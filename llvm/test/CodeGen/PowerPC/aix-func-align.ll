@@ -20,10 +20,10 @@ entry:
   ret i32 0
 }
 
-; CHECK:      .csect .text[PR], 6
+; CHECK:      .csect .text[PR],6
 ; CHECK-NEXT: .foo:
 
-; CHECK:      .csect .text[PR], 6
+; CHECK:      .csect .text[PR],6
 ; CHECK-NEXT: .bar:
 
 ; SYMS:       Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *}}Name: .text

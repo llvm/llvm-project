@@ -11,7 +11,7 @@ entry:
 }
 
 
-;CHECK:          .csect .data[RW], 2
+;CHECK:          .csect .data[RW],2
 ;CHECK-NEXT:     .globl  foo_ptr
 ;CHECK-NEXT:     .align  2
 ;CHECK-NEXT:     foo_ptr:
@@ -22,7 +22,7 @@ entry:
 ;CHECK-NEXT:     .long   bar[DS]
 ;CHECK-NEXT:     .extern foo[DS]
 
-;CHECK64:         .csect .data[RW], 3
+;CHECK64:         .csect .data[RW],3
 ;CHECK64-NEXT:         .globl  foo_ptr
 ;CHECK64-NEXT:         .align  3
 ;CHECK64-NEXT:    foo_ptr:
