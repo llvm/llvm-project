@@ -9,18 +9,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define <4 x float> @hadd_reverse_v4f32(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: @hadd_reverse_v4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP1]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP3]], [[A]]
-; CHECK-NEXT:    [[VECINIT6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP4]], <4 x i32> <i32 2, i32 4, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], [[B]]
-; CHECK-NEXT:    [[VECINIT10:%.*]] = shufflevector <4 x float> [[VECINIT6]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], [[B]]
-; CHECK-NEXT:    [[VECINIT14:%.*]] = shufflevector <4 x float> [[VECINIT10]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
-; CHECK-NEXT:    ret <4 x float> [[VECINIT14]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 3, i32 1, i32 7, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 2, i32 0, i32 6, i32 4>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %shuffle = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %shuffle1 = shufflevector <4 x float> %b, <4 x float> %b, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -45,18 +37,11 @@ define <4 x float> @hadd_reverse_v4f32(<4 x float> %a, <4 x float> %b) #0 {
 
 define <4 x float> @reverse_hadd_v4f32(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: @reverse_hadd_v4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP1]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP3]], [[A]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP4]], <4 x i32> <i32 undef, i32 undef, i32 6, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], [[B]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP7]], <4 x i32> <i32 undef, i32 4, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP9]], [[B]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP10]], <4 x i32> <i32 6, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x float> [[TMP11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
 ;
   %vecext = extractelement <4 x float> %a, i32 0
   %vecext1 = extractelement <4 x float> %a, i32 1

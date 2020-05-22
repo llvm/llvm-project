@@ -742,8 +742,6 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createLoopDistributePass());
 
   MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
-  MPM.add(createVectorCombinePass());
-  MPM.add(createEarlyCSEPass());
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
@@ -783,6 +781,10 @@ void PassManagerBuilder::populateModulePassManager(
       MPM.add(createEarlyCSEPass());
     }
   }
+
+  // Enhance/cleanup vector code.
+  MPM.add(createVectorCombinePass());
+  MPM.add(createEarlyCSEPass());
 
   addExtensionsToPM(EP_Peephole, MPM);
   MPM.add(createInstructionCombiningPass());
