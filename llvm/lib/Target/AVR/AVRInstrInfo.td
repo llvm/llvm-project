@@ -128,21 +128,21 @@ def ioaddr8 : PatLeaf<(imm),
 [{
   uint8_t offset = Subtarget->getIORegisterOffset();
   uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x40;
+  return val < 0x40;
 }], ioaddr_XFORM>;
 
 def lowioaddr8 : PatLeaf<(imm),
 [{
   uint8_t offset = Subtarget->getIORegisterOffset();
   uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x20;
+  return val < 0x20;
 }], ioaddr_XFORM>;
 
 def ioaddr16 : PatLeaf<(imm),
 [{
   uint8_t offset = Subtarget->getIORegisterOffset();
   uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x3f;
+  return val < 0x3f;
 }], ioaddr_XFORM>;
 
 def iobitpos8 : PatLeaf<(imm),
