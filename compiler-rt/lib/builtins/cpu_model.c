@@ -122,7 +122,8 @@ enum ProcessorFeatures {
   FEATURE_VPCLMULQDQ,
   FEATURE_AVX512VNNI,
   FEATURE_AVX512BITALG,
-  FEATURE_AVX512BF16
+  FEATURE_AVX512BF16,
+  FEATURE_AVX512VP2INTERSECT
 };
 
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
@@ -590,6 +591,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_AVX5124VNNIW);
   if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX5124FMAPS);
+  if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX512VP2INTERSECT);
 
   bool HasLeaf7Subleaf1 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
