@@ -8,13 +8,13 @@ define i32 @test1(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SADD:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
-; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i32, i1 } [[SADD]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[SADD]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #2
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i32, i1 } [[SADD]], 0
 ; CHECK-NEXT:    ret i32 [[SADD_RESULT]]
 ;
 entry:
