@@ -1834,6 +1834,10 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
   MaximumJumpTableSize = Val;
 }
 
+bool TargetLoweringBase::isJumpTableRelative() const {
+  return getTargetMachine().isPositionIndependent();
+}
+
 //===----------------------------------------------------------------------===//
 //  Reciprocal Estimates
 //===----------------------------------------------------------------------===//
