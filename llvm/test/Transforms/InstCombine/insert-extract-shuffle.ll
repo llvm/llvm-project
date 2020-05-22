@@ -203,7 +203,6 @@ define double @pr26354(<2 x double>* %tmp, i1 %B) {
 ; CHECK-LABEL: @pr26354(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* [[TMP:%.*]], align 16
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x double> [[LD]], i32 0
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <2 x double> [[LD]], i32 1
@@ -211,6 +210,7 @@ define double @pr26354(<2 x double>* %tmp, i1 %B) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PH:%.*]] = phi <4 x double> [ undef, [[ENTRY:%.*]] ], [ [[I1]], [[IF]] ]
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x double> [[LD]], i32 0
 ; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x double> [[PH]], i32 1
 ; CHECK-NEXT:    [[MU:%.*]] = fmul double [[E1]], [[E3]]
 ; CHECK-NEXT:    ret double [[MU]]
