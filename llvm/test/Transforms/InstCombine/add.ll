@@ -228,22 +228,71 @@ define <2 x i1> @test11vec(<2 x i8> %a) {
   ret <2 x i1> %c
 }
 
-; Should be transformed into shl A, 1?
-
-define i32 @test12(i32 %A, i32 %B) {
-; CHECK-LABEL: @test12(
-; CHECK-NEXT:    br label [[X:%.*]]
-; CHECK:       X:
-; CHECK-NEXT:    [[C_OK:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = add i32 [[C_OK]], [[A]]
-; CHECK-NEXT:    ret i32 [[D]]
+define i8 @reassoc_shl1(i8 %x, i8 %y) {
+; CHECK-LABEL: @reassoc_shl1(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[REASS_ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %C_OK = add i32 %B, %A
-  br label %X
+  %a = add i8 %y, %x
+  %r = add i8 %a, %x
+  ret i8 %r
+}
 
-X:              ; preds = %0
-  %D = add i32 %C_OK, %A
-  ret i32 %D
+define <2 x i8> @reassoc_shl1_commute1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @reassoc_shl1_commute1(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[REASS_ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = add <2 x i8> %x, %y
+  %r = add <2 x i8> %a, %x
+  ret <2 x i8> %r
+}
+
+define i8 @reassoc_shl1_commute2(i8 %px, i8 %py) {
+; CHECK-LABEL: @reassoc_shl1_commute2(
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 43, [[PY:%.*]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y]], [[REASS_ADD]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = sdiv i8 42, %px ; thwart complexity-based canonicalization
+  %y = sdiv i8 43, %py ; thwart complexity-based canonicalization
+  %a = add i8 %y, %x
+  %r = add i8 %x, %a
+  ret i8 %r
+}
+
+define i8 @reassoc_shl1_commute3(i8 %px, i8 %py) {
+; CHECK-LABEL: @reassoc_shl1_commute3(
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 43, [[PY:%.*]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y]], [[REASS_ADD]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = sdiv i8 42, %px ; thwart complexity-based canonicalization
+  %y = sdiv i8 43, %py ; thwart complexity-based canonicalization
+  %a = add i8 %x, %y
+  %r = add i8 %x, %a
+  ret i8 %r
+}
+
+declare void @use(i8)
+
+define i8 @reassoc_shl1_extra_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @reassoc_shl1_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %y, %x
+  call void @use(i8 %a)
+  %r = add i8 %a, %x
+  ret i8 %r
 }
 
 ;; TODO: shl A, 1?
@@ -804,8 +853,8 @@ define <2 x i64> @test41vec_and_multiuse(<2 x i32> %a) {
 ; CHECK-LABEL: @test41vec_and_multiuse(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i32> [[A:%.*]], <i32 16, i32 16>
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[ADD]] to <2 x i64>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i64> [[ZEXT]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw <2 x i64> [[SUB]], [[ZEXT]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl nuw nsw <2 x i64> [[ZEXT]], <i64 1, i64 1>
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw <2 x i64> [[REASS_ADD]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <2 x i64> [[EXTRAUSE]]
 ;
   %add = add nuw <2 x i32> %a, <i32 16, i32 16>
@@ -964,8 +1013,8 @@ define i32 @add_to_sub(i32 %M, i32 %B) {
 ; E = (~B + A) + 1 = A - B
 define i32 @add_to_sub2(i32 %A, i32 %M) {
 ; CHECK-LABEL: @add_to_sub2(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[M:%.*]], -42
-; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = mul i32 [[M:%.*]], -42
+; CHECK-NEXT:    [[E:%.*]] = add i32 [[B_NEG]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %B = mul i32 %M, 42          ; thwart complexity-based ordering

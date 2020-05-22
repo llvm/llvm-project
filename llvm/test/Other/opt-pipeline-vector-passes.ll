@@ -12,15 +12,15 @@
 
 ; OLDPM_O1-LABEL:  Pass Arguments:
 ; OLDPM_O1:        Loop Vectorization
-; OLDPM_O1:        Optimize scalar/vector ops
 ; OLDPM_O1-NOT:    SLP Vectorizer
+; OLDPM_O1:        Optimize scalar/vector ops
 
 ; Everything runs at -O2.
 
 ; OLDPM_O2-LABEL:  Pass Arguments:
 ; OLDPM_O2:        Loop Vectorization
-; OLDPM_O2:        Optimize scalar/vector ops
 ; OLDPM_O2:        SLP Vectorizer
+; OLDPM_O2:        Optimize scalar/vector ops
 
 ; The loop vectorizer still runs at both -O1/-O2 even with the
 ; debug flag, but it only works on loops explicitly annotated
@@ -28,24 +28,24 @@
 
 ; OLDPM_O1_FORCE_OFF-LABEL:  Pass Arguments:
 ; OLDPM_O1_FORCE_OFF:        Loop Vectorization
-; OLDPM_O1_FORCE_OFF:        Optimize scalar/vector ops
 ; OLDPM_O1_FORCE_OFF-NOT:    SLP Vectorizer
+; OLDPM_O1_FORCE_OFF:        Optimize scalar/vector ops
 
 ; OLDPM_O2_FORCE_OFF-LABEL:  Pass Arguments:
 ; OLDPM_O2_FORCE_OFF:        Loop Vectorization
-; OLDPM_O2_FORCE_OFF:        Optimize scalar/vector ops
 ; OLDPM_O2_FORCE_OFF:        SLP Vectorizer
+; OLDPM_O2_FORCE_OFF:        Optimize scalar/vector ops
 
 ; There should be no difference with the new pass manager.
 ; This is tested more thoroughly in other test files.
 
 ; NEWPM_O1-LABEL:  Running pass: LoopVectorizePass
-; NEWPM_O1:        Running pass: VectorCombinePass
 ; NEWPM_O1-NOT:    Running pass: SLPVectorizerPass
+; NEWPM_O1:        Running pass: VectorCombinePass
 
 ; NEWPM_O2-LABEL:  Running pass: LoopVectorizePass
-; NEWPM_O2:        Running pass: VectorCombinePass
 ; NEWPM_O2:        Running pass: SLPVectorizerPass
+; NEWPM_O2:        Running pass: VectorCombinePass
 
 define void @f() {
   ret void
