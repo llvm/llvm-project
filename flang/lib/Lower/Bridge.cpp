@@ -14,6 +14,7 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -31,23 +32,11 @@
 #include "llvm/Support/MD5.h"
 
 #undef TODO
-#define TODO()                                                                 \
-  {                                                                            \
-    if (disableToDoAssertions)                                                 \
-      mlir::emitError(toLocation(), __FILE__)                                  \
-          << ':' << __LINE__ << " not implemented";                            \
-    else                                                                       \
-      llvm_unreachable("not yet implemented");                                 \
-  }
+#define TODO() llvm_unreachable("not yet implemented");
 
 static llvm::cl::opt<bool> dumpBeforeFir(
     "fdebug-dump-pre-fir", llvm::cl::init(false),
     llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));
-
-static llvm::cl::opt<bool>
-    disableToDoAssertions("disable-burnside-todo",
-                          llvm::cl::desc("disable burnside bridge asserts"),
-                          llvm::cl::init(false), llvm::cl::Hidden);
 
 static llvm::cl::opt<std::size_t>
     nameLengthHashSize("length-to-hash-string-literal",
@@ -679,11 +668,6 @@ private:
                                    blockList);
   }
 
-  void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::BlockConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::ChangeTeamConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::CriticalConstruct &) { TODO(); }
-
   /// Generate FIR for a DO construct.  There are six variants:
   ///  - unstructured infinite and while loops
   ///  - structured and unstructured increment loops
@@ -884,11 +868,6 @@ private:
       genFIR(e);
   }
 
-  void genFIR(const Fortran::parser::SelectRankConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::SelectTypeConstruct &) { TODO(); }
-
-  void genFIR(const Fortran::parser::WhereConstruct &) { TODO(); }
-
   /// Lower FORALL construct (See 10.2.4)
   void genFIR(const Fortran::parser::ForallConstruct &forall) {
     auto &stmt = std::get<
@@ -937,13 +916,14 @@ private:
   void genFIR(const Fortran::parser::CompilerDirective &) {
     mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
-  void genFIR(const Fortran::parser::OpenMPConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &) { TODO(); }
 
-  void genFIR(const Fortran::parser::AssociateStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndAssociateStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::BlockStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndBlockStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    genOpenMPConstruct(*this, getEval(), omp);
+  }
+
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {
+    genOpenMPEndLoop(*this, getEval(), omp);
+  }
 
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     auto &eval = getEval();
@@ -1005,33 +985,38 @@ private:
                                        valueList, blockList);
   }
 
-  void genFIR(const Fortran::parser::CaseStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {} // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}  // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {} // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}      // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}     // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}     // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}      // nop
 
+  void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(); }
+  void genFIR(const Fortran::parser::AssociateStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::EndAssociateStmt &) { TODO(); }
+
+  void genFIR(const Fortran::parser::BlockConstruct &) { TODO(); }
+  void genFIR(const Fortran::parser::BlockStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::EndBlockStmt &) { TODO(); }
+
+  void genFIR(const Fortran::parser::ChangeTeamConstruct &) { TODO(); }
   void genFIR(const Fortran::parser::ChangeTeamStmt &) { TODO(); }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &) { TODO(); }
+
+  void genFIR(const Fortran::parser::CriticalConstruct &) { TODO(); }
   void genFIR(const Fortran::parser::CriticalStmt &) { TODO(); }
   void genFIR(const Fortran::parser::EndCriticalStmt &) { TODO(); }
 
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {} // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}      // nop
-
-  void genFIR(const Fortran::parser::IfThenStmt &) {} // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {} // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}   // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}  // nop
-
+  void genFIR(const Fortran::parser::SelectRankConstruct &) { TODO(); }
   void genFIR(const Fortran::parser::SelectRankStmt &) { TODO(); }
   void genFIR(const Fortran::parser::SelectRankCaseStmt &) { TODO(); }
+
+  void genFIR(const Fortran::parser::SelectTypeConstruct &) { TODO(); }
   void genFIR(const Fortran::parser::SelectTypeStmt &) { TODO(); }
   void genFIR(const Fortran::parser::TypeGuardStmt &) { TODO(); }
-
-  void genFIR(const Fortran::parser::WhereConstructStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::ElsewhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndWhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::ForallConstructStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndForallStmt &) { TODO(); }
 
   //===--------------------------------------------------------------------===//
   // IO statements (see io.h)
@@ -1174,30 +1159,20 @@ private:
     // do nothing
   }
 
-  // We don't have runtime library support for various features. When they are
-  // encountered, we emit an error message and exit immediately.
-  void noRuntimeSupport(llvm::StringRef stmt) {
-    mlir::emitError(toLocation(), "There is no runtime support for ")
-        << stmt << " statement.\n";
-    std::exit(1);
+  void genFIR(const Fortran::parser::EventPostStmt &stmt) {
+    genEventPostStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::EventPostStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("EVENT POST");
-  }
-  void genFIR(const Fortran::parser::EventWaitStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("EVENT WAIT");
+  void genFIR(const Fortran::parser::EventWaitStmt &stmt) {
+    genEventWaitStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::FormTeamStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("FORM TEAM");
+  void genFIR(const Fortran::parser::FormTeamStmt &stmt) {
+    genFormTeamStatement(*this, stmt);
   }
-  void genFIR(const Fortran::parser::LockStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("LOCK");
+
+  void genFIR(const Fortran::parser::LockStmt &stmt) {
+    genLockStatement(*this, stmt);
   }
 
   fir::LoopOp createLoopNest(llvm::SmallVectorImpl<mlir::Value> &lcvs,
@@ -1359,8 +1334,15 @@ private:
         assign.u);
   }
 
+  void genFIR(const Fortran::parser::WhereConstruct &) { TODO(); }
+  void genFIR(const Fortran::parser::WhereConstructStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::ElsewhereStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::EndWhereStmt &) { TODO(); }
   void genFIR(const Fortran::parser::WhereStmt &) { TODO(); }
 
+  void genFIR(const Fortran::parser::ForallConstructStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::EndForallStmt &) { TODO(); }
   void genFIR(const Fortran::parser::ForallStmt &) { TODO(); }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
@@ -1371,25 +1353,24 @@ private:
     genAssignment(*stmt.typedAssignment->v);
   }
 
-  void genFIR(const Fortran::parser::SyncAllStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("SYNC ALL");
+  void genFIR(const Fortran::parser::SyncAllStmt &stmt) {
+    genSyncAllStatement(*this, stmt);
   }
-  void genFIR(const Fortran::parser::SyncImagesStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("SYNC IMAGES");
+
+  void genFIR(const Fortran::parser::SyncImagesStmt &stmt) {
+    genSyncImagesStatement(*this, stmt);
   }
-  void genFIR(const Fortran::parser::SyncMemoryStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("SYNC MEMORY");
+
+  void genFIR(const Fortran::parser::SyncMemoryStmt &stmt) {
+    genSyncMemoryStatement(*this, stmt);
   }
-  void genFIR(const Fortran::parser::SyncTeamStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("SYNC TEAM");
+
+  void genFIR(const Fortran::parser::SyncTeamStmt &stmt) {
+    genSyncTeamStatement(*this, stmt);
   }
-  void genFIR(const Fortran::parser::UnlockStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("UNLOCK");
+
+  void genFIR(const Fortran::parser::UnlockStmt &stmt) {
+    genUnlockStatement(*this, stmt);
   }
 
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
@@ -1411,9 +1392,8 @@ private:
 
   void genFIR(const Fortran::parser::EntryStmt &) { TODO(); }
 
-  void genFIR(const Fortran::parser::PauseStmt &) {
-    // FIXME: There is no runtime call to make for this yet.
-    noRuntimeSupport("PAUSE");
+  void genFIR(const Fortran::parser::PauseStmt &stmt) {
+    genPauseStatement(*this, stmt);
   }
 
   void genFIR(const Fortran::parser::DataStmt &) {
@@ -1426,54 +1406,12 @@ private:
 
   // call FAIL IMAGE in runtime
   void genFIR(const Fortran::parser::FailImageStmt &stmt) {
-    auto callee = genFailImageStatementRuntime(*builder);
-    llvm::SmallVector<mlir::Value, 1> operands; // FAIL IMAGE has no args
-    builder->create<mlir::CallOp>(toLocation(), callee, operands);
+    genFailImageStatement(*this);
   }
 
   // call STOP, ERROR STOP in runtime
   void genFIR(const Fortran::parser::StopStmt &stmt) {
-    auto callee = genStopStatementRuntime(*builder);
-    auto calleeType = callee.getType();
-    llvm::SmallVector<mlir::Value, 8> operands;
-    assert(calleeType.getNumInputs() == 3 &&
-           "expected 3 arguments in STOP runtime");
-    // First operand is stop code (zero if absent)
-    if (const auto &code =
-            std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
-      auto expr = Fortran::semantics::GetExpr(*code);
-      assert(expr && "failed getting typed expression");
-      operands.push_back(genExprValue(*expr));
-    } else {
-      operands.push_back(
-          builder->createIntegerConstant(calleeType.getInput(0), 0));
-    }
-    // Second operand indicates ERROR STOP
-    bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
-                   Fortran::parser::StopStmt::Kind::ErrorStop;
-    operands.push_back(
-        builder->createIntegerConstant(calleeType.getInput(1), isError));
-
-    // Third operand indicates QUIET (default to false).
-    if (const auto &quiet =
-            std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
-                stmt.t)) {
-      auto expr = Fortran::semantics::GetExpr(*quiet);
-      assert(expr && "failed getting typed expression");
-      operands.push_back(genExprValue(*expr));
-    } else {
-      operands.push_back(
-          builder->createIntegerConstant(calleeType.getInput(2), 0));
-    }
-
-    // Cast operands in case they have different integer/logical types
-    // compare to runtime.
-    auto i = 0;
-    for (auto &op : operands) {
-      auto type = calleeType.getInput(i++);
-      op = builder->createConvert(toLocation(), type, op);
-    }
-    builder->create<mlir::CallOp>(toLocation(), callee, operands);
+    genStopStatement(*this, stmt);
   }
 
   // gen expression, if any; share code with END of procedure
