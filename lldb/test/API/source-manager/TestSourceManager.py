@@ -172,6 +172,7 @@ class SourceManagerTestCase(TestBase):
                     substrs=['Hello world'])
 
     @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
+    @skipIfReproducer # VFS is a snapshot.
     def test_modify_source_file_while_debugging(self):
         """Modify a source file while debugging the executable."""
         self.build()
