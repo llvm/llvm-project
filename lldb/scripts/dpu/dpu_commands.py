@@ -69,7 +69,7 @@ def get_rank_id(rank, target):
         .Cast(hw_dpu_rank_allocation_parameters_type)
         .GetChildMemberWithName("rank_fs")
         .GetChildMemberWithName("rank_path")
-        )
+    )
     rank_id = int(re.search('dpu_rank(.+)"', rank_path).group(1))
     return rank_id
 
@@ -246,7 +246,8 @@ def dpu_attach(debugger, command, result, internal_dict):
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
     pid = compute_dpu_pid(rank_id, slice_id, dpu_id)
 
-    nb_slices, nb_dpus_per_slice = get_nb_slices_and_nb_dpus_per_slice(rank, target)
+    nb_slices, nb_dpus_per_slice = get_nb_slices_and_nb_dpus_per_slice(
+        rank, target)
     structures_value_env = ""
     slices_target_env = ""
     host_muxs_mram_state_env = ""
@@ -267,15 +268,16 @@ def dpu_attach(debugger, command, result, internal_dict):
             print("Could not find dpu slice_target")
             return None
 
-        structures_value_env += str(slice_info.GetChildMemberWithName("structure_value")
-                                    .GetValueAsUnsigned()) + "&"
+        structures_value_env += str(slice_info.GetChildMemberWithName(
+            "structure_value") .GetValueAsUnsigned()) + "&"
         host_muxs_mram_state_env += \
             str(slice_info.GetChildMemberWithName("host_mux_mram_state").GetValueAsUnsigned()) + "&"
         slice_target_type = slice_target.GetChildMemberWithName("type") \
                                         .GetValueAsUnsigned()
-        slice_target_dpu_group_id = slice_target.GetChildMemberWithName("dpu_id") \
-                                                .GetValueAsUnsigned()
-        slices_target_env += str((slice_target_dpu_group_id << 32) + slice_target_type) + "&"
+        slice_target_dpu_group_id = slice_target.GetChildMemberWithName(
+            "dpu_id") .GetValueAsUnsigned()
+        slices_target_env += str((slice_target_dpu_group_id <<
+                                  32) + slice_target_type) + "&"
 
     if not(set_debug_mode(debugger, rank, 1)):
         print("Could not set dpu in debug mode")
