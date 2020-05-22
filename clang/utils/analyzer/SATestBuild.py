@@ -60,8 +60,8 @@ import time
 
 from queue import Queue
 from subprocess import CalledProcessError, check_call
-from typing import (cast, Dict, Iterable, IO, List, NamedTuple, Tuple,
-                    TYPE_CHECKING)
+from typing import (cast, Dict, Iterable, IO, List, NamedTuple, Optional,
+                    Tuple, TYPE_CHECKING)
 
 
 ###############################################################################
@@ -93,12 +93,14 @@ logging.basicConfig(
 
 # Find Clang for static analysis.
 if 'CC' in os.environ:
-    CLANG = os.environ['CC']
+    cc_candidate: Optional[str] = os.environ['CC']
 else:
-    CLANG = SATestUtils.which("clang", os.environ['PATH'])
-if not CLANG:
+    cc_candidate = SATestUtils.which("clang", os.environ['PATH'])
+if not cc_candidate:
     stderr("Error: cannot find 'clang' in PATH")
     sys.exit(1)
+
+CLANG = cc_candidate
 
 # Number of jobs.
 MAX_JOBS = int(math.ceil(multiprocessing.cpu_count() * 0.75))
@@ -204,8 +206,9 @@ def run_cleanup_script(directory: str, build_log_file: IO):
     cwd = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
     script_path = os.path.join(directory, CLEANUP_SCRIPT)
 
-    SATestUtils.runScript(script_path, build_log_file, cwd,
-                          Stdout=LOCAL.stdout, Stderr=LOCAL.stderr)
+    SATestUtils.run_script(script_path, build_log_file, cwd,
+                           out=LOCAL.stdout, err=LOCAL.stderr,
+                           verbose=VERBOSE)
 
 
 def download_and_patch(directory: str, build_log_file: IO):
@@ -238,8 +241,9 @@ def download(directory: str, build_log_file: IO):
     Run the script to download the project, if it exists.
     """
     script_path = os.path.join(directory, DOWNLOAD_SCRIPT)
-    SATestUtils.runScript(script_path, build_log_file, directory,
-                          Stdout=LOCAL.stdout, Stderr=LOCAL.stderr)
+    SATestUtils.run_script(script_path, build_log_file, directory,
+                           out=LOCAL.stdout, err=LOCAL.stderr,
+                           verbose=VERBOSE)
 
 
 def apply_patch(directory: str, build_log_file: IO):
@@ -557,9 +561,9 @@ class ProjectTester:
             failed = False
 
             # Only run the analyzes on supported files.
-            if SATestUtils.hasNoExtension(file_name):
+            if SATestUtils.has_no_extension(file_name):
                 continue
-            if not SATestUtils.isValidSingleInputFile(file_name):
+            if not SATestUtils.is_valid_single_input_file(file_name):
                 stderr(f"Error: Invalid single input file {full_file_name}.\n")
                 raise Exception()
 
@@ -859,7 +863,7 @@ def get_projects(map_file: IO) -> Iterable[Tuple[str, str]]:
     map_file.seek(0)
     # TODO: csv format is not very readable, change it to JSON
     for project_info in csv.reader(map_file):
-        if (SATestUtils.isCommentCSVLine(project_info)):
+        if SATestUtils.is_comment_csv_line(project_info):
             continue
         # suppress mypy error
         yield cast(Tuple[str, str], project_info)
