@@ -324,7 +324,8 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
 
 void Thread::FrameSelectedCallback(StackFrame *frame) {
   if (!frame)
-      return;
+    return;
+
   if (frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization()) {
     SymbolContext sc =
         frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
