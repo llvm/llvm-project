@@ -1064,7 +1064,7 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
 }
 
 bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
-  // Ensure any bundles created by gather packetize remain seperate.
+  // Ensure any bundles created by gather packetize remain separate.
   if (MI.isBundle())
     return true;
 
