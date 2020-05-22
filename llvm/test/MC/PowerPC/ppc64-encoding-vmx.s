@@ -366,6 +366,9 @@
 # CHECK-BE: vmsumuhm 2, 3, 4, 5             # encoding: [0x10,0x43,0x21,0x66]
 # CHECK-LE: vmsumuhm 2, 3, 4, 5             # encoding: [0x66,0x21,0x43,0x10]
             vmsumuhm 2, 3, 4, 5
+# CHECK-BE: vmsumudm 2, 3, 4, 5             # encoding: [0x10,0x43,0x21,0x63]
+# CHECK-LE: vmsumudm 2, 3, 4, 5             # encoding: [0x63,0x21,0x43,0x10]
+            vmsumudm 2, 3, 4, 5
 # CHECK-BE: vmsumuhs 2, 3, 4, 5             # encoding: [0x10,0x43,0x21,0x67]
 # CHECK-LE: vmsumuhs 2, 3, 4, 5             # encoding: [0x67,0x21,0x43,0x10]
             vmsumuhs 2, 3, 4, 5
