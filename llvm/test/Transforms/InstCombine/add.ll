@@ -228,12 +228,10 @@ define <2 x i1> @test11vec(<2 x i8> %a) {
   ret <2 x i1> %c
 }
 
-; Should be transformed into shl x, 1?
-
 define i8 @reassoc_shl1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @reassoc_shl1(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[X]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[REASS_ADD]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %y, %x
@@ -243,8 +241,8 @@ define i8 @reassoc_shl1(i8 %x, i8 %y) {
 
 define <2 x i8> @reassoc_shl1_commute1(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @reassoc_shl1_commute1(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[A]], [[X]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[REASS_ADD]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, %y
@@ -256,8 +254,8 @@ define i8 @reassoc_shl1_commute2(i8 %px, i8 %py) {
 ; CHECK-LABEL: @reassoc_shl1_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[PX:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 43, [[PY:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[A]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y]], [[REASS_ADD]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = sdiv i8 42, %px ; thwart complexity-based canonicalization
@@ -271,8 +269,8 @@ define i8 @reassoc_shl1_commute3(i8 %px, i8 %py) {
 ; CHECK-LABEL: @reassoc_shl1_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[PX:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 43, [[PY:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[A]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i8 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y]], [[REASS_ADD]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = sdiv i8 42, %px ; thwart complexity-based canonicalization
@@ -855,8 +853,8 @@ define <2 x i64> @test41vec_and_multiuse(<2 x i32> %a) {
 ; CHECK-LABEL: @test41vec_and_multiuse(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i32> [[A:%.*]], <i32 16, i32 16>
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[ADD]] to <2 x i64>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i64> [[ZEXT]], <i64 -1, i64 -1>
-; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw <2 x i64> [[SUB]], [[ZEXT]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl nuw nsw <2 x i64> [[ZEXT]], <i64 1, i64 1>
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw <2 x i64> [[REASS_ADD]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <2 x i64> [[EXTRAUSE]]
 ;
   %add = add nuw <2 x i32> %a, <i32 16, i32 16>
