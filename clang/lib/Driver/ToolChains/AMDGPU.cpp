@@ -107,11 +107,18 @@ RocmInstallationDetector::RocmInstallationDetector(
     // the Windows-esque layout the ROCm packages use with the host architecture
     // subdirectory of bin.
 
+    // Strip off directory (usually bin)
     StringRef ParentDir = llvm::sys::path::parent_path(InstallDir);
-    if (ParentDir == HostTriple.getArchName())
-      ParentDir = llvm::sys::path::parent_path(ParentDir);
+    StringRef ParentName = llvm::sys::path::filename(ParentDir);
 
-    if (ParentDir == "bin") {
+    // Some builds use bin/{host arch}, so go up again.
+    if (ParentName == "bin") {
+      ParentDir = llvm::sys::path::parent_path(ParentDir);
+      ParentName = llvm::sys::path::filename(ParentDir);
+    }
+
+    if (ParentName == "llvm") {
+      // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
       Candidates.emplace_back(llvm::sys::path::parent_path(ParentDir).str(),
                               /*StrictChecking=*/true);
     }
