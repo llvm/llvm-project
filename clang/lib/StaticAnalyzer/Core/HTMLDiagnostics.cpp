@@ -1070,8 +1070,13 @@ StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {
 <script type='text/javascript'>
 var digitMatcher = new RegExp("[0-9]+");
 
+var querySelectorAllArray = function(selector) {
+  return Array.prototype.slice.call(
+    document.querySelectorAll(selector));
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll(".PathNav > a").forEach(
+    querySelectorAllArray(".PathNav > a").forEach(
         function(currentValue, currentIndex) {
             var hrefValue = currentValue.getAttribute("href");
             currentValue.onclick = function() {
@@ -1091,7 +1096,7 @@ var findNum = function() {
 };
 
 var scrollTo = function(el) {
-    document.querySelectorAll(".selected").forEach(function(s) {
+    querySelectorAllArray(".selected").forEach(function(s) {
         s.classList.remove("selected");
     });
     el.classList.add("selected");
