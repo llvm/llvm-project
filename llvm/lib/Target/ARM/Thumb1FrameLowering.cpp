@@ -308,8 +308,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         .add(predOps(ARMCC::AL));
     if(FramePtrOffsetInBlock) {
       CFAOffset += FramePtrOffsetInBlock;
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
-          nullptr, MRI->getDwarfRegNum(FramePtr, true), CFAOffset));
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+          nullptr, MRI->getDwarfRegNum(FramePtr, true), -CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
