@@ -42,14 +42,14 @@ define dso_local i64 @func(i64 %blah, i64 %limit) #0 {
 ; OLDPM-NEXT:    [[K_05:%.*]] = phi i64 [ 1, [[FOR_BODY_LR_PH_NEW]] ], [ [[AND]], [[FOR_BODY]] ]
 ; OLDPM-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NSUB_7:%.*]], [[FOR_BODY]] ]
 ; OLDPM-NEXT:    [[AND]] = and i64 [[CONV]], [[K_05]]
-; OLDPM-NEXT:    [[ADD:%.*]] = add i64 [[AND]], [[G_06]]
-; OLDPM-NEXT:    [[ADD_1:%.*]] = add i64 [[AND]], [[ADD]]
-; OLDPM-NEXT:    [[ADD_2:%.*]] = add i64 [[AND]], [[ADD_1]]
-; OLDPM-NEXT:    [[ADD_3:%.*]] = add i64 [[AND]], [[ADD_2]]
-; OLDPM-NEXT:    [[ADD_4:%.*]] = add i64 [[AND]], [[ADD_3]]
-; OLDPM-NEXT:    [[ADD_5:%.*]] = add i64 [[AND]], [[ADD_4]]
-; OLDPM-NEXT:    [[ADD_6:%.*]] = add i64 [[AND]], [[ADD_5]]
-; OLDPM-NEXT:    [[ADD_7]] = add i64 [[AND]], [[ADD_6]]
+; OLDPM-NEXT:    [[REASS_ADD:%.*]] = shl nuw nsw i64 [[AND]], 1
+; OLDPM-NEXT:    [[ADD_1:%.*]] = add i64 [[G_06]], [[REASS_ADD]]
+; OLDPM-NEXT:    [[REASS_ADD9:%.*]] = shl nuw nsw i64 [[AND]], 1
+; OLDPM-NEXT:    [[ADD_3:%.*]] = add i64 [[ADD_1]], [[REASS_ADD9]]
+; OLDPM-NEXT:    [[REASS_ADD10:%.*]] = shl nuw nsw i64 [[AND]], 1
+; OLDPM-NEXT:    [[ADD_5:%.*]] = add i64 [[ADD_3]], [[REASS_ADD10]]
+; OLDPM-NEXT:    [[REASS_ADD11:%.*]] = shl nuw nsw i64 [[AND]], 1
+; OLDPM-NEXT:    [[ADD_7]] = add i64 [[ADD_5]], [[REASS_ADD11]]
 ; OLDPM-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
 ; OLDPM-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
 ; OLDPM-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
@@ -89,14 +89,14 @@ define dso_local i64 @func(i64 %blah, i64 %limit) #0 {
 ; NEWPM-NEXT:    [[G_06:%.*]] = phi i64 [ undef, [[FOR_BODY_LR_PH_NEW]] ], [ [[ADD_7]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ]
 ; NEWPM-NEXT:    [[AND_PHI]] = phi i64 [ [[AND_0]], [[FOR_BODY_LR_PH_NEW]] ], [ [[AND_1:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
 ; NEWPM-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[FOR_BODY_LR_PH_NEW]] ], [ [[NITER_NSUB_7:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
-; NEWPM-NEXT:    [[ADD:%.*]] = add i64 [[AND_PHI]], [[G_06]]
-; NEWPM-NEXT:    [[ADD_1:%.*]] = add i64 [[AND_PHI]], [[ADD]]
-; NEWPM-NEXT:    [[ADD_2:%.*]] = add i64 [[AND_PHI]], [[ADD_1]]
-; NEWPM-NEXT:    [[ADD_3:%.*]] = add i64 [[AND_PHI]], [[ADD_2]]
-; NEWPM-NEXT:    [[ADD_4:%.*]] = add i64 [[AND_PHI]], [[ADD_3]]
-; NEWPM-NEXT:    [[ADD_5:%.*]] = add i64 [[AND_PHI]], [[ADD_4]]
-; NEWPM-NEXT:    [[ADD_6:%.*]] = add i64 [[AND_PHI]], [[ADD_5]]
-; NEWPM-NEXT:    [[ADD_7]] = add i64 [[AND_PHI]], [[ADD_6]]
+; NEWPM-NEXT:    [[REASS_ADD:%.*]] = shl nuw nsw i64 [[AND_PHI]], 1
+; NEWPM-NEXT:    [[ADD_1:%.*]] = add i64 [[G_06]], [[REASS_ADD]]
+; NEWPM-NEXT:    [[REASS_ADD9:%.*]] = shl nuw nsw i64 [[AND_PHI]], 1
+; NEWPM-NEXT:    [[ADD_3:%.*]] = add i64 [[ADD_1]], [[REASS_ADD9]]
+; NEWPM-NEXT:    [[REASS_ADD10:%.*]] = shl nuw nsw i64 [[AND_PHI]], 1
+; NEWPM-NEXT:    [[ADD_5:%.*]] = add i64 [[ADD_3]], [[REASS_ADD10]]
+; NEWPM-NEXT:    [[REASS_ADD11:%.*]] = shl nuw nsw i64 [[AND_PHI]], 1
+; NEWPM-NEXT:    [[ADD_7]] = add i64 [[ADD_5]], [[REASS_ADD11]]
 ; NEWPM-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
 ; NEWPM-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
 ; NEWPM-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
