@@ -14,6 +14,8 @@ class TestExitDuringExpression(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    # The test file doesn't build on Linux: "undefined reference to pthread_create"
+    @skipIfLinux 
     @skipIfWindows
     def test_exit_before_one_thread_unwind(self):
         """Test the case where we exit within the one thread timeout"""
