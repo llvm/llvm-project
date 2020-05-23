@@ -218,6 +218,7 @@ template <class ELFT> class ELFState {
 
   void assignSectionAddress(Elf_Shdr &SHeader, ELFYAML::Section *YAMLSec);
 
+  BumpPtrAllocator StringAlloc;
   uint64_t alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
                          llvm::Optional<llvm::yaml::Hex64> Offset);
 
@@ -241,17 +242,27 @@ template <class ELFT>
 ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     : Doc(D), ErrHandler(EH) {
   std::vector<ELFYAML::Section *> Sections = Doc.getSections();
-  StringSet<> DocSections;
-  for (const ELFYAML::Section *Sec : Sections)
-    if (!Sec->Name.empty())
-      DocSections.insert(Sec->Name);
-
   // Insert SHT_NULL section implicitly when it is not defined in YAML.
   if (Sections.empty() || Sections.front()->Type != ELF::SHT_NULL)
     Doc.Chunks.insert(
         Doc.Chunks.begin(),
         std::make_unique<ELFYAML::Section>(
             ELFYAML::Chunk::ChunkKind::RawContent, /*IsImplicit=*/true));
+
+  // We add a technical suffix for each unnamed section/fill. It does not affect
+  // the output, but allows us to map them by name in the code and report better
+  // error messages.
+  StringSet<> DocSections;
+  for (size_t I = 0; I < Doc.Chunks.size(); ++I) {
+    const std::unique_ptr<ELFYAML::Chunk> &C = Doc.Chunks[I];
+    if (C->Name.empty()) {
+      std::string NewName = ELFYAML::appendUniqueSuffix(
+          /*Name=*/"", "index " + Twine(I));
+      C->Name = StringRef(NewName).copy(StringAlloc);
+      assert(ELFYAML::dropUniqueSuffix(C->Name).empty());
+    }
+    DocSections.insert(C->Name);
+  }
 
   std::vector<StringRef> ImplicitSections;
   if (Doc.DynamicSymbols)
@@ -401,22 +412,28 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
   return true;
 }
 
-constexpr StringRef SuffixStart = " (";
+constexpr char SuffixStart = '(';
 constexpr char SuffixEnd = ')';
 
 std::string llvm::ELFYAML::appendUniqueSuffix(StringRef Name,
                                               const Twine &Msg) {
-  return (Name + SuffixStart + Msg + Twine(SuffixEnd)).str();
+  // Do not add a space when a Name is empty.
+  std::string Ret = Name.empty() ? "" : Name.str() + ' ';
+  return Ret + (Twine(SuffixStart) + Msg + Twine(SuffixEnd)).str();
 }
 
 StringRef llvm::ELFYAML::dropUniqueSuffix(StringRef S) {
   if (S.empty() || S.back() != SuffixEnd)
     return S;
 
+  // A special case for empty names. See appendUniqueSuffix() above.
   size_t SuffixPos = S.rfind(SuffixStart);
-  if (SuffixPos == StringRef::npos)
+  if (SuffixPos == 0)
+    return "";
+
+  if (SuffixPos == StringRef::npos || S[SuffixPos - 1] != ' ')
     return S;
-  return S.substr(0, SuffixPos);
+  return S.substr(0, SuffixPos - 1);
 }
 
 template <class ELFT>
@@ -426,7 +443,6 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   // valid SHN_UNDEF entry since SHT_NULL == 0.
   SHeaders.resize(Doc.getSections().size());
 
-  size_t SecNdx = -1;
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
     if (ELFYAML::Fill *S = dyn_cast<ELFYAML::Fill>(D.get())) {
       S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
@@ -435,16 +451,16 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       continue;
     }
 
-    ++SecNdx;
     ELFYAML::Section *Sec = cast<ELFYAML::Section>(D.get());
-    if (SecNdx == 0 && Sec->IsImplicit)
+    bool IsFirstUndefSection = D == Doc.Chunks.front();
+    if (IsFirstUndefSection && Sec->IsImplicit)
       continue;
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
     // in the YAML, we need to write them here. This ensures the file offset
     // remains correct.
-    Elf_Shdr &SHeader = SHeaders[SecNdx];
+    Elf_Shdr &SHeader = SHeaders[SN2I.get(Sec->Name)];
     if (initImplicitHeader(CBA, SHeader, Sec->Name,
                            Sec->IsImplicit ? nullptr : Sec))
       continue;
@@ -461,7 +477,6 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
     // Set the offset for all sections, except the SHN_UNDEF section with index
     // 0 when not explicitly requested.
-    bool IsFirstUndefSection = SecNdx == 0;
     if (!IsFirstUndefSection || Sec->Offset)
       SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, Sec->Offset);
 
@@ -1426,9 +1441,6 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
     bool IsSection = isa<ELFYAML::Section>(C.get());
     if (IsSection)
       ++SecNdx;
-
-    if (C->Name.empty())
-      continue;
 
     if (!Seen.insert(C->Name).second)
       reportError("repeated section/fill name: '" + C->Name +
