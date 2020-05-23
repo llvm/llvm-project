@@ -47,7 +47,7 @@ static MCAsmInfo *createSparcV9MCAsmInfo(const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new SparcELFMCAsmInfo(TT);
   unsigned Reg = MRI.getDwarfRegNum(SP::O6, true);
-  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, -2047);
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 2047);
   MAI->addInitialFrameState(Inst);
   return MAI;
 }
