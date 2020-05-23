@@ -1,8 +1,8 @@
-.. _amdgpu-dwarf-6-proposal-for-heterogeneous-debugging:
+.. _amdgpu-proposal-for-heterogeneous-debugging:
 
-*********************************
-DWARF For Heterogeneous Debugging
-*********************************
+******************************************
+DWARF Proposal For Heterogeneous Debugging
+******************************************
 
 .. contents::
    :local:
