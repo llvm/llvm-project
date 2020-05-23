@@ -226,7 +226,7 @@ TEST(ParserTest, FullParserTest) {
       Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error));
   EXPECT_EQ("", Error.toStringFull());
   Matcher<Stmt> MCastStmt =
-      implicitIntBooleanCast->unconditionalConvertTo<Stmt>();
+      traverse(TK_AsIs, implicitIntBooleanCast->unconditionalConvertTo<Stmt>());
   EXPECT_TRUE(matches("bool X = 1;", MCastStmt));
   EXPECT_FALSE(matches("bool X = true;", MCastStmt));
 
