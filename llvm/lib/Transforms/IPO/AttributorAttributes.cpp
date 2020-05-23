@@ -3565,7 +3565,7 @@ static unsigned getKnownAlignForUse(Attributor &A,
       MA = LI->getAlign();
   }
 
-  if (!MA.hasValue() || MA <= 1)
+  if (!MA || *MA <= 1)
     return 0;
 
   unsigned Alignment = MA->value();

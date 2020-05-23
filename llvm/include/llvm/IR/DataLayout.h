@@ -262,7 +262,7 @@ public:
 
   /// Returns true if the given alignment exceeds the natural stack alignment.
   bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > StackNaturalAlign);
+    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
   }
 
   Align getStackAlignment() const {
