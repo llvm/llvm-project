@@ -1849,3 +1849,16 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
 
   return AMDGPU::NoRegister;
 }
+
+bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
+  switch (PhysReg) {
+  case AMDGPU::SGPR_NULL:
+  case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+    return true;
+  default:
+    return false;
+  }
+}
