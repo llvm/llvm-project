@@ -1251,9 +1251,10 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
   AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
-  if (MDep->getSourceAlign() < ByValAlign &&
+  MaybeAlign MemDepAlign = MDep->getSourceAlign();
+  if ((!MemDepAlign || *MemDepAlign < *ByValAlign) &&
       getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL, &CB, &AC,
-                                 &DT) < ByValAlign)
+                                 &DT) < *ByValAlign)
     return false;
 
   // The address space of the memcpy source must match the byval argument

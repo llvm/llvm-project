@@ -757,8 +757,9 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       // For now they aren't reported correctly by ModuleSymbolTable.
       auto &CommonRes = RegularLTO.Commons[std::string(Sym.getIRName())];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
-      CommonRes.Align =
-          std::max(CommonRes.Align, MaybeAlign(Sym.getCommonAlignment()));
+      MaybeAlign SymAlign(Sym.getCommonAlignment());
+      if (SymAlign)
+        CommonRes.Align = max(*SymAlign, CommonRes.Align);
       CommonRes.Prevailing |= Res.Prevailing;
     }
 

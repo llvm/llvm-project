@@ -57,7 +57,7 @@ void GISelKnownBits::computeKnownBitsForAlignment(KnownBits &Known,
                                                   MaybeAlign Alignment) {
   if (Alignment)
     // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2(Alignment));
+    Known.Zero.setLowBits(Log2(*Alignment));
 }
 
 KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
