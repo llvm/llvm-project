@@ -465,7 +465,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the allocation.
     unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaOffset(nullptr, SPOffsetFromCFA + Delta));
+        MCCFIInstruction::cfiDefCfaOffset(nullptr, -SPOffsetFromCFA - Delta));
     BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
     SPOffsetFromCFA += Delta;

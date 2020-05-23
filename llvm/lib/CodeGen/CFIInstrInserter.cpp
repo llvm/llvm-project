@@ -322,9 +322,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
         // of this block, add a def_cfa_offset instruction with the correct
         // offset for this block.
       } else {
-        unsigned CFIIndex =
-            MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(
-                nullptr, -getCorrectCFAOffset(&MBB)));
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
+            nullptr, getCorrectCFAOffset(&MBB)));
         BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
       }
