@@ -15,7 +15,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -53,11 +52,9 @@ void ento::createSarifDiagnosticConsumer(
     const std::string &Output, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
-  if (Output.empty()) {
-    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
-      << "sarif" << "file";
+  // TODO: Emit an error here.
+  if (Output.empty())
     return;
-  }
 
   C.push_back(new SarifDiagnostics(AnalyzerOpts, Output, PP.getLangOpts()));
   createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, Output, PP, CTU);

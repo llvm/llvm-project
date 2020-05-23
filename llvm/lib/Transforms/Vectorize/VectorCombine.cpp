@@ -417,6 +417,8 @@ public:
     AU.setPreservesCFG();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<BasicAAWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -450,5 +452,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
+  PA.preserve<AAManager>();
+  PA.preserve<BasicAA>();
   return PA;
 }

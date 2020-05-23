@@ -36,7 +36,7 @@ foreach Index = 1-31 in {
   def sub#Index#_hi16 : ComposedSubRegIndex<!cast<SubRegIndex>(sub#Index), hi16>;
 }
 
-foreach Size = {2-5,8,16} in {
+foreach Size = {2-6,8,16} in {
   foreach Index = Indexes<!add(33, !mul(Size, -1))>.slice in {
     def !foldl("", Indexes<Size>.slice, acc, cur,
                !strconcat(acc#!if(!eq(acc,""),"","_"), "sub"#!add(cur, Index))) :

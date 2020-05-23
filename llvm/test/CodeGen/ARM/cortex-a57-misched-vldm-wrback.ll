@@ -9,7 +9,7 @@
 ; CHECK:       ********** MI Scheduling **********
 ; We need second, post-ra scheduling to have VLDM instruction combined from single-loads
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:       SU(1):{{.*}}VLDMDIA_UPD
+; CHECK:       VLDMDIA_UPD
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 6
 ; CHECK:       Successors:

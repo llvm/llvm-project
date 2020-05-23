@@ -358,9 +358,6 @@ def err_analyzer_checker_option_invalid_input : Error<
   "invalid input for checker option '%0', that expects %1">;
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
-def err_analyzer_missing_output_loc : Error<
-  "analyzer output type '%0' requires an output %1 to be specified with "
-  "-o </path/to/output_%1>">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
