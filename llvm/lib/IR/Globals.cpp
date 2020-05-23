@@ -121,7 +121,7 @@ unsigned GlobalValue::getAddressSpace() const {
 }
 
 void GlobalObject::setAlignment(MaybeAlign Align) {
-  assert((!Align || Align <= MaximumAlignment) &&
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   unsigned AlignmentData = encode(Align);
   unsigned OldData = getGlobalValueSubClassData();
