@@ -1830,6 +1830,43 @@ void stringConstruct()
                                           hasDescendant(cxxOperatorCallExpr(
                                               isAssignmentOperator(),
                                               hasArgument(1, stringLiteral())))))));
+
+  Code = R"cpp(
+
+struct C1 {};
+struct C2 { operator C1(); };
+
+void conversionOperator()
+{
+    C2* c2;
+    C1 c1 = (*c2);
+}
+
+)cpp";
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_AsIs,
+          functionDecl(
+              hasName("conversionOperator"),
+              hasDescendant(
+                  varDecl(
+                      hasName("c1"),
+                      hasInitializer(
+                          ignoringImplicit(cxxConstructExpr(hasArgument(
+                              0, ignoringImplicit(
+                                     cxxMemberCallExpr(onImplicitObjectArgument(
+                                         ignoringParenImpCasts(unaryOperator(
+                                             hasOperatorName("*")))))))))))
+                      .bind("c1"))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               functionDecl(hasName("conversionOperator"),
+                            hasDescendant(varDecl(
+                                hasName("c1"), hasInitializer(unaryOperator(
+                                                   hasOperatorName("*")))))))));
 }
 
 template <typename MatcherT>
