@@ -1,5 +1,5 @@
 #include "flang/Optimizer/Support/InternalNames.h"
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <iostream>
 
 using namespace fir;
