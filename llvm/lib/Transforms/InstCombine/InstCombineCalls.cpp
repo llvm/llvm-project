@@ -3500,18 +3500,25 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *Src = II->getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
-    if (isa<UndefValue>(Src))
-      return replaceInstUsesWith(CI, Src);
+    if (isa<UndefValue>(Src)) {
+      Type *Ty = II->getType();
+      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
+      return replaceInstUsesWith(CI, QNaN);
+    }
+
+    if (II->isStrictFP())
+      break;
 
     if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
       const APFloat &ArgVal = C->getValueAPF();
       APFloat Val(ArgVal.getSemantics(), 1);
-      APFloat::opStatus Status = Val.divide(ArgVal,
-                                            APFloat::rmNearestTiesToEven);
-      // Only do this if it was exact and therefore not dependent on the
-      // rounding mode.
-      if (Status == APFloat::opOK)
-        return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
+      Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
+
+      // This is more precise than the instruction may give.
+      //
+      // TODO: The instruction always flushes denormal results (except for f16),
+      // should this also?
+      return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
     }
 
     break;
@@ -3520,8 +3527,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *Src = II->getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
-    if (isa<UndefValue>(Src))
-      return replaceInstUsesWith(CI, Src);
+    if (isa<UndefValue>(Src)) {
+      Type *Ty = II->getType();
+      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
+      return replaceInstUsesWith(CI, QNaN);
+    }
+
     break;
   }
   case Intrinsic::amdgcn_frexp_mant:
