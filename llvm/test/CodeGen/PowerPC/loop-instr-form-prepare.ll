@@ -509,10 +509,9 @@ define i64 @test_ds_cross_basic_blocks(i8* %0, i32 signext %1) {
 ; CHECK-NEXT:    bdz .LBB6_9
 ; CHECK-NEXT:  .LBB6_4: #
 ; CHECK-NEXT:    lbzu r0, 1(r5)
-; CHECK-NEXT:    clrldi r27, r0, 32
-; CHECK-NEXT:    mulld r27, r27, r4
-; CHECK-NEXT:    rldicl r27, r27, 31, 33
-; CHECK-NEXT:    slwi r26, r27, 1
+; CHECK-NEXT:    mulhwu r27, r0, r4
+; CHECK-NEXT:    rlwinm r26, r27, 0, 0, 30
+; CHECK-NEXT:    srwi r27, r27, 1
 ; CHECK-NEXT:    add r27, r27, r26
 ; CHECK-NEXT:    subf r0, r27, r0
 ; CHECK-NEXT:    cmplwi r0, 1
