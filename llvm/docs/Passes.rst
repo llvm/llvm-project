@@ -691,6 +691,14 @@ the mess.
 An interprocedural variant of :ref:`Sparse Conditional Constant Propagation
 <passes-sccp>`.
 
+``-ir-canonicalizer``: Transforms IR into canonical form
+--------------------------------------------------------
+
+This pass aims to transform LLVM Modules into a canonical form by reordering and
+renaming instructions while preserving the same semantics. The canonicalizer makes
+it easier to spot semantic differences while diffing two modules which have undergone
+two different passes.
+
 ``-jump-threading``: Jump Threading
 -----------------------------------
 
