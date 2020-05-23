@@ -1352,27 +1352,16 @@ struct __has_allocate_hint
 
 #endif  // _LIBCPP_CXX03_LANG
 
+template <class _Alloc, class ..._Args,
+    class = decltype(_VSTD::declval<_Alloc>().construct(_VSTD::declval<_Args>()...))>
+static true_type __test_has_construct(int);
+template <class _Alloc, class...>
+static false_type __test_has_construct(...);
+
+template <class _Alloc, class ..._Args>
+struct __has_construct : decltype(__test_has_construct<_Alloc, _Args...>(0)) {};
+
 #if !defined(_LIBCPP_CXX03_LANG)
-
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template <class _Alloc, class _Tp, class... _Args>
-auto
-__has_construct_test(_Alloc&& __a, _Tp* __p, _Args&&... __args)
-    -> decltype(__a.construct(__p, _VSTD::forward<_Args>(__args)...), true_type());
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-
-template <class _Alloc, class _Pointer, class ..._Args>
-auto
-__has_construct_test(const _Alloc& __a, _Pointer&& __p, _Args&& ...__args)
-    -> false_type;
-
-template <class _Alloc, class _Pointer, class ..._Args>
-struct __has_construct
-    : decltype(_VSTD::__has_construct_test(declval<_Alloc>(),
-                                           declval<_Pointer>(),
-                                           declval<_Args>()...))
-{
-};
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Alloc, class _Pointer>
@@ -1428,14 +1417,6 @@ struct __has_select_on_container_copy_construction
 };
 
 #else  // _LIBCPP_CXX03_LANG
-
-template <class _Alloc, class _Pointer, class _Tp, class = void>
-struct __has_construct : std::false_type {};
-
-template <class _Alloc, class _Pointer, class _Tp>
-struct __has_construct<_Alloc, _Pointer, _Tp, typename __void_t<
-    decltype(_VSTD::declval<_Alloc>().construct(_VSTD::declval<_Pointer>(), _VSTD::declval<_Tp>()))
->::type> : std::true_type {};
 
 template <class _Alloc, class _Pointer, class = void>
 struct __has_destroy : false_type {};
@@ -1548,41 +1529,11 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     static void deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT
         {__a.deallocate(__p, __n);}
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         static void construct(allocator_type& __a, _Tp* __p, _Args&&... __args)
             {__construct(__has_construct<allocator_type, _Tp*, _Args...>(),
                          __a, __p, _VSTD::forward<_Args>(__args)...);}
-#else  // _LIBCPP_HAS_NO_VARIADICS
-    template <class _Tp>
-        _LIBCPP_INLINE_VISIBILITY
-        static void construct(allocator_type&, _Tp* __p)
-            {
-                ::new ((void*)__p) _Tp();
-            }
-    template <class _Tp, class _A0>
-        _LIBCPP_INLINE_VISIBILITY
-        static void construct(allocator_type& __a, _Tp* __p, const _A0& __a0)
-            {
-                __construct(__has_construct<allocator_type, _Tp*, const _A0&>(),
-                            __a, __p, __a0);
-            }
-    template <class _Tp, class _A0, class _A1>
-        _LIBCPP_INLINE_VISIBILITY
-        static void construct(allocator_type&, _Tp* __p, const _A0& __a0,
-                              const _A1& __a1)
-            {
-                ::new ((void*)__p) _Tp(__a0, __a1);
-            }
-    template <class _Tp, class _A0, class _A1, class _A2>
-        _LIBCPP_INLINE_VISIBILITY
-        static void construct(allocator_type&, _Tp* __p, const _A0& __a0,
-                              const _A1& __a1, const _A2& __a2)
-            {
-                ::new ((void*)__p) _Tp(__a0, __a1, __a2);
-            }
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
@@ -1725,7 +1676,6 @@ private:
         const_void_pointer, false_type)
         {return __a.allocate(__n);}
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         static void __construct(true_type, allocator_type& __a, _Tp* __p, _Args&&... __args)
@@ -1741,20 +1691,6 @@ private:
             {
                 ::new ((void*)__p) _Tp(_VSTD::forward<_Args>(__args)...);
             }
-#else  // _LIBCPP_HAS_NO_VARIADICS
-    template <class _Tp, class _A0>
-        _LIBCPP_INLINE_VISIBILITY
-        static void __construct(true_type, allocator_type& __a, _Tp* __p,
-                                const _A0& __a0)
-            {__a.construct(__p, __a0);}
-    template <class _Tp, class _A0>
-        _LIBCPP_INLINE_VISIBILITY
-        static void __construct(false_type, allocator_type&, _Tp* __p,
-                                const _A0& __a0)
-            {
-                ::new ((void*)__p) _Tp(__a0);
-            }
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
