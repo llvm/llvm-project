@@ -1605,6 +1605,11 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
         error.SetErrorStringWithFormat(
             "expression interrupted for the expression '%s'", expr_str.c_str());
         break;
+      case eExpressionThreadVanished:
+        error.SetErrorStringWithFormat(
+            "expression thread disappeared for the expression '%s'",
+            expr_str.c_str());
+        break;
       case eExpressionHitBreakpoint:
         error.SetErrorStringWithFormat(
             "expression hit breakpoint for the expression '%s'",
