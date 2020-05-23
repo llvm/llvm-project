@@ -1401,6 +1401,16 @@ bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
 }
 
+/// isMulhCheaperThanMulShift - Return true if a mulh[s|u] node for a specific
+/// type is cheaper than a multiply followed by a shift.
+/// This is true for words and doublewords on 64-bit PowerPC.
+bool PPCTargetLowering::isMulhCheaperThanMulShift(EVT Type) const {
+  if (Subtarget.isPPC64() && (isOperationLegal(ISD::MULHS, Type) ||
+                              isOperationLegal(ISD::MULHU, Type)))
+    return true;
+  return TargetLowering::isMulhCheaperThanMulShift(Type);
+}
+
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((PPCISD::NodeType)Opcode) {
   case PPCISD::FIRST_NUMBER:    break;

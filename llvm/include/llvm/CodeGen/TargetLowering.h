@@ -1652,6 +1652,10 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
+  /// Return true if a mulh[s|u] node for a specific type is cheaper than
+  /// a multiply followed by a shift. This is false by default.
+  virtual bool isMulhCheaperThanMulShift(EVT Type) const { return false; }
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   unsigned getStackPointerRegisterToSaveRestore() const {
