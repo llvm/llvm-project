@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -fno-signed-char -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 
 
 #include <immintrin.h>
@@ -1722,7 +1722,7 @@ __m512i test_mm512_slli_epi16(__m512i __A) {
   return _mm512_slli_epi16(__A, 5); 
 }
 
-__m512i test_mm512_slli_epi16_2(__m512i __A, int __B) {
+__m512i test_mm512_slli_epi16_2(__m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_slli_epi16_2
   // CHECK: @llvm.x86.avx512.pslli.w.512
   return _mm512_slli_epi16(__A, __B); 
@@ -1735,7 +1735,7 @@ __m512i test_mm512_mask_slli_epi16(__m512i __W, __mmask32 __U, __m512i __A) {
   return _mm512_mask_slli_epi16(__W, __U, __A, 5); 
 }
 
-__m512i test_mm512_mask_slli_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, int __B) {
+__m512i test_mm512_mask_slli_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_mask_slli_epi16_2
   // CHECK: @llvm.x86.avx512.pslli.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
@@ -1749,7 +1749,7 @@ __m512i test_mm512_maskz_slli_epi16(__mmask32 __U, __m512i __A) {
   return _mm512_maskz_slli_epi16(__U, __A, 5); 
 }
 
-__m512i test_mm512_maskz_slli_epi16_2(__mmask32 __U, __m512i __A, int __B) {
+__m512i test_mm512_maskz_slli_epi16_2(__mmask32 __U, __m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_maskz_slli_epi16_2
   // CHECK: @llvm.x86.avx512.pslli.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
@@ -1828,7 +1828,7 @@ __m512i test_mm512_srai_epi16(__m512i __A) {
   return _mm512_srai_epi16(__A, 5); 
 }
 
-__m512i test_mm512_srai_epi16_2(__m512i __A, int __B) {
+__m512i test_mm512_srai_epi16_2(__m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_srai_epi16_2
   // CHECK: @llvm.x86.avx512.psrai.w.512
   return _mm512_srai_epi16(__A, __B); 
@@ -1841,7 +1841,7 @@ __m512i test_mm512_mask_srai_epi16(__m512i __W, __mmask32 __U, __m512i __A) {
   return _mm512_mask_srai_epi16(__W, __U, __A, 5); 
 }
 
-__m512i test_mm512_mask_srai_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, int __B) {
+__m512i test_mm512_mask_srai_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_mask_srai_epi16_2
   // CHECK: @llvm.x86.avx512.psrai.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
@@ -1855,7 +1855,7 @@ __m512i test_mm512_maskz_srai_epi16(__mmask32 __U, __m512i __A) {
   return _mm512_maskz_srai_epi16(__U, __A, 5); 
 }
 
-__m512i test_mm512_maskz_srai_epi16_2(__mmask32 __U, __m512i __A, int __B) {
+__m512i test_mm512_maskz_srai_epi16_2(__mmask32 __U, __m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_maskz_srai_epi16_2
   // CHECK: @llvm.x86.avx512.psrai.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
@@ -1888,7 +1888,7 @@ __m512i test_mm512_srli_epi16(__m512i __A) {
   return _mm512_srli_epi16(__A, 5); 
 }
 
-__m512i test_mm512_srli_epi16_2(__m512i __A, int __B) {
+__m512i test_mm512_srli_epi16_2(__m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_srli_epi16_2
   // CHECK: @llvm.x86.avx512.psrli.w.512
   return _mm512_srli_epi16(__A, __B); 
@@ -1901,7 +1901,7 @@ __m512i test_mm512_mask_srli_epi16(__m512i __W, __mmask32 __U, __m512i __A) {
   return _mm512_mask_srli_epi16(__W, __U, __A, 5); 
 }
 
-__m512i test_mm512_mask_srli_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, int __B) {
+__m512i test_mm512_mask_srli_epi16_2(__m512i __W, __mmask32 __U, __m512i __A, unsigned int __B) {
   // CHECK-LABEL: @test_mm512_mask_srli_epi16_2
   // CHECK: @llvm.x86.avx512.psrli.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
