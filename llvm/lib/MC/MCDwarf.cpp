@@ -1406,7 +1406,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
     Streamer.emitInt8(dwarf::DW_CFA_def_cfa);
     Streamer.emitULEB128IntValue(Reg);
-    CFAOffset = -Instr.getOffset();
+    CFAOffset = Instr.getOffset();
     Streamer.emitULEB128IntValue(CFAOffset);
 
     return;
