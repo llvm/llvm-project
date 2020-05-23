@@ -25,6 +25,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

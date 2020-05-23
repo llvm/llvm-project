@@ -9,6 +9,7 @@
 #include "SystemZSubtarget.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

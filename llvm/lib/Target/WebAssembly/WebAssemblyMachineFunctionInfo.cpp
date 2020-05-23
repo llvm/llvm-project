@@ -16,6 +16,7 @@
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() = default; // anchor.

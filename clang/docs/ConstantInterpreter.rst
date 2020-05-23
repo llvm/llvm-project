@@ -13,7 +13,7 @@ clang, improving performance on constructs which are executed inefficiently
 by the evaluator. The interpreter is activated using the following flags:
 
 * ``-fexperimental-new-constant-interpreter`` enables the interpreter,
-emitting an error if an unsupported feature is encountered
+  emitting an error if an unsupported feature is encountered
 
 Bytecode Compilation
 ====================
@@ -130,11 +130,11 @@ descriptor that characterises the entire allocation, along with a few
 additional attributes:
 
 * ``IsStatic`` indicates whether the block has static duration in the
-interpreter, i.e. it is not a local in a frame.
+  interpreter, i.e. it is not a local in a frame.
 
 * ``DeclID`` identifies each global declaration (it is set to an invalid
-and irrelevant value for locals) in order to prevent illegal writes and
-reads involving globals and temporaries with static storage duration.
+  and irrelevant value for locals) in order to prevent illegal writes and
+  reads involving globals and temporaries with static storage duration.
 
 Static blocks are never deallocated, but local ones might be deallocated
 even when there are live pointers to them. Pointers are only valid as
@@ -150,8 +150,8 @@ The lifetime of blocks is managed through 3 methods stored in the
 descriptor of the block:
 
 * **CtorFn**: initializes the metadata which is store in the block,
-alongside actual data. Invokes the default constructors of objects
-which are not trivial (``Pointer``, ``RealFP``, etc.)
+  alongside actual data. Invokes the default constructors of objects
+  which are not trivial (``Pointer``, ``RealFP``, etc.)
 
 * **DtorFn**: invokes the destructors of non-trivial objects.
 
@@ -192,13 +192,13 @@ The interpreter distinguishes 3 different kinds of blocks:
   has the following fields:
 
    * **Offset**: byte offset into the array or record, used to step back to the
-   parent array or record.
+     parent array or record.
    * **IsConst**: flag indicating if the field is const-qualified.
    * **IsInitialized**: flag indicating whether the field or element was
-   initialized. For non-primitive fields, this is only relevant to determine
-   the dynamic type of objects during construction.
+     initialized. For non-primitive fields, this is only relevant to determine
+     the dynamic type of objects during construction.
    * **IsBase**: flag indicating whether the record is a base class. In that
-   case, the offset can be used to identify the derived class.
+     case, the offset can be used to identify the derived class.
    * **IsActive**: indicates if the field is the active field of a union.
    * **IsMutable**: indicates if the field is marked as mutable.
 
@@ -222,19 +222,19 @@ Pointers, implemented in ``Pointer.h`` are represented as a tagged union.
 Some of these may not yet be available in upstream ``clang``.
 
  * **BlockPointer**: used to reference memory allocated and managed by the
- interpreter, being the only pointer kind which allows dereferencing in the
- interpreter
+   interpreter, being the only pointer kind which allows dereferencing in the
+   interpreter
  * **ExternPointer**: points to memory which can be addressed, but not read by
- the interpreter. It is equivalent to APValue, tracking a declaration and a path
- of fields and indices into that allocation.
+   the interpreter. It is equivalent to APValue, tracking a declaration and a path
+   of fields and indices into that allocation.
  * **TargetPointer**: represents a target address derived from a base address
- through pointer arithmetic, such as ``((int *)0x100)[20]``. Null pointers are
- target pointers with a zero offset.
+   through pointer arithmetic, such as ``((int *)0x100)[20]``. Null pointers are
+   target pointers with a zero offset.
  * **TypeInfoPointer**: tracks information for the opaque type returned by
- ``typeid``
+   ``typeid``
  * **InvalidPointer**: is dummy pointer created by an invalid operation which
- allows the interpreter to continue execution. Does not allow pointer
- arithmetic or dereferencing.
+   allows the interpreter to continue execution. Does not allow pointer
+   arithmetic or dereferencing.
 
 Besides the previously mentioned union, a number of other pointer-like types
 have their own type:
@@ -367,17 +367,17 @@ Missing Language Features
 * ``new`` and ``delete``
 * Fixed Point numbers and arithmetic on Complex numbers
 * Several builtin methods, including string operations and
-``__builtin_bit_cast``
+  ``__builtin_bit_cast``
 * Continue-after-failure: a form of exception handling at the bytecode
-level should be implemented to allow execution to resume. As an example,
-argument evaluation should resume after the computation of an argument fails.
+  level should be implemented to allow execution to resume. As an example,
+  argument evaluation should resume after the computation of an argument fails.
 * Pointer-to-Integer conversions
 * Lazy descriptors: the interpreter creates a ``Record`` and ``Descriptor``
-when it encounters a type: ones which are not yet defined should be lazily
-created when required
+  when it encounters a type: ones which are not yet defined should be lazily
+  created when required
 
 Known Bugs
 ----------
 
 * If execution fails, memory storing APInts and APFloats is leaked when the
-stack is cleared
+  stack is cleared

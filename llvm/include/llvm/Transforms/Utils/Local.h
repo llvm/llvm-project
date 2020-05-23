@@ -66,18 +66,25 @@ struct SimplifyCFGOptions {
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
   bool SinkCommonInsts;
+  bool SimplifyCondBranch;
+  bool FoldTwoEntryPHINode;
+
   AssumptionCache *AC;
 
   SimplifyCFGOptions(unsigned BonusThreshold = 1,
                      bool ForwardSwitchCond = false,
                      bool SwitchToLookup = false, bool CanonicalLoops = true,
                      bool SinkCommon = false,
-                     AssumptionCache *AssumpCache = nullptr)
+                     AssumptionCache *AssumpCache = nullptr,
+                     bool SimplifyCondBranch = true,
+                     bool FoldTwoEntryPHINode = true)
       : BonusInstThreshold(BonusThreshold),
         ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(SwitchToLookup),
         NeedCanonicalLoop(CanonicalLoops),
         SinkCommonInsts(SinkCommon),
+        SimplifyCondBranch(SimplifyCondBranch),
+        FoldTwoEntryPHINode(FoldTwoEntryPHINode),
         AC(AssumpCache) {}
 
   // Support 'builder' pattern to set members by name at construction time.
@@ -103,6 +110,15 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {
     AC = Cache;
+    return *this;
+  }
+  SimplifyCFGOptions &setSimplifyCondBranch(bool B) {
+    SimplifyCondBranch = B;
+    return *this;
+  }
+
+  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
+    FoldTwoEntryPHINode = B;
     return *this;
   }
 };
