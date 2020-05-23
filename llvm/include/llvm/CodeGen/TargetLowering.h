@@ -50,7 +50,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -86,6 +85,7 @@ class MCExpr;
 class Module;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
+class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;

@@ -20,6 +20,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Target/TargetMachine.h"
 #include <climits>
 #include <memory>
 
@@ -34,7 +35,6 @@ class InstructionSelector;
 class LegalizerInfo;
 class RegisterBankInfo;
 class StringRef;
-class TargetMachine;
 
 /// The X86 backend supports a number of different styles of PIC.
 ///
