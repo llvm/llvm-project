@@ -196,7 +196,7 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
   // .cfi_offset fp, -StackSize
   // .cfi_offset blink, -StackSize+4
   unsigned CFIIndex = MF.addFrameInst(
-      MCCFIInstruction::createDefCfaOffset(nullptr, -MFI.getStackSize()));
+      MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
   BuildMI(MBB, MBBI, dl, TII->get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex)
       .setMIFlags(MachineInstr::FrameSetup);

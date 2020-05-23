@@ -1194,7 +1194,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // Adjust the definition of CFA to account for the change in SP.
       assert(NegFrameSize);
       CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createDefCfaOffset(nullptr, NegFrameSize));
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, -NegFrameSize));
     }
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
