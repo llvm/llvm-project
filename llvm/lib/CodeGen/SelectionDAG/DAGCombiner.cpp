@@ -4118,7 +4118,7 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
 
   // If the type twice as wide is legal, transform the mulhs to a wider multiply
   // plus a shift.
-  if (VT.isSimple() && !VT.isVector()) {
+  if (!TLI.isMulhCheaperThanMulShift(VT) && VT.isSimple() && !VT.isVector()) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);
@@ -4174,7 +4174,7 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
 
   // If the type twice as wide is legal, transform the mulhu to a wider multiply
   // plus a shift.
-  if (VT.isSimple() && !VT.isVector()) {
+  if (!TLI.isMulhCheaperThanMulShift(VT) && VT.isSimple() && !VT.isVector()) {
     MVT Simple = VT.getSimpleVT();
     unsigned SimpleSize = Simple.getSizeInBits();
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), SimpleSize*2);
