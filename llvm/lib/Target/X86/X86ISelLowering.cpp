@@ -47290,6 +47290,13 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // If we're extracting an upper subvector from a broadcast we should just
+  // extract the lowest subvector instead which should allow
+  // SimplifyDemandedVectorElts do more simplifications.
+  if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
+                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD))
+    return extractSubVector(InVec, 0, DAG, SDLoc(N), VT.getSizeInBits());
+
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.
   if (IdxVal == 0 && InVec.hasOneUse()) {

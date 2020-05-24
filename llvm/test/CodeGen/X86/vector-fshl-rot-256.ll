@@ -587,10 +587,9 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %amt) nounwind 
 ;
 ; XOPAVX2-LABEL: splatvar_funnnel_v4i64:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; XOPAVX2-NEXT:    vprotq %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
+; XOPAVX2-NEXT:    vprotq %xmm1, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vprotq %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -671,10 +670,9 @@ define <8 x i32> @splatvar_funnnel_v8i32(<8 x i32> %x, <8 x i32> %amt) nounwind 
 ;
 ; XOPAVX2-LABEL: splatvar_funnnel_v8i32:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; XOPAVX2-NEXT:    vprotd %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
+; XOPAVX2-NEXT:    vprotd %xmm1, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vprotd %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -741,10 +739,9 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounw
 ;
 ; XOPAVX2-LABEL: splatvar_funnnel_v16i16:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpbroadcastw %xmm1, %ymm1
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; XOPAVX2-NEXT:    vprotw %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpbroadcastw %xmm1, %xmm1
+; XOPAVX2-NEXT:    vprotw %xmm1, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vprotw %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
@@ -891,10 +888,9 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind 
 ;
 ; XOPAVX2-LABEL: splatvar_funnnel_v32i8:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; XOPAVX2-NEXT:    vprotb %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
+; XOPAVX2-NEXT:    vprotb %xmm1, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vprotb %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
