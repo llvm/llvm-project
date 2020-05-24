@@ -37404,6 +37404,12 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       return Vec;
      break;
   }
+  case X86ISD::VSRAI:
+    // iff we only need the sign bit then we can use the source directly.
+    // TODO: generalize where we only demand extended signbits.
+    if (DemandedBits.isSignMask())
+      return Op.getOperand(0);
+    break;
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
     // iff we only need the sign bit then we can use R directly.

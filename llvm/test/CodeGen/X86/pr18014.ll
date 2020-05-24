@@ -2,17 +2,18 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=sse4.1 | FileCheck %s
 
 ; Ensure PSRAD is generated as the condition is consumed by both PADD and
-; BLENDVPS. PAND requires all bits setting properly.
+; BLENDVPS. PADD requires all bits setting properly.
 
 define <4 x i32> @foo(<4 x i32>* %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $31, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    psrad $31, %xmm3
+; CHECK-NEXT:    paddd %xmm1, %xmm3
 ; CHECK-NEXT:    blendvps %xmm0, %xmm1, %xmm2
-; CHECK-NEXT:    paddd %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm2, (%rdi)
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
 ; CHECK-NEXT:    retq
   %sext_cond = sext <4 x i1> %cond to <4 x i32>
   %t1 = add <4 x i32> %v1, %sext_cond
