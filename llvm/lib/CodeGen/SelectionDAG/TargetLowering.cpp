@@ -6008,15 +6008,17 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
 
   EVT ShVT = Z.getValueType();
   SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
-  SDValue ShAmt;
+  SDValue ShAmt, InvShAmt;
   if (isPowerOf2_32(EltSizeInBits)) {
     // Z % BW -> Z & (BW - 1)
     ShAmt = DAG.getNode(ISD::AND, DL, ShVT, Z, Mask);
+    // (BW - 1) - (Z % BW) -> ~Z & (BW - 1)
+    InvShAmt = DAG.getNode(ISD::AND, DL, ShVT, DAG.getNOT(DL, Z, ShVT), Mask);
   } else {
     SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
     ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Z, BitWidthC);
+    InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, Mask, ShAmt);
   }
-  SDValue InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, Mask, ShAmt);
 
   SDValue One = DAG.getConstant(1, DL, ShVT);
   SDValue ShX, ShY;
