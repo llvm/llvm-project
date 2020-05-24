@@ -50,7 +50,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -86,6 +85,7 @@ class MCExpr;
 class Module;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
+class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
@@ -1651,6 +1651,10 @@ public:
   unsigned getMaximumJumpTableSize() const;
 
   virtual bool isJumpTableRelative() const;
+
+  /// Return true if a mulh[s|u] node for a specific type is cheaper than
+  /// a multiply followed by a shift. This is false by default.
+  virtual bool isMulhCheaperThanMulShift(EVT Type) const { return false; }
 
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
