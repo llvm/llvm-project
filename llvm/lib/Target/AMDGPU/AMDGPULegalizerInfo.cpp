@@ -1601,7 +1601,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
-  GISelChangeObserver &Observer = Helper.Observer;
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
@@ -1639,7 +1638,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeGlobalValue(MI, MRI, B);
   case TargetOpcode::G_LOAD:
-    return legalizeLoad(MI, MRI, B, Observer);
+    return legalizeLoad(Helper, MI);
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
@@ -2301,15 +2300,26 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeLoad(
-  MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &B, GISelChangeObserver &Observer) const {
-  LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
-  auto Cast = B.buildAddrSpaceCast(ConstPtr, MI.getOperand(1).getReg());
-  Observer.changingInstr(MI);
-  MI.getOperand(1).setReg(Cast.getReg(0));
-  Observer.changedInstr(MI);
-  return true;
+bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  GISelChangeObserver &Observer = Helper.Observer;
+
+  Register PtrReg = MI.getOperand(1).getReg();
+  LLT PtrTy = MRI.getType(PtrReg);
+  unsigned AddrSpace = PtrTy.getAddressSpace();
+
+  if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+    LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
+    auto Cast = B.buildAddrSpaceCast(ConstPtr, PtrReg);
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(Cast.getReg(0));
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPULegalizerInfo::legalizeFMad(
