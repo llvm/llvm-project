@@ -16,37 +16,25 @@ declare i64 @llvm.fshr.i64(i64, i64, i64) nounwind readnone
 define i8 @var_shift_i8(i8 %x, i8 %y, i8 %z) nounwind {
 ; X86-LABEL: var_shift_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    andb $7, %dl
-; X86-NEXT:    movb %al, %ch
-; X86-NEXT:    movb %dl, %cl
-; X86-NEXT:    shrb %cl, %ch
-; X86-NEXT:    movb $8, %cl
-; X86-NEXT:    subb %dl, %cl
-; X86-NEXT:    shlb %cl, %ah
-; X86-NEXT:    testb %dl, %dl
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    orb %ch, %ah
-; X86-NEXT:    movb %ah, %al
-; X86-NEXT:  .LBB0_2:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    andb $7, %cl
+; X86-NEXT:    shrl %cl, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: var_shift_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $7, %dl
-; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrb %cl, %al
-; X64-NEXT:    movb $8, %cl
-; X64-NEXT:    subb %dl, %cl
-; X64-NEXT:    shlb %cl, %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    testb %dl, %dl
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    shll $8, %edi
+; X64-NEXT:    movzbl %sil, %eax
+; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    andb $7, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = tail call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)
@@ -65,15 +53,13 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 ;
 ; X86-SLOW-LABEL: var_shift_i16:
 ; X86-SLOW:       # %bb.0:
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLOW-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-SLOW-NEXT:    andb $15, %cl
-; X86-SLOW-NEXT:    shrl %cl, %edx
-; X86-SLOW-NEXT:    addl %eax, %eax
-; X86-SLOW-NEXT:    xorb $15, %cl
-; X86-SLOW-NEXT:    shll %cl, %eax
+; X86-SLOW-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SLOW-NEXT:    shll $16, %eax
 ; X86-SLOW-NEXT:    orl %edx, %eax
+; X86-SLOW-NEXT:    andb $15, %cl
+; X86-SLOW-NEXT:    shrl %cl, %eax
 ; X86-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SLOW-NEXT:    retl
 ;
@@ -90,15 +76,12 @@ define i16 @var_shift_i16(i16 %x, i16 %y, i16 %z) nounwind {
 ; X64-SLOW-LABEL: var_shift_i16:
 ; X64-SLOW:       # %bb.0:
 ; X64-SLOW-NEXT:    movl %edx, %ecx
-; X64-SLOW-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-SLOW-NEXT:    movzwl %si, %edx
+; X64-SLOW-NEXT:    shll $16, %edi
+; X64-SLOW-NEXT:    movzwl %si, %eax
+; X64-SLOW-NEXT:    orl %edi, %eax
 ; X64-SLOW-NEXT:    andb $15, %cl
-; X64-SLOW-NEXT:    shrl %cl, %edx
-; X64-SLOW-NEXT:    leal (%rdi,%rdi), %eax
-; X64-SLOW-NEXT:    xorb $15, %cl
 ; X64-SLOW-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-SLOW-NEXT:    shll %cl, %eax
-; X64-SLOW-NEXT:    orl %edx, %eax
+; X64-SLOW-NEXT:    shrl %cl, %eax
 ; X64-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-SLOW-NEXT:    retq
   %tmp = tail call i16 @llvm.fshr.i16(i16 %x, i16 %y, i16 %z)

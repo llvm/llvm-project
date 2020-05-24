@@ -199,13 +199,13 @@ registers:
   - { id: 11, class: gpr }
 
 # CHECK:  body:
-# CHECK:    $wzr = SUBSWrr %0, %0, implicit-def $nzcv
+# CHECK:    SUBSWrr %0, %0, implicit-def $nzcv
 # CHECK:    %1:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
 
-# CHECK:    $xzr = SUBSXrr %2, %2, implicit-def $nzcv
+# CHECK:    SUBSXrr %2, %2, implicit-def $nzcv
 # CHECK:    %3:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
 
-# CHECK:    $xzr = SUBSXrr %4, %4, implicit-def $nzcv
+# CHECK:    SUBSXrr %4, %4, implicit-def $nzcv
 # CHECK:    %5:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
 
 body:             |

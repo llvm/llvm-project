@@ -3699,10 +3699,10 @@ AArch64InstructionSelector::emitIntegerCompare(
          "Expected scalar or pointer");
   if (CmpTy == LLT::scalar(32)) {
     CmpOpc = AArch64::SUBSWrr;
-    ZReg = AArch64::WZR;
+    ZReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
   } else if (CmpTy == LLT::scalar(64) || CmpTy.isPointer()) {
     CmpOpc = AArch64::SUBSXrr;
-    ZReg = AArch64::XZR;
+    ZReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
   } else {
     return {nullptr, CmpInst::Predicate::BAD_ICMP_PREDICATE};
   }
