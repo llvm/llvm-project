@@ -843,8 +843,8 @@ public:
       // the extracts could be optimized away.
       Value *EV;
       ConstantInt *Ex1Idx, *Ex2Idx;
-      if (match(V1, m_ExtractElement(m_Value(EV), m_ConstantInt(Ex1Idx))) &&
-          match(V2, m_ExtractElement(m_Deferred(EV), m_ConstantInt(Ex2Idx))) &&
+      if (match(V1, m_ExtractElt(m_Value(EV), m_ConstantInt(Ex1Idx))) &&
+          match(V2, m_ExtractElt(m_Deferred(EV), m_ConstantInt(Ex2Idx))) &&
           Ex1Idx->getZExtValue() + 1 == Ex2Idx->getZExtValue())
         return VLOperands::ScoreConsecutiveExtracts;
 

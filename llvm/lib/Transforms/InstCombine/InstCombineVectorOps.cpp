@@ -58,7 +58,7 @@ static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
   // An insertelement to the same constant index as our extract will simplify
   // to the scalar inserted element. An insertelement to a different constant
   // index is irrelevant to our extract.
-  if (match(V, m_InsertElement(m_Value(), m_Value(), m_ConstantInt())))
+  if (match(V, m_InsertElt(m_Value(), m_Value(), m_ConstantInt())))
     return IsConstantExtractIndex;
 
   if (match(V, m_OneUse(m_Load(m_Value()))))
@@ -189,8 +189,8 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
   if (NumSrcElts < NumElts) {
     Value *Scalar;
     uint64_t InsIndexC;
-    if (!match(X, m_InsertElement(m_Value(), m_Value(Scalar),
-                                  m_ConstantInt(InsIndexC))))
+    if (!match(X, m_InsertElt(m_Value(), m_Value(Scalar),
+                              m_ConstantInt(InsIndexC))))
       return nullptr;
 
     // The extract must be from the subset of vector elements that we inserted
@@ -847,7 +847,7 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
   // Check if the splat shuffle's input is the same as this insert's scalar op.
   Value *X = InsElt.getOperand(1);
   Value *Op0 = Shuf->getOperand(0);
-  if (!match(Op0, m_InsertElement(m_Undef(), m_Specific(X), m_ZeroInt())))
+  if (!match(Op0, m_InsertElt(m_Undef(), m_Specific(X), m_ZeroInt())))
     return nullptr;
 
   // Replace the shuffle mask element at the index of this insert with a zero.
@@ -885,7 +885,7 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
   // input vector.
   Value *Scalar = InsElt.getOperand(1);
   Value *X = Shuf->getOperand(0);
-  if (!match(Scalar, m_ExtractElement(m_Specific(X), m_SpecificInt(IdxC))))
+  if (!match(Scalar, m_ExtractElt(m_Specific(X), m_SpecificInt(IdxC))))
     return nullptr;
 
   // Replace the shuffle mask element at the index of this extract+insert with
@@ -1091,7 +1091,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   if (isa<FixedVectorType>(IE.getType()) &&
       match(IdxOp, m_ConstantInt(InsertedIdx)) &&
       match(ScalarOp,
-            m_ExtractElement(m_Value(ExtVecOp), m_ConstantInt(ExtractedIdx))) &&
+            m_ExtractElt(m_Value(ExtVecOp), m_ConstantInt(ExtractedIdx))) &&
       isa<FixedVectorType>(ExtVecOp->getType()) &&
       ExtractedIdx <
           cast<FixedVectorType>(ExtVecOp->getType())->getNumElements()) {
@@ -1553,8 +1553,8 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
   uint64_t IndexC;
 
   // Match a shuffle that is a splat to a non-zero element.
-  if (!match(Op0, m_OneUse(m_InsertElement(m_Undef(), m_Value(X),
-                                           m_ConstantInt(IndexC)))) ||
+  if (!match(Op0, m_OneUse(m_InsertElt(m_Undef(), m_Value(X),
+                                       m_ConstantInt(IndexC)))) ||
       !match(Op1, m_Undef()) || match(Mask, m_ZeroMask()) || IndexC == 0)
     return nullptr;
 
@@ -1766,7 +1766,7 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   // and have the same number of elements as this shuffle.
   unsigned NarrowNumElts = Shuf.getType()->getNumElements();
   Value *NarrowCond;
-  if (!match(Cond, m_OneUse(m_ShuffleVector(m_Value(NarrowCond), m_Undef()))) ||
+  if (!match(Cond, m_OneUse(m_Shuffle(m_Value(NarrowCond), m_Undef()))) ||
       cast<VectorType>(NarrowCond->getType())->getNumElements() !=
           NarrowNumElts ||
       !cast<ShuffleVectorInst>(Cond)->isIdentityWithPadding())
@@ -1788,7 +1788,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
 
   Value *X, *Y;
   ArrayRef<int> Mask;
-  if (!match(Op0, m_ShuffleVector(m_Value(X), m_Value(Y), m_Mask(Mask))))
+  if (!match(Op0, m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask))))
     return nullptr;
 
   // Be conservative with shuffle transforms. If we can't kill the 1st shuffle,
@@ -1842,12 +1842,12 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   // operand with the source vector of the insertelement.
   Value *X;
   uint64_t IdxC;
-  if (match(V0, m_InsertElement(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
+  if (match(V0, m_InsertElt(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
     // shuf (inselt X, ?, IdxC), ?, Mask --> shuf X, ?, Mask
     if (none_of(Mask, [IdxC](int MaskElt) { return MaskElt == (int)IdxC; }))
       return IC.replaceOperand(Shuf, 0, X);
   }
-  if (match(V1, m_InsertElement(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
+  if (match(V1, m_InsertElt(m_Value(X), m_Value(), m_ConstantInt(IdxC)))) {
     // Offset the index constant by the vector width because we are checking for
     // accesses to the 2nd vector input of the shuffle.
     IdxC += NumElts;
@@ -1859,8 +1859,8 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
   // shuffle (insert ?, Scalar, IndexC), V1, Mask --> insert V1, Scalar, IndexC'
   auto isShufflingScalarIntoOp1 = [&](Value *&Scalar, ConstantInt *&IndexC) {
     // We need an insertelement with a constant index.
-    if (!match(V0, m_InsertElement(m_Value(), m_Value(Scalar),
-                                   m_ConstantInt(IndexC))))
+    if (!match(V0, m_InsertElt(m_Value(), m_Value(Scalar),
+                               m_ConstantInt(IndexC))))
       return false;
 
     // Test the shuffle mask to see if it splices the inserted scalar into the
