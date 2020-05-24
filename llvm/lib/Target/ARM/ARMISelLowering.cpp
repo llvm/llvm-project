@@ -15897,8 +15897,8 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
       Shuffle = dyn_cast<Instruction>(Shuffle->getOperand(0));
     // We are looking for a splat that can be sunk.
     if (!Shuffle ||
-        !match(Shuffle, m_ShuffleVector(
-                            m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
+        !match(Shuffle, m_Shuffle(
+                            m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                             m_Undef(), m_ZeroMask())))
       continue;
     if (!IsSinker(I, OpIdx.index()))

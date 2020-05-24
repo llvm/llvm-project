@@ -1343,7 +1343,7 @@ inline OneOps_match<OpTy, Instruction::Freeze> m_Freeze(const OpTy &Op) {
 /// Matches InsertElementInst.
 template <typename Val_t, typename Elt_t, typename Idx_t>
 inline ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>
-m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
+m_InsertElt(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
   return ThreeOps_match<Val_t, Elt_t, Idx_t, Instruction::InsertElement>(
       Val, Elt, Idx);
 }
@@ -1351,7 +1351,7 @@ m_InsertElement(const Val_t &Val, const Elt_t &Elt, const Idx_t &Idx) {
 /// Matches ExtractElementInst.
 template <typename Val_t, typename Idx_t>
 inline TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>
-m_ExtractElement(const Val_t &Val, const Idx_t &Idx) {
+m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
@@ -1410,13 +1410,13 @@ struct m_SplatOrUndefMask {
 /// Matches ShuffleVectorInst independently of mask value.
 template <typename V1_t, typename V2_t>
 inline TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>
-m_ShuffleVector(const V1_t &v1, const V2_t &v2) {
+m_Shuffle(const V1_t &v1, const V2_t &v2) {
   return TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>(v1, v2);
 }
 
 template <typename V1_t, typename V2_t, typename Mask_t>
 inline Shuffle_match<V1_t, V2_t, Mask_t>
-m_ShuffleVector(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
+m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
   return Shuffle_match<V1_t, V2_t, Mask_t>(v1, v2, mask);
 }
 

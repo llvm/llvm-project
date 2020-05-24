@@ -1445,9 +1445,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // of the results.
   Value *L0, *L1, *R0, *R1;
   ArrayRef<int> Mask;
-  if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS,
-            m_ShuffleVector(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
       LHS->hasOneUse() && RHS->hasOneUse() &&
       cast<ShuffleVectorInst>(LHS)->isConcat() &&
       cast<ShuffleVectorInst>(RHS)->isConcat()) {
@@ -1481,9 +1480,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
   Value *V1, *V2;
-  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
-      match(RHS,
-            m_ShuffleVector(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
       V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
@@ -1493,9 +1491,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // If both arguments of a commutative binop are select-shuffles that use the
   // same mask with commuted operands, the shuffles are unnecessary.
   if (Inst.isCommutative() &&
-      match(LHS, m_ShuffleVector(m_Value(V1), m_Value(V2), m_Mask(Mask))) &&
-      match(RHS, m_ShuffleVector(m_Specific(V2), m_Specific(V1),
-                                 m_SpecificMask(Mask)))) {
+      match(LHS, m_Shuffle(m_Value(V1), m_Value(V2), m_Mask(Mask))) &&
+      match(RHS,
+            m_Shuffle(m_Specific(V2), m_Specific(V1), m_SpecificMask(Mask)))) {
     auto *LShuf = cast<ShuffleVectorInst>(LHS);
     auto *RShuf = cast<ShuffleVectorInst>(RHS);
     // TODO: Allow shuffles that contain undefs in the mask?
@@ -1523,9 +1521,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // transforms.
   unsigned NumElts = cast<FixedVectorType>(Inst.getType())->getNumElements();
   Constant *C;
-  if (match(&Inst, m_c_BinOp(m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(),
-                                                      m_Mask(Mask))),
-                             m_Constant(C))) &&
+  if (match(&Inst,
+            m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
+                      m_Constant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
@@ -1605,8 +1603,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     ArrayRef<int> MaskC;
     int SplatIndex;
     BinaryOperator *BO;
-    if (!match(LHS, m_OneUse(m_ShuffleVector(m_Value(X), m_Undef(),
-                                             m_Mask(MaskC)))) ||
+    if (!match(LHS,
+               m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(MaskC)))) ||
         !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
         X->getType() != Inst.getType() || !match(RHS, m_OneUse(m_BinOp(BO))) ||
         BO->getOpcode() != Opcode)

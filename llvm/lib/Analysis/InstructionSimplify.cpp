@@ -4310,7 +4310,7 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   // If we are extracting a value from a vector, then inserting it into the same
   // place, that's the input vector:
   // insertelt Vec, (extractelt Vec, Idx), Idx --> Vec
-  if (match(Val, m_ExtractElement(m_Specific(Vec), m_Specific(Idx))))
+  if (match(Val, m_ExtractElt(m_Specific(Vec), m_Specific(Idx))))
     return Vec;
 
   return nullptr;
@@ -4570,8 +4570,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // known at compile time for scalable vectors
   Constant *C;
   ConstantInt *IndexC;
-  if (!Scalable && match(Op0, m_InsertElement(m_Value(), m_Constant(C),
-                                              m_ConstantInt(IndexC)))) {
+  if (!Scalable && match(Op0, m_InsertElt(m_Value(), m_Constant(C),
+                                          m_ConstantInt(IndexC)))) {
     // Match a splat shuffle mask of the insert index allowing undef elements.
     int InsertIndex = IndexC->getZExtValue();
     if (all_of(Indices, [InsertIndex](int MaskElt) {

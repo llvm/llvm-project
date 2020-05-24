@@ -2826,7 +2826,7 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
 
   Value *Vec;
   ArrayRef<int> Mask;
-  if (match(BCSrcOp, m_ShuffleVector(m_Value(Vec), m_Undef(), m_Mask(Mask)))) {
+  if (match(BCSrcOp, m_Shuffle(m_Value(Vec), m_Undef(), m_Mask(Mask)))) {
     // Check whether every element of Mask is the same constant
     if (is_splat(Mask)) {
       auto *VecTy = cast<VectorType>(BCSrcOp->getType());
@@ -5393,14 +5393,14 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
 
   Value *V1, *V2;
   ArrayRef<int> M;
-  if (!match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Mask(M))))
+  if (!match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(M))))
     return nullptr;
 
   // If both arguments of the cmp are shuffles that use the same mask and
   // shuffle within a single vector, move the shuffle after the cmp:
   // cmp (shuffle V1, M), (shuffle V2, M) --> shuffle (cmp V1, V2), M
   Type *V1Ty = V1->getType();
-  if (match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_SpecificMask(M))) &&
+  if (match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(M))) &&
       V1Ty == V2->getType() && (LHS->hasOneUse() || RHS->hasOneUse())) {
     Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, V2)
                          : Builder.CreateICmp(Pred, V1, V2);

@@ -342,9 +342,9 @@ const llvm::Value *llvm::getSplatValue(const Value *V) {
 
   // shuf (inselt ?, Splat, 0), ?, <0, undef, 0, ...>
   Value *Splat;
-  if (match(V, m_ShuffleVector(
-                   m_InsertElement(m_Value(), m_Value(Splat), m_ZeroInt()),
-                   m_Value(), m_ZeroMask())))
+  if (match(V,
+            m_Shuffle(m_InsertElt(m_Value(), m_Value(Splat), m_ZeroInt()),
+                      m_Value(), m_ZeroMask())))
     return Splat;
 
   return nullptr;
