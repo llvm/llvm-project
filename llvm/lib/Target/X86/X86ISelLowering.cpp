@@ -39145,12 +39145,13 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return true;
   };
 
+  APInt DemandedBits(APInt::getSignMask(BitWidth));
+
   if (OnlyUsedAsSelectCond(Cond)) {
-    APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
-    if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
+    if (!TLI.SimplifyDemandedBits(Cond, DemandedBits, Known, TLO, 0, true))
       return SDValue();
 
     // If we changed the computation somewhere in the DAG, this change will
@@ -39172,10 +39173,9 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Otherwise we can still at least try to simplify multiple use bits.
-  APInt DemandedBits(APInt::getSignMask(BitWidth));
   if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedBits, DAG))
-    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
-                       N->getOperand(1), N->getOperand(2));
+      return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
+                         N->getOperand(1), N->getOperand(2));
 
   return SDValue();
 }
