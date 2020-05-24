@@ -4422,15 +4422,15 @@ void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
   // loop. This means that we can't just use the original 'cond' value.
   // We have to take the 'vectorized' value and pick the first lane.
   // Instcombine will make this a no-op.
-
-  auto *ScalarCond = State.get(Operands.getOperand(0), {0, 0});
+  auto *InvarCond =
+      InvariantCond ? State.get(Operands.getOperand(0), {0, 0}) : nullptr;
 
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *Cond = State.get(Operands.getOperand(0), Part);
+    Value *Cond =
+        InvarCond ? InvarCond : State.get(Operands.getOperand(0), Part);
     Value *Op0 = State.get(Operands.getOperand(1), Part);
     Value *Op1 = State.get(Operands.getOperand(2), Part);
-    Value *Sel =
-        Builder.CreateSelect(InvariantCond ? ScalarCond : Cond, Op0, Op1);
+    Value *Sel = Builder.CreateSelect(Cond, Op0, Op1);
     VectorLoopValueMap.setVectorValue(&I, Part, Sel);
     addMetadata(Sel, &I);
   }
