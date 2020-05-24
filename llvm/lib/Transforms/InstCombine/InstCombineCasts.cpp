@@ -1558,6 +1558,48 @@ static Type *getMinimumFPType(Value *V) {
   return V->getType();
 }
 
+/// Return true if the cast from integer to FP can be proven to be exact for all
+/// possible inputs (the conversion does not lose any precision).
+static bool isKnownExactCastIntToFP(CastInst &I) {
+  CastInst::CastOps Opcode = I.getOpcode();
+  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
+         "Unexpected cast");
+  Value *Src = I.getOperand(0);
+  Type *SrcTy = Src->getType();
+  Type *FPTy = I.getType();
+  bool IsSigned = Opcode == Instruction::SIToFP;
+  int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+
+  // Easy case - if the source integer type has less bits than the FP mantissa,
+  // then the cast must be exact.
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
+  if (SrcSize <= DestNumSigBits)
+    return true;
+
+  // Cast from FP to integer and back to FP is independent of the intermediate
+  // integer width because of poison on overflow.
+  Value *F;
+  if (match(Src, m_FPToSI(m_Value(F))) || match(Src, m_FPToUI(m_Value(F)))) {
+    // If this is uitofp (fptosi F), the source needs an extra bit to avoid
+    // potential rounding of negative FP input values.
+    int SrcNumSigBits = F->getType()->getFPMantissaWidth();
+    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
+      SrcNumSigBits++;
+
+    // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
+    // significant bits than the destination (and make sure neither type is
+    // weird -- ppc_fp128).
+    if (SrcNumSigBits > 0 && DestNumSigBits > 0 &&
+        SrcNumSigBits <= DestNumSigBits)
+      return true;
+  }
+
+  // TODO:
+  // Try harder to find if the source integer type has less significant bits.
+  // For example, compute number of sign bits or compute low bit mask.
+  return false;
+}
+
 Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
   if (Instruction *I = commonCastTransforms(FPT))
     return I;
@@ -1731,48 +1773,14 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
   if (Instruction *I = shrinkInsertElt(FPT, Builder))
     return I;
 
-  return nullptr;
-}
-
-/// Return true if the cast from integer to FP can be proven to be exact for all
-/// possible inputs (the conversion does not lose any precision).
-static bool isKnownExactCastIntToFP(CastInst &I) {
-  CastInst::CastOps Opcode = I.getOpcode();
-  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
-         "Unexpected cast");
-  Value *Src = I.getOperand(0);
-  Type *SrcTy = Src->getType();
-  Type *FPTy = I.getType();
-  bool IsSigned = Opcode == Instruction::SIToFP;
-  int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
-
-  // Easy case - if the source integer type has less bits than the FP mantissa,
-  // then the cast must be exact.
-  int DestNumSigBits = FPTy->getFPMantissaWidth();
-  if (SrcSize <= DestNumSigBits)
-    return true;
-
-  // Cast from FP to integer and back to FP is independent of the intermediate
-  // integer width because of poison on overflow.
-  Value *F;
-  if (match(Src, m_FPToSI(m_Value(F))) || match(Src, m_FPToUI(m_Value(F)))) {
-    // If this is uitofp (fptosi F), the source needs an extra bit to avoid
-    // potential rounding of negative FP input values.
-    int SrcNumSigBits = F->getType()->getFPMantissaWidth();
-    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
-      SrcNumSigBits++;
-
-    // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
-    // significant bits than the destination (and make sure neither type is
-    // weird -- ppc_fp128).
-    if (SrcNumSigBits > 0 && DestNumSigBits > 0 &&
-        SrcNumSigBits <= DestNumSigBits)
-      return true;
+  Value *Src = FPT.getOperand(0);
+  if (isa<SIToFPInst>(Src) || isa<UIToFPInst>(Src)) {
+    auto *FPCast = cast<CastInst>(Src);
+    if (isKnownExactCastIntToFP(*FPCast))
+      return CastInst::Create(FPCast->getOpcode(), FPCast->getOperand(0), Ty);
   }
 
-  // TODO:
-  // Try harder to find if the source integer type has less significant bits.
-  return false;
+  return nullptr;
 }
 
 Instruction *InstCombiner::visitFPExt(CastInst &FPExt) {
