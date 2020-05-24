@@ -62,8 +62,13 @@ static llvm::cl::opt<std::string>
 static llvm::cl::list<std::string>
     includeDirs("I", llvm::cl::desc("include search paths"));
 
-static llvm::cl::list<std::string>
-    moduleDirs("module", llvm::cl::desc("module search paths"));
+static llvm::cl::opt<std::string>
+    intrinsicModuleDir("intrinsic-module-directory",
+                llvm::cl::desc("intrinsic module directory"));
+
+static llvm::cl::opt<std::string>
+    moduleDir("module", llvm::cl::desc("module output directory (default .)"),
+                llvm::cl::init("."));
 
 static llvm::cl::opt<std::string>
     moduleSuffix("module-suffix", llvm::cl::desc("module file suffix override"),
@@ -271,8 +276,10 @@ int main(int argc, char **argv) {
 
   if (includeDirs.size() == 0)
     includeDirs.push_back(".");
-  if (moduleDirs.size() == 0)
-    moduleDirs.push_back(".");
+
+  if (!intrinsicModuleDir.empty()) {
+    includeDirs.insert(includeDirs.begin(), intrinsicModuleDir);
+  }
 
   Fortran::parser::Options options;
   options.predefinitions.emplace_back("__F18", "1");
@@ -287,7 +294,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::semantics::SemanticsContext semanticsContext{
       defaultKinds, options.features, allSources};
-  semanticsContext.set_moduleDirectory(moduleDirs.front())
+  semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)
       .set_warnOnNonstandardUsage(warnStdViolation)
