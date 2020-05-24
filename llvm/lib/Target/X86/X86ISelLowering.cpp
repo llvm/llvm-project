@@ -201,6 +201,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // For slow shld targets we only lower for code size.
     LegalizeAction ShiftDoubleAction = Subtarget.isSHLDSlow() ? Custom : Legal;
 
+    setOperationAction(ShiftOp             , MVT::i8   , Custom);
     setOperationAction(ShiftOp             , MVT::i16  , Custom);
     setOperationAction(ShiftOp             , MVT::i32  , ShiftDoubleAction);
     if (Subtarget.is64Bit())
@@ -19074,13 +19075,36 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(IsFSHR ? X86ISD::VSHRDV : X86ISD::VSHLDV, DL, VT,
                        Op0, Op1, Amt);
   }
-
-  assert((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-         "Unexpected funnel shift type!");
+  assert(
+      (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+      "Unexpected funnel shift type!");
 
   // Expand slow SHLD/SHRD cases if we are not optimizing for size.
   bool OptForSize = DAG.shouldOptForSize();
-  if (!OptForSize && Subtarget.isSHLDSlow())
+  bool ExpandFunnel = !OptForSize && Subtarget.isSHLDSlow();
+
+  // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
+  // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))) >> bw.
+  if ((VT == MVT::i8 || (ExpandFunnel && VT == MVT::i16)) &&
+      !isa<ConstantSDNode>(Amt)) {
+    unsigned EltSizeInBits = VT.getScalarSizeInBits();
+    SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, Amt.getValueType());
+    SDValue HiShift = DAG.getConstant(EltSizeInBits, DL, Amt.getValueType());
+    Op0 = DAG.getAnyExtOrTrunc(Op0, DL, MVT::i32);
+    Op1 = DAG.getZExtOrTrunc(Op1, DL, MVT::i32);
+    Amt = DAG.getNode(ISD::AND, DL, Amt.getValueType(), Amt, Mask);
+    SDValue Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Op0, HiShift);
+    Res = DAG.getNode(ISD::OR, DL, MVT::i32, Res, Op1);
+    if (IsFSHR) {
+      Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, Amt);
+    } else {
+      Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Res, Amt);
+      Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, HiShift);
+    }
+    return DAG.getZExtOrTrunc(Res, DL, VT);
+  }
+
+  if (VT == MVT::i8 || ExpandFunnel)
     return SDValue();
 
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
