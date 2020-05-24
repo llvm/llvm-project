@@ -1780,6 +1780,8 @@ def RFEBB : XLForm_S<19, 146, (outs), (ins u1imm:$imm), "rfebb $imm",
                      IIC_BrB, [(PPCrfebb (i32 imm:$imm))]>,
                      PPC970_DGroup_Single;
 
+def : InstAlias<"rfebb", (RFEBB 1)>;
+
 // DCB* instructions.
 def DCBA   : DCB_Form<758, 0, (outs), (ins memrr:$dst), "dcba $dst",
                       IIC_LdStDCBF, [(int_ppc_dcba xoaddr:$dst)]>,
@@ -2392,6 +2394,9 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
 }
 }
 
+def : InstAlias<"li $rD, $imm", (ADDI gprc:$rD, ZERO, s16imm:$imm)>;
+def : InstAlias<"lis $rD, $imm", (ADDIS gprc:$rD, ZERO, s17imm:$imm)>;
+
 let PPC970_Unit = 1 in {  // FXU Operations.
 let Defs = [CR0] in {
 def ANDI_rec : DForm_4<28, (outs gprc:$dst), (ins gprc:$src1, u16imm:$src2),
@@ -2479,6 +2484,14 @@ defm SRAW : XForm_6rc<31, 792, (outs gprc:$rA), (ins gprc:$rS, gprc:$rB),
                       "sraw", "$rA, $rS, $rB", IIC_IntShift,
                       [(set i32:$rA, (PPCsra i32:$rS, i32:$rB))]>;
 }
+
+def : InstAlias<"mr $rA, $rB", (OR gprc:$rA, gprc:$rB, gprc:$rB)>;
+def : InstAlias<"mr. $rA, $rB", (OR_rec gprc:$rA, gprc:$rB, gprc:$rB)>;
+
+def : InstAlias<"not $rA, $rS", (NOR gprc:$rA, gprc:$rS, gprc:$rS)>;
+def : InstAlias<"not. $rA, $rS", (NOR_rec gprc:$rA, gprc:$rS, gprc:$rS)>;
+
+def : InstAlias<"nop", (ORI R0, R0, 0)>;
 
 let PPC970_Unit = 1 in {  // FXU Operations.
 let hasSideEffects = 0 in {
@@ -2847,6 +2860,8 @@ def MCRXRX : X_BF3<31, 576, (outs crrc:$BF), (ins),
                    "mcrxrx $BF", IIC_BrMCRX>, Requires<[IsISA3_0]>;
 } // hasSideEffects = 0
 
+def : InstAlias<"mtcr $rA", (MTCRF 255, gprc:$rA)>;
+
 let Predicates = [HasFPU] in {
 // Custom inserter instruction to perform FADD in round-to-zero mode.
 let Uses = [RM] in {
@@ -2991,6 +3006,11 @@ defm SUBFZE : XOForm_3rc<31, 200, 0, (outs gprc:$rT), (ins gprc:$rA),
                          [(set i32:$rT, (sube 0, i32:$rA))]>;
 }
 }
+
+def : InstAlias<"sub $rA, $rB, $rC", (SUBF gprc:$rA, gprc:$rC, gprc:$rB)>;
+def : InstAlias<"sub. $rA, $rB, $rC", (SUBF_rec gprc:$rA, gprc:$rC, gprc:$rB)>;
+def : InstAlias<"subc $rA, $rB, $rC", (SUBFC gprc:$rA, gprc:$rC, gprc:$rB)>;
+def : InstAlias<"subc. $rA, $rB, $rC", (SUBFC_rec gprc:$rA, gprc:$rC, gprc:$rB)>;
 
 // A-Form instructions.  Most of the instructions executed in the FPU are of
 // this type.
@@ -4689,6 +4709,13 @@ def CLRLSLWI : PPCAsmPseudo<"clrlslwi $rA, $rS, $b, $n",
 def CLRLSLWI_rec : PPCAsmPseudo<"clrlslwi. $rA, $rS, $b, $n",
                              (ins gprc:$rA, gprc:$rS, u5imm:$b, u5imm:$n)>;
 
+def : InstAlias<"isellt $rT, $rA, $rB",
+                (ISEL gprc:$rT, gprc_nor0:$rA, gprc:$rB, CR0LT)>;
+def : InstAlias<"iselgt $rT, $rA, $rB",
+                (ISEL gprc:$rT, gprc_nor0:$rA, gprc:$rB, CR0GT)>;
+def : InstAlias<"iseleq $rT, $rA, $rB",
+                (ISEL gprc:$rT, gprc_nor0:$rA, gprc:$rB, CR0EQ)>;
+
 def : InstAlias<"rotlwi $rA, $rS, $n", (RLWINM gprc:$rA, gprc:$rS, u5imm:$n, 0, 31)>;
 def : InstAlias<"rotlwi. $rA, $rS, $n", (RLWINM_rec gprc:$rA, gprc:$rS, u5imm:$n, 0, 31)>;
 def : InstAlias<"rotlw $rA, $rS, $rB", (RLWNM gprc:$rA, gprc:$rS, gprc:$rB, 0, 31)>;
@@ -4737,6 +4764,8 @@ def CLRLSLDI_rec : PPCAsmPseudo<"clrlsldi. $rA, $rS, $b, $n",
 def SUBPCIS : PPCAsmPseudo<"subpcis $RT, $D", (ins g8rc:$RT, s16imm:$D)>;
 
 def : InstAlias<"rotldi $rA, $rS, $n", (RLDICL g8rc:$rA, g8rc:$rS, u6imm:$n, 0)>;
+def : InstAlias<"rotldi $rA, $rS, $n",
+                (RLDICL_32_64 g8rc:$rA, gprc:$rS, u6imm:$n, 0)>;
 def : InstAlias<"rotldi. $rA, $rS, $n", (RLDICL_rec g8rc:$rA, g8rc:$rS, u6imm:$n, 0)>;
 def : InstAlias<"rotld $rA, $rS, $rB", (RLDCL g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"rotld. $rA, $rS, $rB", (RLDCL_rec g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
@@ -4934,6 +4963,8 @@ def : InstAlias<"cmpi $bf, 1, $rA, $imm", (CMPDI crrc:$bf, g8rc:$rA, s16imm64:$i
 def : InstAlias<"cmp $bf, 1, $rA, $rB", (CMPD crrc:$bf, g8rc:$rA, g8rc:$rB)>;
 def : InstAlias<"cmpli $bf, 1, $rA, $imm", (CMPLDI crrc:$bf, g8rc:$rA, u16imm64:$imm)>;
 def : InstAlias<"cmpl $bf, 1, $rA, $rB", (CMPLD crrc:$bf, g8rc:$rA, g8rc:$rB)>;
+
+def : InstAlias<"trap", (TW 31, R0, R0)>;
 
 multiclass TrapExtendedMnemonic<string name, int to> {
   def : InstAlias<"td"#name#"i $rA, $imm", (TDI to, g8rc:$rA, s16imm:$imm)>;

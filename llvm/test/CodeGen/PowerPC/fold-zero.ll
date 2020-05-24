@@ -10,7 +10,7 @@ define i32 @test1(i1 %a, i32 %c) nounwind  {
 
 ; CHECK-LABEL: @test1
 ; CHECK-NOT: li {{[0-9]+}}, 0
-; CHECK: isel 3, 0,
+; CHECK: iseleq 3, 0,
 ; CHECK: blr
 ; CHECK-NO-ISEL-LABEL: @test1
 ; CHECK-NO-ISEL: li 3, 0
@@ -27,14 +27,14 @@ define i32 @test2(i1 %a, i32 %c) nounwind  {
 
 ; CHECK-CRB-LABEL: @test2
 ; CHECK-CRB-NOT: li {{[0-9]+}}, 0
-; CHECK-CRB: isel 3, 0,
+; CHECK-CRB: iselgt 3, 0,
 ; CHECK-CRB: blr
 ; CHECK-NO-ISEL-LABEL: @test2
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: ori 3, 4, 0
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK-NO-ISEL-NEXT: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi 3, 0, 0
+; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK-NO-ISEL-NEXT: blr
 }
 
