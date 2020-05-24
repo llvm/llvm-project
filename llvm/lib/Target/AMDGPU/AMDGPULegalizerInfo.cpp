@@ -114,6 +114,23 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
   };
 }
 
+static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned Size = Ty.getSizeInBits();
+
+    LLT CoercedTy;
+    if (Size < 32) {
+      // <2 x s8> -> s16
+      assert(Size == 16);
+      CoercedTy = LLT::scalar(16);
+    } else
+      CoercedTy = LLT::scalarOrVector(Size / 32, 32);
+
+    return std::make_pair(TypeIdx, CoercedTy);
+  };
+}
+
 static LegalityPredicate vectorSmallerThan(unsigned TypeIdx, unsigned Size) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
@@ -135,19 +152,37 @@ static LegalityPredicate numElementsNotEven(unsigned TypeIdx) {
   };
 }
 
+static bool isRegisterSize(unsigned Size) {
+  return Size % 32 == 0 && Size <= 1024;
+}
+
+static bool isRegisterVectorElementType(LLT EltTy) {
+  const int EltSize = EltTy.getSizeInBits();
+  return EltSize == 16 || EltSize % 32 == 0;
+}
+
+static bool isRegisterVectorType(LLT Ty) {
+  const int EltSize = Ty.getElementType().getSizeInBits();
+  return EltSize == 32 || EltSize == 64 ||
+         (EltSize == 16 && Ty.getNumElements() % 2 == 0) ||
+         EltSize == 128 || EltSize == 256;
+}
+
+static bool isRegisterType(LLT Ty) {
+  if (!isRegisterSize(Ty.getSizeInBits()))
+    return false;
+
+  if (Ty.isVector())
+    return isRegisterVectorType(Ty);
+
+  return true;
+}
+
 // Any combination of 32 or 64-bit elements up to 1024 bits, and multiples of
 // v2s16.
 static LegalityPredicate isRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    const LLT Ty = Query.Types[TypeIdx];
-    if (Ty.isVector()) {
-      const int EltSize = Ty.getElementType().getSizeInBits();
-      return EltSize == 32 || EltSize == 64 ||
-            (EltSize == 16 && Ty.getNumElements() % 2 == 0) ||
-             EltSize == 128 || EltSize == 256;
-    }
-
-    return Ty.getSizeInBits() % 32 == 0 && Ty.getSizeInBits() <= 1024;
+    return isRegisterType(Query.Types[TypeIdx]);
   };
 }
 
@@ -167,6 +202,102 @@ static LegalityPredicate isWideScalarTruncStore(unsigned TypeIdx) {
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
            Query.MMODescrs[0].SizeInBits < Ty.getSizeInBits();
   };
+}
+
+// TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
+// handle some operations by just promoting the register during
+// selection. There are also d16 loads on GFX9+ which preserve the high bits.
+static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
+                                    bool IsLoad) {
+  switch (AS) {
+  case AMDGPUAS::PRIVATE_ADDRESS:
+    // FIXME: Private element size.
+    return 32;
+  case AMDGPUAS::LOCAL_ADDRESS:
+    return ST.useDS128() ? 128 : 64;
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    // Treat constant and global as identical. SMRD loads are sometimes usable for
+    // global loads (ideally constant address space should be eliminated)
+    // depending on the context. Legality cannot be context dependent, but
+    // RegBankSelect can split the load as necessary depending on the pointer
+    // register bank/uniformity and if the memory is invariant or not written in a
+    // kernel.
+    return IsLoad ? 512 : 128;
+  default:
+    // Flat addresses may contextually need to be split to 32-bit parts if they
+    // may alias scratch depending on the subtarget.
+    return 128;
+  }
+}
+
+static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
+                                 const LegalityQuery &Query,
+                                 unsigned Opcode) {
+  const LLT Ty = Query.Types[0];
+
+  // Handle G_LOAD, G_ZEXTLOAD, G_SEXTLOAD
+  const bool IsLoad = Opcode != AMDGPU::G_STORE;
+
+  unsigned RegSize = Ty.getSizeInBits();
+  unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+  unsigned Align = Query.MMODescrs[0].AlignInBits;
+  unsigned AS = Query.Types[1].getAddressSpace();
+
+  // All of these need to be custom lowered to cast the pointer operand.
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    return false;
+
+  // TODO: We should be able to widen loads if the alignment is high enough, but
+  // we also need to modify the memory access size.
+#if 0
+  // Accept widening loads based on alignment.
+  if (IsLoad && MemSize < Size)
+    MemSize = std::max(MemSize, Align);
+#endif
+
+  // Only 1-byte and 2-byte to 32-bit extloads are valid.
+  if (MemSize != RegSize && RegSize != 32)
+    return false;
+
+  if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad))
+    return false;
+
+  switch (MemSize) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+  case 128:
+    break;
+  case 96:
+    if (!ST.hasDwordx3LoadStores())
+      return false;
+    break;
+  case 256:
+  case 512:
+    // These may contextually need to be broken down.
+    break;
+  default:
+    return false;
+  }
+
+  assert(RegSize >= MemSize);
+
+  if (Align < MemSize) {
+    const SITargetLowering *TLI = ST.getTargetLowering();
+    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8))
+      return false;
+  }
+
+  return true;
+}
+
+static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query,
+                             unsigned Opcode) {
+  const LLT Ty = Query.Types[0];
+  return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query, Opcode);
 }
 
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
@@ -711,32 +842,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .custom();
 
-  // TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
-  // handle some operations by just promoting the register during
-  // selection. There are also d16 loads on GFX9+ which preserve the high bits.
-  auto maxSizeForAddrSpace = [this](unsigned AS, bool IsLoad) -> unsigned {
-    switch (AS) {
-    // FIXME: Private element size.
-    case AMDGPUAS::PRIVATE_ADDRESS:
-      return 32;
-    // FIXME: Check subtarget
-    case AMDGPUAS::LOCAL_ADDRESS:
-      return ST.useDS128() ? 128 : 64;
-
-    // Treat constant and global as identical. SMRD loads are sometimes usable
-    // for global loads (ideally constant address space should be eliminated)
-    // depending on the context. Legality cannot be context dependent, but
-    // RegBankSelect can split the load as necessary depending on the pointer
-    // register bank/uniformity and if the memory is invariant or not written in
-    // a kernel.
-    case AMDGPUAS::CONSTANT_ADDRESS:
-    case AMDGPUAS::GLOBAL_ADDRESS:
-      return IsLoad ? 512 : 128;
-    default:
-      return 128;
-    }
-  };
-
   const auto needToSplitMemOp = [=](const LegalityQuery &Query,
                                     bool IsLoad) -> bool {
     const LLT DstTy = Query.Types[0];
@@ -753,7 +858,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     const LLT PtrTy = Query.Types[1];
     unsigned AS = PtrTy.getAddressSpace();
-    if (MemSize > maxSizeForAddrSpace(AS, IsLoad))
+    if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad))
       return true;
 
     // Catch weird sized loads that don't evenly divide into the access sizes
@@ -776,7 +881,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     return false;
   };
 
-  const auto shouldWidenLoadResult = [=](const LegalityQuery &Query) -> bool {
+  const auto shouldWidenLoadResult = [=](const LegalityQuery &Query,
+                                         unsigned Opc) -> bool {
     unsigned Size = Query.Types[0].getSizeInBits();
     if (isPowerOf2_32(Size))
       return false;
@@ -785,7 +891,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       return false;
 
     unsigned AddrSpace = Query.Types[1].getAddressSpace();
-    if (Size >= maxSizeForAddrSpace(AddrSpace, true))
+    if (Size >= maxSizeForAddrSpace(ST, AddrSpace, Opc))
       return false;
 
     unsigned Align = Query.MMODescrs[0].AlignInBits;
@@ -805,12 +911,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     const bool IsStore = Op == G_STORE;
 
     auto &Actions = getActionDefinitionsBuilder(Op);
-    // Whitelist the common cases.
-    // TODO: Loads to s16 on gfx9
+    // Whitelist some common cases.
+    // TODO: Does this help compile time at all?
     Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, 32, GlobalAlign32},
                                       {V2S32, GlobalPtr, 64, GlobalAlign32},
                                       {V4S32, GlobalPtr, 128, GlobalAlign32},
-                                      {S128, GlobalPtr, 128, GlobalAlign32},
                                       {S64, GlobalPtr, 64, GlobalAlign32},
                                       {V2S64, GlobalPtr, 128, GlobalAlign32},
                                       {V2S16, GlobalPtr, 32, GlobalAlign32},
@@ -829,29 +934,49 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {S32, PrivatePtr, 16, 16},
                                       {V2S16, PrivatePtr, 32, 32},
 
-                                      {S32, FlatPtr, 32, GlobalAlign32},
-                                      {S32, FlatPtr, 16, GlobalAlign16},
-                                      {S32, FlatPtr, 8, GlobalAlign8},
-                                      {V2S16, FlatPtr, 32, GlobalAlign32},
-
                                       {S32, ConstantPtr, 32, GlobalAlign32},
                                       {V2S32, ConstantPtr, 64, GlobalAlign32},
                                       {V4S32, ConstantPtr, 128, GlobalAlign32},
                                       {S64, ConstantPtr, 64, GlobalAlign32},
-                                      {S128, ConstantPtr, 128, GlobalAlign32},
                                       {V2S32, ConstantPtr, 32, GlobalAlign32}});
+    Actions.legalIf(
+      [=](const LegalityQuery &Query) -> bool {
+        return isLoadStoreLegal(ST, Query, Op);
+      });
+
+    // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
+    // 64-bits.
+    //
+    // TODO: Should generalize bitcast action into coerce, which will also cover
+    // inserting addrspacecasts.
+    Actions.customIf(typeIs(1, Constant32Ptr));
+
+    // Turn any illegal element vectors into something easier to deal
+    // with. These will ultimately produce 32-bit scalar shifts to extract the
+    // parts anyway.
+    //
+    // For odd 16-bit element vectors, prefer to split those into pieces with
+    // 16-bit vector parts.
+    Actions.bitcastIf(
+      [=](const LegalityQuery &Query) -> bool {
+        LLT Ty = Query.Types[0];
+        return Ty.isVector() &&
+               isRegisterSize(Ty.getSizeInBits()) &&
+               !isRegisterVectorElementType(Ty.getElementType());
+      }, bitcastToRegisterType(0));
+
     Actions
         .customIf(typeIs(1, Constant32Ptr))
         // Widen suitably aligned loads by loading extra elements.
         .moreElementsIf([=](const LegalityQuery &Query) {
             const LLT Ty = Query.Types[0];
             return Op == G_LOAD && Ty.isVector() &&
-                   shouldWidenLoadResult(Query);
+                   shouldWidenLoadResult(Query, Op);
           }, moreElementsToNextPow2(0))
         .widenScalarIf([=](const LegalityQuery &Query) {
             const LLT Ty = Query.Types[0];
             return Op == G_LOAD && !Ty.isVector() &&
-                   shouldWidenLoadResult(Query);
+                   shouldWidenLoadResult(Query, Op);
           }, widenScalarOrEltToNextPow2(0))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
@@ -883,7 +1008,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 return std::make_pair(0, LLT::scalar(32 * (DstSize / 32)));
               }
 
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+              unsigned MaxSize = maxSizeForAddrSpace(ST,
+                                                     PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
               if (MemSize > MaxSize)
                 return std::make_pair(0, LLT::scalar(MaxSize));
@@ -901,7 +1027,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               const LLT PtrTy = Query.Types[1];
 
               LLT EltTy = DstTy.getElementType();
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+              unsigned MaxSize = maxSizeForAddrSpace(ST,
+                                                     PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
 
               // FIXME: Handle widened to power of 2 results better. This ends
@@ -963,37 +1090,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // TODO: Need a bitcast lower option?
     Actions
-        .legalIf([=](const LegalityQuery &Query) {
-          const LLT Ty0 = Query.Types[0];
-          unsigned Size = Ty0.getSizeInBits();
-          unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-          unsigned Align = Query.MMODescrs[0].AlignInBits;
-
-          // FIXME: Widening store from alignment not valid.
-          if (MemSize < Size)
-            MemSize = std::max(MemSize, Align);
-
-          // No extending vector loads.
-          if (Size > MemSize && Ty0.isVector())
-            return false;
-
-          switch (MemSize) {
-          case 8:
-          case 16:
-            return Size == 32;
-          case 32:
-          case 64:
-          case 128:
-            return true;
-          case 96:
-            return ST.hasDwordx3LoadStores();
-          case 256:
-          case 512:
-            return true;
-          default:
-            return false;
-          }
-        })
         .widenScalarToNextPow2(0)
         .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0));
   }
