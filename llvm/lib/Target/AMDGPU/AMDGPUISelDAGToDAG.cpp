@@ -1482,22 +1482,26 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
   Rsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
 
   if (ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
-    unsigned Imm = CAddr->getZExtValue();
+    int64_t Imm = CAddr->getSExtValue();
+    const int64_t NullPtr =
+        AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS);
+    // Don't fold null pointer.
+    if (Imm != NullPtr) {
+      SDValue HighBits = CurDAG->getTargetConstant(Imm & ~4095, DL, MVT::i32);
+      MachineSDNode *MovHighBits = CurDAG->getMachineNode(
+        AMDGPU::V_MOV_B32_e32, DL, MVT::i32, HighBits);
+      VAddr = SDValue(MovHighBits, 0);
 
-    SDValue HighBits = CurDAG->getTargetConstant(Imm & ~4095, DL, MVT::i32);
-    MachineSDNode *MovHighBits = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
-                                                        DL, MVT::i32, HighBits);
-    VAddr = SDValue(MovHighBits, 0);
-
-    // In a call sequence, stores to the argument stack area are relative to the
-    // stack pointer.
-    const MachinePointerInfo &PtrInfo = cast<MemSDNode>(Parent)->getPointerInfo();
-
-    SOffset = isStackPtrRelative(PtrInfo)
-                  ? CurDAG->getRegister(Info->getStackPtrOffsetReg(), MVT::i32)
-                  : CurDAG->getTargetConstant(0, DL, MVT::i32);
-    ImmOffset = CurDAG->getTargetConstant(Imm & 4095, DL, MVT::i16);
-    return true;
+      // In a call sequence, stores to the argument stack area are relative to the
+      // stack pointer.
+      const MachinePointerInfo &PtrInfo
+        = cast<MemSDNode>(Parent)->getPointerInfo();
+      SOffset = isStackPtrRelative(PtrInfo)
+        ? CurDAG->getRegister(Info->getStackPtrOffsetReg(), MVT::i32)
+        : CurDAG->getTargetConstant(0, DL, MVT::i32);
+      ImmOffset = CurDAG->getTargetConstant(Imm & 4095, DL, MVT::i16);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
