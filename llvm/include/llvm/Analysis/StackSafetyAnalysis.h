@@ -35,7 +35,7 @@ public:
   const InfoTy &getInfo() const { return *Info; }
 
   // TODO: Add useful for client methods.
-  void print(raw_ostream &O) const;
+  void print(raw_ostream &O, const GlobalValue &F) const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -60,6 +60,7 @@ public:
 /// StackSafetyInfo wrapper for the legacy pass manager
 class StackSafetyInfoWrapperPass : public FunctionPass {
   Optional<StackSafetyInfo> SSI;
+  const Function *F = nullptr;
 
 public:
   static char ID;
