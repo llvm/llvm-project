@@ -121,7 +121,7 @@
 
 # CHECK-NEXT: mflr 12
 # CHECK-NEXT: mtlr 0
-# CHECK-NEXT: subf 11, 12, 11
+# CHECK-NEXT: sub 11, 11, 12
 
 ## Operand of lwz in -pie mode: &.got[1] - 0x100a8 = 0x20088+4 - 0x100a8 = 65536*1-28
 # CHECK-NEXT:  addis 12, 12, 1

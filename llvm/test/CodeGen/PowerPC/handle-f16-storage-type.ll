@@ -1267,7 +1267,7 @@ define half @PR40273(half) #0 {
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    cmplwi r3, 0
 ; SOFT-NEXT:    lis r3, 16256
-; SOFT-NEXT:    isel r3, 0, r3, eq
+; SOFT-NEXT:    iseleq r3, 0, r3
 ; SOFT-NEXT:    bl __gnu_f2h_ieee
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    addi r1, r1, 32

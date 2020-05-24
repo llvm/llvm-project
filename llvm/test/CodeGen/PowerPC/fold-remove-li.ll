@@ -13,7 +13,7 @@ define dso_local signext i32 @redunLoadImm(%0* %arg) {
 ; CHECK-LABEL: redunLoadImm:
 ; verify that the load immediate has been folded into the isel and deleted
 ; CHECK-NOT:   li r[[REG1:[0-9]+]], 0
-; CHECK:       isel r[[REG2:[0-9]+]], 0, r[[REG3:[0-9]+]], eq
+; CHECK:       iseleq r[[REG2:[0-9]+]], 0, r[[REG3:[0-9]+]]
 
 bb:
   %tmp = icmp eq %0* %arg, null

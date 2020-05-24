@@ -15,11 +15,11 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    clrldi 4, 3, 32
 ; CHECK-NEXT:    cmplwi 3, 1
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    isel 3, 4, 3, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
 ; CHECK-NEXT:    li 4, 2
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    cmpldi 3, 2
-; CHECK-NEXT:    isel 3, 3, 4, 0
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    li 5, 0
@@ -44,7 +44,7 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    bdz .LBB0_4
-; CHECK-NEXT:  .LBB0_3: #
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    clrldi 10, 8, 32
 ; CHECK-NEXT:    cntlzw 9, 6
 ; CHECK-NEXT:    xori 6, 5, 84

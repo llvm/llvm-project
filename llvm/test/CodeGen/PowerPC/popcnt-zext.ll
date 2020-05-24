@@ -15,7 +15,7 @@ define i16 @zpop_i8_i16(i8 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -51,7 +51,7 @@ define i16 @popz_i8_i16(i8 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -87,7 +87,7 @@ define i32 @zpop_i8_i32(i8 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -123,7 +123,7 @@ define i32 @popz_i8_32(i8 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -159,7 +159,7 @@ define i32 @zpop_i16_i32(i16 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -195,7 +195,7 @@ define i32 @popz_i16_32(i16 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -271,7 +271,7 @@ define i64 @popz_i32_i64(i32 %x) {
 ; SLOW-NEXT:    andi. 5, 5, 21845
 ; SLOW-NEXT:    or 5, 5, 6
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 5, 3
+; SLOW-NEXT:    sub 3, 3, 5
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
@@ -308,7 +308,7 @@ define i64 @popa_i16_i64(i16 %x) {
 ; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
-; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    sub 3, 5, 3
 ; SLOW-NEXT:    ori 4, 4, 13107
 ; SLOW-NEXT:    rotlwi 5, 3, 30
 ; SLOW-NEXT:    and 3, 3, 4
