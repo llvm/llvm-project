@@ -823,15 +823,17 @@ private:
   /// Hold the select to be widened.
   SelectInst &Ingredient;
 
-  /// Is the condition of the select loop invariant?
-  bool InvariantCond;
-
   /// Hold VPValues for the operands of the select.
   VPUser User;
 
+  /// Is the condition of the select loop invariant?
+  bool InvariantCond;
+
 public:
-  VPWidenSelectRecipe(SelectInst &I, bool InvariantCond)
-      : VPRecipeBase(VPWidenSelectSC), Ingredient(I),
+  template <typename IterT>
+  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
+                      bool InvariantCond)
+      : VPRecipeBase(VPWidenSelectSC), Ingredient(I), User(Operands),
         InvariantCond(InvariantCond) {}
 
   ~VPWidenSelectRecipe() override = default;
