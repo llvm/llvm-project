@@ -445,7 +445,7 @@ private:
 
   /// Perform a zero-allocation check.
   ///
-  /// \param [in] E The expression that allocates memory.
+  /// \param [in] Call The expression that allocates memory.
   /// \param [in] IndexOfSizeArg Index of the argument that specifies the size
   ///   of the memory that needs to be allocated. E.g. for malloc, this would be
   ///   0.
@@ -469,7 +469,7 @@ private:
   ///   - first: name of the resource (e.g. 'malloc')
   ///   - (OPTIONAL) second: size of the allocated region
   ///
-  /// \param [in] CE The expression that allocates memory.
+  /// \param [in] Call The expression that allocates memory.
   /// \param [in] Att The ownership_returns attribute.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \returns The ProgramState right after allocation.
@@ -480,7 +480,7 @@ private:
 
   /// Models memory allocation.
   ///
-  /// \param [in] CE The expression that allocates memory.
+  /// \param [in] Call The expression that allocates memory.
   /// \param [in] SizeEx Size of the memory that needs to be allocated.
   /// \param [in] Init The value the allocated memory needs to be initialized.
   /// with. For example, \c calloc initializes the allocated memory to 0,
@@ -495,7 +495,7 @@ private:
 
   /// Models memory allocation.
   ///
-  /// \param [in] CE The expression that allocates memory.
+  /// \param [in] Call The expression that allocates memory.
   /// \param [in] Size Size of the memory that needs to be allocated.
   /// \param [in] Init The value the allocated memory needs to be initialized.
   /// with. For example, \c calloc initializes the allocated memory to 0,
@@ -532,7 +532,7 @@ private:
   ///   - first: name of the resource (e.g. 'malloc')
   ///   - second: index of the parameter the attribute applies to
   ///
-  /// \param [in] CE The expression that frees memory.
+  /// \param [in] Call The expression that frees memory.
   /// \param [in] Att The ownership_takes or ownership_holds attribute.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \returns The ProgramState right after deallocation.
@@ -543,7 +543,7 @@ private:
 
   /// Models memory deallocation.
   ///
-  /// \param [in] CE The expression that frees memory.
+  /// \param [in] Call The expression that frees memory.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \param [in] Num Index of the argument that needs to be freed. This is
   ///   normally 0, but for custom free functions it may be different.
@@ -570,7 +570,7 @@ private:
   /// Models memory deallocation.
   ///
   /// \param [in] ArgExpr The variable who's pointee needs to be freed.
-  /// \param [in] ParentExpr The expression that frees the memory.
+  /// \param [in] Call The expression that frees the memory.
   /// \param [in] State The \c ProgramState right before allocation.
   ///   normally 0, but for custom free functions it may be different.
   /// \param [in] Hold Whether the parameter at \p Index has the ownership_holds
@@ -599,7 +599,7 @@ private:
   //
   /// Models memory reallocation.
   ///
-  /// \param [in] CE The expression that reallocated memory
+  /// \param [in] Call The expression that reallocated memory
   /// \param [in] ShouldFreeOnFail Whether if reallocation fails, the supplied
   ///   memory should be freed.
   /// \param [in] State The \c ProgramState right before reallocation.
@@ -623,7 +623,7 @@ private:
 
   /// Models zero initialized array allocation.
   ///
-  /// \param [in] CE The expression that reallocated memory
+  /// \param [in] Call The expression that reallocated memory
   /// \param [in] State The \c ProgramState right before reallocation.
   /// \returns The ProgramState right after allocation.
   LLVM_NODISCARD

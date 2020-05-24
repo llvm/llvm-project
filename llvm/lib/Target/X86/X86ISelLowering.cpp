@@ -1798,12 +1798,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SELECT,             VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Custom);
     }
 
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v32i1, Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v64i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i1, Custom);
     for (auto VT : { MVT::v16i1, MVT::v32i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
@@ -39147,12 +39145,13 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return true;
   };
 
+  APInt DemandedBits(APInt::getSignMask(BitWidth));
+
   if (OnlyUsedAsSelectCond(Cond)) {
-    APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
-    if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
+    if (!TLI.SimplifyDemandedBits(Cond, DemandedBits, Known, TLO, 0, true))
       return SDValue();
 
     // If we changed the computation somewhere in the DAG, this change will
@@ -39174,10 +39173,9 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Otherwise we can still at least try to simplify multiple use bits.
-  APInt DemandedBits(APInt::getSignMask(BitWidth));
   if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedBits, DAG))
-    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
-                       N->getOperand(1), N->getOperand(2));
+      return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
+                         N->getOperand(1), N->getOperand(2));
 
   return SDValue();
 }
