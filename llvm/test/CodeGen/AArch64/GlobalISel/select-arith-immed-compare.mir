@@ -462,7 +462,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm -2147483648
-    ; CHECK: $wzr = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
     ; CHECK: [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[CSINCWr]], 0
     ; CHECK: $w0 = COPY [[ANDWri]]
@@ -498,7 +498,7 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -9223372036854775808
-    ; CHECK: $xzr = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
     ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[CSINCWr]], %subreg.sub_32
@@ -537,7 +537,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 2147483647
-    ; CHECK: $wzr = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; CHECK: [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[CSINCWr]], 0
     ; CHECK: $w0 = COPY [[ANDWri]]
@@ -574,7 +574,7 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 9223372036854775807
-    ; CHECK: $xzr = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[CSINCWr]], %subreg.sub_32
