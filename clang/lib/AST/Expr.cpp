@@ -2909,7 +2909,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   Expr *LastE = nullptr;
   while (E != LastE) {
     LastE = E;
-    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep, IgnoreImpCastsSingleStep,
+    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep, IgnoreImpCastsExtraSingleStep,
                         IgnoreParensOnlySingleStep);
 
     auto SR = E->getSourceRange();
