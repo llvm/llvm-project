@@ -7625,7 +7625,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AS == AMDGPUAS::GLOBAL_ADDRESS) {
     if (Subtarget->getScalarizeGlobalBehavior() && !Op->isDivergent() &&
-        !Load->isVolatile() && isMemOpHasNoClobberedMemOperand(Load) &&
+        Load->isSimple() && isMemOpHasNoClobberedMemOperand(Load) &&
         Alignment >= 4 && NumElements < 32) {
       if (MemVT.isPow2VectorType())
         return SDValue();
