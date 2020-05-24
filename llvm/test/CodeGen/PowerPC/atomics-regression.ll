@@ -2734,7 +2734,7 @@ define i8 @test160(i8* %ptr, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB160_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB160_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2750,7 +2750,7 @@ define i8 @test161(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB161_1:
 ; PPC64LE-NEXT:    lbarx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB161_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2766,7 +2766,7 @@ define i8 @test162(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB162_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB162_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2782,7 +2782,7 @@ define i8 @test163(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB163_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB163_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2799,7 +2799,7 @@ define i8 @test164(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB164_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB164_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2815,7 +2815,7 @@ define i16 @test165(i16* %ptr, i16 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB165_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB165_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2831,7 +2831,7 @@ define i16 @test166(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB166_1:
 ; PPC64LE-NEXT:    lharx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB166_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2847,7 +2847,7 @@ define i16 @test167(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB167_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB167_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2863,7 +2863,7 @@ define i16 @test168(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB168_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB168_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2880,7 +2880,7 @@ define i16 @test169(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB169_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB169_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2896,7 +2896,7 @@ define i32 @test170(i32* %ptr, i32 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB170_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB170_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2912,7 +2912,7 @@ define i32 @test171(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB171_1:
 ; PPC64LE-NEXT:    lwarx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB171_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2928,7 +2928,7 @@ define i32 @test172(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB172_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB172_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2944,7 +2944,7 @@ define i32 @test173(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB173_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB173_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -2961,7 +2961,7 @@ define i32 @test174(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB174_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB174_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6458,7 +6458,7 @@ define i8 @test380(i8* %ptr, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB380_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB380_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6474,7 +6474,7 @@ define i8 @test381(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB381_1:
 ; PPC64LE-NEXT:    lbarx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB381_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6490,7 +6490,7 @@ define i8 @test382(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB382_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB382_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6506,7 +6506,7 @@ define i8 @test383(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB383_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB383_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6523,7 +6523,7 @@ define i8 @test384(i8* %ptr, i8 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB384_1:
 ; PPC64LE-NEXT:    lbarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB384_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6539,7 +6539,7 @@ define i16 @test385(i16* %ptr, i16 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB385_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB385_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6555,7 +6555,7 @@ define i16 @test386(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB386_1:
 ; PPC64LE-NEXT:    lharx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB386_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6571,7 +6571,7 @@ define i16 @test387(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB387_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB387_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6587,7 +6587,7 @@ define i16 @test388(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB388_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB388_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6604,7 +6604,7 @@ define i16 @test389(i16* %ptr, i16 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB389_1:
 ; PPC64LE-NEXT:    lharx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB389_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6620,7 +6620,7 @@ define i32 @test390(i32* %ptr, i32 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:  .LBB390_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB390_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6636,7 +6636,7 @@ define i32 @test391(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    mr 5, 3
 ; PPC64LE-NEXT:  .LBB391_1:
 ; PPC64LE-NEXT:    lwarx 3, 0, 5
-; PPC64LE-NEXT:    subf 6, 4, 3
+; PPC64LE-NEXT:    sub 6, 3, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 5
 ; PPC64LE-NEXT:    bne 0, .LBB391_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6652,7 +6652,7 @@ define i32 @test392(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB392_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB392_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6668,7 +6668,7 @@ define i32 @test393(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:  .LBB393_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB393_1
 ; PPC64LE-NEXT:  # %bb.2:
@@ -6685,7 +6685,7 @@ define i32 @test394(i32* %ptr, i32 %val) {
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:  .LBB394_1:
 ; PPC64LE-NEXT:    lwarx 5, 0, 3
-; PPC64LE-NEXT:    subf 6, 4, 5
+; PPC64LE-NEXT:    sub 6, 5, 4
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB394_1
 ; PPC64LE-NEXT:  # %bb.2:

@@ -272,7 +272,7 @@ define i1 @test_fcmpuno(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB13_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp uno float %a, %b
@@ -291,7 +291,7 @@ define i1 @test_fcmpord(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB14_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ord float %a, %b
@@ -312,7 +312,7 @@ define i1 @test_fcmpueq(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB15_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ueq float %a, %b
@@ -333,7 +333,7 @@ define i1 @test_fcmpne(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB16_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp one float %a, %b
@@ -418,7 +418,7 @@ define i1 @test_fcmpult(float %a, float %b) {
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB19_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ult float %a, %b
@@ -691,7 +691,7 @@ define i1 @test_dcmpuno(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB35_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp uno double %a, %b
@@ -712,7 +712,7 @@ define i1 @test_dcmpord(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB36_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ord double %a, %b
@@ -952,7 +952,7 @@ define i1 @test_dcmpne(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB43_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp one double %a, %b
@@ -1083,7 +1083,7 @@ define i1 @test_dcmpge(double %a, double %b) {
 ; CHECK-NEXT:    ori 3, 7, 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB47_2: # %entry
-; CHECK-NEXT:    addi 3, 0, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp oge double %a, %b

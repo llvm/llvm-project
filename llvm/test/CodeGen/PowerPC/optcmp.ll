@@ -9,8 +9,8 @@ define signext i32 @foo(i32 signext %a, i32 signext %b, i32* nocapture %c) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    isel 6, 3, 4, 1
-; CHECK-NEXT:    subf 4, 4, 3
+; CHECK-NEXT:    iselgt 6, 3, 4
+; CHECK-NEXT:    sub 4, 3, 4
 ; CHECK-NEXT:    extsw 3, 6
 ; CHECK-NEXT:    stw 4, 0(5)
 ; CHECK-NEXT:    blr
@@ -25,7 +25,7 @@ define signext i32 @foo(i32 signext %a, i32 signext %b, i32* nocapture %c) #0 {
 ; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %entry
 ; CHECK-NO-ISEL-NEXT:    addi 6, 3, 0
 ; CHECK-NO-ISEL-NEXT:  .LBB0_3: # %entry
-; CHECK-NO-ISEL-NEXT:    subf 4, 4, 3
+; CHECK-NO-ISEL-NEXT:    sub 4, 3, 4
 ; CHECK-NO-ISEL-NEXT:    extsw 3, 6
 ; CHECK-NO-ISEL-NEXT:    stw 4, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -45,7 +45,7 @@ define signext i32 @foo2(i32 signext %a, i32 signext %b, i32* nocapture %c) #0 {
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    cmpwi 4, 0
 ; CHECK-NEXT:    stw 4, 0(5)
-; CHECK-NEXT:    isel 3, 3, 6, 1
+; CHECK-NEXT:    iselgt 3, 3, 6
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: foo2:
@@ -71,7 +71,7 @@ define i64 @fool(i64 %a, i64 %b, i64* nocapture %c) #0 {
 ; CHECK-LABEL: fool:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 3, 4
-; CHECK-NEXT:    isel 3, 3, 4, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -97,7 +97,7 @@ define i64 @foolb(i64 %a, i64 %b, i64* nocapture %c) #0 {
 ; CHECK-LABEL: foolb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 3, 4
-; CHECK-NEXT:    isel 3, 4, 3, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -123,7 +123,7 @@ define i64 @foolc(i64 %a, i64 %b, i64* nocapture %c) #0 {
 ; CHECK-LABEL: foolc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 4, 3
-; CHECK-NEXT:    isel 3, 3, 4, 0
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -149,7 +149,7 @@ define i64 @foold(i64 %a, i64 %b, i64* nocapture %c) #0 {
 ; CHECK-LABEL: foold:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 4, 3
-; CHECK-NEXT:    isel 3, 3, 4, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -175,7 +175,7 @@ define i64 @foold2(i64 %a, i64 %b, i64* nocapture %c) #0 {
 ; CHECK-LABEL: foold2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub. 6, 3, 4
-; CHECK-NEXT:    isel 3, 3, 4, 0
+; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
@@ -309,7 +309,7 @@ define signext i64 @fooct(i64 signext %a, i64 signext %b, i64* nocapture %c) #0 
 ; CHECK-NEXT:    and 6, 6, 7
 ; CHECK-NEXT:    mulld 6, 6, 9
 ; CHECK-NEXT:    rldicl. 6, 6, 8, 56
-; CHECK-NEXT:    isel 3, 3, 4, 1
+; CHECK-NEXT:    iselgt 3, 3, 4
 ; CHECK-NEXT:    std 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
