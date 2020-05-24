@@ -23,7 +23,6 @@
 namespace llvm {
 
 class StringRef;
-class X86Subtarget;
 class TargetTransformInfo;
 
 class X86TargetMachine final : public LLVMTargetMachine {

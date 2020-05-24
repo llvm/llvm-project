@@ -201,6 +201,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // For slow shld targets we only lower for code size.
     LegalizeAction ShiftDoubleAction = Subtarget.isSHLDSlow() ? Custom : Legal;
 
+    setOperationAction(ShiftOp             , MVT::i8   , Custom);
     setOperationAction(ShiftOp             , MVT::i16  , Custom);
     setOperationAction(ShiftOp             , MVT::i32  , ShiftDoubleAction);
     if (Subtarget.is64Bit())
@@ -1797,12 +1798,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SELECT,             VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Custom);
     }
 
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v32i1, Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v64i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i1, Custom);
     for (auto VT : { MVT::v16i1, MVT::v32i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
@@ -19074,13 +19073,36 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(IsFSHR ? X86ISD::VSHRDV : X86ISD::VSHLDV, DL, VT,
                        Op0, Op1, Amt);
   }
-
-  assert((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-         "Unexpected funnel shift type!");
+  assert(
+      (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+      "Unexpected funnel shift type!");
 
   // Expand slow SHLD/SHRD cases if we are not optimizing for size.
   bool OptForSize = DAG.shouldOptForSize();
-  if (!OptForSize && Subtarget.isSHLDSlow())
+  bool ExpandFunnel = !OptForSize && Subtarget.isSHLDSlow();
+
+  // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
+  // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))) >> bw.
+  if ((VT == MVT::i8 || (ExpandFunnel && VT == MVT::i16)) &&
+      !isa<ConstantSDNode>(Amt)) {
+    unsigned EltSizeInBits = VT.getScalarSizeInBits();
+    SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, Amt.getValueType());
+    SDValue HiShift = DAG.getConstant(EltSizeInBits, DL, Amt.getValueType());
+    Op0 = DAG.getAnyExtOrTrunc(Op0, DL, MVT::i32);
+    Op1 = DAG.getZExtOrTrunc(Op1, DL, MVT::i32);
+    Amt = DAG.getNode(ISD::AND, DL, Amt.getValueType(), Amt, Mask);
+    SDValue Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Op0, HiShift);
+    Res = DAG.getNode(ISD::OR, DL, MVT::i32, Res, Op1);
+    if (IsFSHR) {
+      Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, Amt);
+    } else {
+      Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Res, Amt);
+      Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, HiShift);
+    }
+    return DAG.getZExtOrTrunc(Res, DL, VT);
+  }
+
+  if (VT == MVT::i8 || ExpandFunnel)
     return SDValue();
 
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
@@ -37382,6 +37404,12 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       return Vec;
      break;
   }
+  case X86ISD::VSRAI:
+    // iff we only need the sign bit then we can use the source directly.
+    // TODO: generalize where we only demand extended signbits.
+    if (DemandedBits.isSignMask())
+      return Op.getOperand(0);
+    break;
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
     // iff we only need the sign bit then we can use R directly.
@@ -39123,12 +39151,13 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
     return true;
   };
 
+  APInt DemandedBits(APInt::getSignMask(BitWidth));
+
   if (OnlyUsedAsSelectCond(Cond)) {
-    APInt DemandedMask(APInt::getSignMask(BitWidth));
     KnownBits Known;
     TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                           !DCI.isBeforeLegalizeOps());
-    if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
+    if (!TLI.SimplifyDemandedBits(Cond, DemandedBits, Known, TLO, 0, true))
       return SDValue();
 
     // If we changed the computation somewhere in the DAG, this change will
@@ -39150,10 +39179,9 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Otherwise we can still at least try to simplify multiple use bits.
-  APInt DemandedBits(APInt::getSignMask(BitWidth));
   if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(Cond, DemandedBits, DAG))
-    return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
-                       N->getOperand(1), N->getOperand(2));
+      return DAG.getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0), V,
+                         N->getOperand(1), N->getOperand(2));
 
   return SDValue();
 }
@@ -42927,7 +42955,7 @@ combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
 static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
-  MaskedLoadSDNode *Mld = cast<MaskedLoadSDNode>(N);
+  auto *Mld = cast<MaskedLoadSDNode>(N);
 
   // TODO: Expanding load with constant mask may be optimized as well.
   if (Mld->isExpandingLoad())
@@ -42936,10 +42964,31 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   if (Mld->getExtensionType() == ISD::NON_EXTLOAD) {
     if (SDValue ScalarLoad = reduceMaskedLoadToScalarLoad(Mld, DAG, DCI))
       return ScalarLoad;
+
     // TODO: Do some AVX512 subsets benefit from this transform?
     if (!Subtarget.hasAVX512())
       if (SDValue Blend = combineMaskedLoadConstantMask(Mld, DAG, DCI))
         return Blend;
+  }
+
+  // If the mask value has been legalized to a non-boolean vector, try to
+  // simplify ops leading up to it. We only demand the MSB of each lane.
+  SDValue Mask = Mld->getMask();
+  if (Mask.getScalarValueSizeInBits() != 1) {
+    EVT VT = Mld->getValueType(0);
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
+    if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+    if (SDValue NewMask =
+            TLI.SimplifyMultipleUseDemandedBits(Mask, DemandedBits, DAG))
+      return DAG.getMaskedLoad(
+          VT, SDLoc(N), Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(),
+          NewMask, Mld->getPassThru(), Mld->getMemoryVT(), Mld->getMemOperand(),
+          Mld->getAddressingMode(), Mld->getExtensionType());
   }
 
   return SDValue();
@@ -47240,6 +47289,13 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
       return BcastLd;
     }
   }
+
+  // If we're extracting an upper subvector from a broadcast we should just
+  // extract the lowest subvector instead which should allow
+  // SimplifyDemandedVectorElts do more simplifications.
+  if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
+                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD))
+    return extractSubVector(InVec, 0, DAG, SDLoc(N), VT.getSizeInBits());
 
   // If we're extracting the lowest subvector and we're the only user,
   // we may be able to perform this with a smaller vector width.

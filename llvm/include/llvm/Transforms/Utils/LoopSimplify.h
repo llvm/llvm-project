@@ -38,14 +38,16 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 #define LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
+class AssumptionCache;
+class DominatorTree;
+class Loop;
+class LoopInfo;
 class MemorySSAUpdater;
+class ScalarEvolution;
 
 /// This pass is responsible for loop canonicalization.
 class LoopSimplifyPass : public PassInfoMixin<LoopSimplifyPass> {

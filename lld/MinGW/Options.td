@@ -88,6 +88,8 @@ def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the 
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
 def mllvm: S<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
+defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
+  "Path to ThinLTO cached object file directory">;
 def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 

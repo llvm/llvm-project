@@ -1014,7 +1014,6 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
 
   // Enhance/cleanup vector code.
   OptimizePM.addPass(VectorCombinePass());
-  OptimizePM.addPass(EarlyCSEPass());
   OptimizePM.addPass(InstCombinePass());
 
   // Unroll small loops to hide loop backedge latency and saturate any parallel
