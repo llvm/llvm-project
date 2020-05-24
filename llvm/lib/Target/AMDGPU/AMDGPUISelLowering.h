@@ -18,6 +18,7 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
