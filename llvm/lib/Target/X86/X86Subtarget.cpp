@@ -378,3 +378,7 @@ void X86Subtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(createX86MacroFusionDAGMutation());
 }
+
+bool X86Subtarget::isPositionIndependent() const {
+  return TM.isPositionIndependent();
+}
