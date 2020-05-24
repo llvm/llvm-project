@@ -265,12 +265,21 @@ TEST(Traverse, IgnoreUnlessSpelledInSourceVars) {
 struct String
 {
     String(const char*, int = -1) {}
+
+    int overloaded() const;
+    int& overloaded();
 };
 
 void stringConstruct()
 {
     String s = "foo";
     s = "bar";
+}
+
+void overloadCall()
+{
+   String s = "foo";
+   (s).overloaded();
 }
 
 struct C1 {};
@@ -328,6 +337,46 @@ FunctionDecl 'stringConstruct'
     |-DeclRefExpr 'operator='
     |-DeclRefExpr 's'
     `-StringLiteral
+)cpp");
+  }
+
+  {
+    auto FN =
+        ast_matchers::match(functionDecl(hasName("overloadCall")).bind("fn"),
+                            AST->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<Decl>("fn")),
+              R"cpp(
+FunctionDecl 'overloadCall'
+`-CompoundStmt
+  |-DeclStmt
+  | `-VarDecl 's'
+  |   `-ExprWithCleanups
+  |     `-CXXConstructExpr
+  |       `-MaterializeTemporaryExpr
+  |         `-ImplicitCastExpr
+  |           `-CXXConstructExpr
+  |             |-ImplicitCastExpr
+  |             | `-StringLiteral
+  |             `-CXXDefaultArgExpr
+  `-CXXMemberCallExpr
+    `-MemberExpr
+      `-ParenExpr
+        `-DeclRefExpr 's'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<Decl>("fn")),
+              R"cpp(
+FunctionDecl 'overloadCall'
+`-CompoundStmt
+  |-DeclStmt
+  | `-VarDecl 's'
+  |   `-StringLiteral
+  `-CXXMemberCallExpr
+    `-MemberExpr
+      `-DeclRefExpr 's'
 )cpp");
   }
 
