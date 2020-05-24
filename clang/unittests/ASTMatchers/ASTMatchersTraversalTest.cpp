@@ -1867,6 +1867,26 @@ void conversionOperator()
                             hasDescendant(varDecl(
                                 hasName("c1"), hasInitializer(unaryOperator(
                                                    hasOperatorName("*")))))))));
+
+  Code = R"cpp(
+
+template <unsigned alignment>
+void template_test() {
+  static_assert(alignment, "");
+}
+void actual_template_test() {
+  template_test<4>();
+}
+
+)cpp";
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_AsIs,
+               staticAssertDecl(has(implicitCastExpr(has(
+                   substNonTypeTemplateParmExpr(has(integerLiteral())))))))));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     staticAssertDecl(has(integerLiteral())))));
 }
 
 template <typename MatcherT>
