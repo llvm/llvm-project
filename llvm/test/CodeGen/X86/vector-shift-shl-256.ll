@@ -669,10 +669,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v32i8:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; XOPAVX2-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpshlb %xmm1, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpshlb %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
