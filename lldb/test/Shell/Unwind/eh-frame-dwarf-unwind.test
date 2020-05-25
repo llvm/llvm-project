@@ -20,4 +20,4 @@ thread backtrace
 
 target modules show-unwind -n foo
 # CHECK: eh_frame UnwindPlan:
-# CHECK: row[0]: 0: CFA=rsp +8 => rip=DW_OP_lit8 , DW_OP_minus , DW_OP_deref , DW_OP_const1u 0x47, DW_OP_minus
+# CHECK: row[0]: 0: CFA=rsp +8 => rip=DW_OP_lit8, DW_OP_minus, DW_OP_deref, DW_OP_const1u 0x47, DW_OP_minus

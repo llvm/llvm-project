@@ -705,7 +705,6 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
       .setMIFlag(MachineInstr::FrameSetup);
   testMBB->addSuccessor(testMBB);
   testMBB->addSuccessor(tailMBB);
-  testMBB->addLiveIn(FinalStackPtr);
 
   // BB management
   tailMBB->splice(tailMBB->end(), &MBB, MBBI, MBB.end());
@@ -719,6 +718,10 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
         .addReg(FinalStackPtr)
         .setMIFlag(MachineInstr::FrameSetup);
   }
+
+  // Update Live In information
+  recomputeLiveIns(*testMBB);
+  recomputeLiveIns(*tailMBB);
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
