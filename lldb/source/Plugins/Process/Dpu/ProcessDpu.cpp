@@ -155,7 +155,7 @@ ProcessDpu::Factory::Attach(
   }
 
   char profile[256];
-  sprintf(profile, "backend=hw,rankPath=%s", rank_id, rank_path);
+  sprintf(profile, "backend=hw,rankPath=%s", rank_path);
 
   PseudoTerminal pseudo_terminal;
   if (!pseudo_terminal.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr,
