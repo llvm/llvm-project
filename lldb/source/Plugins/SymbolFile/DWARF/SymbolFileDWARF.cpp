@@ -3601,7 +3601,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
   CallSiteParameterArray parameters;
   for (DWARFDIE child = call_site_die.GetFirstChild(); child.IsValid();
        child = child.GetSibling()) {
-    if (child.Tag() != DW_TAG_call_site_parameter)
+    if (child.Tag() != DW_TAG_call_site_parameter &&
+        child.Tag() != DW_TAG_GNU_call_site_parameter)
       continue;
 
     llvm::Optional<DWARFExpression> LocationInCallee;
@@ -3631,7 +3632,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
       dw_attr_t attr = attributes.AttributeAtIndex(i);
       if (attr == DW_AT_location)
         LocationInCallee = parse_simple_location(i);
-      if (attr == DW_AT_call_value)
+      if (attr == DW_AT_call_value || attr == DW_AT_GNU_call_site_value)
         LocationInCaller = parse_simple_location(i);
     }
 
@@ -3648,8 +3649,9 @@ std::vector<std::unique_ptr<lldb_private::CallEdge>>
 SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
-  uint64_t has_call_edges =
-      function_die.GetAttributeValueAsUnsigned(DW_AT_call_all_calls, 0);
+  bool has_call_edges =
+      function_die.GetAttributeValueAsUnsigned(DW_AT_call_all_calls, 0) ||
+      function_die.GetAttributeValueAsUnsigned(DW_AT_GNU_all_call_sites, 0);
   if (!has_call_edges)
     return {};
 
@@ -3665,13 +3667,15 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   std::vector<std::unique_ptr<CallEdge>> call_edges;
   for (DWARFDIE child = function_die.GetFirstChild(); child.IsValid();
        child = child.GetSibling()) {
-    if (child.Tag() != DW_TAG_call_site)
+    if (child.Tag() != DW_TAG_call_site && child.Tag() != DW_TAG_GNU_call_site)
       continue;
 
     llvm::Optional<DWARFDIE> call_origin;
     llvm::Optional<DWARFExpression> call_target;
     addr_t return_pc = LLDB_INVALID_ADDRESS;
     addr_t call_inst_pc = LLDB_INVALID_ADDRESS;
+    addr_t low_pc = LLDB_INVALID_ADDRESS;
+    bool tail_call = false;
 
     DWARFAttributes attributes;
     const size_t num_attributes = child.GetAttributes(attributes);
@@ -3684,8 +3688,11 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
       dw_attr_t attr = attributes.AttributeAtIndex(i);
 
+      if (attr == DW_AT_call_tail_call || attr == DW_AT_GNU_tail_call)
+        tail_call = form_value.Boolean();
+
       // Extract DW_AT_call_origin (the call target's DIE).
-      if (attr == DW_AT_call_origin) {
+      if (attr == DW_AT_call_origin || attr == DW_AT_abstract_origin) {
         call_origin = form_value.Reference();
         if (!call_origin->IsValid()) {
           LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
@@ -3693,6 +3700,9 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
           break;
         }
       }
+
+      if (attr == DW_AT_low_pc)
+        low_pc = form_value.Address();
 
       // Extract DW_AT_call_return_pc (the PC the call returns to) if it's
       // available. It should only ever be unavailable for tail call edges, in
@@ -3708,7 +3718,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
       // Extract DW_AT_call_target (the location of the address of the indirect
       // call).
-      if (attr == DW_AT_call_target) {
+      if (attr == DW_AT_call_target || attr == DW_AT_GNU_call_site_target) {
         if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
           LLDB_LOG(log,
                    "CollectCallEdges: AT_call_target does not have block form");
@@ -3723,6 +3733,16 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
             child.GetCU());
       }
     }
+    if (child.Tag() == DW_TAG_GNU_call_site) {
+      // In DWARF v4 DW_AT_low_pc is always the address of the instruction after
+      // the call. For tail calls, approximate the address of the call
+      // instruction by subtracting 1.
+      if (tail_call)
+        call_inst_pc = low_pc - 1;
+      else
+        return_pc = low_pc;
+    }
+
     if (!call_origin && !call_target) {
       LLDB_LOG(log, "CollectCallEdges: call site without any call target");
       continue;

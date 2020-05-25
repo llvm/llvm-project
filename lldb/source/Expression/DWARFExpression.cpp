@@ -396,6 +396,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return offset - data_offset;
   }
 
+  case DW_OP_GNU_entry_value:
   case DW_OP_entry_value: // 0xa3 ULEB128 size + variable-length block
   {
     uint64_t subexpr_len = data.GetULEB128(&offset);
@@ -2522,6 +2523,7 @@ bool DWARFExpression::Evaluate(
       stack.push_back(Scalar(value));
     } break;
 
+    case DW_OP_GNU_entry_value:
     case DW_OP_entry_value: {
       if (!Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx, opcodes, offset,
                                       error_ptr, log)) {
