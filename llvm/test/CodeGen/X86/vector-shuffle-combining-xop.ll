@@ -131,27 +131,14 @@ define <4 x double> @combine_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x doub
 }
 
 define <4 x double> @demandedelts_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x double> %a1, i64 %a2) {
-; X86-AVX-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl $4, %eax
-; X86-AVX-NEXT:    vmovd %eax, %xmm2
-; X86-AVX-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-AVX-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-AVX-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
-; X86-AVX-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
-; X86-AVX-NEXT:    retl
-;
-; X86-AVX2-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl $4, %eax
-; X86-AVX2-NEXT:    vmovd %eax, %xmm2
-; X86-AVX2-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-AVX2-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
-; X86-AVX2-NEXT:    retl
+; X86-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; X86-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: demandedelts_vpermil2pd256_as_shufpd:
 ; X64:       # %bb.0:
