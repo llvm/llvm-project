@@ -544,8 +544,7 @@ define i32 @sad_2i8() nounwind {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; SSE2-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,0,0]
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB3_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -995,54 +994,20 @@ define i32 @sad_unroll_nonzero_initial(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x 
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: sad_unroll_nonzero_initial:
-; AVX1:       # %bb.0: # %bb
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: sad_unroll_nonzero_initial:
-; AVX2:       # %bb.0: # %bb
-; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX2-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX2-NEXT:    movl $1, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: sad_unroll_nonzero_initial:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX512-NEXT:    movl $1, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm2
-; AVX512-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX-LABEL: sad_unroll_nonzero_initial:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
 bb:
   %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
   %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
