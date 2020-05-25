@@ -2313,6 +2313,9 @@ def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
 def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
   HelpText<"Enforce targets of indirect branches and function returns">;
 
+def mharden_sls_EQ : Joined<["-"], "mharden-sls=">,
+  HelpText<"Select straight-line speculation hardening scope">;
+
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def munimplemented_simd128 : Flag<["-"], "munimplemented-simd128">, Group<m_wasm_Features_Group>;
 def mno_unimplemented_simd128 : Flag<["-"], "mno-unimplemented-simd128">, Group<m_wasm_Features_Group>;

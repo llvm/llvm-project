@@ -334,6 +334,8 @@ def warn_drv_object_size_disabled_O0 : Warning<
   InGroup<InvalidCommandLineArgument>, DefaultWarnNoWerror;
 def err_invalid_branch_protection: Error <
   "invalid branch protection option '%0' in '%1'">;
+def err_invalid_sls_hardening : Error<
+  "invalid sls hardening option '%0' in '%1'">;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
