@@ -54,7 +54,7 @@ STATISTIC(NumAAs, "Number of abstract attributes created");
 //  }
 // If there is a single "increment" side one can use the macro
 // STATS_DECLTRACK with a custom message. If there are multiple increment
-// sides, STATS_DECL and STATS_TRACK can also be used separatly.
+// sides, STATS_DECL and STATS_TRACK can also be used separately.
 //
 #define BUILD_STAT_MSG_IR_ATTR(TYPE, NAME)                                     \
   ("Number of " #TYPE " marked '" #NAME "'")
