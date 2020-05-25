@@ -3542,14 +3542,14 @@ ParseResult OperationParser::finalize() {
   // Check for any forward references that are left.  If we find any, error
   // out.
   if (!forwardRefPlaceholders.empty()) {
-    SmallVector<std::pair<const char *, Value>, 4> errors;
+    SmallVector<const char *, 4> errors;
     // Iteration over the map isn't deterministic, so sort by source location.
     for (auto entry : forwardRefPlaceholders)
-      errors.push_back({entry.second.getPointer(), entry.first});
+      errors.push_back(entry.second.getPointer());
     llvm::array_pod_sort(errors.begin(), errors.end());
 
     for (auto entry : errors) {
-      auto loc = SMLoc::getFromPointer(entry.first);
+      auto loc = SMLoc::getFromPointer(entry);
       emitError(loc, "use of undeclared SSA value name");
     }
     return failure();
