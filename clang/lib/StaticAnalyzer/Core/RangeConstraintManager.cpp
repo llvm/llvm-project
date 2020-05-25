@@ -155,10 +155,10 @@ bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
 // or, alternatively, /removing/ all integers between Upper and Lower.
 RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
                              llvm::APSInt Lower, llvm::APSInt Upper) const {
-  if (!pin(Lower, Upper))
-    return F.getEmptySet();
-
   PrimRangeSet newRanges = F.getEmptySet();
+
+  if (isEmpty() || !pin(Lower, Upper))
+    return newRanges;
 
   PrimRangeSet::iterator i = begin(), e = end();
   if (Lower <= Upper)
@@ -190,33 +190,78 @@ RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
   return newRanges;
 }
 
-// Turn all [A, B] ranges to [-B, -A]. Ranges [MIN, B] are turned to range set
-// [MIN, MIN] U [-B, MAX], when MIN and MAX are the minimal and the maximal
-// signed values of the type.
+// Turn all [A, B] ranges to [-B, -A], when "-" is a C-like unary minus
+// operation under the values of the type.
+//
+// We also handle MIN because applying unary minus to MIN does not change it.
+// Example 1:
+// char x = -128;        // -128 is a MIN value in a range of 'char'
+// char y = -x;          // y: -128
+// Example 2:
+// unsigned char x = 0;  // 0 is a MIN value in a range of 'unsigned char'
+// unsigned char y = -x; // y: 0
+//
+// And it makes us to separate the range
+// like [MIN, N] to [MIN, MIN] U [-N,MAX].
+// For instance, whole range is {-128..127} and subrange is [-128,-126],
+// thus [-128,-127,-126,.....] negates to [-128,.....,126,127].
+//
+// Negate restores disrupted ranges on bounds,
+// e.g. [MIN, B] => [MIN, MIN] U [-B, MAX] => [MIN, B].
 RangeSet RangeSet::Negate(BasicValueFactory &BV, Factory &F) const {
   PrimRangeSet newRanges = F.getEmptySet();
 
-  for (iterator i = begin(), e = end(); i != e; ++i) {
-    const llvm::APSInt &from = i->From(), &to = i->To();
-    const llvm::APSInt &newTo = (from.isMinSignedValue() ?
-                                 BV.getMaxValue(from) :
-                                 BV.getValue(- from));
-    if (to.isMaxSignedValue() && !newRanges.isEmpty() &&
-        newRanges.begin()->From().isMinSignedValue()) {
-      assert(newRanges.begin()->To().isMinSignedValue() &&
-             "Ranges should not overlap");
-      assert(!from.isMinSignedValue() && "Ranges should not overlap");
-      const llvm::APSInt &newFrom = newRanges.begin()->From();
-      newRanges =
-        F.add(F.remove(newRanges, *newRanges.begin()), Range(newFrom, newTo));
-    } else if (!to.isMinSignedValue()) {
-      const llvm::APSInt &newFrom = BV.getValue(- to);
-      newRanges = F.add(newRanges, Range(newFrom, newTo));
+  if (isEmpty())
+    return newRanges;
+
+  const llvm::APSInt sampleValue = getMinValue();
+  const llvm::APSInt &MIN = BV.getMinValue(sampleValue);
+  const llvm::APSInt &MAX = BV.getMaxValue(sampleValue);
+
+  // Handle a special case for MIN value.
+  iterator i = begin();
+  const llvm::APSInt &from = i->From();
+  const llvm::APSInt &to = i->To();
+  if (from == MIN) {
+    // If [from, to] are [MIN, MAX], then just return the same [MIN, MAX].
+    if (to == MAX) {
+      newRanges = ranges;
+    } else {
+      // Add separate range for the lowest value.
+      newRanges = F.add(newRanges, Range(MIN, MIN));
+      // Skip adding the second range in case when [from, to] are [MIN, MIN].
+      if (to != MIN) {
+        newRanges = F.add(newRanges, Range(BV.getValue(-to), MAX));
+      }
     }
-    if (from.isMinSignedValue()) {
-      newRanges = F.add(newRanges, Range(BV.getMinValue(from),
-                                         BV.getMinValue(from)));
-    }
+    // Skip the first range in the loop.
+    ++i;
+  }
+
+  // Negate all other ranges.
+  for (iterator e = end(); i != e; ++i) {
+    // Negate int values.
+    const llvm::APSInt &newFrom = BV.getValue(-i->To());
+    const llvm::APSInt &newTo = BV.getValue(-i->From());
+    // Add a negated range.
+    newRanges = F.add(newRanges, Range(newFrom, newTo));
+  }
+
+  if (newRanges.isSingleton())
+    return newRanges;
+
+  // Try to find and unite next ranges:
+  // [MIN, MIN] & [MIN + 1, N] => [MIN, N].
+  iterator iter1 = newRanges.begin();
+  iterator iter2 = std::next(iter1);
+
+  if (iter1->To() == MIN && (iter2->From() - 1) == MIN) {
+    const llvm::APSInt &to = iter2->To();
+    // remove adjacent ranges
+    newRanges = F.remove(newRanges, *iter1);
+    newRanges = F.remove(newRanges, *newRanges.begin());
+    // add united range
+    newRanges = F.add(newRanges, Range(MIN, to));
   }
 
   return newRanges;
@@ -527,9 +572,7 @@ RangeConstraintManager::getRangeForMinusSymbol(ProgramStateRef State,
       SymbolRef negSym = SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub,
                                               SSE->getLHS(), T);
       if (const RangeSet *negV = State->get<ConstraintRange>(negSym)) {
-        // Unsigned range set cannot be negated, unless it is [0, 0].
-        if ((negV->getConcreteValue() &&
-             (*negV->getConcreteValue() == 0)) ||
+        if (T->isUnsignedIntegerOrEnumerationType() ||
             T->isSignedIntegerOrEnumerationType())
           return negV;
       }

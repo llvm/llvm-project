@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -42,7 +41,8 @@ TEST_CASE(test_assignment_signature)
 
 TEST_CASE(test_move_to_end_iterator)
 {
-    const path testDir = StaticEnv::Dir;
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
 
     directory_iterator from(testDir);
     TEST_REQUIRE(from != directory_iterator{});
@@ -57,7 +57,8 @@ TEST_CASE(test_move_to_end_iterator)
 
 TEST_CASE(test_move_from_end_iterator)
 {
-    const path testDir = StaticEnv::Dir;
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
 
     directory_iterator from{};
 
@@ -71,7 +72,8 @@ TEST_CASE(test_move_from_end_iterator)
 
 TEST_CASE(test_move_valid_iterator)
 {
-    const path testDir = StaticEnv::Dir;
+    static_test_env static_env;
+    const path testDir = static_env.Dir;
     const directory_iterator endIt{};
 
     directory_iterator it(testDir);
@@ -101,9 +103,10 @@ TEST_CASE(test_returns_reference_to_self)
 
 TEST_CASE(test_self_move)
 {
+    static_test_env static_env;
     // Create two non-equal iterators that have exactly the same state.
-    directory_iterator it(StaticEnv::Dir);
-    directory_iterator it2(StaticEnv::Dir);
+    directory_iterator it(static_env.Dir);
+    directory_iterator it2(static_env.Dir);
     ++it; ++it2;
     TEST_CHECK(it != it2);
     TEST_CHECK(*it2 == *it);

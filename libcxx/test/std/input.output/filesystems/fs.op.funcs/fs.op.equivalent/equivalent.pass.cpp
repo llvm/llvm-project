@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -36,18 +35,19 @@ TEST_CASE(signature_test) {
 }
 
 TEST_CASE(equivalent_test) {
+  static_test_env static_env;
   struct TestCase {
     path lhs;
     path rhs;
     bool expect;
   };
   const TestCase testCases[] = {
-      {StaticEnv::Dir, StaticEnv::Dir, true},
-      {StaticEnv::File, StaticEnv::Dir, false},
-      {StaticEnv::Dir, StaticEnv::SymlinkToDir, true},
-      {StaticEnv::Dir, StaticEnv::SymlinkToFile, false},
-      {StaticEnv::File, StaticEnv::File, true},
-      {StaticEnv::File, StaticEnv::SymlinkToFile, true},
+      {static_env.Dir, static_env.Dir, true},
+      {static_env.File, static_env.Dir, false},
+      {static_env.Dir, static_env.SymlinkToDir, true},
+      {static_env.Dir, static_env.SymlinkToFile, false},
+      {static_env.File, static_env.File, true},
+      {static_env.File, static_env.SymlinkToFile, true},
   };
   for (auto& TC : testCases) {
     std::error_code ec;
@@ -57,8 +57,9 @@ TEST_CASE(equivalent_test) {
 }
 
 TEST_CASE(equivalent_reports_error_if_input_dne) {
-  const path E = StaticEnv::File;
-  const path DNE = StaticEnv::DNE;
+  static_test_env static_env;
+  const path E = static_env.File;
+  const path DNE = static_env.DNE;
   { // Test that an error is reported when either of the paths don't exist
     std::error_code ec = GetTestEC();
     TEST_CHECK(equivalent(E, DNE, ec) == false);

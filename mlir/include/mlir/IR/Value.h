@@ -92,7 +92,7 @@ public:
     return U(ownerAndKind);
   }
 
-  operator bool() const { return ownerAndKind.getPointer(); }
+  explicit operator bool() const { return ownerAndKind.getPointer(); }
   bool operator==(const Value &other) const {
     return ownerAndKind == other.ownerAndKind;
   }
