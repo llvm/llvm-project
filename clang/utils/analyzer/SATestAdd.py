@@ -52,8 +52,8 @@ import sys
 
 def isExistingProject(PMapFile, projectID):
     PMapReader = csv.reader(PMapFile)
-    for I in PMapReader:
-        if projectID == I[0]:
+    for ProjectInfo in PMapReader:
+        if projectID == ProjectInfo[0]:
             return True
     return False
 
@@ -71,21 +71,24 @@ def addNewProject(ID, BuildMode):
         sys.exit(-1)
 
     # Build the project.
+    # TODO: Repair this call.  We give it a wrong amount wrong arguments and it
+    #       is not trivial to construct argparse arguments in here.
+    #       Requires refactoring of the 'testProject' function.
     SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True)
 
     # Add the project ID to the project map.
     ProjectMapPath = os.path.join(CurDir, SATestBuild.ProjectMapFile)
 
     if os.path.exists(ProjectMapPath):
-        FileMode = "r+b"
+        FileMode = "r+"
     else:
         print("Warning: Creating the Project Map file!!")
-        FileMode = "w+b"
+        FileMode = "w+"
 
     with open(ProjectMapPath, FileMode) as PMapFile:
         if (isExistingProject(PMapFile, ID)):
-            print('Warning: Project with ID \'', ID, \
-                                 '\' already exists.', file=sys.stdout)
+            print('Warning: Project with ID \'', ID,
+                  '\' already exists.', file=sys.stdout)
             print("Reference output has been regenerated.", file=sys.stdout)
         else:
             PMapWriter = csv.writer(PMapFile)
@@ -97,12 +100,12 @@ def addNewProject(ID, BuildMode):
 # TODO: Set the path to the Repository directory.
 if __name__ == '__main__':
     if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
-        print('Add a new project for testing to the analyzer'\
-                             '\nUsage: ', sys.argv[0],\
-                             'project_ID <mode>\n' \
-                             'mode: 0 for single file project, ' \
-                             '1 for scan_build, ' \
-                             '2 for single file c++11 project', file=sys.stderr)
+        print('Add a new project for testing to the analyzer'
+              '\nUsage: ', sys.argv[0],
+              'project_ID <mode>\n'
+              'mode: 0 for single file project, '
+              '1 for scan_build, '
+              '2 for single file c++11 project', file=sys.stderr)
         sys.exit(-1)
 
     BuildMode = 1
