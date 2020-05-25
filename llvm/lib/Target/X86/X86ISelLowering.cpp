@@ -43588,21 +43588,12 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
-  case ISD::ADD: {
+  case ISD::ADD:
+  case ISD::SUB: {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
     if (TLI.isOperationLegal(SrcOpcode, VT) &&
         (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
-      return TruncateArithmetic(Op0, Op1);
-    break;
-  }
-  case ISD::SUB: {
-    // TODO: ISD::SUB We are conservative and require both sides to be freely
-    // truncatable to avoid interfering with combineSubToSubus.
-    SDValue Op0 = Src.getOperand(0);
-    SDValue Op1 = Src.getOperand(1);
-    if (TLI.isOperationLegal(SrcOpcode, VT) &&
-        (Op0 == Op1 || (IsFreeTruncation(Op0) && IsFreeTruncation(Op1))))
       return TruncateArithmetic(Op0, Op1);
     break;
   }
@@ -46698,6 +46689,38 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
       SubusRHS = MinLHS;
     else
       return SDValue();
+  } else if (Op1.getOpcode() == ISD::TRUNCATE &&
+             Op1.getOperand(0).getOpcode() == ISD::UMIN &&
+             (EltVT == MVT::i8 || EltVT == MVT::i16)) {
+    // Special case where the UMIN has been truncated. Try to push the truncate
+    // further up. This is similar to the i32/i64 special processing.
+    SubusLHS = Op0;
+    SDValue MinLHS = Op1.getOperand(0).getOperand(0);
+    SDValue MinRHS = Op1.getOperand(0).getOperand(1);
+    EVT TruncVT = Op1.getOperand(0).getValueType();
+    if (!(Subtarget.hasSSSE3() && (TruncVT == MVT::v8i32 ||
+                                   TruncVT == MVT::v8i64)) &&
+        !(Subtarget.useBWIRegs() && (TruncVT == MVT::v16i32)))
+      return SDValue();
+    SDValue OpToSaturate;
+    if (MinLHS.getOpcode() == ISD::ZERO_EXTEND &&
+        MinLHS.getOperand(0) == Op0)
+      OpToSaturate = MinRHS;
+    else if (MinRHS.getOpcode() == ISD::ZERO_EXTEND &&
+             MinRHS.getOperand(0) == Op0)
+      OpToSaturate = MinLHS;
+    else
+      return SDValue();
+
+    // Saturate the non-extended input and then truncate it.
+    SDLoc DL(N);
+    SDValue SaturationConst =
+        DAG.getConstant(APInt::getLowBitsSet(TruncVT.getScalarSizeInBits(),
+                                             VT.getScalarSizeInBits()),
+                        DL, TruncVT);
+    SDValue UMin = DAG.getNode(ISD::UMIN, DL, TruncVT, OpToSaturate,
+                               SaturationConst);
+    SubusRHS = DAG.getNode(ISD::TRUNCATE, DL, VT, UMin);
   } else
     return SDValue();
 

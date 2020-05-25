@@ -33,8 +33,8 @@ class IterateFrameAndDisassembleTestCase(TestBase):
             match = frameRE.search(line)
             if match:
                 function = match.group(1)
-                #print("line:", line)
-                #print("function:", function)
+                self.trace("line:", line)
+                self.trace("function:", function)
                 self.runCmd("disassemble -n '%s'" % function)
 
     @add_test_categories(['pyapi'])
