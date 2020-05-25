@@ -192,7 +192,12 @@ def load_git_config(non_string_options=None):
   out = {}
   for entry in run('git', 'config', '--list', '--null').split('\0'):
     if entry:
-      name, value = entry.split('\n', 1)
+      if '\n' in entry:
+        name, value = entry.split('\n', 1)
+      else:
+        # A setting with no '=' ('\n' with --null) is implicitly 'true'
+        name = entry
+        value = 'true'
       if name in non_string_options:
         value = run('git', 'config', non_string_options[name], name)
       out[name] = value
