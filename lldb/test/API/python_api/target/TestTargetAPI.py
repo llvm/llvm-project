@@ -359,8 +359,8 @@ class TargetAPITestCase(TestBase):
         # Now create the two breakpoints inside function 'a'.
         breakpoint1 = target.BreakpointCreateByLocation('main.c', self.line1)
         breakpoint2 = target.BreakpointCreateByLocation('main.c', self.line2)
-        #print("breakpoint1:", breakpoint1)
-        #print("breakpoint2:", breakpoint2)
+        self.trace("breakpoint1:", breakpoint1)
+        self.trace("breakpoint2:", breakpoint2)
         self.assertTrue(breakpoint1 and
                         breakpoint1.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -402,8 +402,8 @@ class TargetAPITestCase(TestBase):
 
         address2 = lineEntry.GetStartAddress()
 
-        #print("address1:", address1)
-        #print("address2:", address2)
+        self.trace("address1:", address1)
+        self.trace("address2:", address2)
 
         # Now call SBTarget.ResolveSymbolContextForAddress() with the addresses
         # from our line entry.
@@ -413,15 +413,15 @@ class TargetAPITestCase(TestBase):
             address2, lldb.eSymbolContextEverything)
 
         self.assertTrue(context1 and context2)
-        #print("context1:", context1)
-        #print("context2:", context2)
+        self.trace("context1:", context1)
+        self.trace("context2:", context2)
 
         # Verify that the context point to the same function 'a'.
         symbol1 = context1.GetSymbol()
         symbol2 = context2.GetSymbol()
         self.assertTrue(symbol1 and symbol2)
-        #print("symbol1:", symbol1)
-        #print("symbol2:", symbol2)
+        self.trace("symbol1:", symbol1)
+        self.trace("symbol2:", symbol2)
 
         from lldbsuite.test.lldbutil import get_description
         desc1 = get_description(symbol1)
