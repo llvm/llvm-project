@@ -55,4 +55,22 @@ TEST(RecursiveASTVisitor, CXXMethodDeclNoDefaultBodyVisited) {
     EXPECT_TRUE(Visitor.runOver(Code, CXXMethodDeclVisitor::Lang_CXX11));
   }
 }
+
+TEST(RecursiveASTVisitor, FunctionDeclNoDefaultBodyVisited) {
+  for (bool VisitImplCode : {false, true}) {
+    CXXMethodDeclVisitor Visitor(VisitImplCode);
+    if (VisitImplCode)
+      Visitor.ExpectMatch("declref", 4, 58, /*Times=*/2);
+    else
+      Visitor.DisallowMatch("declref", 4, 58);
+    llvm::StringRef Code = R"cpp(
+      struct s {
+        int x;
+        friend auto operator==(s a, s b) -> bool = default;
+      };
+      bool k = s() == s(); // make sure clang generates the "==" definition.
+    )cpp";
+    EXPECT_TRUE(Visitor.runOver(Code, CXXMethodDeclVisitor::Lang_CXX2a));
+  }
+}
 } // end anonymous namespace
