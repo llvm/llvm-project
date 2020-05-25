@@ -427,6 +427,7 @@ public:
   /// inlining across interposable call edges, since the callee can be
   /// replaced with something arbitrary.
   bool isInterposable() const;
+  bool canBenefitFromLocalAlias() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
   bool hasAvailableExternallyLinkage() const {

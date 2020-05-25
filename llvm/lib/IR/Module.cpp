@@ -600,6 +600,13 @@ void Module::setSemanticInterposition(bool SI) {
   addModuleFlag(ModFlagBehavior::Error, "SemanticInterposition", SI);
 }
 
+bool Module::noSemanticInterposition() const {
+  // Conservatively require an explicit zero value for now.
+  Metadata *MF = getModuleFlag("SemanticInterposition");
+  auto *Val = cast_or_null<ConstantAsMetadata>(MF);
+  return Val && cast<ConstantInt>(Val->getValue())->getZExtValue() == 0;
+}
+
 void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
   OwnedMemoryBuffer = std::move(MB);
 }

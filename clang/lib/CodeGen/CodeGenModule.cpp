@@ -493,6 +493,9 @@ void CodeGenModule::Release() {
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(1);
+  else if (Context.getLangOpts().ExplicitNoSemanticInterposition)
+    // Allow dso_local on applicable targets.
+    getModule().setSemanticInterposition(0);
 
   if (CodeGenOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.

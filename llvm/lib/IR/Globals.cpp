@@ -101,6 +101,12 @@ bool GlobalValue::isInterposable() const {
          !isDSOLocal();
 }
 
+bool GlobalValue::canBenefitFromLocalAlias() const {
+  // See AsmPrinter::getSymbolPreferLocal().
+  return GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
+         !isa<GlobalIFunc>(this) && !hasComdat();
+}
+
 unsigned GlobalValue::getAlignment() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
