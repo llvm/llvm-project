@@ -1342,6 +1342,9 @@ public:
   /// Return a freeze using the SDLoc of the value operand.
   SDValue getFreeze(SDValue V);
 
+  /// Return an AssertAlignSDNode.
+  SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
+
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);

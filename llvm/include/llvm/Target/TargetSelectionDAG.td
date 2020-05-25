@@ -667,10 +667,11 @@ def intrinsic_w_chain : SDNode<"ISD::INTRINSIC_W_CHAIN",
 def intrinsic_wo_chain : SDNode<"ISD::INTRINSIC_WO_CHAIN",
                                 SDTypeProfile<1, -1, [SDTCisPtrTy<1>]>, []>;
 
-def SDT_assertext : SDTypeProfile<1, 1,
+def SDT_assert : SDTypeProfile<1, 1,
   [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 0>]>;
-def assertsext : SDNode<"ISD::AssertSext", SDT_assertext>;
-def assertzext : SDNode<"ISD::AssertZext", SDT_assertext>;
+def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
+def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
+def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
 
 
 //===----------------------------------------------------------------------===//
