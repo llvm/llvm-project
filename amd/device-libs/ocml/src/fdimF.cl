@@ -10,12 +10,6 @@
 CONSTATTR float
 MATH_MANGLE(fdim)(float x, float y)
 {
-    if (!FINITE_ONLY_OPT()) {
-        int n = -(MATH_MANGLE(isnan)(x) | MATH_MANGLE(isnan)(y)) & QNANBITPATT_SP32;
-        int r = -(x > y) & AS_INT(x - y);
-        return AS_FLOAT(n | r);
-    } else {
-	return AS_FLOAT(-(x > y) & AS_INT(x - y));
-    }
+    return (x <= y && !BUILTIN_ISUNORDERED_F32(x, y)) ? 0.0f : (x - y);
 }
 

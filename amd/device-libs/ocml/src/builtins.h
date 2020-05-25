@@ -56,6 +56,10 @@
 #define BUILTIN_ISNAN_F64(x) __builtin_isnan(x)
 #define BUILTIN_ISNAN_F16(x) __builtin_isnan(x)
 
+#define BUILTIN_ISUNORDERED_F32(x, y) __builtin_isunordered(x, y)
+#define BUILTIN_ISUNORDERED_F64(x, y) __builtin_isunordered(x, y)
+#define BUILTIN_ISUNORDERED_F16(x, y) __builtin_isunordered(x, y)
+
 // TODO: Use __builtin_isinf
 #define BUILTIN_ISINF_F32(x) __builtin_amdgcn_classf(x, CLASS_PINF|CLASS_NINF)
 #define BUILTIN_ISINF_F64(x) __builtin_amdgcn_class(x, CLASS_PINF|CLASS_NINF)

@@ -10,12 +10,6 @@
 CONSTATTR double
 MATH_MANGLE(fdim)(double x, double y)
 {
-    long d = AS_LONG(x - y);
-    if (!FINITE_ONLY_OPT()) {
-        long n = MATH_MANGLE(isnan)(x) | MATH_MANGLE(isnan)(y) ? QNANBITPATT_DP64 : 0L;
-        return AS_DOUBLE(x > y ? d : n);
-    } else {
-	return AS_DOUBLE(x > y ? d : 0L);
-    }
+    return (x <= y && !BUILTIN_ISUNORDERED_F64(x, y)) ? 0.0 : (x - y);
 }
 
