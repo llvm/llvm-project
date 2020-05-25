@@ -217,14 +217,6 @@ public:
                               lldb::addr_t func_load_addr, lldb::addr_t address,
                               ABI *abi);
 
-  static bool PrintDWARFExpression(Stream &s, const DataExtractor &data,
-                                   int address_size, int dwarf_ref_size,
-                                   bool location_expression);
-
-  static void PrintDWARFLocationList(Stream &s, const DWARFUnit *cu,
-                                     const DataExtractor &debug_loc_data,
-                                     lldb::offset_t offset);
-
   bool MatchesOperand(StackFrame &frame, const Instruction::Operand &op);
 
 private:

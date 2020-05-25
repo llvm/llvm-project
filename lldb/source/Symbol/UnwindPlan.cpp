@@ -15,6 +15,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -79,13 +80,10 @@ GetByteOrderAndAddrSize(Thread *thread) {
 
 static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *thread) {
   if (auto order_and_width = GetByteOrderAndAddrSize(thread)) {
-    DataExtractor extractor(expr.data(), expr.size(), order_and_width->first,
-                            order_and_width->second);
-    if (!DWARFExpression::PrintDWARFExpression(s, extractor,
-                                               order_and_width->second,
-                                               /*dwarf_ref_size*/ 4,
-                                               /*location_expression*/ false))
-      s.PutCString("invalid-dwarf-expr");
+    llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle,
+                             order_and_width->second);
+    llvm::DWARFExpression(data, order_and_width->second, llvm::dwarf::DWARF32)
+        .print(s.AsRawOstream(), nullptr, nullptr);
   } else
     s.PutCString("dwarf-expr");
 }
