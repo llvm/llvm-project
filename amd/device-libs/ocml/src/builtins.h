@@ -60,10 +60,9 @@
 #define BUILTIN_ISUNORDERED_F64(x, y) __builtin_isunordered(x, y)
 #define BUILTIN_ISUNORDERED_F16(x, y) __builtin_isunordered(x, y)
 
-// TODO: Use __builtin_isinf
-#define BUILTIN_ISINF_F32(x) __builtin_amdgcn_classf(x, CLASS_PINF|CLASS_NINF)
-#define BUILTIN_ISINF_F64(x) __builtin_amdgcn_class(x, CLASS_PINF|CLASS_NINF)
-#define BUILTIN_ISINF_F16(x) __builtin_amdgcn_classh(x, CLASS_PINF|CLASS_NINF)
+#define BUILTIN_ISINF_F32(x) __builtin_isinf(x)
+#define BUILTIN_ISINF_F64(x) __builtin_isinf(x)
+#define BUILTIN_ISINF_F16(x) __builtin_isinf(x)
 
 #define BUILTIN_ISFINITE_F32(x) __builtin_amdgcn_classf(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
 #define BUILTIN_ISFINITE_F64(x) __builtin_amdgcn_class(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
