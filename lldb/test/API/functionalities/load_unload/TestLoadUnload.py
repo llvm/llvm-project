@@ -267,7 +267,7 @@ class LoadUnloadTestCase(TestBase):
         output = self.res.GetOutput()
         pattern = re.compile("Image ([0-9]+) loaded")
         for l in output.split(os.linesep):
-            #print("l:", l)
+            self.trace("l:", l)
             match = pattern.search(l)
             if match:
                 break

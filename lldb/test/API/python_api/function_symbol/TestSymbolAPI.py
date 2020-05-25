@@ -38,8 +38,8 @@ class SymbolAPITestCase(TestBase):
         # Now create the two breakpoints inside function 'a'.
         breakpoint1 = target.BreakpointCreateByLocation('main.c', self.line1)
         breakpoint2 = target.BreakpointCreateByLocation('main.c', self.line2)
-        #print("breakpoint1:", breakpoint1)
-        #print("breakpoint2:", breakpoint2)
+        self.trace("breakpoint1:", breakpoint1)
+        self.trace("breakpoint2:", breakpoint2)
         self.assertTrue(breakpoint1 and
                         breakpoint1.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
