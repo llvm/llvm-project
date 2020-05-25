@@ -54,6 +54,8 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
+  if (OverlayRealFileSystemForModules)
+    FS.OverlayRealFileSystemForModules = true;
   Inputs.TFS = &FS;
   Inputs.Opts = ParseOptions();
   Inputs.Opts.BuildRecoveryAST = true;
