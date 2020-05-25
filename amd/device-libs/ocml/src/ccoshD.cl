@@ -37,11 +37,11 @@ MATH_MANGLE(ccosh)(double2 z)
     double rr = BUILTIN_FLDEXP_F64(cxhi * cy, 1);
     bool s = x >= 0x1.0p-27;
     double ri = BUILTIN_FLDEXP_F64(BUILTIN_COPYSIGN_F64(s ? sxhi : x, z.x) * sy, s);
-    
+
     if (!FINITE_ONLY_OPT()) {
         ri = ((x == 0.0) | (z.y == 0.0)) ? BUILTIN_COPYSIGN_F64(0.0, z.y)  : ri;
         rr = (BUILTIN_ISINF_F64(x) &
-              BUILTIN_CLASS_F32(z.y, CLASS_PINF|CLASS_NINF|CLASS_PZER|CLASS_NZER|CLASS_QNAN|CLASS_SNAN)) ? x : rr;
+              BUILTIN_CLASS_F64(z.y, CLASS_PINF|CLASS_NINF|CLASS_PZER|CLASS_NZER|CLASS_QNAN|CLASS_SNAN)) ? x : rr;
     }
 
     return (double2)(rr, ri);
