@@ -670,9 +670,27 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
     MachineBasicBlock *EHPadLayoutPred = MBB.getPrevNode();
     MachineBasicBlock *Cont = BeginToEnd[EHPadToTry[&MBB]]->getParent();
     bool Analyzable = !TII.analyzeBranch(*EHPadLayoutPred, TBB, FBB, Cond);
+    // This condition means either
+    // 1. This BB ends with a single unconditional branch whose destinaion is
+    //    Cont.
+    // 2. This BB ends with a conditional branch followed by an unconditional
+    //    branch, and the unconditional branch's destination is Cont.
+    // In both cases, we want to remove the last (= unconditional) branch.
     if (Analyzable && ((Cond.empty() && TBB && TBB == Cont) ||
-                       (!Cond.empty() && FBB && FBB == Cont)))
-      TII.removeBranch(*EHPadLayoutPred);
+                       (!Cond.empty() && FBB && FBB == Cont))) {
+      bool ErasedUncondBr = false;
+      for (auto I = EHPadLayoutPred->end(), E = EHPadLayoutPred->begin();
+           I != E; --I) {
+        auto PrevI = std::prev(I);
+        if (PrevI->isTerminator()) {
+          assert(PrevI->getOpcode() == WebAssembly::BR);
+          PrevI->eraseFromParent();
+          ErasedUncondBr = true;
+          break;
+        }
+      }
+      assert(ErasedUncondBr && "Unconditional branch not erased!");
+    }
   }
 
   // When there are block / end_block markers that overlap with try / end_try
