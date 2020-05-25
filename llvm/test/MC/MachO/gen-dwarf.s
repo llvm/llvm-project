@@ -30,7 +30,6 @@ _x:	.long 1
 // CHECK: 	DW_AT_decl_file	DW_FORM_data4
 // CHECK: 	DW_AT_decl_line	DW_FORM_data4
 // CHECK: 	DW_AT_low_pc	DW_FORM_addr
-// CHECK: 	DW_AT_prototyped	DW_FORM_flag
 
 // CHECK: [3] DW_TAG_unspecified_parameters	DW_CHILDREN_no
 
@@ -53,7 +52,6 @@ _x:	.long 1
 // CHECK:      DW_AT_decl_file ([[FILE:".*gen-dwarf.s"]])
 // CHECK:      DW_AT_decl_line (5)
 // CHECK:      DW_AT_low_pc (0x0000000000000000)
-// CHECK:      DW_AT_prototyped (0x00)
 
 // CHECK:      DW_TAG_unspecified_parameters
 
@@ -64,7 +62,6 @@ _x:	.long 1
 // CHECK:      DW_AT_decl_file ([[FILE]])
 // CHECK:      DW_AT_decl_line (9)
 // CHECK:      DW_AT_low_pc (0x0000000000000007)
-// CHECK:      DW_AT_prototyped (0x00)
 
 // CHECK:      DW_TAG_unspecified_parameters
 
@@ -75,7 +72,6 @@ _x:	.long 1
 // CHECK:      DW_AT_decl_file ([[FILE]])
 // CHECK:      DW_AT_decl_line (10)
 // CHECK:      DW_AT_low_pc (0x0000000000000007)
-// CHECK:      DW_AT_prototyped (0x00)
 
 // CHECK:      DW_TAG_unspecified_parameters
 
