@@ -713,8 +713,7 @@ define <16 x i16> @shuffle_v16i16_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_0
 ;
 ; AVX512VL-LABEL: shuffle_v16i16_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    movl $15, %eax
-; AVX512VL-NEXT:    vmovd %eax, %xmm1
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,0,0,0]
 ; AVX512VL-NEXT:    vpermw %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;

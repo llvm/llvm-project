@@ -32,7 +32,7 @@ define <1 x i64> @t2() nounwind {
 define <2 x i32> @t3() nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <1,0,u,u>
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1,0,0,0]
 ; CHECK-NEXT:    retq
   ret <2 x i32> <i32 1, i32 0>
 }

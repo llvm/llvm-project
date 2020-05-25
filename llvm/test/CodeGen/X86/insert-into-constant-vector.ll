@@ -129,10 +129,8 @@ define <4 x i32> @elt3_v4i32(i32 %x) {
 define <2 x i64> @elt0_v2i64(i64 %x) {
 ; X32SSE-LABEL: elt0_v2i64:
 ; X32SSE:       # %bb.0:
-; X32SSE-NEXT:    movl $1, %eax
-; X32SSE-NEXT:    movd %eax, %xmm1
-; X32SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X32SSE-NEXT:    retl
 ;
 ; X64SSE2-LABEL: elt0_v2i64:
@@ -150,10 +148,8 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 ;
 ; X32AVX-LABEL: elt0_v2i64:
 ; X32AVX:       # %bb.0:
-; X32AVX-NEXT:    movl $1, %eax
-; X32AVX-NEXT:    vmovd %eax, %xmm0
-; X32AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X32AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X32AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X32AVX-NEXT:    retl
 ;
 ; X64AVX-LABEL: elt0_v2i64:
@@ -365,10 +361,9 @@ define <8 x float> @elt6_v8f32(float %x) {
 define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X32SSE-LABEL: elt5_v8i64:
 ; X32SSE:       # %bb.0:
-; X32SSE-NEXT:    movl $4, %eax
-; X32SSE-NEXT:    movd %eax, %xmm2
-; X32SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X32SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32SSE-NEXT:    movaps {{.*#+}} xmm2 = [4,0,0,0]
+; X32SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X32SSE-NEXT:    movaps {{.*#+}} xmm0 = [42,0,1,0]
 ; X32SSE-NEXT:    movaps {{.*#+}} xmm1 = [2,0,3,0]
 ; X32SSE-NEXT:    movaps {{.*#+}} xmm3 = [6,0,7,0]
@@ -395,10 +390,9 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ;
 ; X32AVX1-LABEL: elt5_v8i64:
 ; X32AVX1:       # %bb.0:
-; X32AVX1-NEXT:    movl $4, %eax
-; X32AVX1-NEXT:    vmovd %eax, %xmm0
-; X32AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X32AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
+; X32AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X32AVX1-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm1
 ; X32AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
 ; X32AVX1-NEXT:    retl
@@ -413,11 +407,10 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ;
 ; X32AVX2-LABEL: elt5_v8i64:
 ; X32AVX2:       # %bb.0:
-; X32AVX2-NEXT:    movl $4, %eax
-; X32AVX2-NEXT:    vmovd %eax, %xmm0
-; X32AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X32AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32AVX2-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm0, %ymm1
+; X32AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
+; X32AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X32AVX2-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm1
 ; X32AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
 ; X32AVX2-NEXT:    retl
 ;
@@ -431,13 +424,12 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ;
 ; X32AVX512F-LABEL: elt5_v8i64:
 ; X32AVX512F:       # %bb.0:
-; X32AVX512F-NEXT:    vmovdqa {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
-; X32AVX512F-NEXT:    movl $4, %eax
-; X32AVX512F-NEXT:    vmovd %eax, %xmm1
-; X32AVX512F-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X32AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; X32AVX512F-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm1, %ymm1
-; X32AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; X32AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
+; X32AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32AVX512F-NEXT:    vmovaps {{.*#+}} xmm2 = [4,0,0,0]
+; X32AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X32AVX512F-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm1, %ymm1
+; X32AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32AVX512F-NEXT:    retl
 ;
 ; X64AVX512F-LABEL: elt5_v8i64:
