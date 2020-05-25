@@ -713,11 +713,11 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // its parent. While removeLoop/removeChildLoop remove the given loop but
     // not relink its subloops, which is what we want.
     if (Loop *ParentLoop = L->getParentLoop()) {
-      Loop::iterator I = find(ParentLoop->begin(), ParentLoop->end(), L);
+      Loop::iterator I = find(*ParentLoop, L);
       assert(I != ParentLoop->end() && "Couldn't find loop");
       ParentLoop->removeChildLoop(I);
     } else {
-      Loop::iterator I = find(LI->begin(), LI->end(), L);
+      Loop::iterator I = find(*LI, L);
       assert(I != LI->end() && "Couldn't find loop");
       LI->removeLoop(I);
     }
