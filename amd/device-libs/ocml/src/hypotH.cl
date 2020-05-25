@@ -9,18 +9,12 @@
 
 CONSTATTR BGEN(hypot)
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(hypot)(half x, half y)
 {
     float fx = (float)x;
     float fy = (float)y;
-
-    float d2;
-    if (HAVE_FAST_FMA32()) {
-        d2 = BUILTIN_FMA_F32(fx, fx, fy*fy);
-    } else {
-        d2 = fx*fx + fy*fy;
-    }
+    float d2 = BUILTIN_MAD_F32(fx, fx, fy*fy);
 
     half ret = (half)BUILTIN_SQRT_F32(d2);
 
