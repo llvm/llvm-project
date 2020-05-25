@@ -41,10 +41,10 @@ b:
 // DWARF4:  DW_AT_ranges [DW_FORM_sec_offset]      (0x00000000
 // DWARF5:  DW_AT_ranges [DW_FORM_sec_offset]      (0x0000000c
 
-// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
+// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2]
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("a")
 
-// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2] *
+// DWARF: 0x{{[0-9a-f]+}}:   DW_TAG_label [2]
 // DWARF-NEXT: DW_AT_name [DW_FORM_string]     ("b")
 
 

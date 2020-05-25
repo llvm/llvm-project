@@ -25,13 +25,11 @@ _x:	.long 1
 // CHECK: 	DW_AT_producer	DW_FORM_string
 // CHECK: 	DW_AT_language	DW_FORM_data2
 
-// CHECK: [2] DW_TAG_label	DW_CHILDREN_yes
+// CHECK: [2] DW_TAG_label	DW_CHILDREN_no
 // CHECK: 	DW_AT_name	DW_FORM_string
 // CHECK: 	DW_AT_decl_file	DW_FORM_data4
 // CHECK: 	DW_AT_decl_line	DW_FORM_data4
 // CHECK: 	DW_AT_low_pc	DW_FORM_addr
-
-// CHECK: [3] DW_TAG_unspecified_parameters	DW_CHILDREN_no
 
 
 // CHECK: .debug_info contents:
@@ -53,29 +51,17 @@ _x:	.long 1
 // CHECK:      DW_AT_decl_line (5)
 // CHECK:      DW_AT_low_pc (0x0000000000000000)
 
-// CHECK:      DW_TAG_unspecified_parameters
-
-// CHECK:      NULL
-
 // CHECK:    DW_TAG_label
 // CHECK:      DW_AT_name ("foo")
 // CHECK:      DW_AT_decl_file ([[FILE]])
 // CHECK:      DW_AT_decl_line (9)
 // CHECK:      DW_AT_low_pc (0x0000000000000007)
 
-// CHECK:      DW_TAG_unspecified_parameters
-
-// CHECK:      NULL
-
 // CHECK:    DW_TAG_label
 // CHECK:      DW_AT_name ("baz")
 // CHECK:      DW_AT_decl_file ([[FILE]])
 // CHECK:      DW_AT_decl_line (10)
 // CHECK:      DW_AT_low_pc (0x0000000000000007)
-
-// CHECK:      DW_TAG_unspecified_parameters
-
-// CHECK:      NULL
 
 // CHECK:    NULL
 

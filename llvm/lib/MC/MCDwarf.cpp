@@ -841,17 +841,11 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   // DW_TAG_label DIE abbrev (2).
   MCOS->emitULEB128IntValue(2);
   MCOS->emitULEB128IntValue(dwarf::DW_TAG_label);
-  MCOS->emitInt8(dwarf::DW_CHILDREN_yes);
+  MCOS->emitInt8(dwarf::DW_CHILDREN_no);
   EmitAbbrev(MCOS, dwarf::DW_AT_name, dwarf::DW_FORM_string);
   EmitAbbrev(MCOS, dwarf::DW_AT_decl_file, dwarf::DW_FORM_data4);
   EmitAbbrev(MCOS, dwarf::DW_AT_decl_line, dwarf::DW_FORM_data4);
   EmitAbbrev(MCOS, dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr);
-  EmitAbbrev(MCOS, 0, 0);
-
-  // DW_TAG_unspecified_parameters DIE abbrev (3).
-  MCOS->emitULEB128IntValue(3);
-  MCOS->emitULEB128IntValue(dwarf::DW_TAG_unspecified_parameters);
-  MCOS->emitInt8(dwarf::DW_CHILDREN_no);
   EmitAbbrev(MCOS, 0, 0);
 
   // Terminate the abbreviations for this compilation unit.
@@ -1085,12 +1079,6 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     const MCExpr *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(),
                                              MCSymbolRefExpr::VK_None, context);
     MCOS->emitValue(AT_low_pc, AddrSize);
-
-    // The DW_TAG_unspecified_parameters DIE abbrev (3).
-    MCOS->emitULEB128IntValue(3);
-
-    // Add the NULL DIE terminating the DW_TAG_unspecified_parameters DIE's.
-    MCOS->emitInt8(0);
   }
 
   // Add the NULL DIE terminating the Compile Unit DIE's.
