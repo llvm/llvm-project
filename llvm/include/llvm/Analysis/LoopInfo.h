@@ -60,7 +60,6 @@ class Loop;
 class InductionDescriptor;
 class MDNode;
 class MemorySSAUpdater;
-class PHINode;
 class ScalarEvolution;
 class raw_ostream;
 template <class N, bool IsPostDom> class DominatorTreeBase;
