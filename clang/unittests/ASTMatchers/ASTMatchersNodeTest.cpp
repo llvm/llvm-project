@@ -303,11 +303,13 @@ TEST(Matcher, SubstNonTypeTemplateParm) {
   EXPECT_FALSE(matches("template<int N>\n"
                          "struct A {  static const int n = 0; };\n"
                          "struct B : public A<42> {};",
-                       substNonTypeTemplateParmExpr()));
+                         traverse(TK_AsIs,
+                       substNonTypeTemplateParmExpr())));
   EXPECT_TRUE(matches("template<int N>\n"
                         "struct A {  static const int n = N; };\n"
                         "struct B : public A<42> {};",
-                      substNonTypeTemplateParmExpr()));
+                         traverse(TK_AsIs,
+                      substNonTypeTemplateParmExpr())));
 }
 
 TEST(Matcher, NonTypeTemplateParmDecl) {

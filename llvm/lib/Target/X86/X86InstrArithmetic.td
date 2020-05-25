@@ -1306,7 +1306,6 @@ let Predicates = [HasBMI], AddedComplexity = -6 in {
 multiclass bmi_mulx<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
                     X86FoldableSchedWrite sched> {
 let hasSideEffects = 0 in {
-  let isCommutable = 1 in
   def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
              []>, T8XD, VEX_4V, Sched<[sched, WriteIMulH]>;

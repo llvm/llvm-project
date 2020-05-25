@@ -291,6 +291,13 @@ void conversionOperator()
     C1 c1 = (*c2);
 }
 
+template <unsigned alignment>
+void template_test() {
+  static_assert(alignment, "");
+}
+void actual_template_test() {
+  template_test<4>();
+}
 )cpp");
 
   {
@@ -408,6 +415,31 @@ VarDecl 'c1'
 VarDecl 'c1'
 `-UnaryOperator
   `-DeclRefExpr 'c2'
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("template_test"),
+                     hasDescendant(staticAssertDecl().bind("staticAssert"))),
+        AST->getASTContext());
+    EXPECT_EQ(FN.size(), 2u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[1].getNodeAs<Decl>("staticAssert")),
+              R"cpp(
+StaticAssertDecl
+|-ImplicitCastExpr
+| `-SubstNonTypeTemplateParmExpr
+|   `-IntegerLiteral
+`-StringLiteral
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[1].getNodeAs<Decl>("staticAssert")),
+              R"cpp(
+StaticAssertDecl
+|-IntegerLiteral
+`-StringLiteral
 )cpp");
   }
 }

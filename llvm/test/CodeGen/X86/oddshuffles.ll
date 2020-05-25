@@ -1146,22 +1146,22 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqu (%rsi), %xmm0
 ; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm2
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = mem[0,1,0,1]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm4 = ymm2[0,1,2,3,6,7,2,3,8,9,8,9,4,5,6,7,16,17,18,19,22,23,18,19,24,25,24,25,20,21,22,23]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,0,1]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[u,u,0,1,u,u,u,u,2,3,u,u,u,u,4,5,u,u,22,23,u,u,u,u,24,25,u,u,u,u,26,27]
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm4[0],ymm2[1],ymm4[2,3],ymm2[4],ymm4[5,6],ymm2[7],ymm4[8],ymm2[9],ymm4[10,11],ymm2[12],ymm4[13,14],ymm2[15]
+; AVX2-NEXT:    vmovdqu (%rcx), %xmm2
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm3
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm4 = ymm3[0,1,2,3,6,7,2,3,8,9,8,9,4,5,6,7,16,17,18,19,22,23,18,19,24,25,24,25,20,21,22,23]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,3,0,1]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[u,u,0,1,u,u,u,u,2,3,u,u,u,u,4,5,u,u,22,23,u,u,u,u,24,25,u,u,u,u,26,27]
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7],ymm4[8],ymm3[9],ymm4[10,11],ymm3[12],ymm4[13,14],ymm3[15]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,0,0,u,1,1,u,2>
-; AVX2-NEXT:    vpermd %ymm3, %ymm4, %ymm4
+; AVX2-NEXT:    vpermd %ymm2, %ymm4, %ymm4
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,0,0,255,255,255,255,0,0,255,255,255,255,0,0,255,255,255,255,0,0,255,255,255,255,0,0,255,255]
-; AVX2-NEXT:    vpblendvb %ymm5, %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm5, %ymm3, %ymm4, %ymm3
 ; AVX2-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,10,11,10,11,8,9,8,9,14,15,12,13,14,15]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm3[2,2,3,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
 ; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdi)
-; AVX2-NEXT:    vmovdqu %ymm2, (%rdi)
+; AVX2-NEXT:    vmovdqu %ymm3, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

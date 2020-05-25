@@ -1746,7 +1746,7 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
 static std::string APIntToHexString(const APInt &AI) {
   unsigned Width = (AI.getBitWidth() / 8) * 2;
   std::string HexString = AI.toString(16, /*Signed=*/false);
-  transform(HexString.begin(), HexString.end(), HexString.begin(), tolower);
+  llvm::transform(HexString, HexString.begin(), tolower);
   unsigned Size = HexString.size();
   assert(Width >= Size && "hex string is too large!");
   HexString.insert(HexString.begin(), Width - Size, '0');
