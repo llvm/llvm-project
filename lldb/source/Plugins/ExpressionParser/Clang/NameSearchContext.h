@@ -32,7 +32,7 @@ struct NameSearchContext {
   /// modules.
   ClangASTImporter::NamespaceMapSP m_namespace_map;
   /// The name being looked for.
-  const clang::DeclarationName &m_decl_name;
+  const clang::DeclarationName m_decl_name;
   /// The DeclContext to put declarations into.
   const clang::DeclContext *m_decl_context;
   /// All the types of functions that have been reported, so we don't
@@ -63,7 +63,7 @@ struct NameSearchContext {
   ///     The DeclContext to register Decls in.
   NameSearchContext(TypeSystemClang &clang_ts,
                     llvm::SmallVectorImpl<clang::NamedDecl *> &decls,
-                    clang::DeclarationName &name, const clang::DeclContext *dc)
+                    clang::DeclarationName name, const clang::DeclContext *dc)
       : m_clang_ts(clang_ts), m_decls(decls),
         m_namespace_map(std::make_shared<ClangASTImporter::NamespaceMap>()),
         m_decl_name(name), m_decl_context(dc) {
