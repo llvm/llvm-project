@@ -750,13 +750,13 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
         patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
         # TODO: get rid of option parser invocation here
-        opts, args = CmpRuns.generate_option_parser().parse_args(
-            ["--rootA", "", "--rootB", patched_source])
+        args = CmpRuns.generate_option_parser().parse_args(
+            ["--root-old", "", "--root-new", patched_source, "", ""])
         # Scan the results, delete empty plist files.
         num_diffs, reports_in_ref, reports_in_new = \
-            CmpRuns.dumpScanBuildResultsDiff(ref_dir, new_dir, opts,
-                                             deleteEmpty=False,
-                                             Stdout=LOCAL.stdout)
+            CmpRuns.dump_scan_build_results_diff(ref_dir, new_dir, args,
+                                                 delete_empty=False,
+                                                 out=LOCAL.stdout)
 
         if num_diffs > 0:
             stdout(f"Warning: {num_diffs} differences in diagnostics.\n")
@@ -834,7 +834,8 @@ def clean_up_empty_plists(output_dir: str):
         plist = os.path.join(output_dir, plist)
 
         try:
-            data = plistlib.readPlist(plist)
+            with open(plist, "rb") as plist_file:
+                data = plistlib.load(plist_file)
             # Delete empty reports.
             if not data['files']:
                 os.remove(plist)
