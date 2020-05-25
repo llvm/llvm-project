@@ -330,7 +330,13 @@ void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream 
 
 template <class ELFT>
 void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
-  for (const auto &YamlPhdr : Doc.ProgramHeaders) {
+  DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
+  for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks)
+    if (auto S = dyn_cast<ELFYAML::Fill>(D.get()))
+      NameToFill[S->Name] = S;
+
+  std::vector<ELFYAML::Section *> Sections = Doc.getSections();
+  for (ELFYAML::ProgramHeader &YamlPhdr : Doc.ProgramHeaders) {
     Elf_Phdr Phdr;
     zero(Phdr);
     Phdr.p_type = YamlPhdr.Type;
@@ -338,6 +344,23 @@ void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
     Phdr.p_vaddr = YamlPhdr.VAddr;
     Phdr.p_paddr = YamlPhdr.PAddr;
     PHeaders.push_back(Phdr);
+
+    // Map Sections list to corresponding chunks.
+    for (const ELFYAML::SectionName &SecName : YamlPhdr.Sections) {
+      if (ELFYAML::Fill *Fill = NameToFill.lookup(SecName.Section)) {
+        YamlPhdr.Chunks.push_back(Fill);
+        continue;
+      }
+
+      unsigned Index;
+      if (SN2I.lookup(SecName.Section, Index)) {
+        YamlPhdr.Chunks.push_back(Sections[Index]);
+        continue;
+      }
+
+      reportError("unknown section or fill referenced: '" + SecName.Section +
+                  "' by program header");
+    }
   }
 }
 
@@ -757,31 +780,19 @@ template <class ELFT> void ELFState<ELFT>::reportError(const Twine &Msg) {
 template <class ELFT>
 std::vector<Fragment>
 ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
-                                 ArrayRef<typename ELFT::Shdr> SHeaders) {
-  DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
-  for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks)
-    if (auto S = dyn_cast<ELFYAML::Fill>(D.get()))
-      NameToFill[S->Name] = S;
-
+                                 ArrayRef<Elf_Shdr> SHeaders) {
   std::vector<Fragment> Ret;
-  for (const ELFYAML::SectionName &SecName : Phdr.Sections) {
-    unsigned Index;
-    if (SN2I.lookup(SecName.Section, Index)) {
-      const typename ELFT::Shdr &H = SHeaders[Index];
-      Ret.push_back({H.sh_offset, H.sh_size, H.sh_type, H.sh_addralign});
-      continue;
-    }
-
-    if (ELFYAML::Fill *Fill = NameToFill.lookup(SecName.Section)) {
-      Ret.push_back({*Fill->Offset, Fill->Size, llvm::ELF::SHT_PROGBITS,
+  for (const ELFYAML::Chunk *C : Phdr.Chunks) {
+    if (const ELFYAML::Fill *F = dyn_cast<ELFYAML::Fill>(C)) {
+      Ret.push_back({*F->Offset, F->Size, llvm::ELF::SHT_PROGBITS,
                      /*ShAddrAlign=*/1});
       continue;
     }
 
-    reportError("unknown section or fill referenced: '" + SecName.Section +
-                "' by program header");
+    const ELFYAML::Section *S = cast<ELFYAML::Section>(C);
+    const Elf_Shdr &H = SHeaders[SN2I.get(S->Name)];
+    Ret.push_back({H.sh_offset, H.sh_size, H.sh_type, H.sh_addralign});
   }
-
   return Ret;
 }
 
