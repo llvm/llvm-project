@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -110,6 +109,7 @@ TEST_CASE(not_regular_file) {
 TEST_CASE(error_reporting) {
   using namespace fs;
 
+  static_test_env static_env;
   scoped_test_env env;
 
   const path dir = env.create_dir("dir");
@@ -125,16 +125,16 @@ TEST_CASE(error_reporting) {
     directory_entry ent;
 
     std::error_code ec = GetTestEC();
-    ent.assign(StaticEnv::DNE, ec);
+    ent.assign(static_env.DNE, ec);
     TEST_CHECK(ec);
-    TEST_REQUIRE(ent.path() == StaticEnv::DNE);
+    TEST_REQUIRE(ent.path() == static_env.DNE);
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ec = GetTestEC();
     TEST_CHECK(ent.hard_link_count(ec) == uintmax_t(-1));
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
-    ExceptionChecker Checker(StaticEnv::DNE,
+    ExceptionChecker Checker(static_env.DNE,
                              std::errc::no_such_file_or_directory,
                              "directory_entry::hard_link_count");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.hard_link_count());
@@ -144,20 +144,20 @@ TEST_CASE(error_reporting) {
     directory_entry ent;
 
     std::error_code ec = GetTestEC();
-    uintmax_t expect_bad = hard_link_count(StaticEnv::BadSymlink, ec);
+    uintmax_t expect_bad = hard_link_count(static_env.BadSymlink, ec);
     TEST_CHECK(expect_bad == uintmax_t(-1));
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ec = GetTestEC();
-    ent.assign(StaticEnv::BadSymlink, ec);
-    TEST_REQUIRE(ent.path() == StaticEnv::BadSymlink);
+    ent.assign(static_env.BadSymlink, ec);
+    TEST_REQUIRE(ent.path() == static_env.BadSymlink);
     TEST_CHECK(!ec);
 
     ec = GetTestEC();
     TEST_CHECK(ent.hard_link_count(ec) == expect_bad);
     TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
-    ExceptionChecker Checker(StaticEnv::BadSymlink,
+    ExceptionChecker Checker(static_env.BadSymlink,
                              std::errc::no_such_file_or_directory,
                              "directory_entry::hard_link_count");
     TEST_CHECK_THROW_RESULT(filesystem_error, Checker, ent.hard_link_count());
