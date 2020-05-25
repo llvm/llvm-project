@@ -4128,7 +4128,7 @@ AMDGPU:
 - ``[0-9]v``: The 32-bit VGPR register, number 0-9.
 - ``[0-9]s``: The 32-bit SGPR register, number 0-9.
 - ``[0-9]a``: The 32-bit AGPR register, number 0-9.
-
+- ``A``: An integer or a floating-point inline constant.
 
 All ARM modes:
 

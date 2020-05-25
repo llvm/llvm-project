@@ -2225,6 +2225,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth,
     bool AssumeSingleUse) const {
   EVT VT = Op.getValueType();
+  unsigned Opcode = Op.getOpcode();
   APInt DemandedElts = OriginalDemandedElts;
   unsigned NumElts = DemandedElts.getBitWidth();
   assert(VT.isVector() && "Expected vector op");
@@ -2256,7 +2257,26 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   SDLoc DL(Op);
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
-  switch (Op.getOpcode()) {
+  // Helper for demanding the specified elements and all the bits of both binary
+  // operands.
+  auto SimplifyDemandedVectorEltsBinOp = [&](SDValue Op0, SDValue Op1) {
+    unsigned NumBits0 = Op0.getScalarValueSizeInBits();
+    unsigned NumBits1 = Op1.getScalarValueSizeInBits();
+    APInt DemandedBits0 = APInt::getAllOnesValue(NumBits0);
+    APInt DemandedBits1 = APInt::getAllOnesValue(NumBits1);
+    SDValue NewOp0 = SimplifyMultipleUseDemandedBits(
+        Op0, DemandedBits0, DemandedElts, TLO.DAG, Depth + 1);
+    SDValue NewOp1 = SimplifyMultipleUseDemandedBits(
+        Op1, DemandedBits1, DemandedElts, TLO.DAG, Depth + 1);
+    if (NewOp0 || NewOp1) {
+      SDValue NewOp = TLO.DAG.getNode(
+          Opcode, SDLoc(Op), VT, NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
+      return TLO.CombineTo(Op, NewOp);
+    }
+    return false;
+  };
+
+  switch (Opcode) {
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0]) {
       KnownUndef.setAllBits();
@@ -2635,7 +2655,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
 
-  // TODO: There are more binop opcodes that could be handled here - MUL, MIN,
+  // TODO: There are more binop opcodes that could be handled here - MIN,
   // MAX, saturated math, etc.
   case ISD::OR:
   case ISD::XOR:
@@ -2646,17 +2666,26 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, UndefRHS,
-                                   ZeroRHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, UndefRHS, ZeroRHS, TLO,
+                                   Depth + 1))
       return true;
     APInt UndefLHS, ZeroLHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UndefLHS,
-                                   ZeroLHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
+                                   Depth + 1))
       return true;
 
     KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    // TODO - use KnownUndef to relax the demandedelts?
+    if (!DemandedElts.isAllOnesValue())
+      if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
+        return true;
     break;
   }
   case ISD::SHL:
@@ -2664,27 +2693,39 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::SRA:
   case ISD::ROTL:
   case ISD::ROTR: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, UndefRHS,
-                                   ZeroRHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, UndefRHS, ZeroRHS, TLO,
+                                   Depth + 1))
       return true;
     APInt UndefLHS, ZeroLHS;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UndefLHS,
-                                   ZeroLHS, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
+                                   Depth + 1))
       return true;
 
     KnownZero = ZeroLHS;
     KnownUndef = UndefLHS & UndefRHS; // TODO: use getKnownUndefForVectorBinop?
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    // TODO - use KnownUndef to relax the demandedelts?
+    if (!DemandedElts.isAllOnesValue())
+      if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
+        return true;
     break;
   }
   case ISD::MUL:
   case ISD::AND: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
     APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
-                                   KnownZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
       return true;
 
     // If either side has a zero element, then the result element is zero, even
@@ -2694,6 +2735,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero |= SrcZero;
     KnownUndef &= SrcUndef;
     KnownUndef &= ~KnownZero;
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    // TODO - use KnownUndef to relax the demandedelts?
+    if (!DemandedElts.isAllOnesValue())
+      if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
+        return true;
     break;
   }
   case ISD::TRUNCATE:
