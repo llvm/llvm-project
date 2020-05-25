@@ -40,7 +40,7 @@ MATH_MANGLE(ctanh)(double2 z)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        bool xn = BUILTIN_CLASS_F64(x, CLASS_QNAN|CLASS_SNAN);
+        bool xn = BUILTIN_ISNAN_F64(x);
         bool yin = BUILTIN_CLASS_F64(z.y, CLASS_NINF|CLASS_PINF|CLASS_QNAN|CLASS_SNAN);
         bool ni = BUILTIN_CLASS_F64(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR) & yin;
         rr = (ni | xn) ? AS_DOUBLE(QNANBITPATT_DP64) : rr;

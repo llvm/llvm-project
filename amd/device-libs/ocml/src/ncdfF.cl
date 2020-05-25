@@ -85,7 +85,7 @@ MATH_MANGLE(ncdf)(float x)
             ret = MATH_FAST_DIV(MATH_MANGLE(exp)(MATH_MAD(x - xh,  -0.5f*(x + xh), ret)), -x) *
                   MATH_MANGLE(exp)(MATH_MAD(xh, -0.5f*xh, -0.9140625f));
         } else {
-            ret = BUILTIN_CLASS_F32(x, CLASS_QNAN|CLASS_SNAN) ? x : 0.0f;
+            ret = BUILTIN_ISNAN_F32(x) ? x : 0.0f;
         }
     }
 
