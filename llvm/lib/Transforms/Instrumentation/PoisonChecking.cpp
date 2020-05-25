@@ -190,7 +190,7 @@ static void generateCreationChecks(Instruction &I,
   if (isa<BinaryOperator>(I) && !I.getType()->isVectorTy())
     generateCreationChecksForBinOp(I, Checks);
 
-  // Handle non-binops seperately
+  // Handle non-binops separately
   switch (I.getOpcode()) {
   default:
     // Note there are a couple of missing cases here, once implemented, this
