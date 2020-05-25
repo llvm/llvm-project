@@ -5172,12 +5172,15 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     }
     break;
 
+  case clang::Type::LValueReference:
+  case clang::Type::RValueReference:
   case clang::Type::ObjCObjectPointer: {
-    const clang::ObjCObjectPointerType *pointer_type =
-        llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr());
-    clang::QualType pointee_type = pointer_type->getPointeeType();
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
+    CompilerType pointee_clang_type(GetPointeeType(type));
+
+    uint32_t num_pointee_children = 0;
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
+          pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5209,27 +5212,16 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     const clang::PointerType *pointer_type =
         llvm::cast<clang::PointerType>(qual_type.getTypePtr());
     clang::QualType pointee_type(pointer_type->getPointeeType());
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
+    CompilerType pointee_clang_type(GetType(pointee_type));
+    uint32_t num_pointee_children = 0;
+    if (pointee_clang_type.IsAggregateType())
+      num_pointee_children =
+          pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
       num_children = GetNumPointeeChildren(pointee_type);
     } else
-      num_children = num_pointee_children;
-  } break;
-
-  case clang::Type::LValueReference:
-  case clang::Type::RValueReference: {
-    const clang::ReferenceType *reference_type =
-        llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
-    clang::QualType pointee_type = reference_type->getPointeeType();
-    uint32_t num_pointee_children =
-        GetType(pointee_type).GetNumChildren(omit_empty_base_classes, exe_ctx);
-    // If this type points to a simple type, then it has 1 child
-    if (num_pointee_children == 0)
-      num_children = 1;
-    else
       num_children = num_pointee_children;
   } break;
 
