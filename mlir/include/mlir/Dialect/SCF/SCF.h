@@ -24,6 +24,8 @@
 namespace mlir {
 namespace scf {
 
+void buildTerminatedBody(OpBuilder &builder, Location loc);
+
 #include "mlir/Dialect/SCF/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
