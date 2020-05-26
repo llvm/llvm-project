@@ -161,7 +161,7 @@ a set of legal ones.
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
 `foo.add`], the framework will automatically detect that it can legalize
-`baz.add` -> `foo.add` even though a direct conversion does not exist. This
+`bar.add` -> `foo.add` even though a direct conversion does not exist. This
 means that you don’t have to define a direct legalization pattern for `bar.add`
 -> `foo.add`.
 
