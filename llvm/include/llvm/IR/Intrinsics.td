@@ -612,6 +612,13 @@ def int_objectsize : Intrinsic<[llvm_anyint_ty],
                                [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<1>, ImmArg<2>, ImmArg<3>]>,
                                GCCBuiltin<"__builtin_object_size">;
 
+//===--------------- Access to Floating Point Environment -----------------===//
+//
+
+let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
+  def int_flt_rounds    : Intrinsic<[llvm_i32_ty], []>;
+}
+
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
 
@@ -1115,8 +1122,6 @@ def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
 
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
-def int_flt_rounds : Intrinsic<[llvm_i32_ty]>,
-                     GCCBuiltin<"__builtin_flt_rounds">;
 def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
                GCCBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,

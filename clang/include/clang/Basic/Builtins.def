@@ -323,6 +323,9 @@ BUILTIN(__builtin_truncf, "ff", "Fnc")
 BUILTIN(__builtin_truncl, "LdLd", "Fnc")
 BUILTIN(__builtin_truncf16, "hh", "Fnc")
 
+// Access to floating point environment
+BUILTIN(__builtin_flt_rounds, "i", "n")
+
 // C99 complex builtins
 BUILTIN(__builtin_cabs, "dXd", "Fne")
 BUILTIN(__builtin_cabsf, "fXf", "Fne")
@@ -517,7 +520,6 @@ BUILTIN(__builtin_return_address, "v*IUi", "n")
 BUILTIN(__builtin_extract_return_addr, "v*v*", "n")
 BUILTIN(__builtin_frame_address, "v*IUi", "n")
 BUILTIN(__builtin___clear_cache, "vc*c*", "n")
-BUILTIN(__builtin_flt_rounds, "i", "nc")
 BUILTIN(__builtin_setjmp, "iv**", "j")
 BUILTIN(__builtin_longjmp, "vv**i", "r")
 BUILTIN(__builtin_unwind_init, "v", "")
