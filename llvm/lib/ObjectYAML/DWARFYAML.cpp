@@ -16,11 +16,11 @@
 namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
-  return 0 == DebugStrings.size() + AbbrevDecls.size() + ARanges.size() +
-                  DebugRanges.size() + PubNames.Entries.size() +
-                  PubTypes.Entries.size() + GNUPubNames.Entries.size() +
-                  GNUPubTypes.Entries.size() + CompileUnits.size() +
-                  DebugLines.size();
+  return DebugStrings.empty() && AbbrevDecls.empty() && ARanges.empty() &&
+         DebugRanges.empty() && PubNames.Entries.empty() &&
+         PubTypes.Entries.empty() && GNUPubNames.Entries.empty() &&
+         GNUPubTypes.Entries.empty() && CompileUnits.empty() &&
+         DebugLines.empty();
 }
 
 namespace yaml {
@@ -70,13 +70,13 @@ void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
 }
 
 void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
-                                               DWARFYAML::ARange &Range) {
-  IO.mapRequired("Length", Range.Length);
-  IO.mapRequired("Version", Range.Version);
-  IO.mapRequired("CuOffset", Range.CuOffset);
-  IO.mapRequired("AddrSize", Range.AddrSize);
-  IO.mapRequired("SegSize", Range.SegSize);
-  IO.mapRequired("Descriptors", Range.Descriptors);
+                                               DWARFYAML::ARange &ARange) {
+  IO.mapRequired("Length", ARange.Length);
+  IO.mapRequired("Version", ARange.Version);
+  IO.mapRequired("CuOffset", ARange.CuOffset);
+  IO.mapRequired("AddrSize", ARange.AddrSize);
+  IO.mapRequired("SegSize", ARange.SegSize);
+  IO.mapRequired("Descriptors", ARange.Descriptors);
 }
 
 void MappingTraits<DWARFYAML::RangeEntry>::mapping(
