@@ -13,7 +13,7 @@
 
 #ifndef LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 #define LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
-#include "llvm/ADT/APInt.h"
+
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
