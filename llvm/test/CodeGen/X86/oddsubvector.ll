@@ -192,82 +192,67 @@ define void @PR42833() {
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    addl .Lb${{.*}}(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    movaps {{.*#+}} xmm3 = <u,1,1,1>
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm2[0],xmm3[1,2,3]
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    paddd %xmm3, %xmm4
-; SSE2-NEXT:    pslld $23, %xmm3
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm3
-; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    pmuludq %xmm3, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm3, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
-; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm4[0],xmm5[1,2,3]
-; SSE2-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm3
-; SSE2-NEXT:    psubd %xmm1, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:    paddd %xmm0, %xmm3
+; SSE2-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm4
+; SSE2-NEXT:    psubd %xmm1, %xmm4
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    paddd %xmm0, %xmm5
+; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm3[0],xmm5[1,2,3]
 ; SSE2-NEXT:    movdqa %xmm1, .Lc$local+{{.*}}(%rip)
 ; SSE2-NEXT:    movaps %xmm5, .Lc$local+{{.*}}(%rip)
 ; SSE2-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm4
+; SSE2-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm3
 ; SSE2-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm5
 ; SSE2-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm6
 ; SSE2-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm7
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; SSE2-NEXT:    psubd %xmm0, %xmm7
-; SSE2-NEXT:    psubd %xmm4, %xmm6
+; SSE2-NEXT:    psubd %xmm3, %xmm6
 ; SSE2-NEXT:    psubd %xmm1, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, .Ld$local+{{.*}}(%rip)
 ; SSE2-NEXT:    movdqa %xmm6, .Ld$local+{{.*}}(%rip)
-; SSE2-NEXT:    movdqa %xmm3, .Ld$local+{{.*}}(%rip)
+; SSE2-NEXT:    movdqa %xmm4, .Ld$local+{{.*}}(%rip)
 ; SSE2-NEXT:    movdqa %xmm7, .Ld$local+{{.*}}(%rip)
-; SSE2-NEXT:    paddd %xmm4, %xmm4
+; SSE2-NEXT:    paddd %xmm3, %xmm3
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, .Lc$local+{{.*}}(%rip)
-; SSE2-NEXT:    movdqa %xmm4, .Lc$local+{{.*}}(%rip)
+; SSE2-NEXT:    movdqa %xmm3, .Lc$local+{{.*}}(%rip)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm1
 ; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm0
-; SSE42-NEXT:    movd %xmm0, %eax
-; SSE42-NEXT:    addl .Lb${{.*}}(%rip), %eax
-; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = <u,1,1,1>
-; SSE42-NEXT:    pinsrd $0, %eax, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    paddd %xmm2, %xmm3
-; SSE42-NEXT:    pslld $23, %xmm2
-; SSE42-NEXT:    paddd {{.*}}(%rip), %xmm2
-; SSE42-NEXT:    cvttps2dq %xmm2, %xmm2
-; SSE42-NEXT:    pmulld %xmm0, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm3
-; SSE42-NEXT:    psubd %xmm1, %xmm3
-; SSE42-NEXT:    paddd %xmm1, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, .Lc$local+{{.*}}(%rip)
-; SSE42-NEXT:    movdqa %xmm2, .Lc$local+{{.*}}(%rip)
 ; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm1
+; SSE42-NEXT:    movd %xmm1, %eax
+; SSE42-NEXT:    addl .Lb${{.*}}(%rip), %eax
+; SSE42-NEXT:    movd %eax, %xmm2
+; SSE42-NEXT:    paddd %xmm1, %xmm2
+; SSE42-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm3
+; SSE42-NEXT:    psubd %xmm0, %xmm3
+; SSE42-NEXT:    paddd %xmm0, %xmm0
+; SSE42-NEXT:    movdqa %xmm1, %xmm4
+; SSE42-NEXT:    paddd %xmm1, %xmm4
+; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm2[0,1],xmm4[2,3,4,5,6,7]
+; SSE42-NEXT:    movdqa %xmm0, .Lc$local+{{.*}}(%rip)
+; SSE42-NEXT:    movdqa %xmm4, .Lc$local+{{.*}}(%rip)
+; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm2
 ; SSE42-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm4
 ; SSE42-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm5
 ; SSE42-NEXT:    movdqa .Ld$local+{{.*}}(%rip), %xmm6
-; SSE42-NEXT:    pinsrd $0, %eax, %xmm0
-; SSE42-NEXT:    psubd %xmm0, %xmm6
+; SSE42-NEXT:    pinsrd $0, %eax, %xmm1
+; SSE42-NEXT:    psubd %xmm1, %xmm6
 ; SSE42-NEXT:    psubd %xmm2, %xmm5
-; SSE42-NEXT:    psubd %xmm1, %xmm4
+; SSE42-NEXT:    psubd %xmm0, %xmm4
 ; SSE42-NEXT:    movdqa %xmm4, .Ld$local+{{.*}}(%rip)
 ; SSE42-NEXT:    movdqa %xmm5, .Ld$local+{{.*}}(%rip)
 ; SSE42-NEXT:    movdqa %xmm3, .Ld$local+{{.*}}(%rip)
 ; SSE42-NEXT:    movdqa %xmm6, .Ld$local+{{.*}}(%rip)
 ; SSE42-NEXT:    paddd %xmm2, %xmm2
-; SSE42-NEXT:    paddd %xmm1, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, .Lc$local+{{.*}}(%rip)
+; SSE42-NEXT:    paddd %xmm0, %xmm0
+; SSE42-NEXT:    movdqa %xmm0, .Lc$local+{{.*}}(%rip)
 ; SSE42-NEXT:    movdqa %xmm2, .Lc$local+{{.*}}(%rip)
 ; SSE42-NEXT:    retq
 ;
@@ -276,17 +261,13 @@ define void @PR42833() {
 ; AVX1-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    addl .Lb${{.*}}(%rip), %eax
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,1,1,1>
-; AVX1-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vmovd %eax, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm3
-; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
-; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpslld $1, %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0],ymm1[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vmovdqa .Ld$local+{{.*}}(%rip), %xmm2
 ; AVX1-NEXT:    vpsubd .Lc$local+{{.*}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmovups %ymm1, .Lc$local+{{.*}}(%rip)
@@ -316,10 +297,9 @@ define void @PR42833() {
 ; AVX2-NEXT:    vmovdqu .Lc$local+{{.*}}(%rip), %ymm0
 ; AVX2-NEXT:    addl .Lc$local+{{.*}}(%rip), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0],mem[1,2,3,4,5,6,7]
-; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm3
-; AVX2-NEXT:    vpsllvd %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0],ymm2[1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm3
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vmovdqu %ymm2, .Lc$local+{{.*}}(%rip)
 ; AVX2-NEXT:    vmovdqu .Lc$local+{{.*}}(%rip), %ymm2
 ; AVX2-NEXT:    vmovdqu .Ld$local+{{.*}}(%rip), %ymm3
@@ -341,10 +321,9 @@ define void @PR42833() {
 ; AVX512-NEXT:    vmovdqu64 .Lc$local+{{.*}}(%rip), %zmm1
 ; AVX512-NEXT:    addl .Lc$local+{{.*}}(%rip), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],mem[1,2,3,4,5,6,7]
-; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm3
-; AVX512-NEXT:    vpsllvd %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0],ymm0[1,2,3,4,5,6,7]
+; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm2
+; AVX512-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0],ymm0[1,2,3,4,5,6,7]
 ; AVX512-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm2
 ; AVX512-NEXT:    vmovdqu %ymm0, .Lc$local+{{.*}}(%rip)
 ; AVX512-NEXT:    vmovdqu .Lc$local+{{.*}}(%rip), %ymm0
@@ -364,14 +343,13 @@ define void @PR42833() {
 ; XOP-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; XOP-NEXT:    vmovd %xmm0, %eax
 ; XOP-NEXT:    addl .Lb${{.*}}(%rip), %eax
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,1,1,1>
-; XOP-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
-; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; XOP-NEXT:    vmovd %eax, %xmm1
+; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; XOP-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
 ; XOP-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm3
-; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vpslld $1, %xmm3, %xmm3
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0],ymm1[1,2,3,4,5,6,7]
+; XOP-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; XOP-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7]
 ; XOP-NEXT:    vmovdqa .Ld$local+{{.*}}(%rip), %xmm2
 ; XOP-NEXT:    vpsubd .Lc$local+{{.*}}(%rip), %xmm2, %xmm2
 ; XOP-NEXT:    vmovups %ymm1, .Lc$local+{{.*}}(%rip)
