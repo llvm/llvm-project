@@ -1481,26 +1481,11 @@ bool ento::shouldRegisterRetainCountBase(const CheckerManager &mgr) {
   return true;
 }
 
-// FIXME: remove this, hack for backwards compatibility:
-// it should be possible to enable the NS/CF retain count checker as
-// osx.cocoa.RetainCount, and it should be possible to disable
-// osx.OSObjectRetainCount using osx.cocoa.RetainCount:CheckOSObject=false.
-static bool getOption(const AnalyzerOptions &Options,
-                      StringRef Postfix,
-                      StringRef Value) {
-  auto I = Options.Config.find(
-    (StringRef("osx.cocoa.RetainCount:") + Postfix).str());
-  if (I != Options.Config.end())
-    return I->getValue() == Value;
-  return false;
-}
-
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<RetainCountChecker>();
   Chk->TrackObjCAndCFObjects = true;
-  Chk->TrackNSCFStartParam = getOption(Mgr.getAnalyzerOptions(),
-                                       "TrackNSCFStartParam",
-                                       "true");
+  Chk->TrackNSCFStartParam = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      Mgr.getCurrentCheckerName(), "TrackNSCFStartParam");
 }
 
 bool ento::shouldRegisterRetainCountChecker(const CheckerManager &mgr) {
@@ -1509,10 +1494,7 @@ bool ento::shouldRegisterRetainCountChecker(const CheckerManager &mgr) {
 
 void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<RetainCountChecker>();
-  if (!getOption(Mgr.getAnalyzerOptions(),
-                 "CheckOSObject",
-                 "false"))
-    Chk->TrackOSObjects = true;
+  Chk->TrackOSObjects = true;
 }
 
 bool ento::shouldRegisterOSObjectRetainCountChecker(const CheckerManager &mgr) {
