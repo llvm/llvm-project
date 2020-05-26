@@ -2931,8 +2931,10 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
         continue;
       }
       if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
-        E = PE;
-        continue;
+        if (PE->getSourceRange() == C->getSourceRange()) {
+          E = PE;
+          continue;
+        }
       }
       ExprNode = ExprNode->IgnoreParenImpCasts();
       if (ExprNode->getSourceRange() == SR)
