@@ -571,7 +571,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-ANDROID %s
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone-aarch64-android.so"
-// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "-export-dynamic-symbol=__cfi_check"
+// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
 // RUN: %clangxx -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -mmacosx-version-min=10.6 \

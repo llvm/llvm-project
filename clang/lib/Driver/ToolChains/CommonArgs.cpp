@@ -774,7 +774,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic");
 
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
-    CmdArgs.push_back("-export-dynamic-symbol=__cfi_check");
+    CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty();
 }
