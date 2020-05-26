@@ -14,6 +14,7 @@
 #include <string>
 
 namespace clang {
+class Decl;
 namespace index {
 
 struct IndexingOptions {
