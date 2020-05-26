@@ -6,17 +6,17 @@ define <32 x i8> @interleaved_load_vf32_i8_stride3(<96 x i8>* %ptr){
 ; AVX2-LABEL: @interleaved_load_vf32_i8_stride3(
 ; AVX2-NEXT:    [[TMP1:%.*]] = bitcast <96 x i8>* [[PTR:%.*]] to <16 x i8>*
 ; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 0
-; AVX2-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]]
+; AVX2-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]], align 128
 ; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 1
-; AVX2-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[TMP4]], align 128
 ; AVX2-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 2
-; AVX2-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[TMP6]]
+; AVX2-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[TMP6]], align 128
 ; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 3
-; AVX2-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[TMP8]]
+; AVX2-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[TMP8]], align 128
 ; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 4
-; AVX2-NEXT:    [[TMP11:%.*]] = load <16 x i8>, <16 x i8>* [[TMP10]]
+; AVX2-NEXT:    [[TMP11:%.*]] = load <16 x i8>, <16 x i8>* [[TMP10]], align 128
 ; AVX2-NEXT:    [[TMP12:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 5
-; AVX2-NEXT:    [[TMP13:%.*]] = load <16 x i8>, <16 x i8>* [[TMP12]]
+; AVX2-NEXT:    [[TMP13:%.*]] = load <16 x i8>, <16 x i8>* [[TMP12]], align 128
 ; AVX2-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> [[TMP9]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; AVX2-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> [[TMP11]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; AVX2-NEXT:    [[TMP16:%.*]] = shufflevector <16 x i8> [[TMP7]], <16 x i8> [[TMP13]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -48,11 +48,11 @@ define <16 x i8> @interleaved_load_vf16_i8_stride3(<48 x i8>* %ptr){
 ; AVX2-LABEL: @interleaved_load_vf16_i8_stride3(
 ; AVX2-NEXT:    [[TMP1:%.*]] = bitcast <48 x i8>* [[PTR:%.*]] to <16 x i8>*
 ; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 0
-; AVX2-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]]
+; AVX2-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[TMP2]], align 64
 ; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 1
-; AVX2-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[TMP4]], align 64
 ; AVX2-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i8>, <16 x i8>* [[TMP1]], i32 2
-; AVX2-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[TMP6]]
+; AVX2-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[TMP6]], align 64
 ; AVX2-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> undef, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 2, i32 5, i32 8, i32 11, i32 14, i32 1, i32 4, i32 7, i32 10, i32 13>
 ; AVX2-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> undef, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 2, i32 5, i32 8, i32 11, i32 14, i32 1, i32 4, i32 7, i32 10, i32 13>
 ; AVX2-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i8> [[TMP7]], <16 x i8> undef, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 2, i32 5, i32 8, i32 11, i32 14, i32 1, i32 4, i32 7, i32 10, i32 13>
@@ -79,7 +79,7 @@ define <16 x i8> @interleaved_load_vf16_i8_stride3(<48 x i8>* %ptr){
 
 define <8 x i8> @interleaved_load_vf8_i8_stride3(<24 x i8>* %ptr){
 ; AVX2-LABEL: @interleaved_load_vf8_i8_stride3(
-; AVX2-NEXT:    [[WIDE_VEC:%.*]] = load <24 x i8>, <24 x i8>* [[PTR:%.*]]
+; AVX2-NEXT:    [[WIDE_VEC:%.*]] = load <24 x i8>, <24 x i8>* [[PTR:%.*]], align 32
 ; AVX2-NEXT:    [[V1:%.*]] = shufflevector <24 x i8> [[WIDE_VEC]], <24 x i8> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; AVX2-NEXT:    [[V2:%.*]] = shufflevector <24 x i8> [[WIDE_VEC]], <24 x i8> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; AVX2-NEXT:    [[V3:%.*]] = shufflevector <24 x i8> [[WIDE_VEC]], <24 x i8> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
