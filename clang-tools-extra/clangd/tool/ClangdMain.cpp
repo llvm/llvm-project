@@ -274,11 +274,8 @@ list<std::string> TweakList{
 opt<bool> CrossFileRename{
     "cross-file-rename",
     cat(Features),
-    desc("Enable cross-file rename feature. Note that this feature is "
-         "experimental and may lead to broken code or incomplete rename "
-         "results"),
-    init(false),
-    Hidden,
+    desc("Enable cross-file rename feature."),
+    init(true),
 };
 
 opt<bool> RecoveryAST{
