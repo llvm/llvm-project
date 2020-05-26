@@ -18,7 +18,7 @@ CHECK-NEXT:         <dict>
 CHECK-NEXT:                 <key>CFBundleDevelopmentRegion</key>
 CHECK-NEXT:                 <string>English</string>
 CHECK-NEXT:                 <key>CFBundleIdentifier</key>
-CHECK-NEXT:                 <string>com.apple.xcode.dsym.custom</string>
+CHECK-NEXT:                 <string>com.apple.xcode.dsym.Foo&amp;Bar</string>
 CHECK-NEXT:                 <key>CFBundleInfoDictionaryVersion</key>
 CHECK-NEXT:                 <string>6.0</string>
 CHECK-NEXT:                 <key>CFBundlePackageType</key>
