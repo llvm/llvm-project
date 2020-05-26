@@ -2009,7 +2009,7 @@ static Instruction *canonicalizeScalarSelectOfVecs(
 
   // We can replace a single-use extract with constant index.
   Value *Cond = Sel.getCondition();
-  if (!match(Cond, m_OneUse(m_ExtractElement(m_Value(), m_ConstantInt()))))
+  if (!match(Cond, m_OneUse(m_ExtractElt(m_Value(), m_ConstantInt()))))
     return nullptr;
 
   // select (extelt V, Index), T, F --> select (splat V, Index), T, F

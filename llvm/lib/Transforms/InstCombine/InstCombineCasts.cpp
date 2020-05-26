@@ -854,8 +854,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   //   --->
   //   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
   Value *VecOp;
-  if (match(Src,
-            m_OneUse(m_ExtractElement(m_Value(VecOp), m_ConstantInt(Cst))))) {
+  if (match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst))))) {
     auto *VecOpTy = cast<VectorType>(VecOp->getType());
     unsigned DestScalarSize = DestTy->getScalarSizeInBits();
     unsigned VecOpScalarSize = VecOpTy->getScalarSizeInBits();
