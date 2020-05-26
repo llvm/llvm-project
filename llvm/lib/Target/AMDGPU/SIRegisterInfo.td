@@ -208,6 +208,9 @@ defm SRC_PRIVATE_BASE : SIRegLoHi16<"src_private_base", 237>;
 defm SRC_PRIVATE_LIMIT : SIRegLoHi16<"src_private_limit", 238>;
 defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
 
+// Not addressable
+def MODE : SIReg <"mode", 0>;
+
 def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   // There is no physical register corresponding to this. This is an
   // encoding value in a source field, which will ultimately trigger a
