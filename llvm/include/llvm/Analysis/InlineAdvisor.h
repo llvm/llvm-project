@@ -22,7 +22,6 @@ class CallBase;
 class Function;
 class Module;
 class OptimizationRemarkEmitter;
-class PreservedAnalyses;
 
 /// There are 3 scenarios we can use the InlineAdvisor:
 /// - Default - use manual heuristics.
