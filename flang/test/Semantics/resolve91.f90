@@ -44,3 +44,10 @@ module m4
     real, dimension(:), pointer :: realArray => localArray
   end type
 end module m4
+
+module m5
+  !ERROR: Actual argument for 'string=' has bad type 'REAL(4)'
+  character(len=len(a)) :: b
+  !ERROR: The type of 'a' has already been implicitly declared
+  character(len=len(b)) :: a
+end module m5
