@@ -106,9 +106,8 @@ define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-SLOW-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    shll %cl, %edx
+; X86-SLOW-NEXT:    notb %cl
 ; X86-SLOW-NEXT:    shrl %eax
-; X86-SLOW-NEXT:    andb $31, %cl
-; X86-SLOW-NEXT:    xorb $31, %cl
 ; X86-SLOW-NEXT:    shrl %cl, %eax
 ; X86-SLOW-NEXT:    orl %edx, %eax
 ; X86-SLOW-NEXT:    retl
@@ -127,8 +126,7 @@ define i32 @var_shift_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X64-SLOW-NEXT:    movl %esi, %eax
 ; X64-SLOW-NEXT:    shll %cl, %edi
 ; X64-SLOW-NEXT:    shrl %eax
-; X64-SLOW-NEXT:    andb $31, %cl
-; X64-SLOW-NEXT:    xorb $31, %cl
+; X64-SLOW-NEXT:    notb %cl
 ; X64-SLOW-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-SLOW-NEXT:    shrl %cl, %eax
 ; X64-SLOW-NEXT:    orl %edi, %eax
@@ -240,7 +238,7 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-SLOW-NEXT:    pushl %ebx
 ; X86-SLOW-NEXT:    pushl %edi
 ; X86-SLOW-NEXT:    pushl %esi
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
@@ -249,32 +247,30 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-SLOW-NEXT:    subb %bl, %ch
 ; X86-SLOW-NEXT:    movb %ch, %cl
 ; X86-SLOW-NEXT:    shrl %cl, %edx
-; X86-SLOW-NEXT:    andb $31, %cl
-; X86-SLOW-NEXT:    xorb $31, %cl
+; X86-SLOW-NEXT:    notb %cl
 ; X86-SLOW-NEXT:    addl %eax, %eax
 ; X86-SLOW-NEXT:    shll %cl, %eax
 ; X86-SLOW-NEXT:    movb %bl, %cl
-; X86-SLOW-NEXT:    shll %cl, %ebp
+; X86-SLOW-NEXT:    shll %cl, %edi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SLOW-NEXT:    movl %esi, %edi
-; X86-SLOW-NEXT:    shrl %edi
-; X86-SLOW-NEXT:    andb $31, %cl
-; X86-SLOW-NEXT:    xorb $31, %cl
-; X86-SLOW-NEXT:    shrl %cl, %edi
+; X86-SLOW-NEXT:    movl %esi, %ebp
+; X86-SLOW-NEXT:    shrl %ebp
+; X86-SLOW-NEXT:    notb %cl
+; X86-SLOW-NEXT:    shrl %cl, %ebp
 ; X86-SLOW-NEXT:    movb %bl, %cl
 ; X86-SLOW-NEXT:    shll %cl, %esi
 ; X86-SLOW-NEXT:    testb $32, %bl
 ; X86-SLOW-NEXT:    jne .LBB5_1
 ; X86-SLOW-NEXT:  # %bb.2:
-; X86-SLOW-NEXT:    orl %edi, %ebp
+; X86-SLOW-NEXT:    orl %ebp, %edi
 ; X86-SLOW-NEXT:    jmp .LBB5_3
 ; X86-SLOW-NEXT:  .LBB5_1:
-; X86-SLOW-NEXT:    movl %esi, %ebp
+; X86-SLOW-NEXT:    movl %esi, %edi
 ; X86-SLOW-NEXT:    xorl %esi, %esi
 ; X86-SLOW-NEXT:  .LBB5_3:
 ; X86-SLOW-NEXT:    movb %ch, %cl
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SLOW-NEXT:    shrl %cl, %edi
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-SLOW-NEXT:    shrl %cl, %ebp
 ; X86-SLOW-NEXT:    testb $32, %ch
 ; X86-SLOW-NEXT:    jne .LBB5_4
 ; X86-SLOW-NEXT:  # %bb.5:
@@ -282,17 +278,17 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-SLOW-NEXT:    movl %eax, %ecx
 ; X86-SLOW-NEXT:    jmp .LBB5_6
 ; X86-SLOW-NEXT:  .LBB5_4:
-; X86-SLOW-NEXT:    movl %edi, %ecx
-; X86-SLOW-NEXT:    xorl %edi, %edi
+; X86-SLOW-NEXT:    movl %ebp, %ecx
+; X86-SLOW-NEXT:    xorl %ebp, %ebp
 ; X86-SLOW-NEXT:  .LBB5_6:
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    testl %ebx, %ebx
 ; X86-SLOW-NEXT:    je .LBB5_8
 ; X86-SLOW-NEXT:  # %bb.7:
-; X86-SLOW-NEXT:    orl %edi, %ebp
+; X86-SLOW-NEXT:    orl %ebp, %edi
 ; X86-SLOW-NEXT:    orl %ecx, %esi
-; X86-SLOW-NEXT:    movl %ebp, %edx
+; X86-SLOW-NEXT:    movl %edi, %edx
 ; X86-SLOW-NEXT:    movl %esi, %eax
 ; X86-SLOW-NEXT:  .LBB5_8:
 ; X86-SLOW-NEXT:    popl %esi
@@ -315,8 +311,7 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X64-SLOW-NEXT:    movq %rsi, %rax
 ; X64-SLOW-NEXT:    shlq %cl, %rdi
 ; X64-SLOW-NEXT:    shrq %rax
-; X64-SLOW-NEXT:    andb $63, %cl
-; X64-SLOW-NEXT:    xorb $63, %cl
+; X64-SLOW-NEXT:    notb %cl
 ; X64-SLOW-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-SLOW-NEXT:    shrq %cl, %rax
 ; X64-SLOW-NEXT:    orq %rdi, %rax
