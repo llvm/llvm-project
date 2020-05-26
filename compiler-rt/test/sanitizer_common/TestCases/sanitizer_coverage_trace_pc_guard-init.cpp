@@ -1,7 +1,6 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime,x86_64-linux
-// XFAIL: tsan
 //
 // RUN: DIR=%t_workdir
 // RUN: CLANG_ARGS="-O0 -fsanitize-coverage=trace-pc-guard"
