@@ -438,8 +438,11 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
     ScoredResults.push_back({Score, std::move(Located)});
   });
 
-  if (TooMany)
+  if (TooMany) {
+    vlog("Heuristic index lookup for {0} returned too many candidates, ignored",
+         Word.Text);
     return {};
+  }
 
   llvm::sort(ScoredResults,
              [](const ScoredLocatedSymbol &A, const ScoredLocatedSymbol &B) {
@@ -448,6 +451,10 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
   std::vector<LocatedSymbol> Results;
   for (auto &Res : std::move(ScoredResults))
     Results.push_back(std::move(Res.second));
+  if (Results.empty())
+    vlog("No heuristic index definition for {0}", Word.Text);
+  else
+    log("Found definition heuristically in index for {0}", Word.Text);
   return Results;
 }
 
@@ -570,13 +577,22 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     // Is the same word nearby a real identifier that might refer to something?
     if (const syntax::Token *NearbyIdent =
             findNearbyIdentifier(*Word, AST.getTokens())) {
-      if (auto Macro = locateMacroReferent(*NearbyIdent, AST, *MainFilePath))
+      if (auto Macro = locateMacroReferent(*NearbyIdent, AST, *MainFilePath)) {
+        log("Found macro definition heuristically using nearby identifier {0}",
+            Word->Text);
         return {*std::move(Macro)};
+      }
       ASTResults =
           locateASTReferent(NearbyIdent->location(), NearbyIdent, AST,
                             *MainFilePath, Index, /*NodeKind=*/nullptr);
-      if (!ASTResults.empty())
+      if (!ASTResults.empty()) {
+        log("Found definition heuristically using nearby identifier {0}",
+            NearbyIdent->text(SM));
         return ASTResults;
+      } else {
+        vlog("No definition found using nearby identifier {0} at {1}",
+             Word->Text, Word->Location.printToString(SM));
+      }
     }
     // No nearby word, or it didn't refer to anything either. Try the index.
     auto TextualResults =
