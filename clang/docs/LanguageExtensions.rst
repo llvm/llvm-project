@@ -478,7 +478,7 @@ bitwise operators &,|,^,~        yes     yes       yes         --
 !, &&, ||                        yes     --        yes [#]_    --
 ==, !=, >, <, >=, <=             yes     yes       yes         --
 =                                yes     yes       yes         yes
-:? [#]_                          yes     --        yes         --
+?: [#]_                          yes     --        yes         --
 sizeof                           yes     yes       yes         yes
 C-style cast                     yes     yes       yes         no
 reinterpret_cast                 yes     no        yes         no
@@ -489,9 +489,11 @@ const_cast                       no      no        no          no
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
 .. [#] unary operator ! is not implemented, however && and || are.
-.. [#] While OpenCL and GCC vectors both implement the comparison operator(?:) as a
-  'select', they operate somewhat differently. OpenCL selects based on signedness of
-  the condition operands, but GCC vectors use normal bool conversions (that is, != 0).
+.. [#] ternary operator(?:) has different behaviors depending on condition
+  operand's vector type. If the condition is a GNU vector (i.e. __vector_size__),
+  it's only available in C++ and uses normal bool conversions (that is, != 0).
+  If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
+  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 
 Matrix Types
 ============
