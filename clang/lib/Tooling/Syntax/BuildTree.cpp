@@ -11,6 +11,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeLoc.h"
@@ -594,10 +595,7 @@ public:
       for (auto *D : DS->decls())
         Builder.noticeDeclWithoutSemicolon(D);
     } else if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
-      // Do not recurse into subexpressions.
-      // We do not have syntax trees for expressions yet, so we only want to see
-      // the first top-level expression.
-      return WalkUpFromExpr(E->IgnoreImplicit());
+      return RecursiveASTVisitor::TraverseStmt(E->IgnoreImplicit());
     }
     return RecursiveASTVisitor::TraverseStmt(S);
   }
@@ -607,6 +605,19 @@ public:
     assert(!isImplicitExpr(E) && "should be handled by TraverseStmt");
     Builder.foldNode(Builder.getExprRange(E),
                      new (allocator()) syntax::UnknownExpression, E);
+    return true;
+  }
+
+  bool WalkUpFromBinaryOperator(BinaryOperator *S) {
+    Builder.markExprChild(
+        S->getLHS(), syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
+    Builder.markChildToken(
+        S->getOperatorLoc(),
+        syntax::NodeRole::BinaryOperatorExpression_operatorToken);
+    Builder.markExprChild(
+        S->getRHS(), syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::BinaryOperatorExpression, S);
     return true;
   }
 
