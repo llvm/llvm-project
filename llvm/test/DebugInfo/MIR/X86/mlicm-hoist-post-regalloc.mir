@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s  | FileCheck %s
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -o - %s  | FileCheck %s
   ; Ensure we execute machinelicm post register allocation.
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ;
