@@ -96,11 +96,6 @@ PPCFrameLowering::PPCFrameLowering(const PPCSubtarget &STI)
 // With the SVR4 ABI, callee-saved registers have fixed offsets on the stack.
 const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
     unsigned &NumEntries) const {
-  // Early exit if not using the SVR4 ABI.
-  if (!Subtarget.isSVR4ABI()) {
-    NumEntries = 0;
-    return nullptr;
-  }
 
 // Floating-point register save area offsets.
 #define CALLEE_SAVED_FPRS \
@@ -123,7 +118,8 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::F15, -136},   \
       {PPC::F14, -144}
 
-// 32-bit general purpose register save area offsets.
+// 32-bit general purpose register save area offsets shared by ELF and
+// AIX. AIX has an extra CSR with r13.
 #define CALLEE_SAVED_GPRS32 \
       {PPC::R31, -4},       \
       {PPC::R30, -8},       \
@@ -183,7 +179,7 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
   // Note that the offsets here overlap, but this is fixed up in
   // processFunctionBeforeFrameFinalized.
 
-  static const SpillSlot Offsets[] = {
+  static const SpillSlot ELFOffsets32[] = {
       CALLEE_SAVED_FPRS,
       CALLEE_SAVED_GPRS32,
 
@@ -218,25 +214,48 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::S15, -136},
       {PPC::S14, -144}};
 
-  static const SpillSlot Offsets64[] = {
+  static const SpillSlot ELFOffsets64[] = {
       CALLEE_SAVED_FPRS,
       CALLEE_SAVED_GPRS64,
 
       // VRSAVE save area offset.
       {PPC::VRSAVE, -4},
-
       CALLEE_SAVED_VRS
   };
 
-  if (Subtarget.isPPC64()) {
-    NumEntries = array_lengthof(Offsets64);
+  static const SpillSlot AIXOffsets32[] = {
+    CALLEE_SAVED_FPRS,
+    CALLEE_SAVED_GPRS32,
+    // Add AIX's extra CSR.
+    {PPC::R13, -76},
+    // TODO Update when we add vector support for AIX.
+  };
 
-    return Offsets64;
-  } else {
-    NumEntries = array_lengthof(Offsets);
+  static const SpillSlot AIXOffsets64[] = {
+    CALLEE_SAVED_FPRS,
+    CALLEE_SAVED_GPRS64,
+    // TODO Update when we add vector support for AIX.
+  };
 
-    return Offsets;
+  if (Subtarget.is64BitELFABI()) {
+    NumEntries = array_lengthof(ELFOffsets64);
+    return ELFOffsets64;
   }
+
+  if (Subtarget.is32BitELFABI()) {
+    NumEntries = array_lengthof(ELFOffsets32);
+    return ELFOffsets32;
+  }
+
+  assert(Subtarget.isAIXABI() && "Unexpected ABI.");
+
+  if (Subtarget.isPPC64()) {
+    NumEntries = array_lengthof(AIXOffsets64);
+    return AIXOffsets64;
+  }
+
+  NumEntries = array_lengthof(AIXOffsets32);
+  return AIXOffsets32;
 }
 
 /// RemoveVRSaveCode - We have found that this function does not need any code
@@ -1805,12 +1824,6 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
 void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                                        RegScavenger *RS) const {
-  // Early exit if not using the SVR4 ABI.
-  if (!Subtarget.isSVR4ABI()) {
-    addScavengingSpillSlot(MF, RS);
-    return;
-  }
-
   // Get callee saved register information.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
