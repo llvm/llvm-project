@@ -2988,9 +2988,13 @@ void Verifier::visitCallBase(CallBase &Call) {
 
     if (Call.paramHasAttr(i, Attribute::Preallocated)) {
       Value *ArgVal = Call.getArgOperand(i);
-      Assert(Call.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0,
-             "preallocated operand requires a preallocated bundle", ArgVal,
-             Call);
+      bool hasOB =
+          Call.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0;
+      bool isMustTail = Call.isMustTailCall();
+      Assert(hasOB != isMustTail,
+             "preallocated operand either requires a preallocated bundle or "
+             "the call to be musttail (but not both)",
+             ArgVal, Call);
     }
   }
 
@@ -3150,9 +3154,6 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
 
 void Verifier::verifyMustTailCall(CallInst &CI) {
   Assert(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
-  // FIXME: support musttail + preallocated
-  Assert(!CI.countOperandBundlesOfType(LLVMContext::OB_preallocated),
-         "musttail and preallocated not yet supported", &CI);
 
   // - The caller and callee prototypes must match.  Pointer types of
   //   parameters or return types may differ in pointee type, but not
@@ -4533,6 +4534,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             ++NumPreallocatedArgs;
           }
         }
+        Assert(NumPreallocatedArgs != 0,
+               "cannot use preallocated intrinsics on a call without "
+               "preallocated arguments");
         Assert(NumArgs->equalsInt(NumPreallocatedArgs),
                "llvm.call.preallocated.setup arg size must be equal to number "
                "of preallocated arguments "
