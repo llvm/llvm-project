@@ -175,3 +175,21 @@
 // CHECK-LD64-NO-DEFAULT-LIBS: "-L[[SYSROOT]]/usr/lib" 
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lpthreads"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lc"
+
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. 'bcdtors' and argument order.
+// RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
+// RUN:          -Wl,-bnocdtors \
+// RUN:          -target powerpc-ibm-aix7.1.0.0 \
+// RUN:          --sysroot %S/Inputs/aix_ppc_tree \
+// RUN: | FileCheck --check-prefix=CHECK-LD32-CXX-ARG-ORDER %s
+
+// CHECK-LD32-CXX-ARG-ORDER:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-CXX-ARG-ORDER:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-CXX-ARG-ORDER:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-CXX-ARG-ORDER-NOT: "-bnso"
+// CHECK-LD32-CXX-ARG-ORDER:     "-b32"
+// CHECK-LD32-CXX-ARG-ORDER:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-CXX-ARG-ORDER:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-CXX-ARG-ORDER:     "-bcdtors:all:0:s"
+// CHECK-LD32-CXX-ARG-ORDER:     "-bnocdtors"
+// CHECK-LD32-CXX-ARG-ORDER-NOT: "-bcdtors:all:0:s"
