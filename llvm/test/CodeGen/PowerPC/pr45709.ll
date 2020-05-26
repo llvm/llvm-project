@@ -10,30 +10,37 @@
 define dso_local void @_ZN1a1bEv(<4 x float> %in) local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: _ZN1a1bEv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bclr 12, 4*cr5+lt, 0
-; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_6
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_1: # %.preheader
+; CHECK-NEXT:    b .LBB0_2
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    vxor v3, v3, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lvx v4, 0, r3
+; CHECK-NEXT:    lvx v3, 0, r3
+; CHECK-NEXT:    vperm v2, v2, v2, v3
+; CHECK-NEXT:    vxor v3, v3, v3
 ; CHECK-NEXT:    addi r3, r1, -48
 ; CHECK-NEXT:    stvx v3, 0, r3
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    vperm v2, v2, v2, v4
 ; CHECK-NEXT:    stvx v2, 0, r3
 ; CHECK-NEXT:    lwz r3, -48(r1)
 ; CHECK-NEXT:    lwz r4, -32(r1)
 ; CHECK-NEXT:    cmpw r4, r3
-; CHECK-NEXT:    bc 12, gt, .LBB0_2
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_2: # %.preheader
+; CHECK-NEXT:    bc 12, gt, .LBB0_4
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    addi r3, r4, 0
-; CHECK-NEXT:  .LBB0_3: # %.preheader
+; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:    cmpw r3, r3
 ; CHECK-NEXT:    stw r3, -64(r1)
 ; CHECK-NEXT:    addi r3, r1, -64
 ; CHECK-NEXT:    lvx v2, 0, r3
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    stvx v2, 0, r3
+; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    blr
   br i1 undef, label %7, label %1
 
@@ -55,4 +62,4 @@ define dso_local void @_ZN1a1bEv(<4 x float> %in) local_unnamed_addr #0 align 2 
 
 declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>) #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind optnone noinline }
