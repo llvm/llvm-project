@@ -44,17 +44,8 @@ PPCELFStreamer::PPCELFStreamer(MCContext &Context,
                     std::move(Emitter)), LastLabel(NULL) {
 }
 
-void PPCELFStreamer::emitInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  PPCMCCodeEmitter *Emitter =
-      static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
-
-  // Special handling is only for prefixed instructions.
-  if (!Emitter->isPrefixedInstruction(Inst)) {
-    MCELFStreamer::emitInstruction(Inst, STI);
-    return;
-  }
-
+void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
+                                             const MCSubtargetInfo &STI) {
   // Prefixed instructions must not cross a 64-byte boundary (i.e. prefix is
   // before the boundary and the remaining 4-bytes are after the boundary). In
   // order to achieve this, a nop is added prior to any such boundary-crossing
@@ -91,6 +82,19 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
       LastLabel->setOffset(0);
     }
   }
+}
+
+void PPCELFStreamer::emitInstruction(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI) {
+  PPCMCCodeEmitter *Emitter =
+      static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
+
+  // Special handling is only for prefixed instructions.
+  if (!Emitter->isPrefixedInstruction(Inst)) {
+    MCELFStreamer::emitInstruction(Inst, STI);
+    return;
+  }
+  emitPrefixedInstruction(Inst, STI);
 }
 
 void PPCELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
