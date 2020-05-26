@@ -40,13 +40,25 @@ class FoundationSymtabTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        #
-        # Exercise Python APIs to access the symbol table entries.
-        #
-
         # Create the filespec by which to locate our a.out module.
         filespec = lldb.SBFileSpec(exe, False)
 
         module = target.FindModule(filespec)
         self.assertTrue(module, VALID_MODULE)
 
+        # Create the set of known symbols.  As we iterate through the symbol
+        # table, remove the symbol from the set if it is a known symbol.
+        expected_symbols = set(self.symbols_list)
+        for symbol in module:
+            self.assertTrue(symbol, VALID_SYMBOL)
+            #print("symbol:", symbol)
+            name = symbol.GetName()
+            if name in expected_symbols:
+                #print("Removing %s from known_symbols %s" % (name, expected_symbols))
+                expected_symbols.remove(name)
+
+        # At this point, the known_symbols set should have become an empty set.
+        # If not, raise an error.
+        #print("symbols unaccounted for:", expected_symbols)
+        self.assertTrue(len(expected_symbols) == 0,
+                        "All the known symbols are accounted for")
