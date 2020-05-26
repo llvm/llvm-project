@@ -1780,6 +1780,55 @@ const char *SomeString{"str"};
   EXPECT_TRUE(
       matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              stringLiteral(hasParent(initListExpr())))));
+
+  Code = R"cpp(
+struct String
+{
+    String(const char*, int = -1) {}
+};
+
+void stringConstruct()
+{
+    String s = "foo";
+    s = "bar";
+}
+)cpp";
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_AsIs,
+          functionDecl(
+              hasName("stringConstruct"),
+              hasDescendant(varDecl(
+                  hasName("s"),
+                  hasInitializer(ignoringImplicit(cxxConstructExpr(hasArgument(
+                      0, ignoringImplicit(cxxConstructExpr(hasArgument(
+                             0, ignoringImplicit(stringLiteral()))))))))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_AsIs,
+          functionDecl(hasName("stringConstruct"),
+                       hasDescendant(cxxOperatorCallExpr(
+                           isAssignmentOperator(),
+                           hasArgument(1, ignoringImplicit(
+                            cxxConstructExpr(hasArgument(
+                               0, ignoringImplicit(stringLiteral())))))
+                           ))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     functionDecl(hasName("stringConstruct"),
+                                  hasDescendant(varDecl(
+                                      hasName("s"),
+                                      hasInitializer(stringLiteral())))))));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                             functionDecl(hasName("stringConstruct"),
+                                          hasDescendant(cxxOperatorCallExpr(
+                                              isAssignmentOperator(),
+                                              hasArgument(1, stringLiteral())))))));
 }
 
 template <typename MatcherT>
