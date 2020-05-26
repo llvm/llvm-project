@@ -108,7 +108,12 @@ class TestSwiftInterfaceDSYM(TestBase):
 
         # We should not find a type for x.
         var = self.frame().FindVariable("x")
-        self.assertEqual(var.GetTypeName(), "<invalid>")
+        # This was true for SwiftASTContext, but
+        # TypeSystemSwiftTyperef succeeds, because this test it only
+        # prints the type *name*.
+        self.assertEqual(var.GetTypeName(), "AA.MyPoint")
+        # Evaluating an expression fails, though.
+        self.expect("p x", error=1)
 
     @swiftTest
     @skipIf(archs=no_match("x86_64"))

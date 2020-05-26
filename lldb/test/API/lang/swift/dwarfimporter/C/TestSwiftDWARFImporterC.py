@@ -50,7 +50,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 value="42")
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
-                                typename='__ObjC.Point', num_children=2)
+                                typename='CModule.Point', num_children=2)
         self.expect("target variable point", substrs=["x = 1", "y = 2"])
         self.expect("target variable enumerator", substrs=[".yellow"])
         self.expect("target variable pureSwiftStruct", substrs=["pure swift"])
@@ -82,7 +82,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                                 value="42")
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
-                                typename='__ObjC.Point', num_children=2)
+                                typename='CModule.Point', num_children=2)
         self.expect("expr point", substrs=["x = 1", "y = 2"])
         self.expect("expr enumerator", substrs=[".yellow"])
         self.expect("expr pureSwiftStruct", substrs=["pure swift"])

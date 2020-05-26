@@ -28,6 +28,7 @@ using namespace lldb_private;
 namespace lldb_private {
 
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
+static const char *g_tau_underscore = g_dollar_tau_underscore + 1;
 
 static bool IsSymbolARuntimeThunk(const Symbol &symbol) {
   llvm::StringRef symbol_name =
@@ -385,8 +386,14 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
   swift::Demangle::DemangleOptions options;
   if (simplified)
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
+  else {
+    options.DisplayModuleNames = true;
+    options.ShowPrivateDiscriminators = false;
+    options.DisplayExtensionContexts = false;
+  }
 
   if (sc) {
+    // Resolve generic parameters in the current function.
     options.GenericParameterName = [&](uint64_t depth, uint64_t index) {
       if (!did_init) {
         GetGenericParameterNamesForFunction(*sc, dict);
@@ -396,6 +403,16 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
       if (it != dict.end())
         return it->second.str();
       return swift::Demangle::genericParameterName(depth, index);
+    };
+  } else {
+    // Print generic generic parameter names.
+    options.GenericParameterName = [&](uint64_t depth, uint64_t index) {
+      std::string name;
+      {
+        llvm::raw_string_ostream s(name);
+        s << g_tau_underscore << depth << '_' << index;
+      }
+      return name;
     };
   }
   return swift::Demangle::demangleSymbolAsString(symbol, options);

@@ -204,6 +204,9 @@ public:
   virtual CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) {
     return CompilerDeclContext();
   }
+  virtual void
+  GetDeclContextForUID(llvm::SmallVectorImpl<CompilerContext> &context,
+                       lldb::user_id_t uid) {}
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc) = 0;
