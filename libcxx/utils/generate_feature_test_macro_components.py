@@ -200,6 +200,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++17": int(201703),
    },
    "headers": ["new"],
+   "unimplemented": True,
    },
   {"name": "__cpp_lib_launder",
    "values": {
