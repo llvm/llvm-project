@@ -111,7 +111,7 @@ static uint8_t AflInputBuf[kMaxAflInputSize];
 
 // Use this optionally defined function to output sanitizer messages even if
 // user asks to close stderr.
-__attribute__((weak)) extern "C" void __sanitizer_set_report_fd(void *);
+extern "C" __attribute__((weak)) void __sanitizer_set_report_fd(void *);
 
 // Keep track of where stderr content is being written to, so that
 // dup_and_close_stderr can use the correct one.
