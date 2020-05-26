@@ -260,7 +260,8 @@ int TargetTransformInfo::getUserCost(const User *U,
                                      ArrayRef<const Value *> Operands,
                                      enum TargetCostKind CostKind) const {
   int Cost = TTIImpl->getUserCost(U, Operands, CostKind);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  assert((CostKind == TTI::TCK_RecipThroughput || Cost >= 0) &&
+         "TTI should not produce negative costs!");
   return Cost;
 }
 
@@ -1419,11 +1420,7 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return TTIImpl->getShuffleCost(SK_PermuteTwoSrc, Ty, 0, nullptr);
   }
   case Instruction::Call:
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      IntrinsicCostAttributes CostAttrs(*II);
-      return getIntrinsicInstrCost(CostAttrs, CostKind);
-    }
-    return -1;
+    return getUserCost(I, CostKind);
   default:
     // We don't have any information on this instruction.
     return -1;
