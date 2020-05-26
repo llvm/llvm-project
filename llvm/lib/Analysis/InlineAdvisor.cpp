@@ -45,7 +45,7 @@ static cl::opt<bool>
 static cl::opt<int>
     InlineDeferralScale("inline-deferral-scale",
                         cl::desc("Scale to limit the cost of inline deferral"),
-                        cl::init(-1), cl::Hidden);
+                        cl::init(2), cl::Hidden);
 
 namespace {
 class DefaultInlineAdvice : public InlineAdvice {
