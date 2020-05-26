@@ -88,7 +88,7 @@ template("unix_toolchain") {
       if (current_os == "mac") {
         command = "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}}"
       } else {
-        command = "$ld {{ldflags}} -o $outfile -Wl,--start-group {{inputs}} -Wl,--end-group {{libs}}"
+        command = "$ld {{ldflags}} -o $outfile -Wl,--start-group {{inputs}} {{libs}} -Wl,--end-group"
       }
       description = "LINK $outfile"
       outputs = [ outfile ]
