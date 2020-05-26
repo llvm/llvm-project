@@ -39,6 +39,12 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+static cl::opt<bool> AllowRiskySelect(
+  "amdgpu-global-isel-risky-select",
+  cl::desc("Allow GlobalISel to select cases that are likely to not work yet"),
+  cl::init(false),
+  cl::ReallyHidden);
+
 #define GET_GLOBALISEL_IMPL
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
@@ -196,6 +202,14 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+  if (DefTy == LLT::scalar(1)) {
+    if (!AllowRiskySelect) {
+      LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
+      return false;
+    }
+
+    LLVM_DEBUG(dbgs() << "Selecting risky boolean phi\n");
+  }
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)
 
