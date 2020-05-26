@@ -34,7 +34,6 @@ static_library("Utils") {
     "FunctionImportUtils.cpp",
     "GlobalStatus.cpp",
     "GuardUtils.cpp",
-    "IRCanonicalizer.cpp",
     "ImportedFunctionsInliningStatistics.cpp",
     "InjectTLIMappings.cpp",
     "InlineFunction.cpp",
