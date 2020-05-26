@@ -141,8 +141,7 @@ define float @fptrunc_select_true_val_type_mismatch_fast(half %x, double %y, i1 
 
 define <2 x float> @ItoFtoF_s54_f64_f32(<2 x i54> %i) {
 ; CHECK-LABEL: @ItoFtoF_s54_f64_f32(
-; CHECK-NEXT:    [[X:%.*]] = sitofp <2 x i54> [[I:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x double> [[X]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i54> [[I:%.*]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %x = sitofp <2 x i54> %i to <2 x double>
@@ -157,7 +156,7 @@ define half @ItoFtoF_u24_f32_f16(i24 %i) {
 ; CHECK-LABEL: @ItoFtoF_u24_f32_f16(
 ; CHECK-NEXT:    [[X:%.*]] = uitofp i24 [[I:%.*]] to float
 ; CHECK-NEXT:    call void @use(float [[X]])
-; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    [[R:%.*]] = uitofp i24 [[I]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = uitofp i24 %i to float
