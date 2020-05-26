@@ -344,7 +344,7 @@ static void SetMemberOwningModule(clang::Decl *member,
   member->setFromASTFile();
   member->setOwningModuleID(id.GetValue());
   member->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
-  if (auto *nd = llvm::dyn_cast<clang::NamedDecl>(member))
+  if (llvm::isa<clang::NamedDecl>(member))
     if (auto *dc = llvm::dyn_cast<clang::DeclContext>(parent)) {
       dc->setHasExternalVisibleStorage(true);
       // This triggers ExternalASTSource::FindExternalVisibleDeclsByName() to be
