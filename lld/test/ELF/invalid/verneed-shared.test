@@ -6,7 +6,7 @@
 ## sh_offset(SHT_GNU_verneed) is out of bounds.
 # RUN: yaml2obj --docnum=1 %s -o %t1.so
 # RUN: not ld.lld %t.o %t1.so -o /dev/null 2>&1 | FileCheck --check-prefix=SHOFFSET %s
-# SHOFFSET: error: {{.*}}.so: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x228)
+# SHOFFSET: error: {{.*}}.so: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x168)
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -17,12 +17,14 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
+    Info:  1
     ShOffset: 0xFFFFFFFF
 
-## A Verneed entry is misaligned (not a multiple of 4).
+## A Verneed entry is misaligned (not a multiple of 4). This may happen
+## some interface shared objects. We use memcpy to read the fields, so
+## misalignment isn't a problem and there is no need to diagnose.
 # RUN: yaml2obj --docnum=2 %s -o %t2.so
-# RUN: not ld.lld %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=VN-MISALIGNED %s
-# VN-MISALIGNED: {{.*}}.so has an invalid Verneed
+# RUN: ld.lld %t.o %t2.so -o /dev/null
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
