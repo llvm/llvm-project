@@ -441,8 +441,8 @@
 # DEBUG-NEXT: G_PTR_ADD (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 2, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
-# DEBUG-NEXT: G_PTR_MASK (opcode {{[0-9]+}}): 1 type index, 0 imm indices
-# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: G_PTRMASK (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. the first uncovered type index: 2, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG: G_SMIN (opcode {{[0-9]+}}): 1 type index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined

@@ -2383,14 +2383,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
-  case TargetOpcode::G_PTR_MASK: {
-    uint64_t Align = I.getOperand(2).getImm();
-    if (Align >= 64 || Align == 0)
+  case TargetOpcode::G_PTRMASK: {
+    Register MaskReg = I.getOperand(2).getReg();
+    Optional<int64_t> MaskVal = getConstantVRegVal(MaskReg, MRI);
+    // TODO: Implement arbitrary cases
+    if (!MaskVal || !isShiftedMask_64(*MaskVal))
       return false;
 
-    uint64_t Mask = ~((1ULL << Align) - 1);
+    uint64_t Mask = *MaskVal;
     I.setDesc(TII.get(AArch64::ANDXri));
-    I.getOperand(2).setImm(AArch64_AM::encodeLogicalImmediate(Mask, 64));
+    I.getOperand(2).ChangeToImmediate(
+        AArch64_AM::encodeLogicalImmediate(Mask, 64));
 
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }

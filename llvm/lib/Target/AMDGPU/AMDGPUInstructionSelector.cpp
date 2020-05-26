@@ -39,6 +39,12 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+static cl::opt<bool> AllowRiskySelect(
+  "amdgpu-global-isel-risky-select",
+  cl::desc("Allow GlobalISel to select cases that are likely to not work yet"),
+  cl::init(false),
+  cl::ReallyHidden);
+
 #define GET_GLOBALISEL_IMPL
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
@@ -196,6 +202,14 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+  if (DefTy == LLT::scalar(1)) {
+    if (!AllowRiskySelect) {
+      LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
+      return false;
+    }
+
+    LLVM_DEBUG(dbgs() << "Selecting risky boolean phi\n");
+  }
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)
 
@@ -2217,9 +2231,14 @@ bool AMDGPUInstructionSelector::selectG_FRAME_INDEX_GLOBAL_VALUE(
     DstReg, IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass, *MRI);
 }
 
-bool AMDGPUInstructionSelector::selectG_PTR_MASK(MachineInstr &I) const {
-  uint64_t Align = I.getOperand(2).getImm();
-  const uint64_t Mask = ~((UINT64_C(1) << Align) - 1);
+bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
+  Register MaskReg = I.getOperand(2).getReg();
+  Optional<int64_t> MaskVal = getConstantVRegVal(MaskReg, *MRI);
+  // TODO: Implement arbitrary cases
+  if (!MaskVal || !isShiftedMask_64(*MaskVal))
+    return false;
+
+  const uint64_t Mask = *MaskVal;
 
   MachineBasicBlock *BB = I.getParent();
 
@@ -2717,8 +2736,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_FRAME_INDEX:
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectG_FRAME_INDEX_GLOBAL_VALUE(I);
-  case TargetOpcode::G_PTR_MASK:
-    return selectG_PTR_MASK(I);
+  case TargetOpcode::G_PTRMASK:
+    return selectG_PTRMASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:

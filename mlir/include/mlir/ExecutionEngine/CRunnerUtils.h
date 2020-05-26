@@ -33,12 +33,6 @@
 
 #include <cstdint>
 
-template <int N>
-void dropFront(int64_t arr[N], int64_t *res) {
-  for (unsigned i = 1; i < N; ++i)
-    *(res + i - 1) = arr[i];
-}
-
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for Vector type.
 //===----------------------------------------------------------------------===//
@@ -129,6 +123,10 @@ struct StridedMemRefType {
     res.basePtr = basePtr;
     res.data = data;
     res.offset = offset + idx * strides[0];
+    auto dropFront = [](const int64_t *arr, int64_t *res) {
+      for (unsigned i = 1; i < N; ++i)
+        res[i - 1] = arr[i];
+    };
     dropFront<N>(sizes, res.sizes);
     dropFront<N>(strides, res.strides);
     return res;
@@ -162,6 +160,39 @@ template <typename T>
 struct UnrankedMemRefType {
   int64_t rank;
   void *descriptor;
+};
+
+//===----------------------------------------------------------------------===//
+// DynamicMemRefType type.
+//===----------------------------------------------------------------------===//
+// A reference to one of the StridedMemRef types.
+template <typename T>
+class DynamicMemRefType {
+public:
+  explicit DynamicMemRefType(const StridedMemRefType<T, 0> &mem_ref)
+      : rank(0), basePtr(mem_ref.basePtr), data(mem_ref.data),
+        offset(mem_ref.offset), sizes(nullptr), strides(nullptr) {}
+  template <int N>
+  explicit DynamicMemRefType(const StridedMemRefType<T, N> &mem_ref)
+      : rank(N), basePtr(mem_ref.basePtr), data(mem_ref.data),
+        offset(mem_ref.offset), sizes(mem_ref.sizes), strides(mem_ref.strides) {
+  }
+  explicit DynamicMemRefType(const UnrankedMemRefType<T> &mem_ref)
+      : rank(mem_ref.rank) {
+    auto *desc = static_cast<StridedMemRefType<T, 1> *>(mem_ref.descriptor);
+    basePtr = desc->basePtr;
+    data = desc->data;
+    offset = desc->offset;
+    sizes = rank == 0 ? nullptr : desc->sizes;
+    strides = sizes + rank;
+  }
+
+  int64_t rank;
+  T *basePtr;
+  T *data;
+  int64_t offset;
+  const int64_t *sizes;
+  const int64_t *strides;
 };
 
 //===----------------------------------------------------------------------===//

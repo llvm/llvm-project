@@ -108,7 +108,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .legalFor({{p0, s64}})
       .clampScalar(1, s64, s64);
 
-  getActionDefinitionsBuilder(G_PTR_MASK).legalFor({p0});
+  getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
   getActionDefinitionsBuilder({G_SDIV, G_UDIV})
       .legalFor({s32, s64})
@@ -744,7 +744,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
     auto AlignMinus1 =
         MIRBuilder.buildConstant(IntPtrTy, Alignment.value() - 1);
     auto ListTmp = MIRBuilder.buildPtrAdd(PtrTy, List, AlignMinus1.getReg(0));
-    DstPtr = MIRBuilder.buildPtrMask(PtrTy, ListTmp, Log2(Alignment));
+    DstPtr = MIRBuilder.buildMaskLowPtrBits(PtrTy, ListTmp, Log2(Alignment));
   } else
     DstPtr = List;
 

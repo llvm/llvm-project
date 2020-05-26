@@ -125,12 +125,13 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:  body:
-# CHECK: %1:gpr64sp = ANDXri %0, 8060
+# CHECK: %2:gpr64sp = ANDXri %0, 8060
 body:             |
   bb.0:
       liveins: $x0
     %0:gpr(p0) = COPY $x0
-    %1:gpr(p0) = G_PTR_MASK %0, 3
+    %const:gpr(s64) = G_CONSTANT i64 -8
+    %1:gpr(p0) = G_PTRMASK %0, %const
     $x0 = COPY %1(p0)
 ...
 
