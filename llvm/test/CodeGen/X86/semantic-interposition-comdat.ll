@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s
 
 $comdat_func = comdat any
 
@@ -21,3 +21,8 @@ entry:
   call void @func()
   ret void
 }
+
+!llvm.module.flags = !{!0, !1}
+
+!0 = !{i32 1, !"SemanticInterposition", i32 0}
+!1 = !{i32 7, !"PIC Level", i32 2}

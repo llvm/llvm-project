@@ -462,10 +462,14 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assembler would otherwise be conservative and assume a global default
   // visibility symbol can be interposable, even if the code generator already
   // assumed it.
-  if (TM.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias())
-    if (GV.isDSOLocal() || (TM.getTargetTriple().isX86() &&
-                            GV.getParent()->noSemanticInterposition()))
-      return getSymbolWithGlobalValueBase(&GV, "$local");
+  if (TM.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
+    const Module &M = *GV.getParent();
+    if (TM.getRelocationModel() != Reloc::Static &&
+        M.getPIELevel() == PIELevel::Default)
+      if (GV.isDSOLocal() || (TM.getTargetTriple().isX86() &&
+                              GV.getParent()->noSemanticInterposition()))
+        return getSymbolWithGlobalValueBase(&GV, "$local");
+  }
   return TM.getSymbol(&GV);
 }
 

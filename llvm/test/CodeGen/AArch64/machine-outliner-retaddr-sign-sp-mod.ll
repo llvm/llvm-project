@@ -4,7 +4,6 @@
 @v = common dso_local global i32* null, align 8
 
 ; CHECK-LABEL:  foo:                                    // @foo
-; CHECK-NEXT:   .Lfoo$local:
 ; CHECK-NEXT:   // %bb.0:                               // %entry
 ; CHECK-NEXT:       paciasp
 ; CHECK-NOT:        OUTLINED_FUNCTION_
@@ -23,7 +22,6 @@ entry:
 }
 
 ; CHECK-LABEL:  bar:                                    // @bar
-; CHECK-NEXT:   .Lbar$local:
 ; CHECK-NEXT:   // %bb.0:                               // %entry
 ; CHECK-NEXT:       paciasp
 ; CHECK-NOT:        OUTLINED_FUNCTION_
