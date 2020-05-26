@@ -261,7 +261,10 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
       C->Name = StringRef(NewName).copy(StringAlloc);
       assert(ELFYAML::dropUniqueSuffix(C->Name).empty());
     }
-    DocSections.insert(C->Name);
+
+    if (!DocSections.insert(C->Name).second)
+      reportError("repeated section/fill name: '" + C->Name +
+                  "' at YAML section/fill number " + Twine(I));
   }
 
   std::vector<StringRef> ImplicitSections;
@@ -1435,18 +1438,10 @@ void ELFState<ELFT>::writeFill(ELFYAML::Fill &Fill,
 
 template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
   size_t SecNdx = -1;
-  StringSet<> Seen;
-  for (size_t I = 0; I < Doc.Chunks.size(); ++I) {
-    const std::unique_ptr<ELFYAML::Chunk> &C = Doc.Chunks[I];
-    bool IsSection = isa<ELFYAML::Section>(C.get());
-    if (IsSection)
-      ++SecNdx;
-
-    if (!Seen.insert(C->Name).second)
-      reportError("repeated section/fill name: '" + C->Name +
-                  "' at YAML section/fill number " + Twine(I));
-    if (!IsSection || HasError)
+  for (const std::unique_ptr<ELFYAML::Chunk> &C : Doc.Chunks) {
+    if (!isa<ELFYAML::Section>(C.get()))
       continue;
+    ++SecNdx;
 
     if (!SN2I.addName(C->Name, SecNdx))
       llvm_unreachable("buildSectionIndex() failed");
@@ -1509,6 +1504,8 @@ template <class ELFT>
 bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
                               yaml::ErrorHandler EH) {
   ELFState<ELFT> State(Doc, EH);
+  if (State.HasError)
+    return false;
 
   // Finalize .strtab and .dynstr sections. We do that early because want to
   // finalize the string table builders before writing the content of the
@@ -1516,9 +1513,6 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   State.finalizeStrings();
 
   State.buildSectionIndex();
-  if (State.HasError)
-    return false;
-
   State.buildSymbolIndexes();
 
   std::vector<Elf_Phdr> PHeaders;
