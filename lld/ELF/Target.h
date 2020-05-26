@@ -213,6 +213,7 @@ unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
 // the .toc section.
 bool isPPC64SmallCodeModelTocReloc(RelType type);
 
+void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 

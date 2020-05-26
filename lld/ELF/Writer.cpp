@@ -264,6 +264,8 @@ void elf::addReservedSymbols() {
     // glibc *crt1.o has a undefined reference to _SDA_BASE_. Since we don't
     // support Small Data Area, define it arbitrarily as 0.
     addOptionalRegular("_SDA_BASE_", nullptr, 0, STV_HIDDEN);
+  } else if (config->emachine == EM_PPC64) {
+    addPPC64SaveRestore();
   }
 
   // The Power Architecture 64-bit v2 ABI defines a TableOfContents (TOC) which
