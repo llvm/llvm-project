@@ -242,14 +242,7 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
   if (SizeRange.isEmptySet())
     return ConstantRange::getEmpty(PointerSize);
 
-  if (!SE.isSCEVable(Addr->getType()))
-    return UnknownRange;
-
-  AllocaOffsetRewriter Rewriter(SE, Base);
-  const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
-
-  ConstantRange AccessStartRange =
-      SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
+  ConstantRange AccessStartRange = offsetFrom(Addr, Base);
   ConstantRange AccessRange = AccessStartRange.add(SizeRange);
   assert(!AccessRange.isEmptySet());
   return AccessRange;
