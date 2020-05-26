@@ -1,4 +1,4 @@
-REQUIRES: x86_64-linux
+REQUIRES: x86-registered-target
 RUN: sancov -merge %p/Inputs/test-linux_x86_64.0.symcov| FileCheck --check-prefix=MERGE1 %s
 RUN: sancov -merge %p/Inputs/test-linux_x86_64.0.symcov %p/Inputs/test-linux_x86_64.1.symcov| FileCheck --check-prefix=MERGE2 %s
 

@@ -1,5 +1,6 @@
-REQUIRES: x86_64-linux
-RUN: sancov -symbolize -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: sancov -symbolize -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,STRIP
+RUN: sancov -symbolize %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,NOSTRIP
 
 CHECK: {
 CHECK-NEXT:  "covered-points": [
@@ -11,7 +12,8 @@ CHECK-NEXT:    "4e1586"
 CHECK-NEXT:  ],
 CHECK-NEXT:  "binary-hash": "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
 CHECK-NEXT:  "point-symbol-info": {
-CHECK-NEXT:    "test/tools/sancov/Inputs/test.cpp": {
+STRIP-NEXT:    "test/tools/sancov/Inputs/test.cpp": {
+NOSTRIP-NEXT:  "/usr/local/google/home/aizatsky/src/llvm/test/tools/sancov/Inputs/test.cpp": {
 CHECK-NEXT:      "bar(std::string)": {
 CHECK-NEXT:        "4e132b": "12:0"
 CHECK-NEXT:      },
