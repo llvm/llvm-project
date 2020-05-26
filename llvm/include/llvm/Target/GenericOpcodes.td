@@ -358,9 +358,11 @@ def G_PTR_ADD : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PTR_MASK : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, unknown:$bits);
+// Generic pointer mask. type1 should be an integer with the same
+// bitwidth as the pointer type.
+def G_PTRMASK : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src, type1:$bits);
   let hasSideEffects = 0;
 }
 

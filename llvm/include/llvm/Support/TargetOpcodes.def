@@ -556,9 +556,8 @@ HANDLE_TARGET_OPCODE(G_FMAXIMUM)
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)
 
-/// Clear the specified number of low bits in a pointer. This rounds the value
-/// *down* to the given alignment.
-HANDLE_TARGET_OPCODE(G_PTR_MASK)
+/// Clear the specified bits in a pointer.
+HANDLE_TARGET_OPCODE(G_PTRMASK)
 
 /// Generic signed integer minimum.
 HANDLE_TARGET_OPCODE(G_SMIN)

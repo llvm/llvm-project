@@ -560,7 +560,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
-  getActionDefinitionsBuilder({G_PTR_ADD, G_PTR_MASK})
+  getActionDefinitionsBuilder(G_PTR_ADD)
+    .scalarize(0)
+    .alwaysLegal();
+
+  // TODO: Clamp mask to pointer sizes
+  getActionDefinitionsBuilder(G_PTRMASK)
     .scalarize(0)
     .alwaysLegal();
 

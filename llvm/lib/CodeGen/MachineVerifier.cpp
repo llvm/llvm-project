@@ -1102,6 +1102,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     // TODO: Is the offset allowed to be a scalar with a vector?
     break;
   }
+  case TargetOpcode::G_PTRMASK: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT MaskTy = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
+      break;
+
+    if (!DstTy.getScalarType().isPointer())
+      report("ptrmask result type must be a pointer", MI);
+
+    if (!MaskTy.getScalarType().isScalar())
+      report("ptrmask mask type must be an integer", MI);
+
+    verifyVectorElementMatch(DstTy, MaskTy, MI);
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
