@@ -64,7 +64,7 @@ or indireclty. For example in:
 
 ``d`` is connected directly with ``c`` and indirectly with ``b``.
 This means that ``d`` potentially clobbers (see below) ``c`` *or*
-``b`` *or* both. This in turn implies that without the use of `The walker_`,
+``b`` *or* both. This in turn implies that without the use of `The walker`_,
 initially every ``MemoryDef`` clobbers every other ``MemoryDef``.
 
 ``MemoryPhi``\ s are ``PhiNode``\ s, but for memory operations. If at any
