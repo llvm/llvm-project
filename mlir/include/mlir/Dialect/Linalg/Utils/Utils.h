@@ -117,28 +117,6 @@ SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ArrayRef<Value> values,
                                        OperationFolder *folder = nullptr);
 
-struct PromotionInfo {
-  Value buffer;
-  Value fullLocalView;
-  Value partialLocalView;
-};
-
-/// Promotes the `subViews` into a new buffer allocated at the insertion point
-/// `b`. For now, promotion occurs in 3 steps:
-///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
-///   2. Take a full view on the buffer and `linalg.fill` it with zeros (use
-///      float zero for now).
-///   3. Take a partial slice of the full view in step 2. and copy into it.
-/// Infers statically sized buffers from subViews unless `dynamicBuffers` is
-/// true.
-///
-/// Returns a list of PromotionInfo which hold the promoted buffer and the
-/// full and partial views indexing into the buffer.
-SmallVector<PromotionInfo, 8>
-promoteSubViews(OpBuilder &b, Location loc, ArrayRef<Value> subViews,
-                bool dynamicBuffers = false, int64_t alignment = 0,
-                OperationFolder *folder = nullptr);
-
 /// Returns all the operands of `linalgOp` that are not views.
 /// Asserts that these operands are value types to allow transformations like
 /// tiling to just use the values when cloning `linalgOp`.

@@ -57,18 +57,27 @@ Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
 /// (i.e. `[1,1,2]` is an invalid permutation).
 LinalgOp interchange(LinalgOp op, ArrayRef<unsigned> interchangeVector);
 
-/// Promotes the `subViews` into a new buffer allocated at the insertion point
-/// `b`. Promotion occurs in 3 steps:
-///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
-///   2. Take a full view on the buffer and `linalg.fill` it with zeros (use
-///      float zero for now).
-///   3. Take a partial slice of the full view in step 2. and copy into it.
-/// Infers statically sized buffers from subViews unless `dynamicBuffers` is
-/// true.
-///
-/// Returns a list of PromotionInfo which hold the promoted buffer and the
-/// full and partial views indexing into the buffer.
-// TODO: revisit dynamicBuffers option.
+/// Callback function type used to perform the allocation for the promoted
+/// `subView`. In `boundingSubViewsize` a best attempt is made to find the
+/// smallest constant value for the size of the buffer needed for each
+/// dimension. If that is not possible, contains the dynamic size of the
+/// subview. The call back should return the buffer to use.
+using AllocBufferCallbackFn = std::function<Optional<Value>(
+    OpBuilder &b, SubViewOp subView, ArrayRef<Value> boundingSubViewSize,
+    OperationFolder *folder)>;
+
+/// Callback function type used to deallocate the buffers used to hold the
+/// promoted subview.
+using DeallocBufferCallbackFn =
+    std::function<LogicalResult(OpBuilder &b, Value buffer)>;
+
+/// Callback function type used to insert copy from original subview to subview
+/// of the promoted region for the read operands/subview of promoted region to
+/// original subview for the results. The copy has to happen from `src` to
+/// `dst`.
+using CopyCallbackFn =
+    std::function<LogicalResult(OpBuilder &b, Value src, Value dst)>;
+
 struct LinalgPromotionOptions {
   /// Indices of subViews to promote. If `None`, try to promote all operands.
   Optional<DenseSet<unsigned>> operandsToPromote = None;
@@ -111,10 +120,44 @@ struct LinalgPromotionOptions {
     alignment = align;
     return *this;
   }
+  /// Callback function to do the allocation of the promoted buffer. If None,
+  /// then the default allocation scheme of allocating a memref<?xi8> buffer
+  /// followed by a view operation is used.
+  Optional<AllocBufferCallbackFn> allocationFn = None;
+  Optional<DeallocBufferCallbackFn> deallocationFn = None;
+  LinalgPromotionOptions &
+  setAllocationDeallocationFns(AllocBufferCallbackFn const &allocFn,
+                               DeallocBufferCallbackFn const &deallocFn) {
+    allocationFn = allocFn;
+    deallocationFn = deallocFn;
+    return *this;
+  }
+
+  /// Callback function to do the copy of data to and from the promoted
+  /// subview. If None then a linalg.copy is used.
+  Optional<CopyCallbackFn> copyInFn = None;
+  Optional<CopyCallbackFn> copyOutFn = None;
+  LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
+                                          CopyCallbackFn const &copyOut) {
+    copyInFn = copyIn;
+    copyOutFn = copyOut;
+    return *this;
+  }
 };
-LinalgOp promoteSubViews(OpBuilder &b, LinalgOp op,
-                         LinalgPromotionOptions options,
-                         OperationFolder *folder = nullptr);
+
+/// Promotes the `subViews` into a new buffer allocated at the insertion point
+/// `b`. Promotion occurs in 3 steps:
+///   1. Create a new buffer for a full tile (i.e. not clipped at the boundary).
+///   2. Take a full view on the buffer.
+///   3. Take a partial slice of the full view in step 2. and copy into it.
+/// Infers statically sized buffers from subViews unless `dynamicBuffers` is
+/// true.
+///
+/// Returns the modified linalg op (the modification happens in place) as well
+/// as all the copy ops created.
+Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
+                                   LinalgPromotionOptions options,
+                                   OperationFolder *folder = nullptr);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
