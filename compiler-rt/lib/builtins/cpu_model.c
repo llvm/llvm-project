@@ -345,6 +345,8 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x5e:              // Skylake desktop
     case 0x8e:              // Kaby Lake mobile
     case 0x9e:              // Kaby Lake desktop
+    case 0xa5:              // Comet Lake-H/S
+    case 0xa6:              // Comet Lake-U
       *Type = INTEL_COREI7; // "skylake"
       *Subtype = INTEL_COREI7_SKYLAKE;
       break;
