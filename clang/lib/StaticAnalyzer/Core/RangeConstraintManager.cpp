@@ -285,8 +285,8 @@ void RangeSet::print(raw_ostream &os) const {
 namespace {
 class RangeConstraintManager : public RangedConstraintManager {
 public:
-  RangeConstraintManager(SubEngine *SE, SValBuilder &SVB)
-      : RangedConstraintManager(SE, SVB) {}
+  RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
+      : RangedConstraintManager(EE, SVB) {}
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
@@ -374,7 +374,8 @@ private:
 } // end anonymous namespace
 
 std::unique_ptr<ConstraintManager>
-ento::CreateRangeConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
+ento::CreateRangeConstraintManager(ProgramStateManager &StMgr,
+                                   ExprEngine *Eng) {
   return std::make_unique<RangeConstraintManager>(Eng, StMgr.getSValBuilder());
 }
 
