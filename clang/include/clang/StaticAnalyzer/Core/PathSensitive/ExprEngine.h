@@ -97,7 +97,7 @@ class SymbolManager;
 class SwitchNodeBuilder;
 
 class ExprEngine {
-  virtual void anchor();
+  void anchor();
 public:
   /// The modes of inlining, which override the default analysis-wide settings.
   enum InliningModes {
