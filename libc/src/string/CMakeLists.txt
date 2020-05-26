@@ -68,30 +68,17 @@ endfunction()
 
 # include the relevant architecture specific implementations
 if(${LIBC_TARGET_MACHINE} STREQUAL "x86_64")
-  set(LIBC_STRING_TARGET_FOLDER "x86")
+  set(LIBC_STRING_TARGET_ARCH "x86")
 else()
-  set(LIBC_STRING_TARGET_FOLDER ${LIBC_TARGET_MACHINE})
+  set(LIBC_STRING_TARGET_ARCH ${LIBC_TARGET_MACHINE})
 endif()
-
-add_gen_header(
-  memcpy_arch_specific
-  DEF_FILE
-    memcpy_arch_specific.h.def
-  GEN_HDR
-    memcpy_arch_specific.h
-  PARAMS
-    memcpy_arch_specific=${LIBC_STRING_TARGET_FOLDER}/memcpy_arch_specific.h.inc
-  DATA_FILES
-    ${LIBC_STRING_TARGET_FOLDER}/memcpy_arch_specific.h.inc
-)
 
 function(add_memcpy memcpy_name)
   add_implementation(memcpy ${memcpy_name}
-    SRCS ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp
+    SRCS ${LIBC_SOURCE_DIR}/src/string/${LIBC_STRING_TARGET_ARCH}/memcpy.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcpy.h
     DEPENDS
       .memory_utils.memory_utils
-      .memcpy_arch_specific
       libc.include.string
     COMPILE_OPTIONS
       -fno-builtin-memcpy
@@ -144,4 +131,4 @@ add_bzero(bzero MARCH native)
 # Add all other relevant implementations for the native target.
 # ------------------------------------------------------------------------------
 
-include(${LIBC_STRING_TARGET_FOLDER}/CMakeLists.txt)
+include(${LIBC_STRING_TARGET_ARCH}/CMakeLists.txt)
