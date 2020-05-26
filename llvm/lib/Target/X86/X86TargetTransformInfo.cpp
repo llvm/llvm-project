@@ -1368,6 +1368,13 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  // TODO: Allow non-throughput costs that aren't binary.
+  auto AdjustCost = [&CostKind](int Cost) {
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return Cost == 0 ? 0 : 1;
+    return Cost;
+  };
+
   // FIXME: Need a better design of the cost table to handle non-simple types of
   // potential massive combinations (elem_num x src_type x dst_type).
 
@@ -1969,7 +1976,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   if (ST->hasSSE2() && !ST->hasAVX()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return LTSrc.first * Entry->Cost;
+      return AdjustCost(LTSrc.first * Entry->Cost);
   }
 
   EVT SrcTy = TLI->getValueType(DL, Src);
@@ -1977,7 +1984,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   // The function getSimpleVT only handles simple value types.
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+    return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind));
 
   MVT SimpleSrcTy = SrcTy.getSimpleVT();
   MVT SimpleDstTy = DstTy.getSimpleVT();
@@ -1986,59 +1993,59 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(AVX512BWConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return Entry->Cost;
+        return AdjustCost(Entry->Cost);
 
     if (ST->hasDQI())
       if (const auto *Entry = ConvertCostTableLookup(AVX512DQConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return Entry->Cost;
+        return AdjustCost(Entry->Cost);
 
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(AVX512FConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return Entry->Cost;
+        return AdjustCost(Entry->Cost);
   }
 
   if (ST->hasBWI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
 
   if (ST->hasDQI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
 
   if (ST->hasAVX512())
     if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
 
   if (ST->hasAVX2()) {
     if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
   }
 
   if (ST->hasAVX()) {
     if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
   }
 
   if (ST->hasSSE41()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
   }
 
   if (ST->hasSSE2()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
+      return AdjustCost(Entry->Cost);
   }
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+  return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
 }
 
 int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
