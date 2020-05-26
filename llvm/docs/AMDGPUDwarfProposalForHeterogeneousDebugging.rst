@@ -1,8 +1,8 @@
 .. _amdgpu-dwarf-6-proposal-for-heterogeneous-debugging:
 
-****************************************************
-DWARF Version 6 Proposal For Heterogeneous Debugging
-****************************************************
+*********************************
+DWARF For Heterogeneous Debugging
+*********************************
 
 .. contents::
    :local:
@@ -3753,8 +3753,14 @@ debugger information entries.
                                  * ``DW_AT_LLVM_lanes``
    ============================= =============================
 
+Examples
+========
+
+The AMD GPU specific usage of the features in the proposal, including examples,
+is available at :ref:`amdgpu-dwarf-debug-information`.
+
 References
-----------
+==========
 
     .. _amdgpu-dwarf-AMD:
 
