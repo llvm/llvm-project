@@ -2,6 +2,7 @@
 
 # CHECK: .eh_frame contents:
 
+## FIXME: GNU objdump prints "00000000 ZERO terminator" instead.
 # CHECK: 00000000 00000000 00000000 CIE
 # CHECK:   Version:               0
 # CHECK:   Augmentation:          ""

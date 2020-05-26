@@ -375,7 +375,19 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint64_t Length;
     DwarfFormat Format;
     std::tie(Length, Format) = Data.getInitialLength(&Offset);
-    uint64_t Id;
+    bool IsDWARF64 = Format == DWARF64;
+
+    // If the Length is 0, then this CIE is a terminator. We add it because some
+    // dumper tools might need it to print something special for such entries
+    // (e.g. llvm-objdump --dwarf=frames prints "ZERO terminator").
+    if (Length == 0) {
+      auto Cie = std::make_unique<CIE>(
+          IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
+          SmallString<8>(), 0, 0, None, None, Arch);
+      CIEs[StartOffset] = Cie.get();
+      Entries.push_back(std::move(Cie));
+      break;
+    }
 
     // At this point, Offset points to the next field after Length.
     // Length is the structure size excluding itself. Compute an offset one
@@ -385,8 +397,12 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint64_t EndStructureOffset = Offset + Length;
 
     // The Id field's size depends on the DWARF format
-    bool IsDWARF64 = Format == DWARF64;
-    Id = Data.getRelocatedValue((IsDWARF64 && !IsEH) ? 8 : 4, &Offset);
+    Error Err = Error::success();
+    uint64_t Id = Data.getRelocatedValue((IsDWARF64 && !IsEH) ? 8 : 4, &Offset,
+                                         /*SectionIndex=*/nullptr, &Err);
+    if (Err)
+      return Err;
+
     if (Id == getCIEId(IsDWARF64, IsEH)) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
