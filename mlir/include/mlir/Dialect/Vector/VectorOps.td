@@ -686,6 +686,11 @@ def Vector_OuterProductOp :
     return %3: vector<4x8xf32>
     ```
   }];
+  let builders = [
+    // Build an op without mask, use the type of `acc` as the return type.
+    OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value lhs, Value rhs, "
+    "Value acc">];
   let extraClassDeclaration = [{
     VectorType getOperandVectorTypeLHS() {
       return lhs().getType().cast<VectorType>();
