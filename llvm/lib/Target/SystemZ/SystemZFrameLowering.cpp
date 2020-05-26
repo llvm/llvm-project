@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 

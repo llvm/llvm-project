@@ -25,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 
 using namespace llvm;
