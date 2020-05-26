@@ -1,0 +1,6 @@
+Test warnings.
+REQUIRES: shell
+RUN: %clang_host -O3 %S/Inputs/true.c -std=c99 -g -o %t.exe
+RUN: %lldb -o "b main" -o r -o q -b %t.exe | FileCheck %s
+
+CHECK: compiled with optimization

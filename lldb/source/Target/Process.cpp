@@ -258,6 +258,12 @@ bool ProcessProperties::GetWarningsOptimization() const {
       nullptr, idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+bool ProcessProperties::GetWarningsUnsupportedLanguage() const {
+  const uint32_t idx = ePropertyWarningUnsupportedLanguage;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -5902,9 +5908,6 @@ void Process::PrintWarning(uint64_t warning_type, const void *repeat_key,
   StreamSP stream_sp = GetTarget().GetDebugger().GetAsyncOutputStream();
   if (!stream_sp)
     return;
-  if (warning_type == eWarningsOptimization && !GetWarningsOptimization()) {
-    return;
-  }
 
   if (repeat_key != nullptr) {
     WarningsCollection::iterator it = m_warnings_issued.find(warning_type);
@@ -5929,8 +5932,11 @@ void Process::PrintWarning(uint64_t warning_type, const void *repeat_key,
 }
 
 void Process::PrintWarningOptimization(const SymbolContext &sc) {
-  if (GetWarningsOptimization() && sc.module_sp &&
-      !sc.module_sp->GetFileSpec().GetFilename().IsEmpty() && sc.function &&
+  if (!GetWarningsOptimization())
+    return;
+  if (!sc.module_sp)
+    return;
+  if (!sc.module_sp->GetFileSpec().GetFilename().IsEmpty() && sc.function &&
       sc.function->GetIsOptimized()) {
     PrintWarning(Process::Warnings::eWarningsOptimization, sc.module_sp.get(),
                  "%s was compiled with optimization - stepping may behave "
@@ -5944,6 +5950,25 @@ void Process::PrintWarningCantLoadSwiftModule(const Module &module,
   PrintWarning(Process::Warnings::eWarningsSwiftImport, (void *)&module,
                "%s: Cannot load Swift type information; %s\n",
                module.GetFileSpec().GetCString(), details.c_str());
+}
+
+void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
+  if (!GetWarningsUnsupportedLanguage())
+    return;
+  if (!sc.module_sp)
+    return;
+  LanguageType language = sc.GetLanguage();
+  if (language == eLanguageTypeUnknown)
+    return;
+  auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(language);
+  if (auto err = type_system_or_err.takeError()) {
+    llvm::consumeError(std::move(err));
+    PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
+                 sc.module_sp.get(),
+                 "This version of LLDB has no plugin for the %s language. "
+                 "Inspection of frame variables will be limited.\n",
+                 Language::GetNameForLanguageType(language));
+  }
 }
 
 bool Process::GetProcessInfo(ProcessInstanceInfo &info) {

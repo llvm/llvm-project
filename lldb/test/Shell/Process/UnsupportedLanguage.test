@@ -1,0 +1,8 @@
+Test warnings.
+REQUIRES: shell
+RUN: %clang_host %S/Inputs/true.c -std=c99 -g -c -S -emit-llvm -o - \
+RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_PLI/g' >%t.ll
+RUN: %clang_host %t.ll -g -o %t.exe
+RUN: %lldb -o "b main" -o r -o q -b %t.exe | FileCheck %s
+
+CHECK: This version of LLDB has no plugin for the pli language

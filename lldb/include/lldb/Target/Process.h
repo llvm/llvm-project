@@ -86,6 +86,7 @@ public:
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
+  bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
@@ -390,7 +391,11 @@ public:
   };
 
   /// Process warning types.
-  enum Warnings { eWarningsOptimization = 1, eWarningsSwiftImport };
+  enum Warnings {
+    eWarningsOptimization = 1,
+    eWarningsUnsupportedLanguage = 2,
+    eWarningsSwiftImport
+  };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -1319,6 +1324,7 @@ public:
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
 
+<<<<<<< HEAD
   /// Prints a async warning message to the user one time per Process
   /// for a Module whose Swift AST sections couldn't be loaded because
   /// they aren't buildable on the current machine.
@@ -1327,6 +1333,13 @@ public:
   ///     The affected Module.
   void PrintWarningCantLoadSwiftModule(const Module &module,
                                        std::string details);
+=======
+  /// Print a user-visible warning about a function written in a
+  /// language that this version of LLDB doesn't support.
+  ///
+  /// \see PrintWarningOptimization
+  void PrintWarningUnsupportedLanguage(const SymbolContext &sc);
+>>>>>>> refs/am/changes/09c86369abd518e8a1872a807cbce20d8be9fbb4_swift/master-next
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
