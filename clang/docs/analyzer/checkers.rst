@@ -1395,6 +1395,7 @@ All uncounted types used as base classes must have a virtual destructor.
 Ref-counted types hold their ref-countable data by a raw pointer and allow implicit upcasting from ref-counted pointer to derived type to ref-counted pointer to base type. This might lead to an object of (dynamic) derived type being deleted via pointer to the base class type which C++ standard defines as UB in case the base class doesn't have virtual destructor ``[expr.delete]``.
 
 .. code-block:: cpp
+
  struct RefCntblBase {
    void ref() {}
    void deref() {}
