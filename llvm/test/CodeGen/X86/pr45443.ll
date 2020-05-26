@@ -8,11 +8,9 @@ define <16 x float> @PR45443() {
 ; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
 ; X86-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
 ; X86-NEXT:    vpcmpltud {{\.LCPI.*}}{1to16}, %zmm1, %k1
-; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; X86-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
-; X86-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X86-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; X86-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
+; X86-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; X86-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; X86-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
 ; X86-NEXT:    vbroadcastss {{\.LCPI.*}}, %zmm0 {%k1}
 ; X86-NEXT:    retl
@@ -22,11 +20,9 @@ define <16 x float> @PR45443() {
 ; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
 ; X64-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
 ; X64-NEXT:    vpcmpltud {{.*}}(%rip){1to16}, %zmm1, %k1
-; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; X64-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
-; X64-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X64-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; X64-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215]
+; X64-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; X64-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; X64-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
 ; X64-NEXT:    vbroadcastss {{.*}}(%rip), %zmm0 {%k1}
 ; X64-NEXT:    retq
