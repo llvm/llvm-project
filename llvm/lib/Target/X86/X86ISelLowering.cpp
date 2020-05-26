@@ -1798,12 +1798,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SELECT,             VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Custom);
     }
 
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v32i1, Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     MVT::v64i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i1, Custom);
     for (auto VT : { MVT::v16i1, MVT::v32i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
