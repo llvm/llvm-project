@@ -14,20 +14,22 @@ interactions between various memory operations. Its goal is to replace
 unless you're very careful, use of ``MemoryDependenceAnalysis`` can easily
 result in quadratic-time algorithms in LLVM. Additionally, ``MemorySSA`` doesn't
 have as many arbitrary limits as ``MemoryDependenceAnalysis``, so you should get
-better results, too.
+better results, too. One common use of ``MemorySSA`` is to quickly find out
+that something definitely cannot happen (for example, reason that a hoist
+out of a loop can't happen).
 
 At a high level, one of the goals of ``MemorySSA`` is to provide an SSA based
 form for memory, complete with def-use and use-def chains, which
 enables users to quickly find may-def and may-uses of memory operations.
 It can also be thought of as a way to cheaply give versions to the complete
-state of heap memory, and associate memory operations with those versions.
+state of memory, and associate memory operations with those versions.
 
 This document goes over how ``MemorySSA`` is structured, and some basic
 intuition on how ``MemorySSA`` works.
 
 A paper on MemorySSA (with notes about how it's implemented in GCC) `can be
 found here <http://www.airs.com/dnovillo/Papers/mem-ssa.pdf>`_. Though, it's
-relatively out-of-date; the paper references multiple heap partitions, but GCC
+relatively out-of-date; the paper references multiple memory partitions, but GCC
 eventually swapped to just using one, like we now have in LLVM.  Like
 GCC's, LLVM's MemorySSA is intraprocedural.
 
@@ -41,9 +43,29 @@ structure that maps ``Instruction``\ s to ``MemoryAccess``\ es, which are
 
 Each ``MemoryAccess`` can be one of three types:
 
+- ``MemoryDef``
 - ``MemoryPhi``
 - ``MemoryUse``
-- ``MemoryDef``
+
+``MemoryDef``\ s are operations which may either modify memory, or which
+introduce some kind of ordering constraints. Examples of ``MemoryDef``\ s
+include ``store``\ s, function calls, ``load``\ s with ``acquire`` (or higher)
+ordering, volatile operations, memory fences, etc. A ``MemoryDef``
+always introduces a new version of the entire memory and is linked with a single
+``MemoryDef/MemoryPhi`` which is the version of memory that the new
+version is based on. This implies that there is a *single*
+``Def`` chain that connects all the ``Def``\ s, either directly
+or indireclty. For example in:
+
+.. code-block:: llvm
+  b = MemoryDef(a)
+  c = MemoryDef(b)
+  d = MemoryDef(c)
+
+``d`` is connected directly with ``c`` and indirectly with ``b``.
+This means that ``d`` potentially clobbers (see below) ``c`` *or*
+``b`` *or* both. This in turn implies that without the use of `The walker_`,
+initially every ``MemoryDef`` clobbers every other ``MemoryDef``.
 
 ``MemoryPhi``\ s are ``PhiNode``\ s, but for memory operations. If at any
 point we have two (or more) ``MemoryDef``\ s that could flow into a
@@ -61,11 +83,6 @@ reach a phi node may or may not clobber a given variable).
 ``MemoryUse``\ s are operations which use but don't modify memory. An example of
 a ``MemoryUse`` is a ``load``, or a ``readonly`` function call.
 
-``MemoryDef``\ s are operations which may either modify memory, or which
-introduce some kind of ordering constraints. Examples of ``MemoryDef``\ s
-include ``store``\ s, function calls, ``load``\ s with ``acquire`` (or higher)
-ordering, volatile operations, memory fences, etc.
-
 Every function that exists has a special ``MemoryDef`` called ``liveOnEntry``.
 It dominates every ``MemoryAccess`` in the function that ``MemorySSA`` is being
 run on, and implies that we've hit the top of the function. It's the only
@@ -75,14 +92,28 @@ defined before the function begins.
 
 An example of all of this overlaid on LLVM IR (obtained by running ``opt
 -passes='print<memoryssa>' -disable-output`` on an ``.ll`` file) is below. When
-viewing this example, it may be helpful to view it in terms of clobbers. The
-operands of a given ``MemoryAccess`` are all (potential) clobbers of said
-MemoryAccess, and the value produced by a ``MemoryAccess`` can act as a clobber
-for other ``MemoryAccess``\ es. Another useful way of looking at it is in
-terms of heap versions.  In that view, operands of a given
-``MemoryAccess`` are the version of the heap before the operation, and
-if the access produces a value, the value is the new version of the heap
-after the operation.
+viewing this example, it may be helpful to view it in terms of clobbers.
+The operands of a given ``MemoryAccess`` are all (potential) clobbers of said
+``MemoryAccess``, and the value produced by a ``MemoryAccess`` can act as a clobber
+for other ``MemoryAccess``\ es.
+
+If a ``MemoryAccess`` is a *clobber* of another, it means that these two
+``MemoryAccess``\ es may access the same memory. For example, ``x = MemoryDef(y)``
+means that ``x`` potentially modifies memory that ``y`` modifies/constrains
+(or has modified / constrained).
+In the same manner, ``a = MemoryPhi({BB1,b},{BB2,c})`` means that
+anyone that uses ``a`` is accessing memory potentially modified / constrained
+by either ``b`` or ``c`` (or both).  And finally, ``MemoryUse(x)`` means
+that this use accesses memory that ``x`` has modified / constrained
+(as an example, think that if ``x = MemoryDef(...)``
+and ``MemoryUse(x)`` are in the same loop, the use can't
+be hoisted outside alone).
+
+Another useful way of looking at it is in terms of memory versions.
+In that view, operands of a given ``MemoryAccess`` are the version
+of the entire memory before the operation, and if the access produces
+a value (i.e. ``MemoryDef/MemoryPhi``),
+the value is the new version of the memory after the operation.
 
 .. code-block:: llvm
 
@@ -96,7 +127,7 @@ after the operation.
     br label %while.cond
 
   while.cond:
-    ; 6 = MemoryPhi({%0,1},{if.end,4})
+    ; 6 = MemoryPhi({entry,1},{if.end,4})
     br i1 undef, label %if.then, label %if.else
 
   if.then:
@@ -148,8 +179,8 @@ Going from the top down:
   reaching definition is ``5``.
 - ``MemoryUse(1)`` notes that ``load i8, i8* %p3`` is just a user of memory,
   and the last thing that could clobber this use is above ``while.cond`` (e.g.
-  the store to ``%p3``). In heap versioning parlance, it really only depends on
-  the heap version 1, and is unaffected by the new heap versions generated since
+  the store to ``%p3``). In memory versioning parlance, it really only depends on
+  the memory version 1, and is unaffected by the new memory versions generated since
   then.
 
 As an aside, ``MemoryAccess`` is a ``Value`` mostly for convenience; it's not
@@ -222,7 +253,7 @@ second ``MemoryUse`` in ``if.end`` has an operand of ``1``, which is a
 value numbering, etc, faster and easier.
 
 It is not possible to optimize ``MemoryDef`` in the same way, as we
-restrict ``MemorySSA`` to one heap variable and, thus, one Phi node
+restrict ``MemorySSA`` to one memory variable and, thus, one Phi node
 per block.
 
 
@@ -320,14 +351,14 @@ Precision
 
 ``MemorySSA`` in LLVM deliberately trades off precision for speed.
 Let us think about memory variables as if they were disjoint partitions of the
-heap (that is, if you have one variable, as above, it represents the entire
-heap, and if you have multiple variables, each one represents some
-disjoint portion of the heap)
+memory (that is, if you have one variable, as above, it represents the entire
+memory, and if you have multiple variables, each one represents some
+disjoint portion of the memory)
 
 First, because alias analysis results conflict with each other, and
 each result may be what an analysis wants (IE
 TBAA may say no-alias, and something else may say must-alias), it is
-not possible to partition the heap the way every optimization wants.
+not possible to partition the memory the way every optimization wants.
 Second, some alias analysis results are not transitive (IE A noalias B,
 and B noalias C, does not mean A noalias C), so it is not possible to
 come up with a precise partitioning in all cases without variables to
