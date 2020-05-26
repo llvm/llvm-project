@@ -276,7 +276,7 @@ public:
     Error parse(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
                 const DWARFContext &Ctx, const DWARFUnit *U,
                 function_ref<void(Error)> RecoverableErrorHandler,
-                raw_ostream *OS = nullptr);
+                raw_ostream *OS = nullptr, bool Verbose = false);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -325,9 +325,11 @@ public:
     /// parsing of the table will be reported through this handler.
     /// \param OS - if not null, the parser will print information about the
     /// table as it parses it.
+    /// \param Verbose - if true, the parser will print verbose information when
+    /// printing to the output.
     LineTable parseNext(function_ref<void(Error)> RecoverableErrorHandler,
                         function_ref<void(Error)> UnrecoverableErrorHandler,
-                        raw_ostream *OS = nullptr);
+                        raw_ostream *OS = nullptr, bool Verbose = false);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
