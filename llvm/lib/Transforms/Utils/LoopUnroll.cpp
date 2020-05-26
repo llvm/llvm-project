@@ -716,9 +716,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  auto setDest = [LoopExit, ContinueOnTrue](BasicBlock *Src, BasicBlock *Dest,
-                                            BasicBlock *BlockInLoop,
-                                            bool NeedConditional) {
+  auto setDest = [](BasicBlock *Src, BasicBlock *Dest, BasicBlock *BlockInLoop,
+                    bool NeedConditional, bool ContinueOnTrue,
+                    bool IsDestLoopExit) {
     auto *Term = cast<BranchInst>(Src->getTerminator());
     if (NeedConditional) {
       // Update the conditional branch's successor for the following
@@ -726,7 +726,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       Term->setSuccessor(!ContinueOnTrue, Dest);
     } else {
       // Remove phi operands at this loop exit
-      if (Dest != LoopExit) {
+      if (!IsDestLoopExit) {
         BasicBlock *BB = Src;
         for (BasicBlock *Succ : successors(BB)) {
           // Preserve the incoming value from BB if we are jumping to the block
@@ -743,29 +743,27 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   };
 
-  // Now that all the basic blocks for the unrolled iterations are in place,
-  // set up the branches to connect them.
-  if (LatchIsExiting) {
-    // Set up latches to branch to the new header in the unrolled iterations or
-    // the loop exit for the last latch in a fully unrolled loop.
-    for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
-      // The branch destination.
-      unsigned j = (i + 1) % e;
-      BasicBlock *Dest = Headers[j];
-      bool NeedConditional = true;
+  // Connect latches of the unrolled iterations to the headers of the next
+  // iteration. If the latch is also the exiting block, the conditional branch
+  // may have to be preserved.
+  for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
+    // The branch destination.
+    unsigned j = (i + 1) % e;
+    BasicBlock *Dest = Headers[j];
+    bool NeedConditional = LatchIsExiting;
 
-      if (RuntimeTripCount && j != 0) {
+    if (LatchIsExiting) {
+      if (RuntimeTripCount && j != 0)
         NeedConditional = false;
-      }
 
       // For a complete unroll, make the last iteration end with a branch
       // to the exit block.
       if (CompletelyUnroll) {
         if (j == 0)
           Dest = LoopExit;
-        // If using trip count upper bound to completely unroll, we need to keep
-        // the conditional branch except the last one because the loop may exit
-        // after any iteration.
+        // If using trip count upper bound to completely unroll, we need to
+        // keep the conditional branch except the last one because the loop
+        // may exit after any iteration.
         assert(NeedConditional &&
                "NeedCondition cannot be modified by both complete "
                "unrolling and runtime unrolling");
@@ -777,16 +775,18 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         // unconditional branch for some iterations.
         NeedConditional = false;
       }
-
-      setDest(Latches[i], Dest, Headers[i], NeedConditional);
     }
-  } else {
-    // Setup headers to branch to their new successors in the unrolled
-    // iterations.
+
+    setDest(Latches[i], Dest, Headers[i], NeedConditional, ContinueOnTrue,
+            Dest == LoopExit);
+  }
+
+  if (!LatchIsExiting) {
+    // If the latch is not exiting, we may be able to simplify the conditional
+    // branches in the unrolled exiting blocks.
     for (unsigned i = 0, e = Headers.size(); i != e; ++i) {
       // The branch destination.
       unsigned j = (i + 1) % e;
-      BasicBlock *Dest = HeaderSucc[i];
       bool NeedConditional = true;
 
       if (RuntimeTripCount && j != 0)
@@ -802,27 +802,19 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         // unconditional branch for some iterations.
         NeedConditional = false;
 
-      setDest(Headers[i], Dest, HeaderSucc[i], NeedConditional);
+      // Conditional branches from non-latch exiting block have successors
+      // either in the same loop iteration or outside the loop. The branches are
+      // already correct.
+      if (NeedConditional)
+        continue;
+      setDest(Headers[i], HeaderSucc[i], HeaderSucc[i], NeedConditional,
+              ContinueOnTrue, false);
     }
 
-    // Set up latches to branch to the new header in the unrolled iterations or
-    // the loop exit for the last latch in a fully unrolled loop.
-
-    for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
-      // The original branch was replicated in each unrolled iteration.
-      BranchInst *Term = cast<BranchInst>(Latches[i]->getTerminator());
-
-      // The branch destination.
-      unsigned j = (i + 1) % e;
-      BasicBlock *Dest = Headers[j];
-
-      // When completely unrolling, the last latch becomes unreachable.
-      if (CompletelyUnroll && j == 0)
-        new UnreachableInst(Term->getContext(), Term);
-      else
-        // Replace the conditional branch with an unconditional one.
-        BranchInst::Create(Dest, Term);
-
+    // When completely unrolling, the last latch becomes unreachable.
+    if (CompletelyUnroll) {
+      BranchInst *Term = cast<BranchInst>(Latches.back()->getTerminator());
+      new UnreachableInst(Term->getContext(), Term);
       Term->eraseFromParent();
     }
   }
