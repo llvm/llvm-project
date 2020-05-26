@@ -7,5 +7,5 @@ define void @usethirteen() {
     ret void
 }
 
-; CHECK: stw 13, -4(1)
-; CHECK: lwz 13, -4(1)
+; CHECK: stw 13, -76(1)
+; CHECK: lwz 13, -76(1)
