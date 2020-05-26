@@ -102,7 +102,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
     %1 = shape.const_shape [1, 2, 3]
     ```
   }];
-  let arguments = (ins I64ElementsAttr:$shape);
+  let arguments = (ins IndexElementsAttr:$shape);
   let results = (outs Shape_ShapeType:$result);
 
   // TODO: Move this to main so that all shape ops implement these.
@@ -206,13 +206,8 @@ def Shape_GetExtentOp : Shape_Op<"get_extent",
   let builders = [
     // Builder that allows passing a simple integer instead of an IntegerAttr.
     OpBuilder<
-      [{
-        OpBuilder &builder, OperationState &result,
-        Value shape, int64_t dim
-      }],
-      [{
-        build(builder, result, shape, builder.getI64IntegerAttr(dim));
-      }]
+      [{OpBuilder &builder, OperationState &result, Value shape, int64_t dim}],
+      [{build(builder, result, shape, builder.getI64IntegerAttr(dim));}]
     >
   ];
 
