@@ -71,7 +71,7 @@ MATH_PRIVATE(trigredlarge)(double x)
     double p1 = BUILTIN_TRIG_PREOP_F64(x, 1);
     double p0 = BUILTIN_TRIG_PREOP_F64(x, 2);
 
-    x = BUILTIN_FLDEXP_F64(x, x >= 0x1.0p+945 ? -128 : 0);
+    x = x >= 0x1.0p+945 ? BUILTIN_FLDEXP_F64(x, -128) : x;
 
     double f2, f1, f0, c2, c1;
     EXPAND(x, p2, p1, p0, f2, f1, f0, c2, c1);
