@@ -415,7 +415,8 @@ public:
                             VPTransformState &State);
 
   /// Widen a single select instruction within the innermost loop.
-  void widenSelectInstruction(SelectInst &I, bool InvariantCond);
+  void widenSelectInstruction(SelectInst &I, VPUser &Operands,
+                              bool InvariantCond, VPTransformState &State);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop();
@@ -4412,7 +4413,9 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
 }
 
 void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
-                                                 bool InvariantCond) {
+                                                 VPUser &Operands,
+                                                 bool InvariantCond,
+                                                 VPTransformState &State) {
   setDebugLocFromInst(Builder, &I);
 
   // The condition can be loop invariant  but still defined inside the
@@ -4420,12 +4423,12 @@ void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I,
   // We have to take the 'vectorized' value and pick the first lane.
   // Instcombine will make this a no-op.
 
-  auto *ScalarCond = getOrCreateScalarValue(I.getOperand(0), {0, 0});
+  auto *ScalarCond = State.get(Operands.getOperand(0), {0, 0});
 
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *Cond = getOrCreateVectorValue(I.getOperand(0), Part);
-    Value *Op0 = getOrCreateVectorValue(I.getOperand(1), Part);
-    Value *Op1 = getOrCreateVectorValue(I.getOperand(2), Part);
+    Value *Cond = State.get(Operands.getOperand(0), Part);
+    Value *Op0 = State.get(Operands.getOperand(1), Part);
+    Value *Op1 = State.get(Operands.getOperand(2), Part);
     Value *Sel =
         Builder.CreateSelect(InvariantCond ? ScalarCond : Cond, Op0, Op1);
     VectorLoopValueMap.setVectorValue(&I, Part, Sel);
@@ -7134,7 +7137,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
     bool InvariantCond =
         PSE.getSE()->isLoopInvariant(PSE.getSCEV(SI->getOperand(0)), OrigLoop);
-    return new VPWidenSelectRecipe(*SI, InvariantCond);
+    return new VPWidenSelectRecipe(*SI, Plan->mapToVPValues(SI->operands()),
+                                   InvariantCond);
   }
 
   return tryToWiden(Instr, *Plan);
@@ -7429,7 +7433,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(Ingredient, InvariantCond);
+  State.ILV->widenSelectInstruction(Ingredient, User, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
