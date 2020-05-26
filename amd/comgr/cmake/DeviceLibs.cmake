@@ -1,6 +1,8 @@
 set(INC_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-file(WRITE ${INC_DIR}/libraries.inc "// Automatically generated file; DO NOT EDIT.\n")
+set(GEN_LIBRARY_INC_FILE ${INC_DIR}/libraries.inc)
+
+file(WRITE ${GEN_LIBRARY_INC_FILE} "// Automatically generated file; DO NOT EDIT.\n")
 
 # cmake does not provide a way to query targets produced by a project,
 # so we have to make one up. Ordinarily, individual library target
@@ -52,7 +54,7 @@ foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   add_custom_target(${AMDGCN_LIB_TARGET}_header DEPENDS ${INC_DIR}/${header})
   add_dependencies(amd_comgr ${AMDGCN_LIB_TARGET}_header)
 
-  file(APPEND ${INC_DIR}/libraries.inc "#include \"${header}\"\n")
+  file(APPEND ${GEN_LIBRARY_INC_FILE} "#include \"${header}\"\n")
 endforeach()
 
 add_custom_command(OUTPUT ${INC_DIR}/opencl1.2-c.inc
@@ -66,7 +68,7 @@ set_property(DIRECTORY APPEND PROPERTY
   ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl1.2-c.inc)
 add_custom_target(opencl1.2-c.inc_target DEPENDS ${INC_DIR}/opencl1.2-c.inc)
 add_dependencies(amd_comgr opencl1.2-c.inc_target)
-file(APPEND ${INC_DIR}/libraries.inc "#include \"opencl1.2-c.inc\"\n")
+file(APPEND ${GEN_LIBRARY_INC_FILE} "#include \"opencl1.2-c.inc\"\n")
 
 add_custom_command(OUTPUT ${INC_DIR}/opencl2.0-c.inc
   COMMAND bc2h ${CMAKE_CURRENT_BINARY_DIR}/opencl2.0-c.pch
@@ -79,27 +81,27 @@ set_property(DIRECTORY APPEND PROPERTY
   ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl2.0-c.inc)
 add_custom_target(opencl2.0-c.inc_target DEPENDS ${INC_DIR}/opencl2.0-c.inc)
 add_dependencies(amd_comgr opencl2.0-c.inc_target)
-file(APPEND ${INC_DIR}/libraries.inc "#include \"opencl2.0-c.inc\"\n")
+file(APPEND ${GEN_LIBRARY_INC_FILE} "#include \"opencl2.0-c.inc\"\n")
 
 # Generate function to select libraries for a given GFXIP number.
-file(APPEND ${INC_DIR}/libraries.inc "#include \"llvm/ADT/StringRef.h\"\n")
-file(APPEND ${INC_DIR}/libraries.inc
+file(APPEND ${GEN_LIBRARY_INC_FILE} "#include \"llvm/ADT/StringRef.h\"\n")
+file(APPEND ${GEN_LIBRARY_INC_FILE}
   "static std::tuple<const char*, const void*, size_t> get_oclc_isa_version(llvm::StringRef gfxip) {")
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_isa_version_.+$")
     string(REGEX REPLACE "^oclc_isa_version_(.+)$" "\\1" gfxip ${AMDGCN_LIB_TARGET})
-    file(APPEND ${INC_DIR}/libraries.inc
+    file(APPEND ${GEN_LIBRARY_INC_FILE}
       "if (gfxip == \"${gfxip}\") return std::make_tuple(\"${AMDGCN_LIB_TARGET}.bc\", ${AMDGCN_LIB_TARGET}_lib, ${AMDGCN_LIB_TARGET}_lib_size);")
   endif()
 endforeach()
-file(APPEND ${INC_DIR}/libraries.inc
+file(APPEND ${GEN_LIBRARY_INC_FILE}
   "return std::make_tuple(nullptr, nullptr, 0); }")
 
 # Generate function to select libraries for given feature.
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   if (${AMDGCN_LIB_TARGET} MATCHES "^oclc_.*_on$")
     string(REGEX REPLACE "^oclc_(.*)_on" "\\1" function ${AMDGCN_LIB_TARGET})
-    file(APPEND ${INC_DIR}/libraries.inc
+    file(APPEND ${GEN_LIBRARY_INC_FILE}
       "static std::tuple<const char*, const void*, size_t> get_oclc_${function}(bool on) { \
        return std::make_tuple( \
          on ? \"oclc_${function}_on_lib.bc\" : \"oclc_${function}_off_lib.bc\", \
