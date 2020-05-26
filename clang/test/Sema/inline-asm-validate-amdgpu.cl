@@ -17,6 +17,10 @@ kernel void test () {
 
   // vgpr constraints
   __asm__ ("v_mov_b32 %0, %1" : "=v" (vgpr) : "v" (imm) : );
+
+  // 'A' constraint
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "A" (imm) : );
+
 }
 
 __kernel void

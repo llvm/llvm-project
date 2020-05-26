@@ -131,6 +131,11 @@ public:
     });
 
     StringRef S(Name);
+    if (S == "A") {
+      Info.setRequiresImmediate();
+      return true;
+    }
+
     bool HasLeftParen = false;
     if (S.front() == '{') {
       HasLeftParen = true;
