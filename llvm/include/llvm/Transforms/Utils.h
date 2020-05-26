@@ -48,12 +48,6 @@ extern char &InstructionNamerID;
 
 //===----------------------------------------------------------------------===//
 //
-// IRCanonicalizer - Transforms LLVM Modules into canonical form.
-//
-Pass *createIRCanonicalizerPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LowerSwitch - This pass converts SwitchInst instructions into a sequence of
 // chained binary branch instructions.
 //
