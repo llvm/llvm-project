@@ -221,22 +221,7 @@ public:
   static MemoryLocation get(const Instruction *Inst) {
     return *MemoryLocation::getOrNone(Inst);
   }
-  static Optional<MemoryLocation> getOrNone(const Instruction *Inst) {
-    switch (Inst->getOpcode()) {
-    case Instruction::Load:
-      return get(cast<LoadInst>(Inst));
-    case Instruction::Store:
-      return get(cast<StoreInst>(Inst));
-    case Instruction::VAArg:
-      return get(cast<VAArgInst>(Inst));
-    case Instruction::AtomicCmpXchg:
-      return get(cast<AtomicCmpXchgInst>(Inst));
-    case Instruction::AtomicRMW:
-      return get(cast<AtomicRMWInst>(Inst));
-    default:
-      return None;
-    }
-  }
+  static Optional<MemoryLocation> getOrNone(const Instruction *Inst);
 
   /// Return a location representing the source of a memory transfer.
   static MemoryLocation getForSource(const MemTransferInst *MTI);

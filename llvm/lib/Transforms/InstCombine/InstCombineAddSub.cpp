@@ -2195,6 +2195,17 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
       return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
     }
 
+    // Reassociate fsub/fadd sequences to create more fadd instructions and
+    // reduce dependency chains:
+    // ((X - Y) + Z) - Op1 --> (X + Z) - (Y + Op1)
+    Value *Z;
+    if (match(Op0, m_OneUse(m_c_FAdd(m_OneUse(m_FSub(m_Value(X), m_Value(Y))),
+                                     m_Value(Z))))) {
+      Value *XZ = Builder.CreateFAddFMF(X, Z, &I);
+      Value *YW = Builder.CreateFAddFMF(Y, Op1, &I);
+      return BinaryOperator::CreateFSubFMF(XZ, YW, &I);
+    }
+
     if (Instruction *F = factorizeFAddFSub(I, Builder))
       return F;
 
