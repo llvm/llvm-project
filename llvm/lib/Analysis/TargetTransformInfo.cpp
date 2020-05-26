@@ -1325,10 +1325,8 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast:
-  case Instruction::AddrSpaceCast: {
-    Type *SrcTy = I->getOperand(0)->getType();
-    return getCastInstrCost(I->getOpcode(), I->getType(), SrcTy, CostKind, I);
-  }
+  case Instruction::AddrSpaceCast:
+    return getUserCost(I, CostKind);
   case Instruction::ExtractElement: {
     const ExtractElementInst *EEI = cast<ExtractElementInst>(I);
     ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));

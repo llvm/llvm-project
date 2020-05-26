@@ -691,6 +691,12 @@ getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,
 int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I) {
+  // FIXME: Can the logic below also be used for these cost kinds?
+  if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency) {
+    int BaseCost = BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+    return BaseCost == 0 ? BaseCost : 1;
+  }
+
   unsigned DstScalarBits = Dst->getScalarSizeInBits();
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
 
