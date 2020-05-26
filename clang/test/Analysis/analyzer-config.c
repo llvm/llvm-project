@@ -99,7 +99,6 @@
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
-// CHECK-NEXT: osx.cocoa.RetainCount:CheckOSObject = true
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
 // CHECK-NEXT: region-store-small-struct-limit = 2

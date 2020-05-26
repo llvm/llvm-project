@@ -1158,6 +1158,15 @@ TLI_DEFINE_STRING_INTERNAL("rmdir")
 /// double round(double x);
 TLI_DEFINE_ENUM_INTERNAL(round)
 TLI_DEFINE_STRING_INTERNAL("round")
+/// double roundeven(double x);
+TLI_DEFINE_ENUM_INTERNAL(roundeven)
+TLI_DEFINE_STRING_INTERNAL("roundeven")
+/// float roundevenf(float x);
+TLI_DEFINE_ENUM_INTERNAL(roundevenf)
+TLI_DEFINE_STRING_INTERNAL("roundevenf")
+/// long double roundevenl(long double x);
+TLI_DEFINE_ENUM_INTERNAL(roundevenl)
+TLI_DEFINE_STRING_INTERNAL("roundevenl")
 /// float roundf(float x);
 TLI_DEFINE_ENUM_INTERNAL(roundf)
 TLI_DEFINE_STRING_INTERNAL("roundf")

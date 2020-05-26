@@ -5,10 +5,6 @@
 // RUN: %clang_analyze_cc1 -std=c++14 -DNO_OS_OBJECT -verify %s \
 // RUN:   -analyzer-checker=core,osx \
 // RUN:   -analyzer-disable-checker osx.OSObjectRetainCount
-//
-// RUN: %clang_analyze_cc1 -std=c++14 -DNO_OS_OBJECT -verify %s \
-// RUN:   -analyzer-checker=core,osx \
-// RUN:   -analyzer-config "osx.cocoa.RetainCount:CheckOSObject=false"
 
 #include "os_object_base.h"
 

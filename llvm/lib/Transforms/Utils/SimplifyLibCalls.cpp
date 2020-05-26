@@ -2930,6 +2930,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
   case LibFunc_round:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_roundeven:
+    return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
   case LibFunc_nearbyint:
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
   case LibFunc_rint:

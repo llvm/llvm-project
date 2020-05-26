@@ -340,6 +340,16 @@ If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
 found``. This means you need to tweak the -rpath linker flag.
 
+This method will add an absolute path to the rpath of all executables. That's
+fine for local development. If you want to distribute the binaries you build
+so that they can run on older systems, copy ``libstdc++.so.6`` into the
+``lib/`` directory.  All of LLVM's shipping binaries have an rpath pointing at
+``$ORIGIN/../lib``, so they will find ``libstdc++.so.6`` there.  Non-distributed
+binaries don't have an rpath set and won't find ``libstdc++.so.6``. Pass
+``-DLLVM_LOCAL_RPATH="$HOME/toolchains/lib64"`` to cmake to add an absolute
+path to ``libstdc++.so.6`` as above. Since these binaries are not distributed,
+having an absolute local path is fine for them.
+
 When you build Clang, you will need to give *it* access to modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along

@@ -19073,7 +19073,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   bool ExpandFunnel = !OptForSize && Subtarget.isSHLDSlow();
 
   // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
-  // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))) >> bw.
+  // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
   if ((VT == MVT::i8 || (ExpandFunnel && VT == MVT::i16)) &&
       !isa<ConstantSDNode>(Amt)) {
     unsigned EltSizeInBits = VT.getScalarSizeInBits();

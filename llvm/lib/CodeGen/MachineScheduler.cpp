@@ -1580,34 +1580,48 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     return;
 
   llvm::sort(MemOpRecords);
+
+  // At this point, `MemOpRecords` array must hold atleast two mem ops. Try to
+  // cluster mem ops collected within `MemOpRecords` array.
   unsigned ClusterLength = 1;
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
-    SUnit *SUa = MemOpRecords[Idx].SU;
-    SUnit *SUb = MemOpRecords[Idx+1].SU;
-    if (TII->shouldClusterMemOps(MemOpRecords[Idx].BaseOps,
-                                 MemOpRecords[Idx + 1].BaseOps,
-                                 ClusterLength + 1)) {
-      if (SUa->NodeNum > SUb->NodeNum)
-        std::swap(SUa, SUb);
-      if (DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
-        LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
-                          << SUb->NodeNum << ")\n");
-        // Copy successor edges from SUa to SUb. Interleaving computation
-        // dependent on SUa can prevent load combining due to register reuse.
-        // Predecessor edges do not need to be copied from SUb to SUa since
-        // nearby loads should have effectively the same inputs.
-        for (const SDep &Succ : SUa->Succs) {
-          if (Succ.getSUnit() == SUb)
-            continue;
-          LLVM_DEBUG(dbgs()
-                     << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum << ")\n");
-          DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
-        }
-        ++ClusterLength;
-      } else
-        ClusterLength = 1;
-    } else
+    // Decision to cluster mem ops is taken based on target dependent logic
+    auto MemOpa = MemOpRecords[Idx];
+    auto MemOpb = MemOpRecords[Idx + 1];
+    ++ClusterLength;
+    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpb.BaseOps,
+                                  ClusterLength)) {
+      // Current mem ops pair could not be clustered, reset cluster length, and
+      // go to next pair
       ClusterLength = 1;
+      continue;
+    }
+
+    SUnit *SUa = MemOpa.SU;
+    SUnit *SUb = MemOpb.SU;
+    if (SUa->NodeNum > SUb->NodeNum)
+      std::swap(SUa, SUb);
+
+    // FIXME: Is this check really required?
+    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+      ClusterLength = 1;
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
+                      << SUb->NodeNum << ")\n");
+
+    // Copy successor edges from SUa to SUb. Interleaving computation
+    // dependent on SUa can prevent load combining due to register reuse.
+    // Predecessor edges do not need to be copied from SUb to SUa since
+    // nearby loads should have effectively the same inputs.
+    for (const SDep &Succ : SUa->Succs) {
+      if (Succ.getSUnit() == SUb)
+        continue;
+      LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
+                        << ")\n");
+      DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
+    }
   }
 }
 

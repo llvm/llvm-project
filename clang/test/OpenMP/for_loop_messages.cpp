@@ -831,3 +831,13 @@ void test_nowait() {
   for (int i = 0; i < 16; ++i)
     ;
 }
+
+void test_static_data_member() {
+#pragma omp parallel
+#pragma omp for
+  for (int i = 0; i < 16; ++i) {
+    class X {
+      static int x; // expected-error {{static data member 'x' not allowed in local class 'X'}}
+    };
+  }
+}

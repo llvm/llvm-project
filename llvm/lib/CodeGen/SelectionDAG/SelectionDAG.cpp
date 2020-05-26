@@ -4103,6 +4103,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FFLOOR:
   case ISD::FCEIL:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FRINT:
   case ISD::FNEARBYINT: {
     if (SNaN)
