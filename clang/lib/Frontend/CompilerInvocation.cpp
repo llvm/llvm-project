@@ -3176,6 +3176,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.SemanticInterposition = Args.hasArg(OPT_fsemantic_interposition);
+  // An explicit -fno-semantic-interposition infers dso_local.
+  Opts.ExplicitNoSemanticInterposition =
+      Args.hasArg(OPT_fno_semantic_interposition);
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
