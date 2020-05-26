@@ -303,7 +303,7 @@ struct StructuredIndexed {
            "MemRef, RankedTensor or Vector expected");
   }
 
-  bool hasValue() const { return value; }
+  bool hasValue() const { return (bool)value; }
   Value getValue() const {
     assert(value && "StructuredIndexed Value not set.");
     return value;

@@ -281,7 +281,8 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
     }
   });
 
-  assert((!options.unroll ^ result) && "Expected resulting Value iff unroll");
+  assert((!options.unroll ^ (bool)result) &&
+         "Expected resulting Value iff unroll");
   if (!result)
     result = std_load(vector_type_cast(MemRefType::get({}, vectorType), alloc));
   rewriter.replaceOp(op, result);
