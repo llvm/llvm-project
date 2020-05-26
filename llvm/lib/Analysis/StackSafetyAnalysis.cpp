@@ -201,15 +201,14 @@ class StackSafetyLocalAnalysis {
 
   const ConstantRange UnknownRange;
 
-  ConstantRange offsetFromAlloca(Value *Addr, const Value *AllocaPtr);
-  ConstantRange getAccessRange(Value *Addr, const Value *AllocaPtr,
+  ConstantRange offsetFrom(Value *Addr, Value *Base);
+  ConstantRange getAccessRange(Value *Addr, Value *Base,
                                ConstantRange SizeRange);
-  ConstantRange getAccessRange(Value *Addr, const Value *AllocaPtr,
-                               TypeSize Size);
+  ConstantRange getAccessRange(Value *Addr, Value *Base, TypeSize Size);
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
-                                           const Value *AllocaPtr);
+                                           Value *Base);
 
-  bool analyzeAllUses(const Value *Ptr, UseInfo &AS);
+  bool analyzeAllUses(Value *Ptr, UseInfo &AS);
 
   ConstantRange getRange(uint64_t Lower, uint64_t Upper) const {
     return ConstantRange(APInt(PointerSize, Lower), APInt(PointerSize, Upper));
@@ -225,13 +224,11 @@ public:
   FunctionInfo run();
 };
 
-ConstantRange
-StackSafetyLocalAnalysis::offsetFromAlloca(Value *Addr,
-                                           const Value *AllocaPtr) {
+ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
   if (!SE.isSCEVable(Addr->getType()))
     return UnknownRange;
 
-  AllocaOffsetRewriter Rewriter(SE, AllocaPtr);
+  AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
   ConstantRange Offset = SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
   assert(!Offset.isEmptySet());
@@ -239,7 +236,7 @@ StackSafetyLocalAnalysis::offsetFromAlloca(Value *Addr,
 }
 
 ConstantRange
-StackSafetyLocalAnalysis::getAccessRange(Value *Addr, const Value *AllocaPtr,
+StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                          ConstantRange SizeRange) {
   // Zero-size loads and stores do not access memory.
   if (SizeRange.isEmptySet())
@@ -248,7 +245,7 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, const Value *AllocaPtr,
   if (!SE.isSCEVable(Addr->getType()))
     return UnknownRange;
 
-  AllocaOffsetRewriter Rewriter(SE, AllocaPtr);
+  AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
 
   ConstantRange AccessStartRange =
@@ -258,17 +255,16 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, const Value *AllocaPtr,
   return AccessRange;
 }
 
-ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr,
-                                                       const Value *AllocaPtr,
+ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
   ConstantRange SizeRange = Size.isScalable()
                                 ? ConstantRange::getFull(PointerSize)
                                 : getRange(0, Size.getFixedSize());
-  return getAccessRange(Addr, AllocaPtr, SizeRange);
+  return getAccessRange(Addr, Base, SizeRange);
 }
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
-    const MemIntrinsic *MI, const Use &U, const Value *AllocaPtr) {
+    const MemIntrinsic *MI, const Use &U, Value *Base) {
   if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
     if (MTI->getRawSource() != U && MTI->getRawDest() != U)
       return getRange(0, 1);
@@ -281,13 +277,13 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   if (!Len)
     return UnknownRange;
   ConstantRange AccessRange =
-      getAccessRange(U, AllocaPtr, getRange(0, Len->getZExtValue()));
+      getAccessRange(U, Base, getRange(0, Len->getZExtValue()));
   return AccessRange;
 }
 
 /// The function analyzes all local uses of Ptr (alloca or argument) and
 /// calculates local access range and all function calls where it was used.
-bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
+bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr, UseInfo &US) {
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 8> WorkList;
   WorkList.push_back(Ptr);
@@ -354,7 +350,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
         auto B = CB.arg_begin(), E = CB.arg_end();
         for (auto A = B; A != E; ++A) {
           if (A->get() == V) {
-            ConstantRange Offset = offsetFromAlloca(UI, Ptr);
+            ConstantRange Offset = offsetFrom(UI, Ptr);
             US.Calls.emplace_back(Callee, A - B, Offset);
           }
         }
@@ -387,7 +383,7 @@ FunctionInfo StackSafetyLocalAnalysis::run() {
     }
   }
 
-  for (const Argument &A : make_range(F.arg_begin(), F.arg_end())) {
+  for (Argument &A : make_range(F.arg_begin(), F.arg_end())) {
     Info.Params.emplace_back(PointerSize);
     UseInfo &PS = Info.Params.back();
     analyzeAllUses(&A, PS);
