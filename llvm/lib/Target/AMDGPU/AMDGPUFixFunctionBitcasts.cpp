@@ -15,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 
 using namespace llvm;
