@@ -17,21 +17,25 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
+class CallBase;
 class LoadInst;
 class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
+class AtomicCmpXchgInst;
 class AtomicMemTransferInst;
 class AtomicMemIntrinsic;
+class AtomicRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
 class TargetLibraryInfo;
+class VAArgInst;
 
 // Represents the size of a MemoryLocation. Logically, it's an
 // Optional<uint63_t> that also carries a bit to represent whether the integer
