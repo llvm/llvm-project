@@ -325,9 +325,9 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
   }
 
-  if (MMI->hasDebugInfo() &&
-      MAI->getExceptionHandlingType() == ExceptionHandling::None &&
-      MAI->doesSupportDebugUnwindInformation()) {
+  if (MAI->getExceptionHandlingType() == ExceptionHandling::None &&
+      (TM.Options.ForceDwarfFrameSection ||
+       (MMI->hasDebugInfo() && MAI->doesSupportDebugUnwindInformation()))) {
     isCFIMoveForDebugging = true;
     Handlers.emplace_back(std::make_unique<UnwindStreamer>(this),
                           UnwindTimerName, UnwindTimerDescription,
