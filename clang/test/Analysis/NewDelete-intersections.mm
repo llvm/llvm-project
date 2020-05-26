@@ -1,7 +1,20 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -std=c++11 -DLEAKS -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -std=c++11 -DLEAKS -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:  -verify=newdelete \
+// RUN:  -analyzer-checker=core \
+// RUN:  -analyzer-checker=cplusplus.NewDelete
+
+// RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
+// RUN:   -verify=leak \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+
+// leak-no-diagnostics
+
+// RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
+// RUN:   -verify=mismatch \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.MismatchedDeallocator
+
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-objc.h"
 
@@ -10,12 +23,6 @@ extern "C" void *malloc(size_t);
 extern "C" void *alloca(size_t);
 extern "C" void free(void *);
 
-//----------------------------------------------------------------------------
-// Check for intersections with unix.Malloc and unix.MallocWithAnnotations 
-// checkers bounded with cplusplus.NewDelete.
-//----------------------------------------------------------------------------
-
-//----- malloc()/free() are subjects of unix.Malloc and unix.MallocWithAnnotations
 void testMallocFreeNoWarn() {
   int i;
   free(&i); // no warn
@@ -39,7 +46,8 @@ void testMallocFreeNoWarn() {
 
 void testDeleteMalloced() {
   int *p1 = (int *)malloc(sizeof(int));
-  delete p1; // no warn
+  delete p1;
+  // mismatch-warning@-1{{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
 
   int *p2 = (int *)__builtin_alloca(sizeof(int));
   delete p2; // no warn
@@ -54,35 +62,30 @@ void testUseZeroAllocatedMalloced() {
 void testFreeOpNew() {
   void *p = operator new(0);
   free(p);
+  // mismatch-warning@-1{{Memory allocated by operator new should be deallocated by 'delete', not free()}}
 }
-#ifdef LEAKS
-// expected-warning@-2 {{Potential leak of memory pointed to by 'p'}}
-#endif
 
 void testFreeNewExpr() {
   int *p = new int;
   free(p);
+  // mismatch-warning@-1{{Memory allocated by 'new' should be deallocated by 'delete', not free()}}
+  free(p);
 }
-#ifdef LEAKS
-// expected-warning@-2 {{Potential leak of memory pointed to by 'p'}}
-#endif
 
 void testObjcFreeNewed() {
   int *p = new int;
   NSData *nsdata = [NSData dataWithBytesNoCopy:p length:sizeof(int) freeWhenDone:1];
-#ifdef LEAKS
-  // expected-warning@-2 {{Potential leak of memory pointed to by 'p'}}
-#endif
+  // mismatch-warning@-1{{+dataWithBytesNoCopy:length:freeWhenDone: cannot take ownership of memory allocated by 'new'}}
 }
 
 void testFreeAfterDelete() {
   int *p = new int;  
   delete p;
-  free(p); // expected-warning{{Use of memory after it is freed}}
+  free(p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testStandardPlacementNewAfterDelete() {
   int *p = new int;  
   delete p;
-  p = new(p) int; // expected-warning{{Use of memory after it is freed}}
+  p = new (p) int; // newdelete-warning{{Use of memory after it is freed}}
 }
