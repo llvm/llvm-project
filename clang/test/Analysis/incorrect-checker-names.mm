@@ -125,7 +125,7 @@ bool write_into_out_param_on_success(OS_RETURNS_RETAINED OSObject **obj);
 void use_out_param_leak() {
   OSObject *obj;
   // FIXME: This shouldn't be tied to a modeling checker.
-  write_into_out_param_on_success(&obj); // expected-warning{{Potential leak of an object stored into 'obj' [osx.cocoa.RetainCountBase]}}
+  write_into_out_param_on_success(&obj); // expected-warning{{Potential leak of an object stored into 'obj' [osx.cocoa.RetainCount]}}
 }
 
 typedef struct dispatch_queue_s *dispatch_queue_t;

@@ -1065,17 +1065,22 @@ Currently, only the following parameter attributes are defined:
     form and the known alignment of the pointer specified to the call
     site. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
+
+.. _attr_preallocated:
+
 ``preallocated(<ty>)``
     This indicates that the pointer parameter should really be passed by
     value to the function, and that the pointer parameter's pointee has
     already been initialized before the call instruction. This attribute
     is only valid on LLVM pointer arguments. The argument must be the value
     returned by the appropriate
-    :ref:`llvm.call.preallocated.arg<int_call_preallocated_arg>`, although is
-    ignored during codegen.
+    :ref:`llvm.call.preallocated.arg<int_call_preallocated_arg>` on non
+    ``musttail`` calls, or the corresponding caller parameter in ``musttail``
+    calls, although it is ignored during codegen.
 
-    Any function call with a ``preallocated`` attribute in any parameter
-    must have a ``"preallocated"`` operand bundle.
+    A non ``musttail`` function call with a ``preallocated`` attribute in
+    any parameter must have a ``"preallocated"`` operand bundle. A ``musttail``
+    function call cannot have a ``"preallocated"`` operand bundle.
 
     The preallocated attribute requires a type argument, which must be
     the same as the pointee type of the argument.
@@ -10634,8 +10639,8 @@ This instruction requires several arguments:
 
    #. The call will not cause unbounded stack growth if it is part of a
       recursive cycle in the call graph.
-   #. Arguments with the :ref:`inalloca <attr_inalloca>` attribute are
-      forwarded in place.
+   #. Arguments with the :ref:`inalloca <attr_inalloca>` or
+      :ref:`preallocated <attr_preallocated>` attribute are forwarded in place.
    #. If the musttail call appears in a function with the ``"thunk"`` attribute
       and the caller and callee both have varargs, than any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
