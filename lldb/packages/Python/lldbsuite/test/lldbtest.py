@@ -505,6 +505,10 @@ class Base(unittest2.TestCase):
         """Returns True if we are in trace mode (tracing detailed test execution)."""
         return traceAlways
 
+    def trace(self, *args,**kwargs):
+        with recording(self, self.TraceOn()) as sbuf:
+            print(*args, **kwargs, file=sbuf)
+
     @classmethod
     def setUpClass(cls):
         """

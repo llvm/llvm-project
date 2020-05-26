@@ -118,7 +118,7 @@ class BreakpointSerialization(TestBase):
             copy_text = copy_desc.GetData()
 
             # These two should be identical.
-            # print ("Source text for %d is %s."%(i, source_text))
+            self.trace("Source text for %d is %s."%(i, source_text))
             self.assertTrue (source_text == copy_text, "Source and dest breakpoints are not identical: \nsource: %s\ndest: %s"%(source_text, copy_text))
 
     def do_check_resolvers(self):
