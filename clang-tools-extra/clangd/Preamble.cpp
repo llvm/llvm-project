@@ -104,24 +104,6 @@ private:
   const SourceManager *SourceMgr = nullptr;
 };
 
-// Runs preprocessor over preamble section.
-class PreambleOnlyAction : public PreprocessorFrontendAction {
-protected:
-  void ExecuteAction() override {
-    Preprocessor &PP = getCompilerInstance().getPreprocessor();
-    auto &SM = PP.getSourceManager();
-    PP.EnterMainSourceFile();
-    auto Bounds = ComputePreambleBounds(getCompilerInstance().getLangOpts(),
-                                        SM.getBuffer(SM.getMainFileID()), 0);
-    Token Tok;
-    do {
-      PP.Lex(Tok);
-      assert(SM.isInMainFile(Tok.getLocation()));
-    } while (Tok.isNot(tok::eof) &&
-             SM.getDecomposedLoc(Tok.getLocation()).second < Bounds.Size);
-  }
-};
-
 /// Gets the includes in the preamble section of the file by running
 /// preprocessor over \p Contents. Returned includes do not contain resolved
 /// paths. \p VFS and \p Cmd is used to build the compiler invocation, which
@@ -142,8 +124,15 @@ scanPreambleIncludes(llvm::StringRef Contents,
                                    "failed to create compiler invocation");
   CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
+  // This means we're scanning (though not preprocessing) the preamble section
+  // twice. However, it's important to precisely follow the preamble bounds used
+  // elsewhere.
+  auto Bounds =
+      ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
+  auto PreambleContents =
+      llvm::MemoryBuffer::getMemBufferCopy(Contents.substr(0, Bounds.Size));
   auto Clang = prepareCompilerInstance(
-      std::move(CI), nullptr, std::move(ContentsBuffer),
+      std::move(CI), nullptr, std::move(PreambleContents),
       // Provide an empty FS to prevent preprocessor from performing IO. This
       // also implies missing resolved paths for includes.
       new llvm::vfs::InMemoryFileSystem, IgnoreDiags);
@@ -152,7 +141,7 @@ scanPreambleIncludes(llvm::StringRef Contents,
                                    "compiler instance had no inputs");
   // We are only interested in main file includes.
   Clang->getPreprocessorOpts().SingleFileParseMode = true;
-  PreambleOnlyAction Action;
+  PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "failed BeginSourceFile");

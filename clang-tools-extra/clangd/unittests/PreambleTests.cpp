@@ -118,6 +118,11 @@ TEST(PreamblePatchTest, IncludeParsing) {
         ^#include "a.h"
         #include <b
         ^#include <b.h>)cpp",
+      // Directive is not part of preamble if it is not the token immediately
+      // followed by the hash (#).
+      R"cpp(
+        ^#include "a.h"
+        #/**/include <b.h>)cpp",
   };
 
   for (const auto Case : Cases) {
