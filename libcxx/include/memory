@@ -1352,9 +1352,12 @@ struct __has_allocate_hint
 
 #endif  // _LIBCPP_CXX03_LANG
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Alloc, class ..._Args,
     class = decltype(_VSTD::declval<_Alloc>().construct(_VSTD::declval<_Args>()...))>
 static true_type __test_has_construct(int);
+_LIBCPP_SUPPRESS_DEPRECATED_POP
+
 template <class _Alloc, class...>
 static false_type __test_has_construct(...);
 
