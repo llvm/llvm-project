@@ -4107,6 +4107,14 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::ROUND_F128,
                     RTLIB::ROUND_PPCF128, Results);
     break;
+  case ISD::FROUNDEVEN:
+  case ISD::STRICT_FROUNDEVEN:
+    ExpandFPLibCall(Node, RTLIB::ROUNDEVEN_F32,
+                    RTLIB::ROUNDEVEN_F64,
+                    RTLIB::ROUNDEVEN_F80,
+                    RTLIB::ROUNDEVEN_F128,
+                    RTLIB::ROUNDEVEN_PPCF128, Results);
+    break;
   case ISD::FPOWI:
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC;
@@ -4601,6 +4609,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
   case ISD::FNEG:
   case ISD::FSQRT:

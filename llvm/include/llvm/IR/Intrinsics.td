@@ -579,6 +579,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_rint  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_nearbyint : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_round : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_roundeven    : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_canonicalize : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
 
@@ -783,6 +784,9 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
   def int_experimental_constrained_round : Intrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                       llvm_metadata_ty ]>;
+  def int_experimental_constrained_roundeven : Intrinsic<[ llvm_anyfloat_ty ],
+                                                         [ LLVMMatchType<0>,
+                                                           llvm_metadata_ty ]>;
   def int_experimental_constrained_trunc : Intrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty ]>;
