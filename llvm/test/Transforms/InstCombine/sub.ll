@@ -1543,9 +1543,9 @@ define i8 @test75(i8 %x) {
 
 define i8 @sub_add_sub_reassoc(i8 %w, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_add_sub_reassoc(
-; CHECK-NEXT:    [[S1:%.*]] = sub i8 [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[S1]], [[Y:%.*]]
-; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[W:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[S2]]
 ;
   %s1 = sub i8 %w, %x
@@ -1559,9 +1559,9 @@ define i8 @sub_add_sub_reassoc(i8 %w, i8 %x, i8 %y, i8 %z) {
 define <2 x i8> @sub_add_sub_reassoc_commute(<2 x i8> %w, <2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @sub_add_sub_reassoc_commute(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[Y:%.*]], <i8 42, i8 -42>
-; CHECK-NEXT:    [[S1:%.*]] = sub <2 x i8> [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[D]], [[S1]]
-; CHECK-NEXT:    [[S2:%.*]] = sub <2 x i8> [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[D]], [[W:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub <2 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[S2]]
 ;
   %d = sdiv <2 x i8> %y, <i8 42, i8 -42> ; thwart complexity-based canonicalization
@@ -1575,10 +1575,10 @@ define <2 x i8> @sub_add_sub_reassoc_commute(<2 x i8> %w, <2 x i8> %x, <2 x i8> 
 
 define i8 @sub_add_sub_reassoc_twice(i8 %v, i8 %w, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sub_add_sub_reassoc_twice(
-; CHECK-NEXT:    [[S1:%.*]] = sub i8 [[V:%.*]], [[W:%.*]]
-; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[S3:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X:%.*]], [[V:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[S3:%.*]] = sub i8 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[S3]]
 ;
   %s1 = sub i8 %v, %w

@@ -1765,6 +1765,17 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (match(Op0, m_OneUse(m_Add(m_Value(X), m_AllOnes()))))
     return BinaryOperator::CreateAdd(Builder.CreateNot(Op1), X);
 
+  // Reassociate sub/add sequences to create more add instructions and
+  // reduce dependency chains:
+  // ((X - Y) + Z) - Op1 --> (X + Z) - (Y + Op1)
+  Value *Z;
+  if (match(Op0, m_OneUse(m_c_Add(m_OneUse(m_Sub(m_Value(X), m_Value(Y))),
+                                  m_Value(Z))))) {
+    Value *XZ = Builder.CreateAdd(X, Z);
+    Value *YW = Builder.CreateAdd(Y, Op1);
+    return BinaryOperator::CreateSub(XZ, YW);
+  }
+
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
     if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))

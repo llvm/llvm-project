@@ -152,9 +152,9 @@ define i32 @test_struct_load4(%struct.ST4* nocapture readonly %S) {
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub <4 x i32> [[TMP2]], [[STRIDED_VEC1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], [[STRIDED_VEC2]]
-; CHECK-NEXT:    [[TMP5]] = sub <4 x i32> [[TMP4]], [[STRIDED_VEC3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[STRIDED_VEC2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC3]]
+; CHECK-NEXT:    [[TMP5]] = sub <4 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
