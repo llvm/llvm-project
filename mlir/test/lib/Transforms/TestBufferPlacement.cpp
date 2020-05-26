@@ -106,6 +106,7 @@ struct TestBufferPlacementPreparationPass
       TypeConverter *converter, OwningRewritePatternList *patterns) {
     // clang-format off
     patterns->insert<
+                   BufferAssignmentCallOpConverter,
                    FunctionAndBlockSignatureConverter,
                    GenericOpConverter,
                    BufferAssignmentReturnOpConverter<
@@ -135,6 +136,12 @@ struct TestBufferPlacementPreparationPass
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
       return llvm::none_of(returnOp.getOperandTypes(), isIllegalType);
+    });
+
+    // Mark Standard Call Operation illegal as long as it operates on tensor.
+    target.addDynamicallyLegalOp<mlir::CallOp>([&](mlir::CallOp callOp) {
+      return llvm::none_of(callOp.getOperandTypes(), isIllegalType) &&
+             llvm::none_of(callOp.getResultTypes(), isIllegalType);
     });
 
     // Mark the function whose arguments are in tensor-type illegal.
