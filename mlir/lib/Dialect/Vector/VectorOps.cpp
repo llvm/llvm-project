@@ -223,8 +223,9 @@ static bool verifyDimMap(VectorType lhsType, VectorType rhsType,
   return true;
 }
 
-static bool verifyOutputShape(
-    VectorType lhsType, VectorType rhsType, Type accType, Type resType,
+static LogicalResult verifyOutputShape(
+    ContractionOp op, VectorType lhsType, VectorType rhsType, Type accType,
+    Type resType,
     const std::vector<std::pair<int64_t, int64_t>> &contractingDimMap,
     const std::vector<std::pair<int64_t, int64_t>> &batchDimMap) {
   DenseSet<int64_t> lhsContractingDimSet;
@@ -256,26 +257,56 @@ static bool verifyOutputShape(
   if (expectedResultDims.size() == 0) {
     // No batch or free dimension implies a scalar result.
     if (resType.isa<VectorType>() || accType.isa<VectorType>())
-      return false;
-
+      return op.emitOpError("invalid accumulator/result vector shape");
   } else {
     // At least one batch or free dimension implies a vector result.
     auto resVectorType = resType.dyn_cast<VectorType>();
     auto accVectorType = accType.dyn_cast<VectorType>();
     if (!resVectorType || !accVectorType)
-      return false;
+      return op.emitOpError("invalid accumulator/result vector shape");
 
-    // Verify dimension from 'resType' against 'expectedResultDims'.
-    if (resVectorType.getShape().size() != expectedResultDims.size() ||
-        accVectorType.getShape().size() != expectedResultDims.size())
-      return false;
-    for (int64_t i = 0, e = resVectorType.getRank(); i < e; ++i) {
-      if (resVectorType.getDimSize(i) != expectedResultDims[i] ||
-          accVectorType.getDimSize(i) != expectedResultDims[i])
-        return false;
+    // Infer expected result vector type. Lhs + rhs map and lhs + rhs vector
+    // types fully define the result vector type. This assumes the affine maps
+    // are well-formed, which must have been verified already.
+    MLIRContext *ctx = op.getContext();
+    AffineMap lhsMap = op.getIndexingMaps()[0];
+    AffineMap rhsMap = op.getIndexingMaps()[1];
+    SmallVector<AffineExpr, 4> extents(lhsMap.getNumInputs());
+    for (auto pair :
+         {std::make_pair(lhsType, lhsMap), std::make_pair(rhsType, rhsMap)}) {
+      VectorType v = pair.first;
+      auto map = pair.second;
+      for (unsigned idx = 0, e = v.getRank(); idx < e; ++idx) {
+        unsigned pos = map.getResult(idx).cast<AffineDimExpr>().getPosition();
+        if (!extents[pos])
+          extents[pos] = getAffineConstantExpr(v.getShape()[idx], ctx);
+      }
     }
+    assert(llvm::all_of(extents, [](AffineExpr e) { return e; }) &&
+           "expected extent along all dimensions.");
+
+    AffineMap resMap = op.getIndexingMaps()[2];
+    auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
+                                     /*symCount=*/0, extents, ctx);
+    // Compose the resMap with the extentsMap, which is a constant map.
+    AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
+    assert(llvm::all_of(
+               expectedMap.getResults(),
+               [](AffineExpr e) { return e.isa<AffineConstantExpr>(); }) &&
+           "expected constant extent along all dimensions.");
+    // Extract the expected shape and build the type.
+    auto expectedShape = llvm::to_vector<4>(
+        llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
+          return e.cast<AffineConstantExpr>().getValue();
+        }));
+    auto expected =
+        VectorType::get(expectedShape, resVectorType.getElementType());
+    if (resVectorType != expected || accVectorType != expected)
+      return op.emitOpError(
+                 "invalid accumulator/result vector shape, expected: ")
+             << expected;
   }
-  return true;
+  return success();
 }
 
 static LogicalResult verify(ContractionOp op) {
@@ -329,9 +360,9 @@ static LogicalResult verify(ContractionOp op) {
     return op.emitOpError("invalid batch dimension map");
 
   // Verify 'accType' and 'resType' shape.
-  if (!verifyOutputShape(lhsType, rhsType, accType, resType, contractingDimMap,
-                         batchDimMap))
-    return op.emitOpError("invalid accumulator/result vector shape");
+  if (failed(verifyOutputShape(op, lhsType, rhsType, accType, resType,
+                               contractingDimMap, batchDimMap)))
+    return failure();
 
   // Verify that either two vector masks are set or none are set.
   auto lhsMaskType = op.getLHSVectorMaskType();

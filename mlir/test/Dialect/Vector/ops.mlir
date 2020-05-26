@@ -160,9 +160,11 @@ func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32
   indexing_maps = #contraction_accesses0,
   iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]
 }
-#contraction_accesses1 = [
+#contraction_accesses1 = [              // 7,  8, 16, 15
   affine_map<(f0, f1, f2, f3, c0, c1) -> (c0, f0, c1, f2)>,
+                                        // 8, 16,  7,  5
   affine_map<(f0, f1, f2, f3, c0, c1) -> (f1, c1, c0, f3)>,
+                                        // 8,  8, 15,  5
   affine_map<(f0, f1, f2, f3, c0, c1) -> (f0, f1, f2, f3)>
 ]
 #contraction_trait1 = {
@@ -172,7 +174,7 @@ func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32
 }
 // CHECK-LABEL: contraction
 func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
-                  %arg2 : vector<8x15x5xf32>, %arg3 : vector<8x15x8x5xf32>,
+                  %arg2 : vector<8x15x5xf32>, %arg3 : vector<8x8x15x5xf32>,
                   %arg4 : index) {
   // Test contraction with batch and contracting dims.
   // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x5xf32>
@@ -181,16 +183,16 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
   // Test contraction with only contracting dims. In this case the lhs/rhs
   // dimension of size 8 will be considered a parallel dim for lhs/rhs and will
   // appear twice in the output.
-  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
+  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   %1 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3
-      : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
+      : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   // Test contraction with optional vector mask arguments.
   %lhs_mask = vector.constant_mask [7, 8, 16, 15] : vector<7x8x16x15xi1>
   %rhs_mask = vector.constant_mask [8, 16, 7, 5] : vector<8x16x7x5xi1>
-  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
+  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]} {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   %2 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3, %lhs_mask,
                                            %rhs_mask
-      : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x15x8x5xf32>
+      : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   return
 }
 
