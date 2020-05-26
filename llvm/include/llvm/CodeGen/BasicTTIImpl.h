@@ -1091,6 +1091,9 @@ public:
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  TTI::TargetCostKind CostKind) {
 
+    if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
+      return 0;
+
     // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
