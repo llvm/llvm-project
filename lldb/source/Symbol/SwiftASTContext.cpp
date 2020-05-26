@@ -2642,7 +2642,7 @@ public:
     if (source_loc.isValid()) {
       bufferID = source_mgr.findBufferContainingLoc(source_loc);
       bufferName = source_mgr.getDisplayNameForLoc(source_loc);
-      line_col = source_mgr.getLineAndColumn(source_loc);
+      line_col = source_mgr.getPresumedLineAndColumnForLoc(source_loc);
     }
 
     if (line_col.first != 0) {
