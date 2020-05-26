@@ -846,7 +846,6 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   EmitAbbrev(MCOS, dwarf::DW_AT_decl_file, dwarf::DW_FORM_data4);
   EmitAbbrev(MCOS, dwarf::DW_AT_decl_line, dwarf::DW_FORM_data4);
   EmitAbbrev(MCOS, dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr);
-  EmitAbbrev(MCOS, dwarf::DW_AT_prototyped, dwarf::DW_FORM_flag);
   EmitAbbrev(MCOS, 0, 0);
 
   // DW_TAG_unspecified_parameters DIE abbrev (3).
@@ -1086,9 +1085,6 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     const MCExpr *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(),
                                              MCSymbolRefExpr::VK_None, context);
     MCOS->emitValue(AT_low_pc, AddrSize);
-
-    // DW_AT_prototyped, a one byte flag value of 0 saying we have no prototype.
-    MCOS->emitInt8(0);
 
     // The DW_TAG_unspecified_parameters DIE abbrev (3).
     MCOS->emitULEB128IntValue(3);
