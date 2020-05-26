@@ -416,8 +416,9 @@ public:
 
   virtual const TargetRegisterClass *
   getRegClassFor(MVT VT, bool isDivergent) const override;
-  virtual bool requiresUniformRegister(MachineFunction &MF,
-                                       const Value *V) const override;
+  virtual bool isDivergent(const LegacyDivergenceAnalysis *DA,
+                           MachineFunction &MF, const Value *V) const override;
+  bool requiresUniformRegister(MachineFunction &MF, const Value *V) const;
   Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,
