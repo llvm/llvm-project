@@ -11226,6 +11226,12 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   return RC;
 }
 
+bool SITargetLowering::isDivergent(const LegacyDivergenceAnalysis *DA,
+                                   MachineFunction &MF, const Value *V) const {
+  return !requiresUniformRegister(MF, V) &&
+         TargetLoweringBase::isDivergent(DA, MF, V);
+}
+
 // FIXME: This is a workaround for DivergenceAnalysis not understanding always
 // uniform values (as produced by the mask results of control flow intrinsics)
 // used outside of divergent blocks. The phi users need to also be treated as

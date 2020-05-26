@@ -28,6 +28,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
@@ -821,12 +822,12 @@ public:
     return RC;
   }
 
-  /// Allows target to decide about the register class of the
-  /// specific value that is live outside the defining block.
-  /// Returns true if the value needs uniform register class.
-  virtual bool requiresUniformRegister(MachineFunction &MF,
-                                       const Value *) const {
-    return false;
+  /// Allows target to decide about the divergence of the
+  /// specific value. Base class implementation returns true
+  /// if the Divergece Analysis exists and reports value as divergent.
+  virtual bool isDivergent(const LegacyDivergenceAnalysis *DA,
+                           MachineFunction &MF, const Value *V) const {
+    return DA && DA->isDivergent(V);
   }
 
   /// Return the 'representative' register class for the specified value
