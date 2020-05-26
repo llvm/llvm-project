@@ -40,6 +40,7 @@ enum class NodeKind : uint16_t {
 
   // Expressions.
   UnknownExpression,
+  BinaryOperatorExpression,
 
   // Statements.
   UnknownStatement,
@@ -104,6 +105,9 @@ enum class NodeRole : uint8_t {
   BodyStatement,
 
   // Roles specific to particular node kinds.
+  BinaryOperatorExpression_leftHandSide,
+  BinaryOperatorExpression_operatorToken,
+  BinaryOperatorExpression_rightHandSide,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -156,6 +160,24 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// <lhs> <operator> <rhs>
+///
+/// For example:
+///   a + b
+///   a bitor 1
+///   a |= b
+///   a and_eq b
+class BinaryOperatorExpression final : public Expression {
+public:
+  BinaryOperatorExpression() : Expression(NodeKind::BinaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::BinaryOperatorExpression;
+  }
+  syntax::Expression *lhs();
+  syntax::Leaf *operatorToken();
+  syntax::Expression *rhs();
 };
 
 /// An abstract node for C++ statements, e.g. 'while', 'if', etc.
