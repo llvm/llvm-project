@@ -651,11 +651,12 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
   if (CacheLineSize.getNumOccurrences() > 0)
     return CacheLineSize;
 
-  // On P7, P8 or P9 we have a cache line size of 128.
+  // Starting with P7 we have a cache line size of 128.
   unsigned Directive = ST->getCPUDirective();
   // Assume that Future CPU has the same cache line size as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
-      Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
+      Directive == PPC::DIR_PWR_FUTURE)
     return 128;
 
   // On other processors return a default of 64 bytes.
@@ -687,9 +688,11 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // For P7 and P8, floating-point instructions have a 6-cycle latency and
   // there are two execution units, so unroll by 12x for latency hiding.
   // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
+  // FIXME: the same for P10 as previous gen until POWER10 scheduling is ready
   // Assume that future is the same as the others.
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
-      Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR_FUTURE)
+      Directive == PPC::DIR_PWR9 || Directive == PPC::DIR_PWR10 ||
+      Directive == PPC::DIR_PWR_FUTURE)
     return 12;
 
   // For most things, modern systems have two execution units (and
