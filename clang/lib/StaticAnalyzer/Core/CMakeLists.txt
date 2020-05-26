@@ -44,7 +44,6 @@ add_clang_library(clangStaticAnalyzerCore
   SimpleSValBuilder.cpp
   SMTConstraintManager.cpp
   Store.cpp
-  SubEngine.cpp
   SValBuilder.cpp
   SVals.cpp
   SymbolManager.cpp

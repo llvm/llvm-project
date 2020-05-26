@@ -31,8 +31,9 @@ class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
   mutable llvm::SMTSolverRef Solver = llvm::CreateZ3Solver();
 
 public:
-  SMTConstraintManager(clang::ento::SubEngine *SE, clang::ento::SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB) {}
+  SMTConstraintManager(clang::ento::ExprEngine *EE,
+                       clang::ento::SValBuilder &SB)
+      : SimpleConstraintManager(EE, SB) {}
   virtual ~SMTConstraintManager() = default;
 
   //===------------------------------------------------------------------===//
