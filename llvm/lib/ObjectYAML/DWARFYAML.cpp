@@ -70,13 +70,13 @@ void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
 }
 
 void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
-                                               DWARFYAML::ARange &Range) {
-  IO.mapRequired("Length", Range.Length);
-  IO.mapRequired("Version", Range.Version);
-  IO.mapRequired("CuOffset", Range.CuOffset);
-  IO.mapRequired("AddrSize", Range.AddrSize);
-  IO.mapRequired("SegSize", Range.SegSize);
-  IO.mapRequired("Descriptors", Range.Descriptors);
+                                               DWARFYAML::ARange &ARange) {
+  IO.mapRequired("Length", ARange.Length);
+  IO.mapRequired("Version", ARange.Version);
+  IO.mapRequired("CuOffset", ARange.CuOffset);
+  IO.mapRequired("AddrSize", ARange.AddrSize);
+  IO.mapRequired("SegSize", ARange.SegSize);
+  IO.mapRequired("Descriptors", ARange.Descriptors);
 }
 
 void MappingTraits<DWARFYAML::RangeEntry>::mapping(
