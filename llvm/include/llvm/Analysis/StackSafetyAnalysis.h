@@ -21,22 +21,21 @@ namespace llvm {
 /// Interface to access stack safety analysis results for single function.
 class StackSafetyInfo {
 public:
-  struct FunctionInfo;
+  struct InfoTy;
 
 private:
-  std::unique_ptr<FunctionInfo> Info;
+  std::unique_ptr<InfoTy> Info;
 
 public:
-  StackSafetyInfo();
-  StackSafetyInfo(FunctionInfo &&Info);
+  StackSafetyInfo(InfoTy Info);
   StackSafetyInfo(StackSafetyInfo &&);
   StackSafetyInfo &operator=(StackSafetyInfo &&);
   ~StackSafetyInfo();
 
-  FunctionInfo *getInfo() const { return Info.get(); }
+  const InfoTy &getInfo() const { return *Info; }
 
   // TODO: Add useful for client methods.
-  void print(raw_ostream &O) const;
+  void print(raw_ostream &O, const GlobalValue &F) const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -60,13 +59,14 @@ public:
 
 /// StackSafetyInfo wrapper for the legacy pass manager
 class StackSafetyInfoWrapperPass : public FunctionPass {
-  StackSafetyInfo SSI;
+  Optional<StackSafetyInfo> SSI;
+  const Function *F = nullptr;
 
 public:
   static char ID;
   StackSafetyInfoWrapperPass();
 
-  const StackSafetyInfo &getResult() const { return SSI; }
+  const StackSafetyInfo &getResult() const { return *SSI; }
 
   void print(raw_ostream &O, const Module *M) const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

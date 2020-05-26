@@ -30,6 +30,7 @@ class APInt;
 class DwarfCompileUnit;
 class DIELoc;
 class TargetRegisterInfo;
+class MachineLocation;
 
 /// Holds a DIExpression and keeps track of how many operands have been consumed
 /// so far.
@@ -142,14 +143,18 @@ protected:
   /// The kind of location description being produced.
   enum { Unknown = 0, Register, Memory, Implicit };
 
-  /// The flags of location description being produced.
-  enum { EntryValue = 1, CallSiteParamValue };
+  /// Additional location flags which may be combined with any location kind.
+  /// Currently, entry values are not supported for the Memory location kind.
+  enum { EntryValue = 1 << 0, Indirect = 1 << 1, CallSiteParamValue = 1 << 2 };
 
   unsigned LocationKind : 3;
-  unsigned LocationFlags : 2;
+  unsigned LocationFlags : 3;
   unsigned DwarfVersion : 4;
 
 public:
+  /// Set the location (\p Loc) and \ref DIExpression (\p DIExpr) to describe.
+  void setLocation(const MachineLocation &Loc, const DIExpression *DIExpr);
+
   bool isUnknownLocation() const { return LocationKind == Unknown; }
 
   bool isMemoryLocation() const { return LocationKind == Memory; }
@@ -159,6 +164,8 @@ public:
   bool isImplicitLocation() const { return LocationKind == Implicit; }
 
   bool isEntryValue() const { return LocationFlags & EntryValue; }
+
+  bool isIndirect() const { return LocationFlags & Indirect; }
 
   bool isParameterValue() { return LocationFlags & CallSiteParamValue; }
 
@@ -296,7 +303,7 @@ public:
   }
 
   /// Lock this down to become an entry value location.
-  void setEntryValueFlag() { LocationFlags |= EntryValue; }
+  void setEntryValueFlags(const MachineLocation &Loc);
 
   /// Lock this down to become a call site parameter location.
   void setCallSiteParamValueFlag() { LocationFlags |= CallSiteParamValue; }

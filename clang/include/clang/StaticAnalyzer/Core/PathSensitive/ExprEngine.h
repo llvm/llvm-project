@@ -97,7 +97,7 @@ class SymbolManager;
 class SwitchNodeBuilder;
 
 class ExprEngine {
-  virtual void anchor();
+  void anchor();
 public:
   /// The modes of inlining, which override the default analysis-wide settings.
   enum InliningModes {
@@ -177,7 +177,7 @@ public:
              SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
-  ~ExprEngine() = default;
+  virtual ~ExprEngine() = default;
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {

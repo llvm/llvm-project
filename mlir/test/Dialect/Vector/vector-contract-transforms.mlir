@@ -681,3 +681,219 @@ func @genbool_var_2d(%arg0: index, %arg1: index) -> vector<2x3xi1> {
   %0 = vector.create_mask %arg0, %arg1 : vector<2x3xi1>
   return %0 : vector<2x3xi1>
 }
+
+#matmat_accesses_0 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_0 = {
+  indexing_maps = #matmat_accesses_0,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_0
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<2x3xf32>
+func @matmul_0(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<2x3xf32>)
+-> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+#matmat_accesses_1 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_1 = {
+  indexing_maps = #matmat_accesses_1,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_1
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      OUTERPRODUCT: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<2x3xf32>
+func @matmul_1(%arg0: vector<2x1xf32>, %arg1: vector<3x1xf32>, %arg2: vector<2x3xf32>)
+-> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_1 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<3x1xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+#matmat_accesses_2 = [
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_2 = {
+  indexing_maps = #matmat_accesses_2,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_2
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      OUTERPRODUCT: %[[a0:.*]] = vector.extract %[[A]][0] : vector<1x2xf32>
+//      OUTERPRODUCT: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<2x3xf32>
+func @matmul_2(%arg0: vector<1x2xf32>, %arg1: vector<1x3xf32>, %arg2: vector<2x3xf32>)
+-> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_2 %arg0, %arg1, %arg2
+    : vector<1x2xf32>, vector<1x3xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+#matmat_accesses_3 = [
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_3 = {
+  indexing_maps = #matmat_accesses_3,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_3
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      OUTERPRODUCT: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      OUTERPRODUCT: %[[a0:.*]] = vector.extract %[[A]][0] : vector<1x2xf32>
+//      OUTERPRODUCT: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<2x3xf32>
+func @matmul_3(%arg0: vector<1x2xf32>, %arg1: vector<3x1xf32>, %arg2: vector<2x3xf32>)
+-> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_3 %arg0, %arg1, %arg2
+    : vector<1x2xf32>, vector<3x1xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+#matmat_accesses_4 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_4 = {
+  indexing_maps = #matmat_accesses_4,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_4
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<3x2xf32>
+func @matmul_4(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
+-> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_4 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+#matmat_accesses_5 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_5 = {
+  indexing_maps = #matmat_accesses_5,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_5
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<3x2xf32>
+func @matmul_5(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
+-> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_5 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+#matmat_accesses_6 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_6 = {
+  indexing_maps = #matmat_accesses_6,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_6
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<3x2xf32>
+func @matmul_6(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
+-> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_6 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+#matmat_accesses_7 = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_7 = {
+  indexing_maps = #matmat_accesses_7,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// OUTERPRODUCT-LABEL: func @matmul_7
+// OUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// OUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// OUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      OUTERPRODUCT: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      OUTERPRODUCT-DAG: %[[a0:.*]] = vector.extract %[[At]][0] : vector<1x2xf32>
+//      OUTERPRODUCT-DAG: %[[b0:.*]] = vector.extract %[[B]][0] : vector<1x3xf32>
+//      OUTERPRODUCT: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      OUTERPRODUCT: return %[[c0]] : vector<3x2xf32>
+func @matmul_7(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2xf32>)
+-> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_7 %arg0, %arg1, %arg2
+    : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}

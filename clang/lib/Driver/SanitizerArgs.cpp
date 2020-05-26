@@ -43,11 +43,12 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
     SanitizerKind::MemTag | SanitizerKind::Memory |
     SanitizerKind::KernelMemory | SanitizerKind::Leak |
-    SanitizerKind::Undefined | SanitizerKind::Integer |
+    SanitizerKind::Undefined | SanitizerKind::Integer | SanitizerKind::Bounds |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
-    SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack;
+    SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
+    SanitizerKind::Thread;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |

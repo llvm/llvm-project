@@ -76,7 +76,7 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
 ; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], 0
+; CI-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
 ; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; CI-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -89,7 +89,7 @@ define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
 ; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], 0
+; GFX9: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
 ; GFX9: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
 ; GFX9: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
@@ -167,7 +167,7 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32* %ptr) #0 {
 ; HSA: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}
 ; HSA-DAG: v_cmp_ne_u64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
-; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], 0, v[[VPTR_LO]]
+; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}
 ; HSA: buffer_store_dword v[[K]], [[CASTPTR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32* %ptr) #0 {
@@ -252,12 +252,16 @@ define amdgpu_kernel void @cast_neg1_flat_to_group_addrspacecast() #0 {
 
 ; FIXME: Shouldn't need to enable queue ptr
 ; HSA-LABEL: {{^}}cast_0_private_to_flat_addrspacecast:
-; CI: enable_sgpr_queue_ptr = 1
-; GFX9: enable_sgpr_queue_ptr = 0
+; CI: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11
+; CI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
+; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
+; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SSRC_SHARED_BASE]]
+
+; GFX9-XXX: v_mov_b32_e32 v[[HI:[0-9]+]], src_shared_base
 
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(5)* null to i32*
@@ -266,13 +270,40 @@ define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_0_flat_to_private_addrspacecast:
-; HSA: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
-; HSA: buffer_store_dword [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0
+; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], -1{{$}}
+; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
+; HSA: buffer_store_dword [[K]], [[PTR]], s{{\[[0-9]+:[0-9]+\]}}, 0
 define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
   %cast = addrspacecast i32* null to i32 addrspace(5)*
   store volatile i32 7, i32 addrspace(5)* %cast
   ret void
 }
+
+
+; HSA-LABEL: {{^}}cast_neg1_private_to_flat_addrspacecast:
+; CI: enable_sgpr_queue_ptr = 1
+; GFX9: enable_sgpr_queue_ptr = 0
+
+; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
+; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
+define amdgpu_kernel void @cast_neg1_private_to_flat_addrspacecast() #0 {
+  %cast = addrspacecast i32 addrspace(5)* inttoptr (i32 -1 to i32 addrspace(5)*) to i32*
+  store volatile i32 7, i32* %cast
+  ret void
+}
+
+; HSA-LABEL: {{^}}cast_neg1_flat_to_private_addrspacecast:
+; HSA-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], -1{{$}}
+; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
+; HSA: buffer_store_dword [[K]], [[PTR]], s{{\[[0-9]+:[0-9]+\]}}, 0
+define amdgpu_kernel void @cast_neg1_flat_to_private_addrspacecast() #0 {
+  %cast = addrspacecast i32* inttoptr (i64 -1 to i32*) to i32 addrspace(5)*
+  store volatile i32 7, i32 addrspace(5)* %cast
+  ret void
+}
+
 
 ; Disable optimizations in case there are optimizations added that
 ; specialize away generic pointer accesses.

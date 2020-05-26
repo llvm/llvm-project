@@ -3062,7 +3062,8 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   int64_t Offset = 0;
-  if (mi_match(Root.getReg(), *MRI, m_ICst(Offset))) {
+  if (mi_match(Root.getReg(), *MRI, m_ICst(Offset)) &&
+      Offset != TM.getNullPointerValue(AMDGPUAS::PRIVATE_ADDRESS)) {
     Register HighBits = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
     // TODO: Should this be inside the render function? The iterator seems to
@@ -3091,7 +3092,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
              }}};
   }
 
-  assert(Offset == 0);
+  assert(Offset == 0 || Offset == -1);
 
   // Try to fold a frame index directly into the MUBUF vaddr field, and any
   // offsets.
