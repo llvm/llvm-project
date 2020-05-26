@@ -2146,11 +2146,11 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    cmpld r4, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, -1
-; CHECK-NEXT:    isel r5, r4, r3, lt
+; CHECK-NEXT:    isellt r5, r4, r3
 ; CHECK-NEXT:    std r5, -8(r1)
 ; CHECK-NEXT:    ld r5, -32(r1)
 ; CHECK-NEXT:    cmpld r6, r5
-; CHECK-NEXT:    isel r3, r4, r3, lt
+; CHECK-NEXT:    isellt r3, r4, r3
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -2168,11 +2168,11 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-NEXT:    cmpld r4, r3
 ; CHECK-REG-NEXT:    li r3, 0
 ; CHECK-REG-NEXT:    li r4, -1
-; CHECK-REG-NEXT:    isel r5, r4, r3, lt
+; CHECK-REG-NEXT:    isellt r5, r4, r3
 ; CHECK-REG-NEXT:    std r5, -8(r1)
 ; CHECK-REG-NEXT:    ld r5, -32(r1)
 ; CHECK-REG-NEXT:    cmpld r6, r5
-; CHECK-REG-NEXT:    isel r3, r4, r3, lt
+; CHECK-REG-NEXT:    isellt r3, r4, r3
 ; CHECK-REG-NEXT:    std r3, -16(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16
 ; CHECK-REG-NEXT:    lxvd2x v2, 0, r3
@@ -2189,12 +2189,12 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    cmpld r4, r3
 ; CHECK-FISL-NEXT:    li r3, 0
 ; CHECK-FISL-NEXT:    li r4, -1
-; CHECK-FISL-NEXT:    isel r5, r4, r3, lt
+; CHECK-FISL-NEXT:    isellt r5, r4, r3
 ; CHECK-FISL-NEXT:    std r5, -8(r1)
 ; CHECK-FISL-NEXT:    ld r5, -32(r1)
 ; CHECK-FISL-NEXT:    ld r6, -48(r1)
 ; CHECK-FISL-NEXT:    cmpld r6, r5
-; CHECK-FISL-NEXT:    isel r3, r4, r3, lt
+; CHECK-FISL-NEXT:    isellt r3, r4, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3

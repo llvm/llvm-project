@@ -22,8 +22,8 @@ cond.false:                                       ; preds = %sw.epilog
 ; CHECK-LABEL: @test
 ; CHECK-NO-ISEL-LABEL: @test
 ; CHECK: add [[REG:[0-9]+]], 
-; CHECK: subf [[REG2:[0-9]+]],
-; CHECK: isel {{[0-9]+}}, [[REG]], [[REG2]],
+; CHECK: sub [[REG2:[0-9]+]],
+; CHECK: iselgt {{[0-9]+}}, [[REG]], [[REG2]]
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: [[TRUE]]

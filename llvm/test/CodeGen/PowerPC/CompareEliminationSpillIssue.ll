@@ -32,7 +32,7 @@ entry:
   %conv1 = zext i1 %cmp to i32
   ret i32 %conv1
 ; CHECK-LABEL: test
-; CHECK: subf r3,
+; CHECK: sub r3,
 ; CHECK: extsw r3,
 ; CHECK: bl call
 ; CHECK: sub r3,
