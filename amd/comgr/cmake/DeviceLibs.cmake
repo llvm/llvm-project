@@ -43,7 +43,7 @@ foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
     COMMAND bc2h ${bc_lib_path}
                  ${INC_DIR}/${header}
                  "${AMDGCN_LIB_TARGET}_lib"
-    DEPENDS bc2h ${AMDGCN_LIB_TARGET}
+    DEPENDS bc2h ${AMDGCN_LIB_TARGET} ${bc_lib_path}
     COMMENT "Generating ${AMDGCN_LIB_TARGET}.inc"
   )
   set_property(DIRECTORY APPEND PROPERTY
