@@ -2925,7 +2925,16 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     }
 
     if (auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
-      Expr *ExprNode = C->getImplicitObjectArgument()->IgnoreParenImpCasts();
+      Expr *ExprNode = C->getImplicitObjectArgument();
+      if (ExprNode->getSourceRange() == SR) {
+        E = ExprNode;
+        continue;
+      }
+      if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
+        E = PE;
+        continue;
+      }
+      ExprNode = ExprNode->IgnoreParenImpCasts();
       if (ExprNode->getSourceRange() == SR)
         E = ExprNode;
     }
