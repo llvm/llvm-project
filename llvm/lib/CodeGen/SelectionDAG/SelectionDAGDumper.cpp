@@ -211,6 +211,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FNEARBYINT:          return "strict_fnearbyint";
   case ISD::FROUND:                     return "fround";
   case ISD::STRICT_FROUND:              return "strict_fround";
+  case ISD::FROUNDEVEN:                 return "froundeven";
+  case ISD::STRICT_FROUNDEVEN:          return "strict_froundeven";
   case ISD::FEXP:                       return "fexp";
   case ISD::STRICT_FEXP:                return "strict_fexp";
   case ISD::FEXP2:                      return "fexp2";

@@ -113,6 +113,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FRINT:       R = SoftenFloatRes_FRINT(N); break;
     case ISD::STRICT_FROUND:
     case ISD::FROUND:      R = SoftenFloatRes_FROUND(N); break;
+    case ISD::STRICT_FROUNDEVEN:
+    case ISD::FROUNDEVEN:  R = SoftenFloatRes_FROUNDEVEN(N); break;
     case ISD::STRICT_FSIN:
     case ISD::FSIN:        R = SoftenFloatRes_FSIN(N); break;
     case ISD::STRICT_FSQRT:
@@ -614,6 +616,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FROUND(SDNode *N) {
                                               RTLIB::ROUND_F80,
                                               RTLIB::ROUND_F128,
                                               RTLIB::ROUND_PPCF128));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FROUNDEVEN(SDNode *N) {
+  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+                                              RTLIB::ROUNDEVEN_F32,
+                                              RTLIB::ROUNDEVEN_F64,
+                                              RTLIB::ROUNDEVEN_F80,
+                                              RTLIB::ROUNDEVEN_F128,
+                                              RTLIB::ROUNDEVEN_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSIN(SDNode *N) {
@@ -1178,6 +1189,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FRINT:      ExpandFloatRes_FRINT(N, Lo, Hi); break;
   case ISD::STRICT_FROUND:
   case ISD::FROUND:     ExpandFloatRes_FROUND(N, Lo, Hi); break;
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::FROUNDEVEN: ExpandFloatRes_FROUNDEVEN(N, Lo, Hi); break;
   case ISD::STRICT_FSIN:
   case ISD::FSIN:       ExpandFloatRes_FSIN(N, Lo, Hi); break;
   case ISD::STRICT_FSQRT:
@@ -1502,6 +1515,16 @@ void DAGTypeLegalizer::ExpandFloatRes_FROUND(SDNode *N,
                                        RTLIB::ROUND_F80,
                                        RTLIB::ROUND_F128,
                                        RTLIB::ROUND_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FROUNDEVEN(SDNode *N,
+                                             SDValue &Lo, SDValue &Hi) {
+  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
+                                       RTLIB::ROUNDEVEN_F32,
+                                       RTLIB::ROUNDEVEN_F64,
+                                       RTLIB::ROUNDEVEN_F80,
+                                       RTLIB::ROUNDEVEN_F128,
+                                       RTLIB::ROUNDEVEN_PPCF128), Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FSIN(SDNode *N,
@@ -2136,6 +2159,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FNEG:
     case ISD::FRINT:
     case ISD::FROUND:
+    case ISD::FROUNDEVEN:
     case ISD::FSIN:
     case ISD::FSQRT:
     case ISD::FTRUNC:
@@ -2476,6 +2500,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
   case ISD::FRINT:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FSQRT:
   case ISD::FTRUNC:
