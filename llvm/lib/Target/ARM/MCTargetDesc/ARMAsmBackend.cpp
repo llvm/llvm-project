@@ -1118,11 +1118,11 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCCFIInstruction &Inst = Instrs[i];
     switch (Inst.getOperation()) {
     case MCCFIInstruction::OpDefCfa: // DW_CFA_def_cfa
-      CFARegisterOffset = -Inst.getOffset();
+      CFARegisterOffset = Inst.getOffset();
       CFARegister = *MRI.getLLVMRegNum(Inst.getRegister(), true);
       break;
     case MCCFIInstruction::OpDefCfaOffset: // DW_CFA_def_cfa_offset
-      CFARegisterOffset = -Inst.getOffset();
+      CFARegisterOffset = Inst.getOffset();
       break;
     case MCCFIInstruction::OpDefCfaRegister: // DW_CFA_def_cfa_register
       CFARegister = *MRI.getLLVMRegNum(Inst.getRegister(), true);
