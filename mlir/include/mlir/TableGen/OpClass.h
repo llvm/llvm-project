@@ -145,10 +145,6 @@ class OpClass : public Class {
 public:
   explicit OpClass(StringRef name, StringRef extraClassDeclaration = "");
 
-  // Sets whether this OpClass should generate the using directive for its
-  // associate operand adaptor class.
-  void setHasOperandAdaptorClass(bool has);
-
   // Adds an op trait.
   void addTrait(Twine trait);
 
@@ -160,7 +156,6 @@ private:
   StringRef extraClassDeclaration;
   SmallVector<std::string, 4> traitsVec;
   StringSet<> traitsSet;
-  bool hasOperandAdaptor;
 };
 
 } // namespace tblgen

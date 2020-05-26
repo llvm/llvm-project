@@ -50,12 +50,14 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // CHECK: class AOpOperandAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values);
+// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values
 // CHECK:   ArrayRef<Value> getODSOperands(unsigned index);
 // CHECK:   Value a();
 // CHECK:   ArrayRef<Value> b();
+// CHECK:   IntegerAttr attr1();
+// CHECL:   FloatAttr attr2();
 // CHECK: private:
-// CHECK:   ArrayRef<Value> tblgen_operands;
+// CHECK:   ArrayRef<Value> odsOperands;
 // CHECK: };
 
 // CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
@@ -89,6 +91,29 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
+
+// Check AttrSizedOperandSegments
+// ---
+
+def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
+                                 [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$a,
+    Variadic<I32>:$b,
+    I32:$c,
+    Variadic<I32>:$d,
+    I32ElementsAttr:$operand_segment_sizes
+  );
+}
+
+// CHECK-LABEL: AttrSizedOperandOpOperandAdaptor(
+// CHECK-SAME:    ArrayRef<Value> values
+// CHECK-SAME:    DictionaryAttr attrs
+// CHECK:  ArrayRef<Value> a();
+// CHECK:  ArrayRef<Value> b();
+// CHECK:  Value c();
+// CHECK:  ArrayRef<Value> d();
+// CHECK:  DenseIntElementsAttr operand_segment_sizes();
 
 // Check op trait for different number of operands
 // ---
@@ -150,3 +175,4 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // CHECK-LABEL: _BOp declarations
 // CHECK: class _BOp : public Op<_BOp
+

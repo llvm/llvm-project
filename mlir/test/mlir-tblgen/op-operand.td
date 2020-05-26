@@ -15,7 +15,7 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
 // CHECK-LABEL: OpA definitions
 
 // CHECK:      OpAOperandAdaptor::OpAOperandAdaptor
-// CHECK-NEXT: tblgen_operands = values
+// CHECK-NEXT: odsOperands = values
 
 // CHECK:      void OpA::build
 // CHECK:        Value input

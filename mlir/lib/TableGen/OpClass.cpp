@@ -188,12 +188,7 @@ void tblgen::Class::writeDefTo(raw_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 tblgen::OpClass::OpClass(StringRef name, StringRef extraClassDeclaration)
-    : Class(name), extraClassDeclaration(extraClassDeclaration),
-      hasOperandAdaptor(true) {}
-
-void tblgen::OpClass::setHasOperandAdaptorClass(bool has) {
-  hasOperandAdaptor = has;
-}
+    : Class(name), extraClassDeclaration(extraClassDeclaration) {}
 
 void tblgen::OpClass::addTrait(Twine trait) {
   auto traitStr = trait.str();
@@ -207,8 +202,7 @@ void tblgen::OpClass::writeDeclTo(raw_ostream &os) const {
     os << ", " << trait;
   os << "> {\npublic:\n";
   os << "  using Op::Op;\n";
-  if (hasOperandAdaptor)
-    os << "  using OperandAdaptor = " << className << "OperandAdaptor;\n";
+  os << "  using OperandAdaptor = " << className << "OperandAdaptor;\n";
 
   bool hasPrivateMethod = false;
   for (const auto &method : methods) {
