@@ -301,6 +301,7 @@ ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
 LANGOPT(SetVisibilityForExternDecls, 1, 0,
         "apply global symbol visibility to external declarations without an explicit visibility")
 BENIGN_LANGOPT(SemanticInterposition        , 1, 0, "semantic interposition")
+BENIGN_LANGOPT(ExplicitNoSemanticInterposition, 1, 0, "explicitly no semantic interposition")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
              "stack protector mode")
 ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,

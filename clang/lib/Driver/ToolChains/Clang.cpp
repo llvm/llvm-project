@@ -4471,10 +4471,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (Args.hasFlag(options::OPT_fsemantic_interposition,
-                   options::OPT_fno_semantic_interposition, false) &&
-      RelocationModel != llvm::Reloc::Static && !IsPIE)
-    CmdArgs.push_back("-fsemantic-interposition");
+  // The default is -fno-semantic-interposition. We render it just because we
+  // require explicit -fno-semantic-interposition to infer dso_local.
+  if (Arg *A = Args.getLastArg(options::OPT_fsemantic_interposition,
+                               options::OPT_fno_semantic_interposition))
+    if (RelocationModel != llvm::Reloc::Static && !IsPIE)
+      A->render(Args, CmdArgs);
 
   CmdArgs.push_back("-mthread-model");
   if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
