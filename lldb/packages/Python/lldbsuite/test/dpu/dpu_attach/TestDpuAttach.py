@@ -57,7 +57,7 @@ class DpuAttachTestCase(TestBase):
         target.BreakpointDelete(breakpoint_poll.GetID())
 
         process.GetSelectedThread().SetSelectedFrame(1)
-        dpu_commands.dpu_attach(self.dbg, "0.0.0.0", None, None)
+        dpu_commands.dpu_attach(self.dbg, "0.0.0", None, None)
 
         process_dpu = self.dbg.GetSelectedTarget().GetProcess()
         process_dpu.GetThreadAtIndex(0).GetFrameAtIndex(0) \
