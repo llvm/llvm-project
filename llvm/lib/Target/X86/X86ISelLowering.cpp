@@ -31612,14 +31612,26 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
   return SinkMBB;
 }
 
+static unsigned getSUBriOpcode(bool IsLP64, int64_t Imm) {
+  if (IsLP64) {
+    if (isInt<8>(Imm))
+      return X86::SUB64ri8;
+    return X86::SUB64ri32;
+  } else {
+    if (isInt<8>(Imm))
+      return X86::SUB32ri8;
+    return X86::SUB32ri;
+  }
+}
+
 MachineBasicBlock *
 X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
-                                           MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
+                                           MachineBasicBlock *MBB) const {
+  MachineFunction *MF = MBB->getParent();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const X86FrameLowering &TFI = *Subtarget.getFrameLowering();
   DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
 
   const unsigned ProbeSize = getStackProbeSize(*MF);
 
@@ -31628,31 +31640,35 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
   MachineBasicBlock *tailMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *blockMBB = MF->CreateMachineBasicBlock(LLVM_BB);
 
-  MachineFunction::iterator MBBIter = ++BB->getIterator();
+  MachineFunction::iterator MBBIter = ++MBB->getIterator();
   MF->insert(MBBIter, testMBB);
   MF->insert(MBBIter, blockMBB);
   MF->insert(MBBIter, tailMBB);
 
-  unsigned sizeVReg = MI.getOperand(1).getReg();
+  Register sizeVReg = MI.getOperand(1).getReg();
 
-  const TargetRegisterClass *SizeRegClass = MRI.getRegClass(sizeVReg);
+  Register physSPReg = TFI.Uses64BitFramePtr ? X86::RSP : X86::ESP;
 
-  unsigned tmpSizeVReg = MRI.createVirtualRegister(SizeRegClass);
-  unsigned tmpSizeVReg2 = MRI.createVirtualRegister(SizeRegClass);
+  Register TmpStackPtr = MRI.createVirtualRegister(
+      TFI.Uses64BitFramePtr ? &X86::GR64RegClass : &X86::GR32RegClass);
+  Register FinalStackPtr = MRI.createVirtualRegister(
+      TFI.Uses64BitFramePtr ? &X86::GR64RegClass : &X86::GR32RegClass);
 
-  unsigned physSPReg = TFI.Uses64BitFramePtr ? X86::RSP : X86::ESP;
+  BuildMI(*MBB, {MI}, DL, TII->get(TargetOpcode::COPY), TmpStackPtr)
+      .addReg(physSPReg);
+  {
+    const unsigned Opc = TFI.Uses64BitFramePtr ? X86::SUB64rr : X86::SUB32rr;
+    BuildMI(*MBB, {MI}, DL, TII->get(Opc), FinalStackPtr)
+        .addReg(TmpStackPtr)
+        .addReg(sizeVReg);
+  }
 
   // test rsp size
-  BuildMI(testMBB, DL, TII->get(X86::PHI), tmpSizeVReg)
-      .addReg(sizeVReg)
-      .addMBB(BB)
-      .addReg(tmpSizeVReg2)
-      .addMBB(blockMBB);
 
   BuildMI(testMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::CMP64ri32 : X86::CMP32ri))
-      .addReg(tmpSizeVReg)
-      .addImm(ProbeSize);
+          TII->get(TFI.Uses64BitFramePtr ? X86::CMP64rr : X86::CMP32rr))
+      .addReg(physSPReg)
+      .addReg(FinalStackPtr);
 
   BuildMI(testMBB, DL, TII->get(X86::JCC_1))
       .addMBB(tailMBB)
@@ -31663,14 +31679,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
   // allocate a block and touch it
 
   BuildMI(blockMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64ri32 : X86::SUB32ri),
-          tmpSizeVReg2)
-      .addReg(tmpSizeVReg)
-      .addImm(ProbeSize);
-
-  BuildMI(blockMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64ri32 : X86::SUB32ri),
-          physSPReg)
+          TII->get(getSUBriOpcode(TFI.Uses64BitFramePtr, ProbeSize)), physSPReg)
       .addReg(physSPReg)
       .addImm(ProbeSize);
 
@@ -31682,19 +31691,14 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
   BuildMI(blockMBB, DL, TII->get(X86::JMP_1)).addMBB(testMBB);
   blockMBB->addSuccessor(testMBB);
 
-  // allocate the tail and continue
-  BuildMI(tailMBB, DL,
-          TII->get(TFI.Uses64BitFramePtr ? X86::SUB64rr : X86::SUB32rr),
-          physSPReg)
-      .addReg(physSPReg)
-      .addReg(tmpSizeVReg);
+  // Replace original instruction by the expected stack ptr
   BuildMI(tailMBB, DL, TII->get(TargetOpcode::COPY), MI.getOperand(0).getReg())
-      .addReg(physSPReg);
+      .addReg(FinalStackPtr);
 
-  tailMBB->splice(tailMBB->end(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  tailMBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(testMBB);
+  tailMBB->splice(tailMBB->end(), MBB,
+                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  tailMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  MBB->addSuccessor(testMBB);
 
   // Delete the original pseudo instruction.
   MI.eraseFromParent();
