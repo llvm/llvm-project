@@ -10209,15 +10209,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       if (NumZero == 0)
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
 
-      // Just load a vector integer constant. Loading is better for code size,
-      // avoids move GPR immediate --> XMM, and reduces register pressure.
-      if (IsAllConstants && VT.isInteger()) {
-        // TODO: Remove -1 restriction with demanded elements improvement?
-        // TODO: Insert 128-bit load into wider undef vector?
-        if (VT.is128BitVector() && !isAllOnesConstant(Item))
-          return SDValue();
-      }
-
       if (EltVT == MVT::i32 || EltVT == MVT::f32 || EltVT == MVT::f64 ||
           (EltVT == MVT::i64 && Subtarget.is64Bit())) {
         assert((VT.is128BitVector() || VT.is256BitVector() ||
@@ -35855,6 +35846,30 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Trunc);
         SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, SclVec);
         return DAG.getBitcast(VT, Movl);
+      }
+    }
+
+    // Load a scalar integer constant directly to XMM instead of transferring an
+    // immediate value from GPR.
+    // vzext_movl (scalar_to_vector C) --> load [C,0...]
+    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+      if (auto *C = dyn_cast<ConstantSDNode>(N0.getOperand(0))) {
+        // Create a vector constant - scalar constant followed by zeros.
+        EVT ScalarVT = N0.getOperand(0).getValueType();
+        Type *ScalarTy = ScalarVT.getTypeForEVT(*DAG.getContext());
+        unsigned NumElts = VT.getVectorNumElements();
+        Constant *Zero = ConstantInt::getNullValue(ScalarTy);
+        SmallVector<Constant *, 32> ConstantVec(NumElts, Zero);
+        ConstantVec[0] = const_cast<ConstantInt *>(C->getConstantIntValue());
+
+        // Load the vector constant from constant pool.
+        MVT PVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        SDValue CP = DAG.getConstantPool(ConstantVector::get(ConstantVec), PVT);
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+        Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
+        return DAG.getLoad(VT, DL, DAG.getEntryNode(), CP, MPI, Alignment,
+                           MachineMemOperand::MOLoad);
       }
     }
 
