@@ -1823,13 +1823,13 @@ void stringConstruct()
                                   hasDescendant(varDecl(
                                       hasName("s"),
                                       hasInitializer(stringLiteral())))))));
-  EXPECT_TRUE(matches(
-      Code,
-      traverse(TK_IgnoreUnlessSpelledInSource,
-               functionDecl(hasName("conversionOperator"),
-                            hasDescendant(varDecl(
-                                hasName("c1"), hasInitializer(unaryOperator(
-                                                   hasOperatorName("*")))))))));
+
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                             functionDecl(hasName("stringConstruct"),
+                                          hasDescendant(cxxOperatorCallExpr(
+                                              isAssignmentOperator(),
+                                              hasArgument(1, stringLiteral())))))));
 }
 
 template <typename MatcherT>
