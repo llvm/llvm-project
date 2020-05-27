@@ -37,6 +37,7 @@ class ThreadAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.run_to_address(self.exe_name)
 
+    @skipIfAsan # The output looks different under ASAN.
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])

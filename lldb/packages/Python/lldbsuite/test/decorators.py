@@ -802,10 +802,21 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
 
     return skipTestIfFn(is_compiler_clang_with_ubsan)(func)
 
+def is_running_under_asan():
+    if ('ASAN_OPTIONS' in os.environ):
+        return "ASAN unsupported"
+    return None
+
 def skipUnlessAddressSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
     def is_compiler_with_address_sanitizer(self):
+        # Also don't run tests that use address sanitizer inside an
+        # address-sanitized LLDB. The tests don't support that
+        # configuration.
+        if is_running_under_asan():
+            return "Address sanitizer tests are disabled when runing under ASAN"
+
         compiler_path = self.getCompiler()
         compiler = os.path.basename(compiler_path)
         f = tempfile.NamedTemporaryFile()
@@ -824,6 +835,8 @@ def skipUnlessSwiftAddressSanitizer(func):
     """Decorate the item to skip test unless Swift -sanitize=address is supported."""
 
     def is_swift_compiler_with_address_sanitizer(self):
+        if is_running_under_asan():
+            return "Address sanitizer tests are disabled when runing under ASAN"
         swiftc = swift.getSwiftCompiler()
         f = tempfile.NamedTemporaryFile()
         cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
@@ -840,6 +853,8 @@ def skipUnlessSwiftThreadSanitizer(func):
     """Decorate the item to skip test unless Swift -sanitize=thread is supported."""
 
     def is_swift_compiler_with_thread_sanitizer(self):
+        if is_running_under_asan():
+            return "Thread sanitizer tests are disabled when runing under ASAN"
         swiftc = swift.getSwiftCompiler()
         f = tempfile.NamedTemporaryFile()
         cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
@@ -851,6 +866,9 @@ def skipUnlessSwiftThreadSanitizer(func):
         return None
     return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
 
+def skipIfAsan(func):
+    """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
+    return skipTestIfFn(is_running_under_asan)(func)
 
 def _get_bool_config_skip_if_decorator(key):
     config = lldb.SBDebugger.GetBuildConfiguration()
@@ -896,10 +914,10 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
 
-def skipIfAsan(func):
-    """Skip this test if the environment is set up to run LLDB itself under ASAN."""
-    def is_asan():
-        if ('ASAN_OPTIONS' in os.environ):
-            return "ASAN unsupported"
+def skipIfReproducer(func):
+    """Skip this test if the environment is set up to run LLDB with reproducers."""
+    def is_reproducer():
+        if configuration.capture_path or configuration.replay_path:
+            return "reproducers unsupported"
         return None
-    return skipTestIfFn(is_asan)(func)
+    return skipTestIfFn(is_reproducer)(func)
