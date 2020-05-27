@@ -11,6 +11,8 @@
 #include "ParallelSnippetGenerator.h"
 #include "SerialSnippetGenerator.h"
 #include "UopsBenchmarkRunner.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace exegesis {
@@ -25,6 +27,19 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
       return T;
   }
   return nullptr;
+}
+
+Expected<std::unique_ptr<pfm::Counter>>
+ExegesisTarget::createCounter(const char *CounterName,
+                              const LLVMState &) const {
+  pfm::PerfEvent Event(CounterName);
+  if (!Event.valid())
+    return llvm::make_error<Failure>(
+        llvm::Twine("Unable to create counter with name '")
+            .concat(CounterName)
+            .concat("'"));
+
+  return std::make_unique<pfm::Counter>(std::move(Event));
 }
 
 void ExegesisTarget::registerTarget(ExegesisTarget *Target) {

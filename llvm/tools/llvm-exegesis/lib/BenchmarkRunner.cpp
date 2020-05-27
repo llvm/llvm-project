@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <array>
+#include <memory>
 #include <string>
 
 #include "Assembler.h"
@@ -14,11 +15,13 @@
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "PerfHelper.h"
+#include "Target.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -38,7 +41,7 @@ public:
   FunctionExecutorImpl(const LLVMState &State,
                        object::OwningBinary<object::ObjectFile> Obj,
                        BenchmarkRunner::ScratchSpace *Scratch)
-      : Function(State.createTargetMachine(), std::move(Obj)),
+      : State(State), Function(State.createTargetMachine(), std::move(Obj)),
         Scratch(Scratch) {}
 
 private:
@@ -51,30 +54,33 @@ private:
     char *const ScratchPtr = Scratch->ptr();
     for (auto &CounterName : CounterNames) {
       CounterName = CounterName.trim();
-      pfm::PerfEvent PerfEvent(CounterName);
-      if (!PerfEvent.valid())
-        return make_error<Failure>(
-            Twine("invalid perf event '").concat(CounterName).concat("'"));
-      pfm::Counter Counter(std::move(PerfEvent));
+      auto CounterOrError =
+          State.getExegesisTarget().createCounter(CounterName.data(), State);
+
+      if (!CounterOrError)
+        return CounterOrError.takeError();
+
+      pfm::Counter *Counter = CounterOrError.get().get();
       Scratch->clear();
       {
         CrashRecoveryContext CRC;
         CrashRecoveryContext::Enable();
-        const bool Crashed = !CRC.RunSafely([this, &Counter, ScratchPtr]() {
-          Counter.start();
+        const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
+          Counter->start();
           this->Function(ScratchPtr);
-          Counter.stop();
+          Counter->stop();
         });
         CrashRecoveryContext::Disable();
         // FIXME: Better diagnosis.
         if (Crashed)
           return make_error<SnippetCrash>("snippet crashed while running");
       }
-      CounterValue += Counter.read();
+      CounterValue += Counter->read();
     }
     return CounterValue;
   }
 
+  const LLVMState &State;
   const ExecutableFunction Function;
   BenchmarkRunner::ScratchSpace *const Scratch;
 };
