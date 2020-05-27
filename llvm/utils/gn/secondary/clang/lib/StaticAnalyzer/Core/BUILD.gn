@@ -55,7 +55,6 @@ static_library("Core") {
     "SimpleConstraintManager.cpp",
     "SimpleSValBuilder.cpp",
     "Store.cpp",
-    "SubEngine.cpp",
     "SymbolManager.cpp",
     "TextDiagnostics.cpp",
     "WorkList.cpp",
