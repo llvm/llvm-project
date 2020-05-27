@@ -9,14 +9,21 @@
 #ifndef MLIR_DIALECT_LINALG_UTILS_H_
 #define MLIR_DIALECT_LINALG_UTILS_H_
 
+#include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "llvm/ADT/SetVector.h"
 
+using mlir::edsc::intrinsics::AffineIndexedValue;
+using mlir::edsc::intrinsics::StdIndexedValue;
+
 namespace mlir {
 class AffineExpr;
+class AffineForOp;
 class AffineMap;
 class OperationFolder;
 class PatternRewriter;
@@ -48,6 +55,15 @@ struct RegionMatcher {
   /// ```
   static Optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
 };
+
+/// Checks if an iterator_type attribute is parallel.
+bool isParallelIteratorType(Attribute attr);
+
+/// Checks if an iterator_type attribute is parallel.
+bool isReductionIteratorType(Attribute attr);
+
+/// Checks if an iterator_type attribute is parallel.
+bool isWindowIteratorType(Attribute attr);
 
 /// Checks whether the specific `producer` is the last write to exactly the
 /// whole `consumedView`. This checks structural dominance, that the dependence
@@ -140,6 +156,21 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
     auxVec[i] = inVec[permutation[i]];
   inVec = auxVec;
 }
+
+/// Utility class used to generate nested loops with ranges described by
+/// `loopRanges` and loop type described by the `iteratorTypes`. `allIvs` is
+/// populated with induction variables for all generated loops on return, with
+/// `fun` used to generate the body of the innermost loop.
+template <typename LoopTy>
+struct GenerateLoopNest {
+  using IndexedValueTy =
+      typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
+                                AffineIndexedValue, StdIndexedValue>::type;
+  static void doit(MutableArrayRef<Value> allIvs,
+                   ArrayRef<SubViewOp::Range> loopRanges,
+                   ArrayRef<Attribute> iteratorTypes,
+                   std::function<void(void)> fun);
+};
 
 } // namespace linalg
 } // namespace mlir

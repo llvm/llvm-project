@@ -44,7 +44,8 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c0:.*]] = constant 0 : index
 // CHECK-DAG:     %[[c5:.*]] = constant 5 : index
 // CHECK-DAG:     %[[c6:.*]] = constant 6 : index
-// CHECK:         scf.parallel {{.*}} step (%[[c5]], %[[c6]])
+// CHECK:         scf.parallel {{.*}} step (%[[c5]])
+// CHECK:           scf.for {{.*}} step %[[c6]]
 // CHECK:             linalg.matvec({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?xf32, #[[STRIDED_1D]]>, memref<?xf32, #[[STRIDED_1D]]>
 
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -364,3 +365,25 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 // CHECK:         linalg.fill(%[[v0]], {{%.*}}) : memref<?x?xf32>, f32
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:         linalg.fill(%[[v0]], %[[cf]]) : memref<?x?xf32>, f32
+
+func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
+                                 %arg1: memref<?x?xf32>,
+                                 %arg2: memref<?x?xf32>) {
+  linalg.matmul(%arg0, %arg1, %arg2) {__internal_linalg_transform__ = "par__with_perm__"}
+    : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  return
+}
+// CHECK-LABEL: func @tile_permute_parallel_loop
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
+//   CHECK-DAG:   %[[C16:.*]] = constant 16 : index
+//   CHECK-DAG:   %[[C8:.*]] = constant 8 : index
+//   CHECK-DAG:   %[[C4:.*]] = constant 4 : index
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[D0:.*]] = dim %[[ARG0]], 0
+//   CHECK-DAG:   %[[D1:.*]] = dim %[[ARG0]], 1
+//   CHECK-DAG:   %[[D2:.*]] = dim %[[ARG1]], 1
+//       CHECK:   scf.parallel (%{{.*}}) = (%[[C0]]) to (%[[D2]]) step (%[[C8]])
+//       CHECK:     scf.for %{{.*}} = %[[C0]] to %[[D1]] step %[[C4]]
+//       CHECK:       scf.parallel (%{{.*}}) = (%[[C0]]) to (%[[D0]]) step (%[[C16]])
