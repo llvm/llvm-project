@@ -845,44 +845,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (TRI.isCFISavedRegsSpillEnabled()) {
-    MCRegister ReturnAddressReg = TRI.getReturnAddressReg(MF);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> ReturnAddressSpill =
-        FuncInfo->getSGPRToVGPRSpills(FuncInfo->ReturnAddressSaveIndex);
-    assert(ReturnAddressSpill.size() == 2);
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            ReturnAddressSpill[0].VGPR)
-        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(0)))
-        .addImm(ReturnAddressSpill[0].Lane)
-        .addReg(ReturnAddressSpill[0].VGPR, RegState::Undef);
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            ReturnAddressSpill[1].VGPR)
-        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(1)))
-        .addImm(ReturnAddressSpill[1].Lane)
-        .addReg(ReturnAddressSpill[1].VGPR, RegState::Undef);
-    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, AMDGPU::PC_REG,
-                               ReturnAddressSpill);
-
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> EXECSpill =
-        FuncInfo->getSGPRToVGPRSpills(FuncInfo->EXECSaveIndex);
-    assert(EXECSpill.size());
-    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-            EXECSpill[0].VGPR)
-        .addReg(AMDGPU::EXEC_LO)
-        .addImm(EXECSpill[0].Lane)
-        .addReg(EXECSpill[0].VGPR, RegState::Undef);
-    if (!ST.isWave32()) {
-      assert(EXECSpill.size() == 2);
-      BuildMI(MBB, MBBI, DL,
-              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
-              EXECSpill[1].VGPR)
-          .addReg(AMDGPU::EXEC_HI)
-          .addImm(EXECSpill[1].Lane)
-          .addReg(EXECSpill[1].VGPR, RegState::Undef);
-    }
-    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, AMDGPU::EXEC, EXECSpill);
-  }
-
   for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
          : FuncInfo->getSGPRSpillVGPRs()) {
     if (!Reg.FI.hasValue())
@@ -952,6 +914,44 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
         .addReg(ScratchExecCopy, RegState::Kill);
     LiveRegs.addReg(ScratchExecCopy);
+  }
+
+  if (TRI.isCFISavedRegsSpillEnabled()) {
+    MCRegister ReturnAddressReg = TRI.getReturnAddressReg(MF);
+    ArrayRef<SIMachineFunctionInfo::SpilledReg> ReturnAddressSpill =
+        FuncInfo->getSGPRToVGPRSpills(FuncInfo->ReturnAddressSaveIndex);
+    assert(ReturnAddressSpill.size() == 2);
+    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+            ReturnAddressSpill[0].VGPR)
+        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(0)))
+        .addImm(ReturnAddressSpill[0].Lane)
+        .addReg(ReturnAddressSpill[0].VGPR, RegState::Undef);
+    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+            ReturnAddressSpill[1].VGPR)
+        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(1)))
+        .addImm(ReturnAddressSpill[1].Lane)
+        .addReg(ReturnAddressSpill[1].VGPR, RegState::Undef);
+    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, AMDGPU::PC_REG,
+                               ReturnAddressSpill);
+
+    ArrayRef<SIMachineFunctionInfo::SpilledReg> EXECSpill =
+        FuncInfo->getSGPRToVGPRSpills(FuncInfo->EXECSaveIndex);
+    assert(EXECSpill.size());
+    BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+            EXECSpill[0].VGPR)
+        .addReg(AMDGPU::EXEC_LO)
+        .addImm(EXECSpill[0].Lane)
+        .addReg(EXECSpill[0].VGPR, RegState::Undef);
+    if (!ST.isWave32()) {
+      assert(EXECSpill.size() == 2);
+      BuildMI(MBB, MBBI, DL,
+              TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
+              EXECSpill[1].VGPR)
+          .addReg(AMDGPU::EXEC_HI)
+          .addImm(EXECSpill[1].Lane)
+          .addReg(EXECSpill[1].VGPR, RegState::Undef);
+    }
+    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, AMDGPU::EXEC, EXECSpill);
   }
 
   // In this case, spill the FP to a reserved VGPR.

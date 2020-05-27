@@ -14,7 +14,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: func:
+; CHECK-LABEL: func_saved_in_clobbered_vgpr:
 ; CHECK: .cfi_startproc
 ; CHECK-NOT: .cfi_{{.*}}
 ; CHECK: %bb.0:
@@ -90,8 +90,35 @@ entry:
 
 ; CHECK-NOT: .cfi_{{.*}}
 ; CHECK: .cfi_endproc
-define hidden void @func() #0 {
+define hidden void @func_saved_in_clobbered_vgpr() #0 {
 entry:
+  ret void
+}
+
+; Check that the option causes a CSR VGPR to spill when needed.
+
+; CHECK-LABEL: func_saved_in_preserved_vgpr:
+; CHECK: %bb.0:
+
+; CHECK: s_or_saveexec_b{{(32|64)}}
+; CHECK: buffer_store_dword [[CSR:v[0-9]+]], off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK: s_mov_b{{(32|64)}} {{(exec|exec_lo)}},
+
+; CHECK: v_writelane_b32 [[CSR]], s30, {{[0-9]+}}
+; CHECK-NEXT: v_writelane_b32 [[CSR]], s31, {{[0-9]+}}
+
+; WAVE64: v_writelane_b32 [[CSR]], exec_lo, {{[0-9]+}}
+; WAVE64-NEXT: v_writelane_b32 [[CSR]], exec_hi, {{[0-9]+}}
+
+; WAVE32: v_writelane_b32 [[CSR]], exec_lo, {{[0-9]+}}
+
+define hidden void @func_saved_in_preserved_vgpr() #0 {
+entry:
+  call void asm sideeffect "; clobber nonpreserved VGPRs",
+    "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
+    ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
+    ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"()
   ret void
 }
 
