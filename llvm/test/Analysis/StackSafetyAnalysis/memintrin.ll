@@ -32,7 +32,7 @@ define void @VolatileMemsetInBounds() {
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
-    %x1 = bitcast i32* %x to i8*
+  %x1 = bitcast i32* %x to i8*
   call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 4, i1 true)
   ret void
 }
@@ -45,7 +45,7 @@ define void @MemsetOutOfBounds() {
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
-    %x1 = bitcast i32* %x to i8*
+  %x1 = bitcast i32* %x to i8*
   call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 5, i1 false)
   ret void
 }
@@ -59,7 +59,7 @@ define void @MemsetNonConst(i32 %size) {
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
-    %x1 = bitcast i32* %x to i8*
+  %x1 = bitcast i32* %x to i8*
   call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %size, i1 false)
   ret void
 }
