@@ -2348,14 +2348,17 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   unsigned DstSize = RI.getRegSizeInBits(*DstRC);
 
   if (DstSize == 32) {
-    unsigned SelOp = Pred == SCC_TRUE ?
-      AMDGPU::S_CSELECT_B32 : AMDGPU::V_CNDMASK_B32_e32;
-
-    // Instruction's operands are backwards from what is expected.
-    MachineInstr *Select =
-      BuildMI(MBB, I, DL, get(SelOp), DstReg)
-      .addReg(FalseReg)
-      .addReg(TrueReg);
+    MachineInstr *Select;
+    if (Pred == SCC_TRUE) {
+      Select = BuildMI(MBB, I, DL, get(AMDGPU::S_CSELECT_B32), DstReg)
+        .addReg(TrueReg)
+        .addReg(FalseReg);
+    } else {
+      // Instruction's operands are backwards from what is expected.
+      Select = BuildMI(MBB, I, DL, get(AMDGPU::V_CNDMASK_B32_e32), DstReg)
+        .addReg(FalseReg)
+        .addReg(TrueReg);
+    }
 
     preserveCondRegFlags(Select->getOperand(3), Cond[1]);
     return;
@@ -2364,8 +2367,8 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   if (DstSize == 64 && Pred == SCC_TRUE) {
     MachineInstr *Select =
       BuildMI(MBB, I, DL, get(AMDGPU::S_CSELECT_B64), DstReg)
-      .addReg(FalseReg)
-      .addReg(TrueReg);
+      .addReg(TrueReg)
+      .addReg(FalseReg);
 
     preserveCondRegFlags(Select->getOperand(3), Cond[1]);
     return;
@@ -2416,10 +2419,19 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
 
     unsigned SubIdx = SubIndices[Idx];
 
-    MachineInstr *Select =
-      BuildMI(MBB, I, DL, get(SelOp), DstElt)
-      .addReg(FalseReg, 0, SubIdx)
-      .addReg(TrueReg, 0, SubIdx);
+    MachineInstr *Select;
+    if (SelOp == AMDGPU::V_CNDMASK_B32_e32) {
+      Select =
+        BuildMI(MBB, I, DL, get(SelOp), DstElt)
+        .addReg(FalseReg, 0, SubIdx)
+        .addReg(TrueReg, 0, SubIdx);
+    } else {
+      Select =
+        BuildMI(MBB, I, DL, get(SelOp), DstElt)
+        .addReg(TrueReg, 0, SubIdx)
+        .addReg(FalseReg, 0, SubIdx);
+    }
+
     preserveCondRegFlags(Select->getOperand(3), Cond[1]);
     fixImplicitOperands(*Select);
 
