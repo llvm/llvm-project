@@ -665,7 +665,8 @@ private:
   /// \p Context points to the class instance holding the live string and
   /// numeric variables. \returns the class representing that operand in the
   /// AST of the expression or an error holding a diagnostic against \p SM
-  /// otherwise.
+  /// otherwise. If \p Expr starts with a "(" this function will attempt to
+  /// parse a parenthesized expression.
   static Expected<std::unique_ptr<ExpressionAST>>
   parseNumericOperand(StringRef &Expr, AllowedOperand AO,
                       Optional<size_t> LineNumber,
@@ -684,6 +685,16 @@ private:
              std::unique_ptr<ExpressionAST> LeftOp, bool IsLegacyLineExpr,
              Optional<size_t> LineNumber, FileCheckPatternContext *Context,
              const SourceMgr &SM);
+
+  /// Parses a parenthesized expression inside \p Expr at line \p LineNumber, or
+  /// before input is parsed if \p LineNumber is None. \p Expr must start with
+  /// a '('. Accepts both literal values and numeric variables. Parameter \p
+  /// Context points to the class instance holding the live string and numeric
+  /// variables. \returns the class representing that operand in the AST of the
+  /// expression or an error holding a diagnostic against \p SM otherwise.
+  static Expected<std::unique_ptr<ExpressionAST>>
+  parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
+                 FileCheckPatternContext *Context, const SourceMgr &SM);
 };
 
 //===----------------------------------------------------------------------===//

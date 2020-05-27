@@ -724,6 +724,46 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
       "implicit format conflict between 'FOO' (%u) and "
       "'VAR_LOWER_HEX' (%x), need an explicit format specifier",
       Tester.parseSubst("FOO+VAR_LOWER_HEX").takeError());
+
+  // Simple parenthesized expressions:
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("(1)"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("(1+1)"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("(1)+1"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("((1)+1)"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("((1)+X)"), Succeeded());
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("((X)+Y)"), Succeeded());
+
+  expectDiagnosticError("missing operand in expression",
+                        Tester.parseSubst("(").takeError());
+  expectDiagnosticError("missing ')' at end of nested expression",
+                        Tester.parseSubst("(1").takeError());
+  expectDiagnosticError("missing operand in expression",
+                        Tester.parseSubst("(1+").takeError());
+  expectDiagnosticError("missing ')' at end of nested expression",
+                        Tester.parseSubst("(1+1").takeError());
+  expectDiagnosticError("missing ')' at end of nested expression",
+                        Tester.parseSubst("((1+2+3").takeError());
+  expectDiagnosticError("missing ')' at end of nested expression",
+                        Tester.parseSubst("((1+2)+3").takeError());
+
+  // Test missing operation between operands:
+  expectDiagnosticError("unsupported operation '('",
+                        Tester.parseSubst("(1)(2)").takeError());
+  expectDiagnosticError("unsupported operation '('",
+                        Tester.parseSubst("2(X)").takeError());
+
+  // Test more closing than opening parentheses. The diagnostic messages are
+  // not ideal, but for now simply check that we reject invalid input.
+  expectDiagnosticError("invalid operand format ')'",
+                        Tester.parseSubst(")").takeError());
+  expectDiagnosticError("unsupported operation ')'",
+                        Tester.parseSubst("1)").takeError());
+  expectDiagnosticError("unsupported operation ')'",
+                        Tester.parseSubst("(1+2))").takeError());
+  expectDiagnosticError("unsupported operation ')'",
+                        Tester.parseSubst("(2))").takeError());
+  expectDiagnosticError("unsupported operation ')'",
+                        Tester.parseSubst("(1))(").takeError());
 }
 
 TEST_F(FileCheckTest, ParsePattern) {
@@ -842,6 +882,52 @@ TEST_F(FileCheckTest, Match) {
   EXPECT_FALSE(Tester.parsePattern("[[#@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match(std::to_string(Tester.getLineNumber())),
                        Succeeded());
+}
+
+TEST_F(FileCheckTest, MatchParen) {
+  PatternTester Tester;
+  // Check simple parenthesized expressions
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR:]]"));
+  expectNotFoundError(Tester.match("FAIL").takeError());
+  expectNotFoundError(Tester.match("").takeError());
+  EXPECT_THAT_EXPECTED(Tester.match("18"), Succeeded());
+
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR + (2 + 2)]]"));
+  expectNotFoundError(Tester.match("21").takeError());
+  EXPECT_THAT_EXPECTED(Tester.match("22"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR + (2)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("20"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+(2)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("20"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+(NUMVAR)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("36"), Succeeded());
+
+  // Check nested parenthesized expressions:
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+(2+(2))]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("22"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+(2+(NUMVAR))]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("38"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+((((NUMVAR))))]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("36"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#NUMVAR+((((NUMVAR)))-1)-1]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("34"), Succeeded());
+
+  // Parentheses can also be the first character after the '#':
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#(NUMVAR)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("18"), Succeeded());
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePattern("[[#(NUMVAR+2)]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("20"), Succeeded());
 }
 
 TEST_F(FileCheckTest, Substitution) {
