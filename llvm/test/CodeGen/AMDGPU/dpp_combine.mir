@@ -298,10 +298,10 @@ body:             |
 # check for floating point modifiers
 # GCN-LABEL: name: add_f32_e64
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-# GCN: %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $exec
-# GCN: %6:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $exec
-# GCN: %8:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $exec
-# GCN: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $exec
+# GCN: %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $mode, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $mode, implicit $exec
 
 name: add_f32_e64
 tracksRegLiveness: true
@@ -315,19 +315,19 @@ body:             |
 
     ; this shouldn't be combined as omod is set
     %3:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-    %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $exec
+    %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $mode, implicit $exec
 
     ; this should be combined as all modifiers are default
     %5:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-    %6:vgpr_32 = V_ADD_F32_e64 0, %5, 0, %0, 0, 0, implicit $exec
+    %6:vgpr_32 = V_ADD_F32_e64 0, %5, 0, %0, 0, 0, implicit $mode, implicit $exec
 
     ; this should be combined as modifiers other than abs|neg are default
     %7:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-    %8:vgpr_32 = V_ADD_F32_e64 1, %7, 2, %0, 0, 0, implicit $exec
+    %8:vgpr_32 = V_ADD_F32_e64 1, %7, 2, %0, 0, 0, implicit $mode, implicit $exec
 
     ; this shouldn't be combined as modifiers aren't abs|neg
     %9:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-    %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $exec
+    %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $mode, implicit $exec
 ...
 
 # check for e64 modifiers
@@ -532,73 +532,73 @@ body: |
 
 # Test instruction which does not have modifiers in VOP1 form but does in DPP form.
 # GCN-LABEL: name: dpp_vop1
-# GCN: %3:vgpr_32 = V_CEIL_F32_dpp %0, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN: %3:vgpr_32 = V_CEIL_F32_dpp %0, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_vop1
 tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = V_MOV_B32_dpp %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
-    %3:vgpr_32 = V_CEIL_F32_e32 %2, implicit $exec
+    %3:vgpr_32 = V_CEIL_F32_e32 %2, implicit $mode, implicit $exec
 ...
 
 # Test instruction which does not have modifiers in VOP2 form but does in DPP form.
 # GCN-LABEL: name: dpp_min
-# GCN: %3:vgpr_32 = V_MIN_F32_dpp %0, 0, undef %2:vgpr_32, 0, undef %4:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN: %3:vgpr_32 = V_MIN_F32_dpp %0, 0, undef %2:vgpr_32, 0, undef %4:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_min
 tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = V_MOV_B32_dpp %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
-    %4:vgpr_32 = V_MIN_F32_e32 %2, undef %3:vgpr_32, implicit $exec
+    %4:vgpr_32 = V_MIN_F32_e32 %2, undef %3:vgpr_32, implicit $mode, implicit $exec
 ...
 
 # Test an undef old operand
 # GCN-LABEL: name: dpp_undef_old
-# GCN: %3:vgpr_32 = V_CEIL_F32_dpp undef %1:vgpr_32, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN: %3:vgpr_32 = V_CEIL_F32_dpp undef %1:vgpr_32, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_undef_old
 tracksRegLiveness: true
 body: |
   bb.0:
     %2:vgpr_32 = V_MOV_B32_dpp undef %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
-    %3:vgpr_32 = V_CEIL_F32_e32 %2, implicit $exec
+    %3:vgpr_32 = V_CEIL_F32_e32 %2, implicit $mode, implicit $exec
 ...
 
 # Do not combine a dpp mov which writes a physreg.
 # GCN-LABEL: name: phys_dpp_mov_dst
 # GCN: $vgpr0 = V_MOV_B32_dpp undef %0:vgpr_32, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
-# GCN: %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $mode, implicit $exec
 name: phys_dpp_mov_dst
 tracksRegLiveness: true
 body: |
   bb.0:
     $vgpr0 = V_MOV_B32_dpp undef %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
-    %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $mode, implicit $exec
 ...
 
 # Do not combine a dpp mov which reads a physreg.
 # GCN-LABEL: name: phys_dpp_mov_old_src
 # GCN: %0:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
-# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $mode, implicit $exec
 name: phys_dpp_mov_old_src
 tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
-    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $mode, implicit $exec
 ...
 
 # Do not combine a dpp mov which reads a physreg.
 # GCN-LABEL: name: phys_dpp_mov_src
 # GCN: %0:vgpr_32 = V_MOV_B32_dpp undef %1:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
-# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $mode, implicit $exec
 name: phys_dpp_mov_src
 tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = V_MOV_B32_dpp undef %0:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
-    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $mode, implicit $exec
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_both_combined
@@ -817,7 +817,7 @@ body: |
 
 # Make sure flags aren't dropped
 # GCN-LABEL: name: flags_add_f32_e64
-# GCN: %4:vgpr_32 = nnan nofpexcept V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $exec
+# GCN: %4:vgpr_32 = nnan nofpexcept V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: flags_add_f32_e64
 tracksRegLiveness: true
 body:             |
@@ -829,7 +829,7 @@ body:             |
     %2:vgpr_32 = IMPLICIT_DEF
 
     %3:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-    %4:vgpr_32 = nofpexcept nnan V_ADD_F32_e64 0, %3, 0, %0, 0, 0, implicit $exec
+    %4:vgpr_32 = nofpexcept nnan V_ADD_F32_e64 0, %3, 0, %0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %4
 
 ...

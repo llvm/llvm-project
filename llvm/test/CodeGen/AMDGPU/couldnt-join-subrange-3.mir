@@ -17,9 +17,9 @@ body:             |
   ; GCN-LABEL: name: _amdgpu_ps_main
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   [[V_TRUNC_F32_e32_:%[0-9]+]]:vgpr_32 = V_TRUNC_F32_e32 undef %4:vgpr_32, implicit $exec
-  ; GCN:   [[V_CVT_U32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_U32_F32_e32 [[V_TRUNC_F32_e32_]], implicit $exec
-  ; GCN:   [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 4, [[V_CVT_U32_F32_e32_]], implicit $exec
+  ; GCN:   %3:vgpr_32 = nofpexcept V_TRUNC_F32_e32 undef %4:vgpr_32, implicit $mode, implicit $exec
+  ; GCN:   %5:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 %3, implicit $mode, implicit $exec
+  ; GCN:   [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 4, %5, implicit $exec
   ; GCN:   undef %11.sub0:vreg_128 = V_MUL_LO_I32 [[V_LSHRREV_B32_e32_]], 3, implicit $exec
   ; GCN:   %11.sub3:vreg_128 = COPY %11.sub0
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
@@ -47,19 +47,19 @@ body:             |
   ; GCN:   S_CBRANCH_VCCNZ %bb.4, implicit killed $vcc
   ; GCN:   S_BRANCH %bb.6
   ; GCN: bb.5:
-  ; GCN:   [[V_MUL_F32_e32_:%[0-9]+]]:vgpr_32 = V_MUL_F32_e32 target-flags(amdgpu-gotprel) 0, %11.sub0, implicit $exec
-  ; GCN:   [[V_MIN_F32_e32_:%[0-9]+]]:vgpr_32 = V_MIN_F32_e32 1106771968, [[V_MUL_F32_e32_]], implicit $exec
-  ; GCN:   [[V_MAD_F32_:%[0-9]+]]:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, [[V_MIN_F32_e32_]], 0, 0, 0, 0, 0, 0, implicit $exec
-  ; GCN:   [[V_MAD_F32_1:%[0-9]+]]:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, [[V_MAD_F32_]], 0, 0, 0, 0, 0, 0, implicit $exec
-  ; GCN:   [[V_MAD_F32_2:%[0-9]+]]:vgpr_32 = V_MAD_F32 0, [[V_MAD_F32_1]], 0, 0, 0, 0, 0, 0, implicit $exec
-  ; GCN:   [[V_CVT_PKRTZ_F16_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, [[V_MAD_F32_2]], 0, undef %27:vgpr_32, 0, 0, implicit $exec
-  ; GCN:   EXP_DONE 0, [[V_CVT_PKRTZ_F16_F32_e64_]], undef %28:vgpr_32, undef %29:vgpr_32, undef %30:vgpr_32, -1, -1, 15, implicit $exec
+  ; GCN:   %21:vgpr_32 = nofpexcept V_MUL_F32_e32 target-flags(amdgpu-gotprel) 0, %11.sub0, implicit $mode, implicit $exec
+  ; GCN:   %22:vgpr_32 = nofpexcept V_MIN_F32_e32 1106771968, %21, implicit $mode, implicit $exec
+  ; GCN:   %23:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, %22, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN:   %24:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, %23, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN:   %25:vgpr_32 = nofpexcept V_MAD_F32 0, %24, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN:   %26:vgpr_32 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, %25, 0, undef %27:vgpr_32, 0, 0, implicit $mode, implicit $exec
+  ; GCN:   EXP_DONE 0, %26, undef %28:vgpr_32, undef %29:vgpr_32, undef %30:vgpr_32, -1, -1, 15, implicit $exec
   ; GCN:   S_ENDPGM 0
   ; GCN: bb.6:
   ; GCN:   S_ENDPGM 0
   bb.0:
-    %10:vgpr_32 = V_TRUNC_F32_e32 undef %11:vgpr_32, implicit $exec
-    %12:vgpr_32 = V_CVT_U32_F32_e32 killed %10, implicit $exec
+    %10:vgpr_32 = nofpexcept V_TRUNC_F32_e32 undef %11:vgpr_32, implicit $mode, implicit $exec
+    %12:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 killed %10, implicit $mode, implicit $exec
     %50:vgpr_32 = V_LSHRREV_B32_e32 4, killed %12, implicit $exec
     %51:vgpr_32 = V_MUL_LO_I32 killed %50, 3, implicit $exec
     undef %52.sub0:vreg_128 = COPY %51
@@ -102,12 +102,12 @@ body:             |
     S_BRANCH %bb.6
 
   bb.5:
-    %39:vgpr_32 = V_MUL_F32_e32 target-flags(amdgpu-gotprel) 0, killed %55.sub0, implicit $exec
-    %41:vgpr_32 = V_MIN_F32_e32 1106771968, killed %39, implicit $exec
-    %42:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %41, 0, 0, 0, 0, 0, 0, implicit $exec
-    %43:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %42, 0, 0, 0, 0, 0, 0, implicit $exec
-    %44:vgpr_32 = V_MAD_F32 0, killed %43, 0, 0, 0, 0, 0, 0, implicit $exec
-    %45:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %44, 0, undef %46:vgpr_32, 0, 0, implicit $exec
+    %39:vgpr_32 = nofpexcept V_MUL_F32_e32 target-flags(amdgpu-gotprel) 0, killed %55.sub0, implicit $mode, implicit $exec
+    %41:vgpr_32 = nofpexcept V_MIN_F32_e32 1106771968, killed %39, implicit $mode, implicit $exec
+    %42:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, killed %41, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %43:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, killed %42, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %44:vgpr_32 = nofpexcept V_MAD_F32 0, killed %43, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %45:vgpr_32 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, killed %44, 0, undef %46:vgpr_32, 0, 0, implicit $mode, implicit $exec
     EXP_DONE 0, killed %45, undef %47:vgpr_32, undef %48:vgpr_32, undef %49:vgpr_32, -1, -1, 15, implicit $exec
     S_ENDPGM 0
 

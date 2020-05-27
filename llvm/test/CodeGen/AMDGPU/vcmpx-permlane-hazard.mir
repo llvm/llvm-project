@@ -117,7 +117,7 @@ body:            |
     $vgpr1 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
-    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1,  implicit $exec
+    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1,  implicit $mode, implicit $exec
     $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...

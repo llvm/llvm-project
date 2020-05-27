@@ -64,7 +64,7 @@ def : ExpComprPattern<v2f16, EXP_DONE, -1>;
 // Used to inject printing of "_e32" suffix for VI (there are "_e64" variants for VI)
 def VINTRPDst : VINTRPDstOperand <VGPR_32>;
 
-let Uses = [M0, EXEC] in {
+let Uses = [MODE, M0, EXEC] in {
 
 // FIXME: Specify SchedRW for VINTRP instructions.
 
@@ -109,7 +109,7 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   [(set f32:$vdst, (int_amdgcn_interp_mov (i32 timm:$vsrc),
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
-} // End Uses = [M0, EXEC]
+} // End Uses = [MODE, M0, EXEC]
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
