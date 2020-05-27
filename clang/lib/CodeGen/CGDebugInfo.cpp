@@ -3900,7 +3900,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
 
-  DBuilder.retainType(SP);
+  DBuilder.finalizeSubprogram(SP);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
