@@ -109,19 +109,19 @@ TEST(ExpfTest, Borderline) {
 
   llvmlibc_errno = 0;
   x = valueFromBits(0x42affff8U);
-  ASSERT_MPFR_MATCH(mpfr::OP_Exp, x, __llvm_libc::expf(x), tolerance);
+  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), tolerance);
   EXPECT_EQ(llvmlibc_errno, 0);
 
   x = valueFromBits(0x42b00008U);
-  ASSERT_MPFR_MATCH(mpfr::OP_Exp, x, __llvm_libc::expf(x), tolerance);
+  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), tolerance);
   EXPECT_EQ(llvmlibc_errno, 0);
 
   x = valueFromBits(0xc2affff8U);
-  ASSERT_MPFR_MATCH(mpfr::OP_Exp, x, __llvm_libc::expf(x), tolerance);
+  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), tolerance);
   EXPECT_EQ(llvmlibc_errno, 0);
 
   x = valueFromBits(0xc2b00008U);
-  ASSERT_MPFR_MATCH(mpfr::OP_Exp, x, __llvm_libc::expf(x), tolerance);
+  ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), tolerance);
   EXPECT_EQ(llvmlibc_errno, 0);
 }
 
@@ -141,6 +141,6 @@ TEST(ExpfTest, InFloatRange) {
     // wider precision.
     if (isnan(result) || isinf(result) || llvmlibc_errno != 0)
       continue;
-    ASSERT_MPFR_MATCH(mpfr::OP_Exp, x, __llvm_libc::expf(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Exp, x, __llvm_libc::expf(x), tolerance);
   }
 }

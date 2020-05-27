@@ -80,13 +80,13 @@ TEST(SinfTest, InFloatRange) {
     float x = valueFromBits(v);
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x), tolerance);
   }
 }
 
 TEST(SinfTest, SpecificBitPatterns) {
   float x = valueFromBits(0xc70d39a1);
-  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x), tolerance);
 }
 
 // For small values, sin(x) is x.
@@ -94,13 +94,13 @@ TEST(SinfTest, SmallValues) {
   uint32_t bits = 0x17800000;
   float x = valueFromBits(bits);
   float result = __llvm_libc::sinf(x);
-  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result, tolerance);
   EXPECT_EQ(bits, valueAsBits(result));
 
   bits = 0x00400000;
   x = valueFromBits(bits);
   result = __llvm_libc::sinf(x);
-  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result, tolerance);
   EXPECT_EQ(bits, valueAsBits(result));
 }
 
@@ -109,6 +109,6 @@ TEST(SinfTest, SmallValues) {
 TEST(SinfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
     float x = valueFromBits(v);
-    EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
+    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x), tolerance);
   }
 }
