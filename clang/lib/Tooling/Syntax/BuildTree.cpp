@@ -608,6 +608,25 @@ public:
     return true;
   }
 
+  bool WalkUpFromUnaryOperator(UnaryOperator *S) {
+    Builder.markChildToken(
+        S->getOperatorLoc(),
+        syntax::NodeRole::UnaryOperatorExpression_operatorToken);
+    Builder.markExprChild(S->getSubExpr(),
+                          syntax::NodeRole::UnaryOperatorExpression_operand);
+
+    if (S->isPostfix())
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PostfixUnaryOperatorExpression,
+                       S);
+    else
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PrefixUnaryOperatorExpression,
+                       S);
+
+    return true;
+  }
+
   bool WalkUpFromBinaryOperator(BinaryOperator *S) {
     Builder.markExprChild(
         S->getLHS(), syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
