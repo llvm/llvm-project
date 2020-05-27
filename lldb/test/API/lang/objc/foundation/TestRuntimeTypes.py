@@ -19,7 +19,7 @@ class RuntimeTypesTestCase(TestBase):
         oslist=["macosx"],
         debug_info="gmodules",
         bugnumber="llvm.org/pr27862")
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_break(self):
         """Test setting objc breakpoints using '_regexp-break' and 'breakpoint set'."""
         if self.getArchitecture() != 'x86_64':
