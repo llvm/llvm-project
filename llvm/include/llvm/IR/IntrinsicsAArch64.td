@@ -487,7 +487,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                   [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_1Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<2>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
 
   class AdvSIMD_2Vec_Load_Intrinsic
     : Intrinsic<[LLVMMatchType<0>, llvm_anyvector_ty],
@@ -501,11 +501,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_2Vec_Store_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrArgMemOnly, NoCapture<2>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
   class AdvSIMD_2Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<3>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
 
   class AdvSIMD_3Vec_Load_Intrinsic
     : Intrinsic<[LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
@@ -519,12 +519,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_3Vec_Store_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      LLVMMatchType<0>, LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrArgMemOnly, NoCapture<3>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
   class AdvSIMD_3Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<4>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
 
   class AdvSIMD_4Vec_Load_Intrinsic
     : Intrinsic<[LLVMMatchType<0>, LLVMMatchType<0>,
@@ -542,12 +542,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrArgMemOnly, NoCapture<4>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
   class AdvSIMD_4Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<5>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
 }
 
 // Memory ops
@@ -744,20 +744,20 @@ def int_aarch64_irg_sp   : Intrinsic<[llvm_ptr_ty], [llvm_i64_ty],
 //   ADDG ptr1, baseptr, (ptr0 - baseptr), tag_offset
 // It is intended that ptr0 is an alloca address, and baseptr is the direct output of llvm.aarch64.irg.sp.
 def int_aarch64_tagp : Intrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_ptr_ty, llvm_i64_ty],
-    [IntrNoMem, ImmArg<2>]>;
+    [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 // Update allocation tags for the memory range to match the tag in the pointer argument.
 def int_aarch64_settag  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
-    [IntrWriteMem, IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
+    [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
 
 // Update allocation tags for the memory range to match the tag in the pointer argument,
 // and set memory contents to zero.
 def int_aarch64_settag_zero  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
-    [IntrWriteMem, IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
+    [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
 
 // Update allocation tags for 16-aligned, 16-sized memory region, and store a pair 8-byte values.
 def int_aarch64_stgp  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
-    [IntrWriteMem, IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
+    [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
 }
 
 // Transactional Memory Extension (TME) Intrinsics
@@ -768,7 +768,7 @@ def int_aarch64_tstart  : GCCBuiltin<"__builtin_arm_tstart">,
 def int_aarch64_tcommit : GCCBuiltin<"__builtin_arm_tcommit">, Intrinsic<[]>;
 
 def int_aarch64_tcancel : GCCBuiltin<"__builtin_arm_tcancel">,
-                          Intrinsic<[], [llvm_i64_ty], [ImmArg<0>]>;
+                          Intrinsic<[], [llvm_i64_ty], [ImmArg<ArgIndex<0>>]>;
 
 def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
                           Intrinsic<[llvm_i64_ty], [],
@@ -800,26 +800,26 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [llvm_anyvector_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                  LLVMPointerToElt<0>],
-                [IntrArgMemOnly, NoCapture<2>]>;
+                [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
 
   class AdvSIMD_2Vec_PredStore_Intrinsic
       : Intrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMPointerTo<0>],
-                  [IntrArgMemOnly, NoCapture<3>]>;
+                  [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
 
   class AdvSIMD_3Vec_PredStore_Intrinsic
       : Intrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMPointerTo<0>],
-                  [IntrArgMemOnly, NoCapture<4>]>;
+                  [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
 
   class AdvSIMD_4Vec_PredStore_Intrinsic
       : Intrinsic<[],
                   [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
                    LLVMMatchType<0>,
                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMPointerTo<0>],
-                  [IntrArgMemOnly, NoCapture<5>]>;
+                  [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
 
   class AdvSIMD_SVE_Index_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -839,7 +839,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMMatchType<0>,
                  LLVMMatchType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<2>]>;
+                [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class AdvSIMD_3VectorArgIndexed_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -847,7 +847,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  LLVMMatchType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   class AdvSIMD_Pred1VectorArg_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -895,7 +895,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMMatchType<0>,
                  llvm_i32_ty,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   class AdvSIMD_SVE_Saturating_N_Intrinsic<LLVMType T>
     : Intrinsic<[T],
@@ -905,7 +905,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_SVE_SaturatingWithPattern_N_Intrinsic<LLVMType T>
     : Intrinsic<[T],
                 [T, llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   class AdvSIMD_SVE_CNT_Intrinsic
     : Intrinsic<[LLVMVectorOfBitcastsToInt<0>],
@@ -926,7 +926,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                  LLVMMatchType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<2>]>;
+                [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class AdvSIMD_SVE_ShiftWide_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -946,7 +946,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  LLVMMatchType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   class AdvSIMD_SVE_CMLA_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -955,7 +955,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  LLVMMatchType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<4>]>;
+                [IntrNoMem, ImmArg<ArgIndex<4>>]>;
 
   class AdvSIMD_SVE_CMLA_LANE_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -964,7 +964,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  llvm_i32_ty,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>, ImmArg<4>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
   class AdvSIMD_SVE_DUP_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1011,7 +1011,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_SVE_PTRUE_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [llvm_i32_ty],
-                [IntrNoMem, ImmArg<0>]>;
+                [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
     : Intrinsic<[LLVMHalfElementsVectorType<0>],
@@ -1041,7 +1041,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_SVE_CNTB_Intrinsic
     : Intrinsic<[llvm_i64_ty],
                 [llvm_i32_ty],
-                [IntrNoMem, ImmArg<0>]>;
+                [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
   class AdvSIMD_SVE_CNTP_Intrinsic
     : Intrinsic<[llvm_i64_ty],
@@ -1061,7 +1061,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMSubdivide4VectorType<0>,
                  LLVMSubdivide4VectorType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   class AdvSIMD_SVE_PTEST_Intrinsic
     : Intrinsic<[llvm_i1_ty],
@@ -1086,7 +1086,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMSubdivide2VectorType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<1>]>;
+                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   class SVE2_2VectorArg_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1099,7 +1099,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
               [LLVMSubdivide2VectorType<0>,
                LLVMSubdivide2VectorType<0>,
                llvm_i32_ty],
-              [IntrNoMem, ImmArg<2>]>;
+              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class SVE2_2VectorArg_Wide_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1127,7 +1127,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMSubdivide2VectorType<0>,
                  LLVMSubdivide2VectorType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   class SVE2_1VectorArg_Narrowing_Intrinsic
     : Intrinsic<[LLVMSubdivide2VectorType<0>],
@@ -1154,13 +1154,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class SVE2_1VectorArg_Imm_Narrowing_Intrinsic
       : Intrinsic<[LLVMSubdivide2VectorType<0>],
                   [llvm_anyvector_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<1>]>;
+                  [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   class SVE2_2VectorArg_Imm_Narrowing_Intrinsic
       : Intrinsic<[LLVMSubdivide2VectorType<0>],
                   [LLVMSubdivide2VectorType<0>, llvm_anyvector_ty,
                    llvm_i32_ty],
-                  [IntrNoMem, ImmArg<2>]>;
+                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class SVE2_CONFLICT_DETECT_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1173,7 +1173,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMSubdivide2VectorType<0>,
                  LLVMSubdivide2VectorType<0>,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   class AdvSIMD_SVE_CDOT_LANE_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1182,7 +1182,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMSubdivide4VectorType<0>,
                  llvm_i32_ty,
                  llvm_i32_ty],
-                [IntrNoMem, ImmArg<3>, ImmArg<4>]>;
+                [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
@@ -1283,7 +1283,7 @@ class SVE_gather_prf_SV
                   llvm_anyvector_ty, // Offsets
                   llvm_i32_ty // Prfop
                 ],
-                [IntrInaccessibleMemOrArgMemOnly, NoCapture<1>, ImmArg<3>]>;
+                [IntrInaccessibleMemOrArgMemOnly, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
 
 class SVE_gather_prf_VS
     : Intrinsic<[],
@@ -1293,7 +1293,7 @@ class SVE_gather_prf_VS
                   llvm_i64_ty, // Scalar offset
                   llvm_i32_ty // Prfop
                 ],
-                [IntrInaccessibleMemOrArgMemOnly, ImmArg<3>]>;
+                [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<3>>]>;
 
 class SVE_MatMul_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
@@ -1329,7 +1329,7 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 
 def int_aarch64_sve_prf
   : Intrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i32_ty],
-                  [IntrArgMemOnly, ImmArg<2>]>;
+                  [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 
 // Scalar + 32-bit scaled offset vector, zero extend, packed and
 // unpacked.
