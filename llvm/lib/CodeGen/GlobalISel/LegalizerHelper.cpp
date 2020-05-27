@@ -1210,6 +1210,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_PTRMASK: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    narrowScalarSrc(MI, NarrowTy, 2);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 
@@ -2143,6 +2151,14 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_TRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_PTRMASK: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 

@@ -106,3 +106,33 @@ func @no_fold(%arg0: index) -> !shape.shape {
   %ret = shape.from_extents %e0, %arg0
   return %ret : !shape.shape
 }
+
+// -----
+// Canonicalization of shape.get_extent
+
+// Basic folding.
+// CHECK-LABEL: func @basic
+func @basic() -> !shape.size {
+  // CHECK: shape.const_size 2
+  %0 = shape.const_shape [0, 1, 2]
+  %1 = shape.get_extent %0, 2
+  return %1 : !shape.size
+}
+
+// Should not fold.
+// CHECK-LABEL: func @out_of_bounds
+func @out_of_bounds() -> !shape.size {
+  // CHECK: shape.const_shape
+  // CHECK: shape.get_extent
+  %0 = shape.const_shape [0, 1, 2]
+  %1 = shape.get_extent %0, 3
+  return %1 : !shape.size
+}
+
+// Should not fold.
+// CHECK-LABEL: func @not_const
+func @not_const(%arg0: !shape.shape) -> !shape.size {
+  // CHECK: shape.get_extent
+  %0 = shape.get_extent %arg0, 3
+  return %0 : !shape.size
+}

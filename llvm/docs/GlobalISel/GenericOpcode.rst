@@ -567,7 +567,11 @@ Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with
 G_STORE
 ^^^^^^^
 
-Generic store. Expects a MachineMemOperand in addition to explicit operands.
+Generic store. Expects a MachineMemOperand in addition to explicit
+operands. If the stored value size is greater than the memory size,
+the high bits are implicitly truncated. If this is a vector store, the
+high elements are discarded (i.e. this does not function as a per-lane
+vector, truncating store)
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^

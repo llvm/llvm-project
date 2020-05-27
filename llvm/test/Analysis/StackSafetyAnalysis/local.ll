@@ -177,6 +177,7 @@ define void @NonConstantOffset(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
+; FIXME: SCEV can't look through selects.
 ; CHECK-NEXT: x[4]: [0,4){{$}}
 ; CHECK-NOT: ]:
 entry:

@@ -627,4 +627,82 @@ body:             |
     %3:gpr(s64) = G_AND %6, %5
     $x0 = COPY %3(s64)
     RET_ReallyLR implicit $x0
+
+...
+---
+name:            more_than_one_use_select
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+    ; Both of these selects use the same compare.
+    ;
+    ; They should both be optimized in the same way, so the SUBS produced for
+    ; each CSEL should be the same.
+
+    ; CHECK-LABEL: name: more_than_one_use_select
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: %a:gpr64common = COPY $x0
+    ; CHECK: %b:gpr64 = COPY $x1
+    ; CHECK: %c:gpr64 = COPY $x2
+    ; CHECK: $xzr = SUBSXri %a, 0, 0, implicit-def $nzcv
+    ; CHECK: %select1:gpr64 = CSELXr %a, %b, 11, implicit $nzcv
+    ; CHECK: $xzr = SUBSXri %a, 0, 0, implicit-def $nzcv
+    ; CHECK: %select2:gpr64 = CSELXr %b, %c, 11, implicit $nzcv
+    ; CHECK: %add:gpr64 = ADDXrr %select1, %select2
+    ; CHECK: $x0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $x0
+    %a:gpr(s64) = COPY $x0
+    %b:gpr(s64) = COPY $x1
+    %c:gpr(s64) = COPY $x2
+    %cst:gpr(s64) = G_CONSTANT i64 -1
+    %cmp:gpr(s32) = G_ICMP intpred(sle), %a(s64), %cst
+    %trunc_cmp:gpr(s1) = G_TRUNC %cmp(s32)
+    %select1:gpr(s64) = G_SELECT %trunc_cmp(s1), %a, %b
+    %select2:gpr(s64) = G_SELECT %trunc_cmp(s1), %b, %c
+    %add:gpr(s64) = G_ADD %select1, %select2
+    $x0 = COPY %add(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            more_than_one_use_select_no_opt
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+    ; When we don't end up doing the optimization, we should not change the
+    ; predicate.
+    ;
+    ; In this case, the CSELXrs should both have predicate code 13.
+
+    ; CHECK-LABEL: name: more_than_one_use_select_no_opt
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: %a:gpr64 = COPY $x0
+    ; CHECK: %b:gpr64 = COPY $x1
+    ; CHECK: %c:gpr64 = COPY $x2
+    ; CHECK: %cst:gpr64 = MOVi64imm 922337203685477580
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %a, %cst, implicit-def $nzcv
+    ; CHECK: %select1:gpr64 = CSELXr %a, %b, 13, implicit $nzcv
+    ; CHECK: [[SUBSXrr1:%[0-9]+]]:gpr64 = SUBSXrr %a, %cst, implicit-def $nzcv
+    ; CHECK: %select2:gpr64 = CSELXr %b, %c, 13, implicit $nzcv
+    ; CHECK: %add:gpr64 = ADDXrr %select1, %select2
+    ; CHECK: $x0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $x0
+    %a:gpr(s64) = COPY $x0
+    %b:gpr(s64) = COPY $x1
+    %c:gpr(s64) = COPY $x2
+    %cst:gpr(s64) = G_CONSTANT i64 922337203685477580
+    %cmp:gpr(s32) = G_ICMP intpred(sle), %a(s64), %cst
+    %trunc_cmp:gpr(s1) = G_TRUNC %cmp(s32)
+    %select1:gpr(s64) = G_SELECT %trunc_cmp(s1), %a, %b
+    %select2:gpr(s64) = G_SELECT %trunc_cmp(s1), %b, %c
+    %add:gpr(s64) = G_ADD %select1, %select2
+    $x0 = COPY %add(s64)
+    RET_ReallyLR implicit $x0
 ...
