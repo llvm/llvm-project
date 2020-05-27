@@ -7,13 +7,12 @@
 define void @f(i8* %p, i32 %n, i32 %m) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    add w8, w2, #1 // =1
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add w9, w2, w8
-; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    strb wzr, [x0, w8, sxtw]
+; CHECK-NEXT:    subs w1, w1, #1 // =1
 ; CHECK-NEXT:    add w8, w8, #1 // =1
-; CHECK-NEXT:    strb wzr, [x0, w9, sxtw]
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
