@@ -132,6 +132,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasFPARMv8()) {
     addRegisterClass(MVT::f16, &AArch64::FPR16RegClass);
+    addRegisterClass(MVT::bf16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::f32, &AArch64::FPR32RegClass);
     addRegisterClass(MVT::f64, &AArch64::FPR64RegClass);
     addRegisterClass(MVT::f128, &AArch64::FPR128RegClass);
@@ -148,6 +149,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addDRTypeForNEON(MVT::v1i64);
     addDRTypeForNEON(MVT::v1f64);
     addDRTypeForNEON(MVT::v4f16);
+    addDRTypeForNEON(MVT::v4bf16);
 
     addQRTypeForNEON(MVT::v4f32);
     addQRTypeForNEON(MVT::v2f64);
@@ -156,6 +158,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addQRTypeForNEON(MVT::v4i32);
     addQRTypeForNEON(MVT::v2i64);
     addQRTypeForNEON(MVT::v8f16);
+    addQRTypeForNEON(MVT::v8bf16);
   }
 
   if (Subtarget->hasSVE()) {
@@ -174,6 +177,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv2f16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv4f16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8f16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv2bf16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv4bf16, &AArch64::ZPRRegClass);
+    addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
@@ -3577,6 +3583,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       else if (RegVT == MVT::i64)
         RC = &AArch64::GPR64RegClass;
       else if (RegVT == MVT::f16)
+        RC = &AArch64::FPR16RegClass;
+      else if (RegVT == MVT::bf16)
         RC = &AArch64::FPR16RegClass;
       else if (RegVT == MVT::f32)
         RC = &AArch64::FPR32RegClass;

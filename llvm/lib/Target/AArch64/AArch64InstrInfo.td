@@ -2529,7 +2529,7 @@ defm LDURB : LoadUnscaled<0b00, 1, 0b01, FPR8Op, "ldur",
                     [(set FPR8Op:$Rt,
                           (load (am_unscaled8 GPR64sp:$Rn, simm9:$offset)))]>;
 defm LDURH : LoadUnscaled<0b01, 1, 0b01, FPR16Op, "ldur",
-                    [(set FPR16Op:$Rt,
+                    [(set (f16 FPR16Op:$Rt),
                           (load (am_unscaled16 GPR64sp:$Rn, simm9:$offset)))]>;
 defm LDURS : LoadUnscaled<0b10, 1, 0b01, FPR32Op, "ldur",
                     [(set (f32 FPR32Op:$Rt),
