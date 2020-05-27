@@ -256,10 +256,10 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
     const MemIntrinsic *MI, const Use &U, Value *Base) {
   if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
     if (MTI->getRawSource() != U && MTI->getRawDest() != U)
-      return getRange(0, 1);
+      return ConstantRange::getEmpty(PointerSize);
   } else {
     if (MI->getRawDest() != U)
-      return getRange(0, 1);
+      return ConstantRange::getEmpty(PointerSize);
   }
   auto *CalculationTy = IntegerType::getIntNTy(SE.getContext(), PointerSize);
   if (!SE.isSCEVable(MI->getLength()->getType()))
