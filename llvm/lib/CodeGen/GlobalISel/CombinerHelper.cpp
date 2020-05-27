@@ -1534,8 +1534,28 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   if (!I2)
     return false;
 
-  // Check for physical registers on the instructions first to avoid cases like
-  // this:
+  // If we have an instruction which loads or stores, we can't guarantee that
+  // it is identical.
+  //
+  // For example, we may have
+  //
+  // %x1 = G_LOAD %addr (load N from @somewhere)
+  // ...
+  // call @foo
+  // ...
+  // %x2 = G_LOAD %addr (load N from @somewhere)
+  // ...
+  // %or = G_OR %x1, %x2
+  //
+  // It's possible that @foo will modify whatever lives at the address we're
+  // loading from. To be safe, let's just assume that all loads and stores
+  // are different (unless we have something which is guaranteed to not
+  // change.)
+  if (I1->mayLoadOrStore() && !I1->isDereferenceableInvariantLoad(nullptr))
+    return false;
+
+  // Check for physical registers on the instructions first to avoid cases
+  // like this:
   //
   // %a = COPY $physreg
   // ...
