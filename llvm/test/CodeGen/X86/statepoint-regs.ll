@@ -691,6 +691,23 @@ define i32 addrspace(1)*  @test_fpconst_deopt(i32 addrspace(1)* %in) gc "statepo
     %out = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 27, i32 27)
     ret i32 addrspace(1)* %out
 }
+
+; Same as test1, but using deopt bundle
+define void @test1b(i32 %a) gc "statepoint-example" {
+; CHECK-LABEL: test1b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    callq _bar ## 4-byte Folded Reload
+; CHECK-NEXT:  Ltmp19:
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a)]
+  ret void
+}
+
 ; CHECK-LABEL: __LLVM_StackMaps:
 ; CHECK: .long   Ltmp18-_test_fpconst_deopt
 ; CHECK-NEXT: .short	0
