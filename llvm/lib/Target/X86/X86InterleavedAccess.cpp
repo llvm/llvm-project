@@ -150,7 +150,7 @@ bool X86InterleavedAccessGroup::isSupported() const {
   // We support shuffle represents stride 4 for byte type with size of
   // WideInstSize.
   if (ShuffleElemSize == 64 && WideInstSize == 1024 && Factor == 4)
-     return true;
+    return true;
 
   if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) && Factor == 4 &&
       (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024 ||
@@ -211,13 +211,20 @@ void X86InterleavedAccessGroup::decompose(
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
   }
   // Generate N loads of T type.
+  assert(VecBaseTy->getPrimitiveSizeInBits().isByteSized() &&
+         "VecBaseTy's size must be a multiple of 8");
+  const Align FirstAlignment = LI->getAlign();
+  const Align SubsequentAlignment = commonAlignment(
+      FirstAlignment, VecBaseTy->getPrimitiveSizeInBits().getFixedSize() / 8);
+  Align Alignment = FirstAlignment;
   for (unsigned i = 0; i < NumLoads; i++) {
     // TODO: Support inbounds GEP.
     Value *NewBasePtr =
         Builder.CreateGEP(VecBaseTy, VecBasePtr, Builder.getInt32(i));
     Instruction *NewLoad =
-        Builder.CreateAlignedLoad(VecBaseTy, NewBasePtr, LI->getAlign());
+        Builder.CreateAlignedLoad(VecBaseTy, NewBasePtr, Alignment);
     DecomposedVectors.push_back(NewLoad);
+    Alignment = SubsequentAlignment;
   }
 }
 
@@ -255,7 +262,7 @@ static void genShuffleBland(MVT VT, ArrayRef<int> Mask,
                             SmallVectorImpl<int> &Out, int LowOffset,
                             int HighOffset) {
   assert(VT.getSizeInBits() >= 256 &&
-    "This function doesn't accept width smaller then 256");
+         "This function doesn't accept width smaller then 256");
   unsigned NumOfElm = VT.getVectorNumElements();
   for (unsigned i = 0; i < Mask.size(); i++)
     Out.push_back(Mask[i] + LowOffset);
@@ -289,7 +296,7 @@ static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
   if (VecElems == 16) {
     for (unsigned i = 0; i < Stride; i++)
       TransposedMatrix[i] = Builder.CreateShuffleVector(
-        Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
+          Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
     return;
   }
 
@@ -298,20 +305,19 @@ static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
 
   for (unsigned i = 0; i < (VecElems / 16) * Stride; i += 2) {
     genShuffleBland(VT, VPShuf, OptimizeShuf, (i / Stride) * 16,
-      (i + 1) / Stride * 16);
+                    (i + 1) / Stride * 16);
     Temp[i / 2] = Builder.CreateShuffleVector(
-      Vec[i % Stride], Vec[(i + 1) % Stride], OptimizeShuf);
+        Vec[i % Stride], Vec[(i + 1) % Stride], OptimizeShuf);
     OptimizeShuf.clear();
   }
 
   if (VecElems == 32) {
     std::copy(Temp, Temp + Stride, TransposedMatrix.begin());
     return;
-  }
-  else
+  } else
     for (unsigned i = 0; i < Stride; i++)
       TransposedMatrix[i] =
-      Builder.CreateShuffleVector(Temp[2 * i], Temp[2 * i + 1], Concat);
+          Builder.CreateShuffleVector(Temp[2 * i], Temp[2 * i + 1], Concat);
 }
 
 void X86InterleavedAccessGroup::interleave8bitStride4VF8(
@@ -682,7 +688,7 @@ void X86InterleavedAccessGroup::interleave8bitStride3(
 
   unsigned NumOfElm = VT.getVectorNumElements();
   group2Shuffle(VT, GroupSize, VPShuf);
-  reorderSubVector(VT, TransposedMatrix, Vec, VPShuf, NumOfElm,3, Builder);
+  reorderSubVector(VT, TransposedMatrix, Vec, VPShuf, NumOfElm, 3, Builder);
 }
 
 void X86InterleavedAccessGroup::transpose_4x4(
