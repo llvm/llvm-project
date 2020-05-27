@@ -362,7 +362,7 @@ define dso_local void @SizeCheck(i32 %sz) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: sz[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x1[128]: full-set{{$}}
+; CHECK-NEXT: x1[128]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x1 = alloca [128 x i8], align 16
