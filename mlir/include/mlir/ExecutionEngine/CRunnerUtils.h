@@ -106,6 +106,12 @@ using Vector3D = Vector<T, D1, D2, D3>;
 template <int D1, int D2, int D3, int D4, typename T>
 using Vector4D = Vector<T, D1, D2, D3, D4>;
 
+template <int N>
+void dropFront(int64_t arr[N], int64_t *res) {
+  for (unsigned i = 1; i < N; ++i)
+    *(res + i - 1) = arr[i];
+}
+
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for StridedMemRef type.
 //===----------------------------------------------------------------------===//
@@ -123,10 +129,6 @@ struct StridedMemRefType {
     res.basePtr = basePtr;
     res.data = data;
     res.offset = offset + idx * strides[0];
-    auto dropFront = [](const int64_t *arr, int64_t *res) {
-      for (unsigned i = 1; i < N; ++i)
-        res[i - 1] = arr[i];
-    };
     dropFront<N>(sizes, res.sizes);
     dropFront<N>(strides, res.strides);
     return res;
@@ -209,3 +211,4 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void print_comma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_newline();
 
 #endif // EXECUTIONENGINE_CRUNNERUTILS_H_
+
