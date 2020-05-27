@@ -784,8 +784,8 @@ static void buildCmpIOp(OpBuilder &build, OperationState &result,
 
 // Compute `lhs` `pred` `rhs`, where `pred` is one of the known integer
 // comparison predicates.
-static bool applyCmpPredicate(CmpIPredicate predicate, const APInt &lhs,
-                              const APInt &rhs) {
+bool mlir::applyCmpPredicate(CmpIPredicate predicate, const APInt &lhs,
+                             const APInt &rhs) {
   switch (predicate) {
   case CmpIPredicate::eq:
     return lhs.eq(rhs);
@@ -838,8 +838,8 @@ static void buildCmpFOp(OpBuilder &build, OperationState &result,
 
 /// Compute `lhs` `pred` `rhs`, where `pred` is one of the known floating point
 /// comparison predicates.
-static bool applyCmpPredicate(CmpFPredicate predicate, const APFloat &lhs,
-                              const APFloat &rhs) {
+bool mlir::applyCmpPredicate(CmpFPredicate predicate, const APFloat &lhs,
+                             const APFloat &rhs) {
   auto cmpResult = lhs.compare(rhs);
   switch (predicate) {
   case CmpFPredicate::AlwaysFalse:
