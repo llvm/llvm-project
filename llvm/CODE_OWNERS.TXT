@@ -52,8 +52,8 @@ N: Pete Couperus
 E: petecoup@synopsys.com
 D: ARC backend (lib/Target/ARC/*)
 
-N: Sanjoy Das
-E: sanjoy@playingwithpointers.com
+N: Philip Reames
+E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
 
 N: Marshall Clow
