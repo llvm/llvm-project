@@ -304,6 +304,12 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
 }
 
 void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
+  // A CIE with a zero length is a terminator entry in the .eh_frame sextion.
+  if (IsEH && Length == 0) {
+    OS << format("%08" PRIx64, Offset) << " ZERO terminator\n";
+    return;
+  }
+
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
      << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
