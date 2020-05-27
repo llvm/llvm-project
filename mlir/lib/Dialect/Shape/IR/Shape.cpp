@@ -245,6 +245,8 @@ ConstSizeOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
   return success();
 }
 
+OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
+
 //===----------------------------------------------------------------------===//
 // FromExtentsOp
 //===----------------------------------------------------------------------===//
@@ -265,6 +267,37 @@ OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
     extents.push_back(attr.cast<IntegerAttr>().getInt());
   Builder builder(getContext());
   return builder.getI64TensorAttr(extents);
+}
+
+//===----------------------------------------------------------------------===//
+// GetExtentOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetExtentOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
+                              ValueRange operands, DictionaryAttr attributes,
+                              RegionRange regions,
+                              SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(SizeType::get(context));
+  return success();
+}
+
+OpFoldResult GetExtentOp::fold(ArrayRef<Attribute> operands) {
+  auto elements = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (!elements)
+    return nullptr;
+  uint64_t dimToGet = dim().getLimitedValue();
+  // TODO: Constant fold this to some kind of constant error.
+  if (dimToGet >= (uint64_t)elements.getNumElements())
+    return nullptr;
+  // This is a little inconvenient because getValue returns an IntegerAttr
+  // that is not of IndexType, but the result here needs to be of
+  // IndexType.
+  // TODO: Make ConstShapeOp hold an tensor of index instead of i64.
+  Builder builder(getContext());
+  return builder.getIntegerAttr(
+      builder.getIndexType(),
+      elements.getValue<IntegerAttr>({dimToGet}).getInt());
 }
 
 //===----------------------------------------------------------------------===//
