@@ -16,11 +16,11 @@
 namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
-  return 0 == DebugStrings.size() + AbbrevDecls.size() + ARanges.size() +
-                  DebugRanges.size() + PubNames.Entries.size() +
-                  PubTypes.Entries.size() + GNUPubNames.Entries.size() +
-                  GNUPubTypes.Entries.size() + CompileUnits.size() +
-                  DebugLines.size();
+  return DebugStrings.empty() && AbbrevDecls.empty() && ARanges.empty() &&
+         DebugRanges.empty() && PubNames.Entries.empty() &&
+         PubTypes.Entries.empty() && GNUPubNames.Entries.empty() &&
+         GNUPubTypes.Entries.empty() && CompileUnits.empty() &&
+         DebugLines.empty();
 }
 
 namespace yaml {
