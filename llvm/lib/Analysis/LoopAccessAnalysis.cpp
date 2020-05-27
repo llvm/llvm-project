@@ -705,7 +705,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   // to place a runtime bound check.
   bool CanDoRT = true;
 
-  bool NeedRTCheck = false;
+  bool MayNeedRTCheck = false;
   if (!IsRTCheckAnalysisNeeded) return true;
 
   bool IsDepCheckNeeded = isDependencyCheckNeeded();
@@ -747,10 +747,10 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     // check them.  But there is no need to checks if there is only one
     // dependence set for this alias set.
     //
-    // Note that this function computes CanDoRT and NeedRTCheck independently.
-    // For example CanDoRT=false, NeedRTCheck=false means that we have a pointer
-    // for which we couldn't find the bounds but we don't actually need to emit
-    // any checks so it does not matter.
+    // Note that this function computes CanDoRT and MayNeedRTCheck
+    // independently. For example CanDoRT=false, MayNeedRTCheck=false means that
+    // we have a pointer for which we couldn't find the bounds but we don't
+    // actually need to emit any checks so it does not matter.
     bool NeedsAliasSetRTCheck = false;
     if (!(IsDepCheckNeeded && CanDoAliasSetRT && RunningDepId == 2))
       NeedsAliasSetRTCheck = (NumWritePtrChecks >= 2 ||
@@ -773,7 +773,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
 
     CanDoRT &= CanDoAliasSetRT;
-    NeedRTCheck |= NeedsAliasSetRTCheck;
+    MayNeedRTCheck |= NeedsAliasSetRTCheck;
     ++ASId;
   }
 
@@ -807,15 +807,18 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
   }
 
-  if (NeedRTCheck && CanDoRT)
+  if (MayNeedRTCheck && CanDoRT)
     RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
 
-  RtCheck.Need = NeedRTCheck;
+  // If we can do run-time checks, but there are no checks, no runtime checks
+  // are needed. This can happen when all pointers point to the same underlying
+  // object for example.
+  RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
 
-  bool CanDoRTIfNeeded = !NeedRTCheck || CanDoRT;
+  bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
   if (!CanDoRTIfNeeded)
     RtCheck.reset();
   return CanDoRTIfNeeded;
