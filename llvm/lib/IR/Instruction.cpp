@@ -198,6 +198,11 @@ void Instruction::setHasAllowReciprocal(bool B) {
   cast<FPMathOperator>(this)->setHasAllowReciprocal(B);
 }
 
+void Instruction::setHasAllowContract(bool B) {
+  assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
+  cast<FPMathOperator>(this)->setHasAllowContract(B);
+}
+
 void Instruction::setHasApproxFunc(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasApproxFunc(B);
