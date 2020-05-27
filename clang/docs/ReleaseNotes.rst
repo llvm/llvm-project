@@ -259,6 +259,36 @@ AST Matchers
   uses ``IgnoreUnlessSpelledInSource`` by default.  The mode can be changed
   using ``set traversal AsIs`` in the ``clang-query`` environment.
 
+  As this change requires downstream tools which use AST Matchers to adapt
+  to the new default, a porting guide may be useful for downstream tools
+  needing to adapt.
+
+  Note that although there are many steps below, only the first is
+  non-optional. The steps are intentionally extemely granular to facilitate
+  understanding of the guide itself. It is reasonable to do some of the
+  steps at the same time if you understand the guide:
+
+  1. Use ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
+     to restore the previous behavior for your tool.  All further steps in
+     this porting guide are optional.
+  2. Wrap your existing matcher expressions with ``traverse(TK_AsIs, ...)``
+     before passing them to ``ASTMatchFinder::addMatcher``.
+  3. Remove ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
+     from your tool so that the default behavior of your tool matches the
+     default behavior of upstream clang. This is made possible by wrapping
+     your matchers in ``traverse(TK_AsIs, ...)`` from step (2).
+  4. Audit your matcher expressions and remove ``traverse(TK_AsIs, ...)``
+     where not needed.
+  5. Audit your matcher expressions and remove calls to ``ignoring*()``
+     matchers where not needed.
+  6. Audit your matcher expressions and consider whether the matcher is
+     better using the ``TK_AsIs`` mode or if it can be better expressed in
+     the default mode. For example, some matchers explicitly match
+     ``has(implicitCastExpr(has(...)))``. Such matchers are sometimes
+     written by author who were unaware of the existence of the
+     ``ignoring*()`` matchers.
+
+
 clang-format
 ------------
 
