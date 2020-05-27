@@ -526,6 +526,12 @@ public:
   void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
                           llvm::FunctionCallee dtor,
                           llvm::Constant *addr) override;
+
+  bool useSinitAndSterm() const override { return true; }
+
+private:
+  void emitCXXStermFinalizer(const VarDecl &D, llvm::Function *dtorStub,
+                             llvm::Constant *addr);
 };
 }
 
@@ -2525,7 +2531,7 @@ void CodeGenModule::registerGlobalDtorsWithAtExit() {
     std::string GlobalInitFnName =
         std::string("__GLOBAL_init_") + llvm::to_string(Priority);
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
-    llvm::Function *GlobalInitFn = CreateGlobalInitOrDestructFunction(
+    llvm::Function *GlobalInitFn = CreateGlobalInitOrCleanUpFunction(
         FTy, GlobalInitFnName, getTypes().arrangeNullaryFunction(),
         SourceLocation());
     ASTContext &Ctx = getContext();
@@ -2679,9 +2685,9 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
     const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-    InitFunc = CGM.CreateGlobalInitOrDestructFunction(FTy, "__tls_init", FI,
-                                                      SourceLocation(),
-                                                      /*TLS=*/true);
+    InitFunc = CGM.CreateGlobalInitOrCleanUpFunction(FTy, "__tls_init", FI,
+                                                     SourceLocation(),
+                                                     /*TLS=*/true);
     llvm::GlobalVariable *Guard = new llvm::GlobalVariable(
         CGM.getModule(), CGM.Int8Ty, /*isConstant=*/false,
         llvm::GlobalVariable::InternalLinkage,
@@ -4516,6 +4522,67 @@ void WebAssemblyCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
                                   llvm::FunctionCallee dtor,
                                   llvm::Constant *addr) {
-  llvm::report_fatal_error("Static initialization has not been implemented on"
-                           " XL ABI yet.");
+  if (D.getTLSKind() != VarDecl::TLS_None)
+    llvm::report_fatal_error("thread local storage not yet implemented on AIX");
+
+  // Create __dtor function for the var decl.
+  llvm::Function *dtorStub = CGF.createAtExitStub(D, dtor, addr);
+
+  if (CGM.getCodeGenOpts().CXAAtExit)
+    llvm::report_fatal_error("using __cxa_atexit unsupported on AIX");
+  // Register above __dtor with atexit().
+  CGF.registerGlobalDtorWithAtExit(dtorStub);
+
+  // Emit __finalize function to unregister __dtor and (as appropriate) call
+  // __dtor.
+  emitCXXStermFinalizer(D, dtorStub, addr);
+}
+
+void XLCXXABI::emitCXXStermFinalizer(const VarDecl &D, llvm::Function *dtorStub,
+                                     llvm::Constant *addr) {
+  llvm::FunctionType *FTy = llvm::FunctionType::get(CGM.VoidTy, false);
+  SmallString<256> FnName;
+  {
+    llvm::raw_svector_ostream Out(FnName);
+    getMangleContext().mangleDynamicStermFinalizer(&D, Out);
+  }
+
+  // Create the finalization action associated with a variable.
+  const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+  llvm::Function *StermFinalizer = CGM.CreateGlobalInitOrCleanUpFunction(
+      FTy, FnName.str(), FI, D.getLocation());
+
+  CodeGenFunction CGF(CGM);
+
+  CGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, StermFinalizer, FI,
+                    FunctionArgList());
+
+  // The unatexit subroutine unregisters __dtor functions that were previously
+  // registered by the atexit subroutine. If the referenced function is found,
+  // the unatexit returns a value of 0, meaning that the cleanup is still
+  // pending (and we should call the __dtor function).
+  llvm::Value *V = CGF.unregisterGlobalDtorWithUnAtExit(dtorStub);
+
+  llvm::Value *NeedsDestruct = CGF.Builder.CreateIsNull(V, "needs_destruct");
+
+  llvm::BasicBlock *DestructCallBlock = CGF.createBasicBlock("destruct.call");
+  llvm::BasicBlock *EndBlock = CGF.createBasicBlock("destruct.end");
+
+  // Check if unatexit returns a value of 0. If it does, jump to
+  // DestructCallBlock, otherwise jump to EndBlock directly.
+  CGF.Builder.CreateCondBr(NeedsDestruct, DestructCallBlock, EndBlock);
+
+  CGF.EmitBlock(DestructCallBlock);
+
+  // Emit the call to dtorStub.
+  llvm::CallInst *CI = CGF.Builder.CreateCall(dtorStub);
+
+  // Make sure the call and the callee agree on calling convention.
+  CI->setCallingConv(dtorStub->getCallingConv());
+
+  CGF.EmitBlock(EndBlock);
+
+  CGF.FinishFunction();
+
+  CGM.AddCXXStermFinalizerEntry(StermFinalizer);
 }

@@ -160,6 +160,7 @@ public:
   void mangleDynamicInitializer(const VarDecl *D, raw_ostream &Out) override;
   void mangleDynamicAtExitDestructor(const VarDecl *D,
                                      raw_ostream &Out) override;
+  void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &Out) override;
   void mangleSEHFilterExpression(const NamedDecl *EnclosingDecl,
                                  raw_ostream &Out) override;
   void mangleSEHFinallyBlock(const NamedDecl *EnclosingDecl,
@@ -5224,6 +5225,18 @@ void ItaniumMangleContextImpl::mangleDynamicAtExitDestructor(const VarDecl *D,
   // Prefix the mangling of D with __dtor_.
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "__dtor_";
+  if (shouldMangleDeclName(D))
+    Mangler.mangle(D);
+  else
+    Mangler.getStream() << D->getName();
+}
+
+void ItaniumMangleContextImpl::mangleDynamicStermFinalizer(const VarDecl *D,
+                                                           raw_ostream &Out) {
+  // Clang generates these internal-linkage functions as part of its
+  // implementation of the XL ABI.
+  CXXNameMangler Mangler(*this, Out);
+  Mangler.getStream() << "__finalize_";
   if (shouldMangleDeclName(D))
     Mangler.mangle(D);
   else
