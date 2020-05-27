@@ -1,9 +1,10 @@
-// RxUN: %clang_cc1 -verify -fopenmp -std=c++11 -ast-print %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -std=c++11 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -std=c++11 -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -16,18 +17,19 @@ struct SA {
   int i, j;
   int *k = &j;
   int *&z = k;
+  int &y = i;
   void func(int arg) {
-#pragma omp target data map(tofrom: i) use_device_ptr(k)
+#pragma omp target data map(tofrom: i) use_device_ptr(k) use_device_addr(i, j)
     {}
-#pragma omp target data map(tofrom: i) use_device_ptr(z)
+#pragma omp target data map(tofrom: i) use_device_ptr(z) use_device_addr(k, y)
     {}
   return;
  }
 };
 // CHECK: struct SA
 // CHECK: void func(
-// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->k){{$}}
-// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->z)
+// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->k) use_device_addr(this->i,this->j){{$}}
+// CHECK: #pragma omp target data map(tofrom: this->i) use_device_ptr(this->z) use_device_addr(this->k,this->y)
 struct SB {
   unsigned A;
   unsigned B;
@@ -143,13 +145,13 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: int &j = i;
 // CHECK-NEXT: int *k = &j;
 // CHECK-NEXT: int *&z = k;
-#pragma omp target data map(tofrom: i) use_device_ptr(k)
-// CHECK-NEXT: #pragma omp target data map(tofrom: i) use_device_ptr(k)
+#pragma omp target data map(tofrom: i) use_device_ptr(k) use_device_addr(i, j)
+// CHECK-NEXT: #pragma omp target data map(tofrom: i) use_device_ptr(k) use_device_addr(i,j)
   {}
 // CHECK-NEXT: {
 // CHECK-NEXT: }
-#pragma omp target data map(tofrom: i) use_device_ptr(z)
-// CHECK-NEXT: #pragma omp target data map(tofrom: i) use_device_ptr(z)
+#pragma omp target data map(tofrom: i) use_device_ptr(z) use_device_addr(i, j, k[:i])
+// CHECK-NEXT: #pragma omp target data map(tofrom: i) use_device_ptr(z) use_device_addr(i,j,k[:i])
   {}
   return tmain<int>(argc) + (*tmain<int*>(&argc));
 }
