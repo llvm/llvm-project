@@ -226,10 +226,10 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
 
   AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
-  ConstantRange Offset = SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
-  if (Offset.isEmptySet())
+  ConstantRange Offset = SE.getSignedRange(Expr);
+  if (Offset.isEmptySet() || Offset.isFullSet() || Offset.isSignWrappedSet())
     return UnknownRange;
-  return Offset;
+  return Offset.sextOrTrunc(PointerSize);
 }
 
 ConstantRange
