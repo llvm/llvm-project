@@ -149,7 +149,6 @@ static void eventStreamCallback(ConstFSEventStreamRef Stream,
     // default
     Events.emplace_back(DirectoryWatcher::Event{
         DirectoryWatcher::Event::EventKind::WatcherGotInvalidated, ""});
-    llvm_unreachable("Unknown FSEvent type.");
   }
 
   if (!Events.empty()) {
