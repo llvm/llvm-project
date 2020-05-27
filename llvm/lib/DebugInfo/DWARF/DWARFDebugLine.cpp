@@ -1043,12 +1043,22 @@ Error DWARFDebugLine::LineTable::parse(
         // as a multiple of LEB128 operands for each opcode.
         {
           assert(Opcode - 1U < Prologue.StandardOpcodeLengths.size());
+          if (Verbose)
+            *OS << "Unrecognized standard opcode";
           uint8_t OpcodeLength = Prologue.StandardOpcodeLengths[Opcode - 1];
-          for (uint8_t I = 0; I < OpcodeLength; ++I) {
-            uint64_t Value = TableData.getULEB128(OffsetPtr);
+          if (OpcodeLength != 0) {
             if (Verbose)
-              *OS << format("Skipping ULEB128 value: 0x%16.16" PRIx64 ")\n",
-                            Value);
+              *OS << format(" (operands: ");
+            for (uint8_t I = 0; I < OpcodeLength; ++I) {
+              uint64_t Value = TableData.getULEB128(OffsetPtr);
+              if (Verbose) {
+                if (I > 0)
+                  *OS << ", ";
+                *OS << format("0x%16.16" PRIx64, Value);
+              }
+            }
+            if (Verbose)
+              *OS << format(")");
           }
         }
         break;
