@@ -207,11 +207,10 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 /// anything. It's used to track API boundaries when we cannot record for
 /// technical reasons.
 #define LLDB_RECORD_DUMMY(Result, Class, Method, Signature, ...)               \
-  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION,                \
-                                          stringify_args(__VA_ARGS__));
+  lldb_private::repro::Recorder _recorder;
 
 #define LLDB_RECORD_DUMMY_NO_ARGS(Result, Class, Method)                       \
-  lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION);
+  lldb_private::repro::Recorder _recorder;
 
 namespace lldb_private {
 namespace repro {
@@ -727,7 +726,8 @@ struct EmptyArg {};
 /// this class is also used for logging.
 class Recorder {
 public:
-  Recorder(llvm::StringRef pretty_func = {}, std::string &&pretty_args = {});
+  Recorder();
+  Recorder(llvm::StringRef pretty_func, std::string &&pretty_args = {});
   ~Recorder();
 
   /// Records a single function call.
