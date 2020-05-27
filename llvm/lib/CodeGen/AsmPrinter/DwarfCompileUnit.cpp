@@ -1285,15 +1285,12 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   const DIExpression *DIExpr = DV.getSingleExpression();
   DwarfExpr.addFragmentOffset(DIExpr);
-  if (Location.isIndirect())
-    DwarfExpr.setMemoryLocationKind();
+  DwarfExpr.setLocation(Location, DIExpr);
 
   DIExpressionCursor Cursor(DIExpr);
 
-  if (DIExpr->isEntryValue()) {
-    DwarfExpr.setEntryValueFlag();
+  if (DIExpr->isEntryValue())
     DwarfExpr.beginEntryValueExpression(Cursor);
-  }
 
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))

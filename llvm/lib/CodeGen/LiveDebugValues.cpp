@@ -1613,10 +1613,6 @@ bool LiveDebugValues::isEntryValueCandidate(
   if (MI.getDebugLoc()->getInlinedAt())
     return false;
 
-  // Do not consider indirect debug values (TODO: explain why).
-  if (MI.isIndirectDebugValue())
-    return false;
-
   // Only consider parameters that are described using registers. Parameters
   // that are passed on the stack are not yet supported, so ignore debug
   // values that are described by the frame or stack pointer.
@@ -1631,7 +1627,7 @@ bool LiveDebugValues::isEntryValueCandidate(
     return false;
 
   // TODO: Add support for parameters that have a pre-existing debug expressions
-  // (e.g. fragments, or indirect parameters using DW_OP_deref).
+  // (e.g. fragments).
   if (MI.getDebugExpression()->getNumElements() > 0)
     return false;
 
