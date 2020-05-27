@@ -23,13 +23,11 @@
   ;
   ; ModuleID = 'tx.ll'
   source_filename = "t.c"
-  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-  target triple = "x86_64-unknown-linux-gnu"
 
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
   ; Function Attrs: noreturn nounwind uwtable
-  define void @Process(i32* nocapture readonly %p) local_unnamed_addr #0 !dbg !9 {
+  define void @Process(i32* nocapture readonly %p) local_unnamed_addr  !dbg !9 {
   entry:
     tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !16, metadata !17), !dbg !18
     br label %while.body, !dbg !19
@@ -45,11 +43,7 @@
   }
 
   ; Function Attrs: nounwind readnone
-  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
-
-  attributes #0 = { noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #1 = { nounwind readnone }
-  attributes #2 = { nounwind }
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
   !llvm.dbg.cu = !{!1}
   !llvm.module.flags = !{!6, !7}
@@ -80,7 +74,7 @@
   !22 = !{!23, !23, i64 0}
   !23 = !{!"int", !24, i64 0}
   !24 = !{!"omnipotent char", !25, i64 0}
-  !25 = !{!"Simple C/C++ TBAA"}
+  !25 = !{!"C++"}
   !26 = !DILocation(line: 5, column: 7, scope: !9)
   !27 = !DILocation(line: 4, column: 3, scope: !28)
   !28 = !DILexicalBlockFile(scope: !9, file: !2, discriminator: 1)
@@ -89,11 +83,6 @@
 ...
 ---
 name:            Process
-alignment:       16
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
@@ -101,22 +90,6 @@ registers:
   - { id: 2, class: gr64 }
   - { id: 3, class: gr32 }
   - { id: 4, class: gr64 }
-liveins:
-  - { reg: '$rdi', virtual-reg: '%2' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.entry:
     successors: %bb.1.while.body(0x80000000)
