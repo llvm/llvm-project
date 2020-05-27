@@ -81,6 +81,16 @@ define float @uitofp_round(i32 %arg) {
   ret float %round
 }
 
+define float @uitofp_roundeven(i32 %arg) {
+; CHECK-LABEL: @uitofp_roundeven(
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG:%.*]] to float
+; CHECK-NEXT:    ret float [[CVT]]
+;
+  %cvt = uitofp i32 %arg to float
+  %round = call float @llvm.roundeven.f32(float %cvt)
+  ret float %round
+}
+
 define float @sitofp_nearbyint(i32 %arg) {
 ; CHECK-LABEL: @sitofp_nearbyint(
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG:%.*]] to float
@@ -125,6 +135,7 @@ declare float @llvm.floor.f32(float) #0
 declare float @llvm.trunc.f32(float) #0
 declare float @llvm.ceil.f32(float) #0
 declare float @llvm.round.f32(float) #0
+declare float @llvm.roundeven.f32(float) #0
 declare float @llvm.nearbyint.f32(float) #0
 declare float @llvm.rint.f32(float) #0
 

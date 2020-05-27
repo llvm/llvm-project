@@ -1328,6 +1328,9 @@ public:
     case Intrinsic::round:
       ISDs.push_back(ISD::FROUND);
       break;
+    case Intrinsic::roundeven:
+      ISDs.push_back(ISD::FROUNDEVEN);
+      break;
     case Intrinsic::pow:
       ISDs.push_back(ISD::FPOW);
       break;
