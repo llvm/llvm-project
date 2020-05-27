@@ -826,18 +826,18 @@ public:
       return TTI::TCC_Expensive;
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
+    case Instruction::SIToFP:
+    case Instruction::UIToFP:
+    case Instruction::FPToUI:
+    case Instruction::FPToSI:
     case Instruction::Trunc:
+    case Instruction::FPTrunc:
     case Instruction::BitCast:
-      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) ==
-          TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
     case Instruction::FPExt:
     case Instruction::SExt:
     case Instruction::ZExt:
-      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
+    case Instruction::AddrSpaceCast:
+      return TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I);
     }
     // By default, just classify everything as 'basic'.
     return TTI::TCC_Basic;
