@@ -223,15 +223,6 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
 
 OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shape(); }
 
-LogicalResult
-ConstShapeOp::inferReturnTypes(MLIRContext *context,
-                               Optional<Location> location, ValueRange operands,
-                               DictionaryAttr attributes, RegionRange regions,
-                               SmallVectorImpl<Type> &inferredReturnTypes) {
-  inferredReturnTypes.push_back(ShapeType::get(context));
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // ConstSizeOp
 //===----------------------------------------------------------------------===//

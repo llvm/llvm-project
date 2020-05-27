@@ -91,10 +91,7 @@ def Shape_BroadcastOp : Shape_Op<"broadcast",
   let hasFolder = 1;
 }
 
-def Shape_ConstShapeOp : Shape_Op<"const_shape",
-    [ConstantLike,
-     NoSideEffect,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let summary = "Creates a constant of !shape.shape type.";
   let description = [{
     Creates a !shape.shape with rank given by the length of `shape` and with

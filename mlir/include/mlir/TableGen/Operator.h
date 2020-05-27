@@ -23,6 +23,7 @@
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 
@@ -227,9 +228,44 @@ public:
   // debugging purposes.
   void print(llvm::raw_ostream &os) const;
 
+  // Return whether all the result types are known.
+  bool allResultTypesKnown() const { return allResultsHaveKnownTypes; };
+
+  // Pair representing either a index to an argument or a type constraint. Only
+  // one of these entries should have the non-default value.
+  struct ArgOrType {
+    explicit ArgOrType(int index) : index(index), constraint(None) {}
+    explicit ArgOrType(TypeConstraint constraint)
+        : index(None), constraint(constraint) {}
+    bool isArg() const {
+      assert(constraint.hasValue() ^ index.hasValue());
+      return index.hasValue();
+    }
+    bool isType() const {
+      assert(constraint.hasValue() ^ index.hasValue());
+      return constraint.hasValue();
+    }
+
+    int getArg() const { return *index; }
+    TypeConstraint getType() const { return *constraint; }
+
+  private:
+    Optional<int> index;
+    Optional<TypeConstraint> constraint;
+  };
+
+  // Return all arguments or type constraints with same type as result[index].
+  // Requires: all result types are known.
+  ArrayRef<ArgOrType> getSameTypeAsResult(int index) const;
+
 private:
   // Populates the vectors containing operands, attributes, results and traits.
   void populateOpStructure();
+
+  // Populates type inference info (mostly equality) with input a mapping from
+  // names to indices for arguments and results.
+  void populateTypeInferenceInfo(
+      const llvm::StringMap<int> &argumentsAndResultsIndex);
 
   // The dialect of this op.
   Dialect dialect;
@@ -261,12 +297,18 @@ private:
   // The regions of this op.
   SmallVector<NamedRegion, 1> regions;
 
+  // The argument with the same type as the result.
+  SmallVector<SmallVector<ArgOrType, 2>, 4> resultTypeMapping;
+
   // The number of native attributes stored in the leading positions of
   // `attributes`.
   int numNativeAttributes;
 
   // The TableGen definition of this op.
   const llvm::Record &def;
+
+  // Whether the type of all results are known.
+  bool allResultsHaveKnownTypes;
 };
 
 } // end namespace tblgen
