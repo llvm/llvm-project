@@ -412,3 +412,15 @@ entry:
   %val = load %zerosize_type, %zerosize_type* %p, align 4
   ret void
 }
+
+define void @OperandBundle() {
+; CHECK-LABEL: @OperandBundle dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   a[4]: full-set
+; CHECK-NOT: ]:
+entry:
+  %a = alloca i32, align 4
+  call void @LeakAddress() ["unknown"(i32* %a)]
+  ret void
+}
