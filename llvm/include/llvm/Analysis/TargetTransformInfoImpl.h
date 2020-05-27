@@ -776,6 +776,14 @@ public:
                   TTI::TargetCostKind CostKind) {
     auto *TargetTTI = static_cast<T *>(this);
 
+    // FIXME: We shouldn't have to special-case intrinsics here.
+    if (CostKind == TTI::TCK_RecipThroughput) {
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+        IntrinsicCostAttributes CostAttrs(*II);
+        return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+      }
+    }
+
     // FIXME: Unlikely to be true for anything but CodeSize.
     if (const auto *CB = dyn_cast<CallBase>(U)) {
       const Function *F = CB->getCalledFunction();
