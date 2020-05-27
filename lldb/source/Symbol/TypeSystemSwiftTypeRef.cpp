@@ -772,13 +772,14 @@ bool Whitelisted(SwiftASTContext &swift_ast_context) {
   if (!obj_file)
     return false;
   auto &file_spec = obj_file->GetFileSpec();
-  llvm::StringRef path = file_spec.GetPath(false);
-  return path.contains("lang/swift/clangimporter/include_conflict/"
-                       "TestSwiftIncludeConflict") ||
-         path.contains("lang/swift/clangimporter/headermap_conflict/"
-                       "TestSwiftHeadermapConflict") ||
-         path.contains("lang/swift/clangimporter/extra_clang_flags/"
-                       "TestSwiftExtraClangFlags");
+  std::string path = file_spec.GetPath(false);
+  llvm::StringRef p(path);
+  return p.contains("lang/swift/clangimporter/include_conflict/"
+                    "TestSwiftIncludeConflict") ||
+         p.contains("lang/swift/clangimporter/headermap_conflict/"
+                    "TestSwiftHeadermapConflict") ||
+         p.contains("lang/swift/clangimporter/extra_clang_flags/"
+                    "TestSwiftExtraClangFlags");
 }
 }
 #endif
