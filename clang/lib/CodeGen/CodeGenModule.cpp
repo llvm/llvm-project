@@ -4136,17 +4136,24 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
 
-  // On Darwin, if the normal linkage of a C++ thread_local variable is
-  // LinkOnce or Weak, we keep the normal linkage to prevent multiple
-  // copies within a linkage unit; otherwise, the backing variable has
-  // internal linkage and all accesses should just be calls to the
-  // Itanium-specified entry point, which has the normal linkage of the
-  // variable. This is to preserve the ability to change the implementation
-  // behind the scenes.
-  if (!D->isStaticLocal() && D->getTLSKind() == VarDecl::TLS_Dynamic &&
+  // On Darwin, unlike other Itanium C++ ABI platforms, the thread-wrapper
+  // function is only defined alongside the variable, not also alongside
+  // callers. Normally, all accesses to a thread_local go through the
+  // thread-wrapper in order to ensure initialization has occurred, underlying
+  // variable will never be used other than the thread-wrapper, so it can be
+  // converted to internal linkage.
+  //
+  // However, if the variable has the 'constinit' attribute, it _can_ be
+  // referenced directly, without calling the thread-wrapper, so the linkage
+  // must not be changed.
+  //
+  // Additionally, if the variable isn't plain external linkage, e.g. if it's
+  // weak or linkonce, the de-duplication semantics are important to preserve,
+  // so we don't change the linkage.
+  if (D->getTLSKind() == VarDecl::TLS_Dynamic &&
+      Linkage == llvm::GlobalValue::ExternalLinkage &&
       Context.getTargetInfo().getTriple().isOSDarwin() &&
-      !llvm::GlobalVariable::isLinkOnceLinkage(Linkage) &&
-      !llvm::GlobalVariable::isWeakLinkage(Linkage))
+      !D->hasAttr<ConstInitAttr>())
     Linkage = llvm::GlobalValue::InternalLinkage;
 
   GV->setLinkage(Linkage);
