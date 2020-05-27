@@ -42,7 +42,6 @@ class DIExpression;
 class DILocalVariable;
 class MachineBasicBlock;
 class MachineFunction;
-class MachineMemOperand;
 class MachineRegisterInfo;
 class ModuleSlotTracker;
 class raw_ostream;
