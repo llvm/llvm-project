@@ -27,8 +27,10 @@ enum NodeType : unsigned {
   Hi,
   Lo, // Hi/Lo operations, typically on a global address.
 
-  GETFUNPLT,  // load function address through %plt insturction
-  GETTLSADDR, // load address for TLS access
+  GETFUNPLT,   // load function address through %plt insturction
+  GETTLSADDR,  // load address for TLS access
+  GETSTACKTOP, // retrieve address of stack top (first address of
+               // locals and temporaries)
 
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.
@@ -81,6 +83,7 @@ public:
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
 
   SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
