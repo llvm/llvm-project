@@ -201,26 +201,26 @@ class CommandLineExprCompletionTestCase(TestBase):
                                           '// Break here', self.main_source_spec)
 
         self.check_completion_with_desc("expr ", [
-            # VarDecls have their type as description.
-            ["some_expr", "Expr &"],
             # builtin types have no description.
             ["int", ""],
-            ["float", ""]
-        ])
+            ["float", ""],
+            # VarDecls have their type as description.
+            ["some_expr", "Expr &"],
+        ], enforce_order = True)
         self.check_completion_with_desc("expr some_expr.", [
             # Functions have their signature as description.
-            ["some_expr.Self()", "Expr &Self()"],
-            ["some_expr.operator=(", "inline Expr &operator=(const Expr &)"],
-            ["some_expr.FooNumbersBar1()", "int FooNumbersBar1()"],
-            ["some_expr.StaticMemberMethodBar()", "static int StaticMemberMethodBar()"],
-            ["some_expr.FooWithArgsBar(", "int FooWithArgsBar(int)"],
-            ["some_expr.FooNoArgsBar()", "int FooNoArgsBar()"],
-            ["some_expr.FooUnderscoreBar_()", "int FooUnderscoreBar_()"],
-            ["some_expr.FooWithMultipleArgsBar(", "int FooWithMultipleArgsBar(int, int)"],
             ["some_expr.~Expr()", "inline ~Expr()"],
+            ["some_expr.operator=(", "inline Expr &operator=(const Expr &)"],
             # FieldDecls have their type as description.
             ["some_expr.MemberVariableBar", "int"],
-        ])
+            ["some_expr.StaticMemberMethodBar()", "static int StaticMemberMethodBar()"],
+            ["some_expr.Self()", "Expr &Self()"],
+            ["some_expr.FooNoArgsBar()", "int FooNoArgsBar()"],
+            ["some_expr.FooWithArgsBar(", "int FooWithArgsBar(int)"],
+            ["some_expr.FooNumbersBar1()", "int FooNumbersBar1()"],
+            ["some_expr.FooUnderscoreBar_()", "int FooUnderscoreBar_()"],
+            ["some_expr.FooWithMultipleArgsBar(", "int FooWithMultipleArgsBar(int, int)"],
+        ], enforce_order = True)
 
     def assume_no_completions(self, str_input, cursor_pos = None):
         interp = self.dbg.GetCommandInterpreter()
