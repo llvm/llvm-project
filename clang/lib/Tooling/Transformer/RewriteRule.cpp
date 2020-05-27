@@ -116,10 +116,13 @@ static bool hasValidKind(const DynTypedMatcher &M) {
 #endif
 
 // Binds each rule's matcher to a unique (and deterministic) tag based on
-// `TagBase` and the id paired with the case.
+// `TagBase` and the id paired with the case. All of the returned matchers have
+// their traversal kind explicitly set, either based on a pre-set kind or to the
+// provided `DefaultTraversalKind`.
 static std::vector<DynTypedMatcher> taggedMatchers(
     StringRef TagBase,
-    const SmallVectorImpl<std::pair<size_t, RewriteRule::Case>> &Cases) {
+    const SmallVectorImpl<std::pair<size_t, RewriteRule::Case>> &Cases,
+    ast_type_traits::TraversalKind DefaultTraversalKind) {
   std::vector<DynTypedMatcher> Matchers;
   Matchers.reserve(Cases.size());
   for (const auto &Case : Cases) {
@@ -127,8 +130,10 @@ static std::vector<DynTypedMatcher> taggedMatchers(
     // HACK: Many matchers are not bindable, so ensure that tryBind will work.
     DynTypedMatcher BoundMatcher(Case.second.Matcher);
     BoundMatcher.setAllowBind(true);
-    auto M = BoundMatcher.tryBind(Tag);
-    Matchers.push_back(*std::move(M));
+    auto M = *BoundMatcher.tryBind(Tag);
+    Matchers.push_back(!M.getTraversalKind()
+                           ? M.withTraversalKind(DefaultTraversalKind)
+                           : std::move(M));
   }
   return Matchers;
 }
@@ -158,14 +163,21 @@ transformer::detail::buildMatchers(const RewriteRule &Rule) {
     Buckets[Cases[I].Matcher.getSupportedKind()].emplace_back(I, Cases[I]);
   }
 
+  // Each anyOf explicitly controls the traversal kind. The anyOf itself is set
+  // to `TK_AsIs` to ensure no nodes are skipped, thereby deferring to the kind
+  // of the branches. Then, each branch is either left as is, if the kind is
+  // already set, or explicitly set to `TK_IgnoreUnlessSpelledInSource`. We
+  // choose this setting, because we think it is the one most friendly to
+  // beginners, who are (largely) the target audience of Transformer.
   std::vector<DynTypedMatcher> Matchers;
   for (const auto &Bucket : Buckets) {
     DynTypedMatcher M = DynTypedMatcher::constructVariadic(
         DynTypedMatcher::VO_AnyOf, Bucket.first,
-        taggedMatchers("Tag", Bucket.second));
+        taggedMatchers("Tag", Bucket.second, TK_IgnoreUnlessSpelledInSource));
     M.setAllowBind(true);
     // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
-    Matchers.push_back(*M.tryBind(RewriteRule::RootID));
+    Matchers.push_back(
+        M.tryBind(RewriteRule::RootID)->withTraversalKind(TK_AsIs));
   }
   return Matchers;
 }
