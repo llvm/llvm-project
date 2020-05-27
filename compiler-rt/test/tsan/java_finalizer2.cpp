@@ -47,7 +47,7 @@ void *Ballast(void *p) {
 }
 
 int main() {
-  Heap* heap = (Heap*)calloc(sizeof(Heap), 1);
+  Heap* heap = (Heap*)calloc(sizeof(Heap), 2) + 1;
   __tsan_java_init((jptr)heap, sizeof(*heap));
   __tsan_java_alloc((jptr)heap, sizeof(*heap));
   // Ballast threads merely make the bug a bit easier to trigger.
