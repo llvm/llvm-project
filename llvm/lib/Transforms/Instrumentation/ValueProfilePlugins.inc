@@ -20,6 +20,8 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
+extern cl::opt<bool> MemOPOptMemcmpBcmp;
+
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
   Function &F;
@@ -48,6 +50,8 @@ public:
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});
   }
   void visitCallInst(CallInst &CI) {
+    if (!MemOPOptMemcmpBcmp)
+      return;
     auto *F = CI.getCalledFunction();
     if (!F)
       return;
