@@ -1247,25 +1247,52 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   EXPECT_FALSE(Unrecoverable);
 }
 
-TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
-  if (!setupGenerator())
+TEST_F(DebugLineBasicFixture, VerboseOutput) {
+  if (!setupGenerator(5))
     return;
 
-  using ValLen = dwarfgen::LineTable::ValueAndLength;
-  LineTable &LT = Gen->addLineTable(DWARF32);
+  LineTable &LT = Gen->addLineTable();
+  LT.addByte(0); // Extended opcode with zero length.
+  LT.addByte(0);
+  // Zero-value extended opcode.
+  LT.addExtendedOpcode(2, 0, {{1, LineTable::Byte}});
+  // Unknown extended opcode.
+  LT.addExtendedOpcode(2, 0x42, {{1, LineTable::Byte}});
+  LT.addExtendedOpcode(9, DW_LNE_set_address,
+                       {{0x123456789abcdef, LineTable::Quad}});
+  LT.addExtendedOpcode(6, DW_LNE_define_file,
+                       {{'a', LineTable::Byte},
+                        {'\0', LineTable::Byte},
+                        {2, LineTable::ULEB},
+                        {3, LineTable::ULEB},
+                        {4, LineTable::ULEB}});
+  LT.addExtendedOpcode(2, DW_LNE_set_discriminator, {{0x7f, LineTable::ULEB}});
   LT.addStandardOpcode(DW_LNS_copy, {});
-  LT.addStandardOpcode(DW_LNS_advance_pc, {ValLen{11, LineTable::ULEB}});
-  LT.addStandardOpcode(DW_LNS_advance_line, {ValLen{22, LineTable::SLEB}});
-  LT.addStandardOpcode(DW_LNS_set_file, {ValLen{33, LineTable::ULEB}});
-  LT.addStandardOpcode(DW_LNS_set_column, {ValLen{44, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_advance_pc, {{11, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_advance_line, {{22, LineTable::SLEB}});
+  LT.addStandardOpcode(DW_LNS_set_file, {{33, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_set_column, {{44, LineTable::ULEB}});
   LT.addStandardOpcode(DW_LNS_negate_stmt, {});
   LT.addStandardOpcode(DW_LNS_set_basic_block, {});
   LT.addStandardOpcode(DW_LNS_const_add_pc, {});
-  LT.addStandardOpcode(DW_LNS_fixed_advance_pc, {ValLen{55, LineTable::Half}});
+  LT.addStandardOpcode(DW_LNS_fixed_advance_pc, {{55, LineTable::Half}});
   LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
   LT.addStandardOpcode(DW_LNS_set_epilogue_begin, {});
-  LT.addStandardOpcode(DW_LNS_set_isa, {ValLen{66, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_set_isa, {{66, LineTable::ULEB}});
+  // Add unknown standard opcode.
+  LT.addStandardOpcode(
+      0xd, {{1, LineTable::ULEB}, {0x123456789abcdef, LineTable::ULEB}});
+  LT.addByte(0xff); // Special opcode.
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  // Adjust the prologue to account for the extra standard opcode.
+  DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+  ++Prologue.TotalLength;
+  ++Prologue.PrologueLength;
+  ++Prologue.OpcodeBase;
+  Prologue.StandardOpcodeLengths.push_back(2);
+  LT.setPrologue(Prologue);
+
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
@@ -1274,30 +1301,88 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
                    /*Verbose=*/true);
   OS.flush();
+  StringRef OutputRef(Output);
 
-  EXPECT_FALSE(Recoverable);
-  EXPECT_FALSE(Unrecoverable);
-  auto InOutput = [&Output](char const *Str) {
-    return Output.find(Str) != std::string::npos;
+  size_t Pos = 0;
+  auto NextLine = [&Pos, &OutputRef]() {
+    size_t EOL = OutputRef.find_first_of('\n', Pos);
+    StringRef Line = OutputRef.substr(Pos, EOL - Pos);
+    Pos = EOL + 1;
+    return Line;
   };
-  EXPECT_TRUE(InOutput("0x0000002e: 01 DW_LNS_copy\n")) << Output;
-  EXPECT_TRUE(InOutput("0x0000002f: 02 DW_LNS_advance_pc (11)\n")) << Output;
-  // FIXME: The value printed after DW_LNS_advance_line is currently the result
-  // of the advance, but it should be the value being advanced by. See
-  // https://bugs.llvm.org/show_bug.cgi?id=44261 for details.
-  EXPECT_TRUE(InOutput("0x00000031: 03 DW_LNS_advance_line (23)\n")) << Output;
-  EXPECT_TRUE(InOutput("0x00000033: 04 DW_LNS_set_file (33)\n")) << Output;
-  EXPECT_TRUE(InOutput("0x00000035: 05 DW_LNS_set_column (44)\n")) << Output;
-  EXPECT_TRUE(InOutput("0x00000037: 06 DW_LNS_negate_stmt\n")) << Output;
-  EXPECT_TRUE(InOutput("0x00000038: 07 DW_LNS_set_basic_block\n")) << Output;
-  EXPECT_TRUE(
-      InOutput("0x00000039: 08 DW_LNS_const_add_pc (0x0000000000000011)\n"))
-      << Output;
-  EXPECT_TRUE(InOutput("0x0000003a: 09 DW_LNS_fixed_advance_pc (0x0037)\n"))
-      << Output;
-  EXPECT_TRUE(InOutput("0x0000003d: 0a DW_LNS_set_prologue_end\n")) << Output;
-  EXPECT_TRUE(InOutput("0x0000003e: 0b DW_LNS_set_epilogue_begin\n")) << Output;
-  EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
+  EXPECT_EQ(NextLine(), "Line table prologue:");
+  EXPECT_EQ(NextLine(), "    total_length: 0x00000076");
+  EXPECT_EQ(NextLine(), "          format: DWARF32");
+  EXPECT_EQ(NextLine(), "         version: 5");
+  EXPECT_EQ(NextLine(), "    address_size: 8");
+  EXPECT_EQ(NextLine(), " seg_select_size: 0");
+  EXPECT_EQ(NextLine(), " prologue_length: 0x0000002b");
+  EXPECT_EQ(NextLine(), " min_inst_length: 1");
+  EXPECT_EQ(NextLine(), "max_ops_per_inst: 1");
+  EXPECT_EQ(NextLine(), " default_is_stmt: 1");
+  EXPECT_EQ(NextLine(), "       line_base: -5");
+  EXPECT_EQ(NextLine(), "      line_range: 14");
+  EXPECT_EQ(NextLine(), "     opcode_base: 14");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_copy] = 0");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_advance_pc] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_advance_line] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_file] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_column] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_negate_stmt] = 0");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_basic_block] = 0");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_const_add_pc] = 0");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_prologue_end] = 0");
+  EXPECT_EQ(NextLine(),
+            "standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_isa] = 1");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_unknown_d] = 2");
+  EXPECT_EQ(NextLine(), "include_directories[  0] = \"a dir\"");
+  EXPECT_EQ(NextLine(), "file_names[  0]:");
+  EXPECT_EQ(NextLine(), "           name: \"a file\"");
+  EXPECT_EQ(NextLine(), "      dir_index: 0");
+  EXPECT_EQ(NextLine(), "");
+  EXPECT_EQ(NextLine(), "            Address            Line   Column File   ISA Discriminator Flags");
+  EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ --- ------------- -------------");
+  EXPECT_EQ(NextLine(),
+            "0x00000037: 00 Badly formed extended line op (length 0)");
+  EXPECT_EQ(NextLine(),
+            "0x00000039: 00 Unrecognized extended op 0x00 length 2");
+  EXPECT_EQ(NextLine(),
+            "0x0000003d: 00 Unrecognized extended op 0x42 length 2");
+  EXPECT_EQ(NextLine(),
+            "0x00000041: 00 DW_LNE_set_address (0x0123456789abcdef)");
+  EXPECT_EQ(NextLine(), "0x0000004c: 00 DW_LNE_define_file (a, dir=2, "
+                        "mod_time=(0x0000000000000003), length=4)");
+  EXPECT_EQ(NextLine(), "0x00000054: 00 DW_LNE_set_discriminator (127)");
+  EXPECT_EQ(NextLine(), "0x00000058: 01 DW_LNS_copy");
+  EXPECT_EQ(NextLine(), "            0x0123456789abcdef      1      0      1   "
+                        "0           127  is_stmt");
+  EXPECT_EQ(NextLine(), "0x00000059: 02 DW_LNS_advance_pc (11)");
+  EXPECT_EQ(NextLine(), "0x0000005b: 03 DW_LNS_advance_line (23)");
+  EXPECT_EQ(NextLine(), "0x0000005d: 04 DW_LNS_set_file (33)");
+  EXPECT_EQ(NextLine(), "0x0000005f: 05 DW_LNS_set_column (44)");
+  EXPECT_EQ(NextLine(), "0x00000061: 06 DW_LNS_negate_stmt");
+  EXPECT_EQ(NextLine(), "0x00000062: 07 DW_LNS_set_basic_block");
+  EXPECT_EQ(NextLine(),
+            "0x00000063: 08 DW_LNS_const_add_pc (0x0000000000000011)");
+  EXPECT_EQ(NextLine(), "0x00000064: 09 DW_LNS_fixed_advance_pc (0x0037)");
+  EXPECT_EQ(NextLine(), "0x00000067: 0a DW_LNS_set_prologue_end");
+  EXPECT_EQ(NextLine(), "0x00000068: 0b DW_LNS_set_epilogue_begin");
+  EXPECT_EQ(NextLine(), "0x00000069: 0c DW_LNS_set_isa (66)");
+  EXPECT_EQ(NextLine(),
+            "0x0000006b: 0d Skipping ULEB128 value: 0x0000000000000001)");
+  EXPECT_EQ(NextLine(), "Skipping ULEB128 value: 0x0123456789abcdef)");
+  EXPECT_EQ(NextLine(), "");
+  EXPECT_EQ(NextLine(), "0x00000076: ff address += 17,  line += -2");
+  EXPECT_EQ(NextLine(),
+            "            0x0123456789abce53     21     44     33  66           "
+            "  0  basic_block prologue_end epilogue_begin");
+  EXPECT_EQ(NextLine(), "0x00000077: 00 DW_LNE_end_sequence");
+  EXPECT_EQ(NextLine(), "            0x0123456789abce53     21     44     33  "
+                        "66             0  end_sequence");
+  EXPECT_EQ(NextLine(), "");
+  EXPECT_EQ(Output.size(), Pos);
 }
 
 using ValueAndLengths = std::vector<LineTable::ValueAndLength>;
