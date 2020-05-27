@@ -594,6 +594,161 @@ void test() {
 )txt");
 }
 
+TEST_F(SyntaxTreeTest, PostfixUnaryOperator) {
+  expectTreeDumpEqual(
+      R"cpp(
+void test(int a) {
+  a++;
+  a--;
+}
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-a
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PostfixUnaryOperatorExpression
+    | | |-UnknownExpression
+    | | | `-a
+    | | `-++
+    | `-;
+    |-ExpressionStatement
+    | |-PostfixUnaryOperatorExpression
+    | | |-UnknownExpression
+    | | | `-a
+    | | `---
+    | `-;
+    `-}
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, PrefixUnaryOperator) {
+  expectTreeDumpEqual(
+      R"cpp(
+void test(int a, int *ap, bool b) {
+  --a; ++a;
+  ~a; compl a;
+  -a;
+  +a;
+  &a;
+  *ap;
+  !b; not b;
+  __real a; __imag a;
+}
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-a
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   |-*
+  |   |   `-ap
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-bool
+  |   | `-SimpleDeclarator
+  |   |   `-b
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |---
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-++
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-~
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-compl
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |--
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-+
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-&
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-*
+    | | `-UnknownExpression
+    | |   `-ap
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-!
+    | | `-UnknownExpression
+    | |   `-b
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-not
+    | | `-UnknownExpression
+    | |   `-b
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-__real
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-__imag
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    `-}
+)txt");
+}
+
 TEST_F(SyntaxTreeTest, BinaryOperator) {
   expectTreeDumpEqual(
       R"cpp(
@@ -1866,7 +2021,7 @@ const int const *const *volatile b;
 | |-SimpleDeclarator
 | | |-west
 | | |-=
-| | `-UnknownExpression
+| | `-PrefixUnaryOperatorExpression
 | |   |--
 | |   `-UnknownExpression
 | |     `-1

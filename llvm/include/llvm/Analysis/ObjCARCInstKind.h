@@ -9,8 +9,6 @@
 #ifndef LLVM_ANALYSIS_OBJCARCINSTKIND_H
 #define LLVM_ANALYSIS_OBJCARCINSTKIND_H
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {

@@ -694,6 +694,8 @@ The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
   A numeric operand is a previously defined numeric variable, or an integer
   literal. The supported operators are ``+`` and ``-``. Spaces are accepted
   before, after and between any of these elements.
+  There is currently no support for operator precendence, but parentheses can
+  be used to change the evaluation order.
 
 For example:
 

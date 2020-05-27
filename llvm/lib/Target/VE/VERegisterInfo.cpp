@@ -34,12 +34,22 @@ VERegisterInfo::VERegisterInfo() : VEGenRegisterInfo(VE::SX10) {}
 
 const MCPhysReg *
 VERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return CSR_SaveList;
+  switch (MF->getFunction().getCallingConv()) {
+  default:
+    return CSR_SaveList;
+  case CallingConv::PreserveAll:
+    return CSR_preserve_all_SaveList;
+  }
 }
 
 const uint32_t *VERegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                                      CallingConv::ID CC) const {
-  return CSR_RegMask;
+  switch (CC) {
+  default:
+    return CSR_RegMask;
+  case CallingConv::PreserveAll:
+    return CSR_preserve_all_RegMask;
+  }
 }
 
 const uint32_t *VERegisterInfo::getNoPreservedMask() const {

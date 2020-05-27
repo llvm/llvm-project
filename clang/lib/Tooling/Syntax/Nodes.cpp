@@ -18,6 +18,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "TranslationUnit";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
+  case NodeKind::PrefixUnaryOperatorExpression:
+    return OS << "PrefixUnaryOperatorExpression";
+  case NodeKind::PostfixUnaryOperatorExpression:
+    return OS << "PostfixUnaryOperatorExpression";
   case NodeKind::BinaryOperatorExpression:
     return OS << "BinaryOperatorExpression";
   case NodeKind::UnknownStatement:
@@ -112,6 +116,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "IfStatement_elseKeyword";
   case syntax::NodeRole::IfStatement_elseStatement:
     return OS << "IfStatement_elseStatement";
+  case syntax::NodeRole::UnaryOperatorExpression_operatorToken:
+    return OS << "UnaryOperatorExpression_operatorToken";
+  case syntax::NodeRole::UnaryOperatorExpression_operand:
+    return OS << "UnaryOperatorExpression_operand";
   case syntax::NodeRole::BinaryOperatorExpression_leftHandSide:
     return OS << "BinaryOperatorExpression_leftHandSide";
   case syntax::NodeRole::BinaryOperatorExpression_operatorToken:
@@ -153,6 +161,16 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
 syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
   return llvm::cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::BinaryOperatorExpression_leftHandSide));
+}
+
+syntax::Leaf *syntax::UnaryOperatorExpression::operatorToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::UnaryOperatorExpression_operatorToken));
+}
+
+syntax::Expression *syntax::UnaryOperatorExpression::operand() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::UnaryOperatorExpression_operand));
 }
 
 syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {

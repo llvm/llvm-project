@@ -226,10 +226,10 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
 
   AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
-  ConstantRange Offset = SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
-  if (Offset.isEmptySet())
+  ConstantRange Offset = SE.getSignedRange(Expr);
+  if (Offset.isEmptySet() || Offset.isFullSet() || Offset.isSignWrappedSet())
     return UnknownRange;
-  return Offset;
+  return Offset.sextOrTrunc(PointerSize);
 }
 
 ConstantRange
@@ -247,9 +247,8 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
 
 ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
-  ConstantRange SizeRange = Size.isScalable()
-                                ? ConstantRange::getFull(PointerSize)
-                                : getRange(0, Size.getFixedSize());
+  ConstantRange SizeRange =
+      Size.isScalable() ? UnknownRange : getRange(0, Size.getFixedSize());
   return getAccessRange(Addr, Base, SizeRange);
 }
 
@@ -257,18 +256,26 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
     const MemIntrinsic *MI, const Use &U, Value *Base) {
   if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
     if (MTI->getRawSource() != U && MTI->getRawDest() != U)
-      return getRange(0, 1);
+      return ConstantRange::getEmpty(PointerSize);
   } else {
     if (MI->getRawDest() != U)
-      return getRange(0, 1);
+      return ConstantRange::getEmpty(PointerSize);
   }
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
-  // Non-constant size => unsafe. FIXME: try SCEV getRange.
-  if (!Len)
+  auto *CalculationTy = IntegerType::getIntNTy(SE.getContext(), PointerSize);
+  if (!SE.isSCEVable(MI->getLength()->getType()))
     return UnknownRange;
-  ConstantRange AccessRange =
-      getAccessRange(U, Base, getRange(0, Len->getZExtValue()));
-  return AccessRange;
+
+  const SCEV *Expr =
+      SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
+  ConstantRange LenRange = SE.getSignedRange(Expr);
+  assert(!LenRange.isEmptySet());
+  if (LenRange.isSignWrappedSet() || LenRange.isFullSet() ||
+      LenRange.getUpper().isNegative())
+    return UnknownRange;
+  LenRange = LenRange.sextOrTrunc(PointerSize);
+  ConstantRange SizeRange(APInt::getNullValue(PointerSize),
+                          LenRange.getUpper() - 1);
+  return getAccessRange(U, Base, SizeRange);
 }
 
 /// The function analyzes all local uses of Ptr (alloca or argument) and
@@ -338,11 +345,17 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr, UseInfo &US) {
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
 
         auto B = CB.arg_begin(), E = CB.arg_end();
+        int Found = 0;
         for (auto A = B; A != E; ++A) {
           if (A->get() == V) {
+            ++Found;
             ConstantRange Offset = offsetFrom(UI, Ptr);
             US.Calls.emplace_back(Callee, A - B, Offset);
           }
+        }
+        if (!Found) {
+          US.updateRange(UnknownRange);
+          return false;
         }
 
         break;

@@ -35,6 +35,11 @@ SCFDialect::SCFDialect(MLIRContext *context)
       >();
 }
 
+/// Default callback for IfOp builders. Inserts a yield without arguments.
+void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
+  builder.create<scf::YieldOp>(loc);
+}
+
 //===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
@@ -338,20 +343,43 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
                  TypeRange resultTypes, Value cond, bool withElseRegion) {
+  auto addTerminator = [&](OpBuilder &nested, Location loc) {
+    if (resultTypes.empty())
+      IfOp::ensureTerminator(*nested.getInsertionBlock()->getParent(), nested,
+                             loc);
+  };
+
+  build(builder, result, resultTypes, cond, addTerminator,
+        withElseRegion ? addTerminator
+                       : function_ref<void(OpBuilder &, Location)>());
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result,
+                 TypeRange resultTypes, Value cond,
+                 function_ref<void(OpBuilder &, Location)> thenBuilder,
+                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+  assert(thenBuilder && "the builder callback for 'then' must be present");
+
   result.addOperands(cond);
   result.addTypes(resultTypes);
 
+  OpBuilder::InsertionGuard guard(builder);
   Region *thenRegion = result.addRegion();
-  thenRegion->push_back(new Block());
-  if (resultTypes.empty())
-    IfOp::ensureTerminator(*thenRegion, builder, result.location);
+  builder.createBlock(thenRegion);
+  thenBuilder(builder, result.location);
 
   Region *elseRegion = result.addRegion();
-  if (withElseRegion) {
-    elseRegion->push_back(new Block());
-    if (resultTypes.empty())
-      IfOp::ensureTerminator(*elseRegion, builder, result.location);
-  }
+  if (!elseBuilder)
+    return;
+
+  builder.createBlock(elseRegion);
+  elseBuilder(builder, result.location);
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                 function_ref<void(OpBuilder &, Location)> thenBuilder,
+                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
+  build(builder, result, TypeRange(), cond, thenBuilder, elseBuilder);
 }
 
 static LogicalResult verify(IfOp op) {

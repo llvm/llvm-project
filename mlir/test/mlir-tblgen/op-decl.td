@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -43,8 +44,6 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
     void displayGraph();
   }];
 }
-
-// CHECK: class AOp;
 
 // CHECK-LABEL: NS::AOp declarations
 
@@ -149,6 +148,26 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 // CHECK:   ::mlir::MutableOperandRange aMutable();
 // CHECK:   Value b();
 // CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+
+// Check that all types match constraint results in generating builder.
+// ---
+
+def NS_FOp : NS_Op<"op_with_all_types_constraint",
+    [AllTypesMatch<["a", "b"]>]> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs AnyType:$b);
+}
+
+// CHECK-LABEL: class FOp :
+// CHECK: static LogicalResult inferReturnTypes
+
+def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs I32:$b);
+}
+
+// CHECK-LABEL: class GOp :
+// CHECK: static LogicalResult inferReturnTypes
 
 // Check that default builders can be suppressed.
 // ---

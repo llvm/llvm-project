@@ -84,3 +84,6 @@ def RetCC_VE : CallingConv<[
 // Callee-saved registers
 def CSR : CalleeSavedRegs<(add (sequence "SX%u", 18, 33))>;
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+
+// PreserveAll (clobbers s62,s63) - used for ve_grow_stack
+def CSR_preserve_all : CalleeSavedRegs<(add (sequence "SX%u", 0, 61))>;

@@ -58,6 +58,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eVariablePathCompletion, CommandCompletions::VariablePath},
       {eRegisterCompletion, CommandCompletions::Registers},
       {eBreakpointCompletion, CommandCompletions::Breakpoints},
+      {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -581,4 +582,11 @@ void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
 
     request.TryCompleteCurrentArg(std::to_string(bp->GetID()), bp_info);
   }
+}
+
+void CommandCompletions::ProcessPluginNames(CommandInterpreter &interpreter,
+                                            CompletionRequest &request,
+                                            SearchFilter *searcher) {
+  PluginManager::AutoCompleteProcessName(request.GetCursorArgumentPrefix(),
+                                         request);
 }

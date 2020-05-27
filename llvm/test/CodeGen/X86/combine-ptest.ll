@@ -299,16 +299,15 @@ start:
 }
 
 ;
-; TODO: testz(ashr(X,bw-1),-1) -> movmsk(X)
+; testz(ashr(X,bw-1),-1) -> movmsk(X)
 ;
 
 define i32 @ptestz_v2i64_signbits(<2 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_v2i64_signbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vptest %xmm0, %xmm0
+; CHECK-NEXT:    vmovmskpd %xmm0, %ecx
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = ashr <2 x i64> %c, <i64 63, i64 63>
@@ -334,8 +333,8 @@ define i32 @ptestz_v8i32_signbits(<8 x i32> %c, i32 %a, i32 %b) {
 ; AVX2-LABEL: ptestz_v8i32_signbits:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
-; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskps %ymm0, %ecx
+; AVX2-NEXT:    testl %ecx, %ecx
 ; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -351,8 +350,8 @@ define i32 @ptestz_v8i16_signbits(<8 x i16> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_v8i16_signbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpsraw $15, %xmm0, %xmm0
-; CHECK-NEXT:    vptest %xmm0, %xmm0
+; CHECK-NEXT:    vpmovmskb %xmm0, %ecx
+; CHECK-NEXT:    testl $43690, %ecx # imm = 0xAAAA
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = ashr <8 x i16> %c, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -380,9 +379,8 @@ define i32 @ptestz_v32i8_signbits(<32 x i8> %c, i32 %a, i32 %b) {
 ; AVX2-LABEL: ptestz_v32i8_signbits:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    testl %ecx, %ecx
 ; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

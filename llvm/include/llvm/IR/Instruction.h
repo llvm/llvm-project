@@ -396,6 +396,11 @@ public:
   /// this flag.
   void setHasAllowReciprocal(bool B);
 
+  /// Set or clear the allow-contract flag on this instruction, which must be
+  /// an operator which supports this flag. See LangRef.html for the meaning of
+  /// this flag.
+  void setHasAllowContract(bool B);
+
   /// Set or clear the approximate-math-functions flag on this instruction,
   /// which must be an operator which supports this flag. See LangRef.html for
   /// the meaning of this flag.

@@ -33596,6 +33596,21 @@ SDValue X86TargetLowering::unwrapAddress(SDValue N) const {
   return N;
 }
 
+// Helper to look for a normal load that can be narrowed into a vzload with the
+// specified VT and memory VT. Returns SDValue() on failure.
+static SDValue narrowLoadToVZLoad(LoadSDNode *LN, MVT MemVT, MVT VT,
+                                  SelectionDAG &DAG) {
+  // Can't if the load is volatile or atomic.
+  if (!LN->isSimple())
+    return SDValue();
+
+  SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+  SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+  return DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, SDLoc(LN), Tys, Ops, MemVT,
+                                 LN->getPointerInfo(), LN->getOriginalAlign(),
+                                 LN->getMemOperand()->getFlags());
+}
+
 // Attempt to match a combined shuffle mask against supported unary shuffle
 // instructions.
 // TODO: Investigate sharing more of this with shuffle lowering.
@@ -35598,13 +35613,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (VT == MVT::v2f64 && Src.hasOneUse() &&
         ISD::isNormalLoad(Src.getNode())) {
       LoadSDNode *LN = cast<LoadSDNode>(Src);
-      // Unless the load is volatile or atomic.
-      if (LN->isSimple()) {
-        SDVTList Tys = DAG.getVTList(MVT::v2f64, MVT::Other);
-        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-        SDValue VZLoad = DAG.getMemIntrinsicNode(
-            X86ISD::VZEXT_LOAD, DL, Tys, Ops, MVT::f64, LN->getPointerInfo(),
-            LN->getOriginalAlign(), LN->getMemOperand()->getFlags());
+      if (SDValue VZLoad = narrowLoadToVZLoad(LN, MVT::f64, MVT::v2f64, DAG)) {
         SDValue Movddup = DAG.getNode(X86ISD::MOVDDUP, DL, MVT::v2f64, VZLoad);
         DCI.CombineTo(N.getNode(), Movddup);
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
@@ -35786,7 +35795,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
         SDValue BcastLd = DAG.getMemIntrinsicNode(
             X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MVT::f64,
-            LN->getPointerInfo(), LN->getAlign(),
+            LN->getPointerInfo(), LN->getOriginalAlign(),
             LN->getMemOperand()->getFlags());
         DCI.CombineTo(N.getNode(), BcastLd);
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
@@ -35804,13 +35813,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // the load is volatile.
     if (N0.hasOneUse() && ISD::isNormalLoad(N0.getNode())) {
       auto *LN = cast<LoadSDNode>(N0);
-      if (LN->isSimple()) {
-        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
-        SDValue VZLoad = DAG.getMemIntrinsicNode(
-            X86ISD::VZEXT_LOAD, DL, Tys, Ops, VT.getVectorElementType(),
-            LN->getPointerInfo(), LN->getAlign(),
-            LN->getMemOperand()->getFlags());
+      if (SDValue VZLoad =
+              narrowLoadToVZLoad(LN, VT.getVectorElementType(), VT, DAG)) {
         DCI.CombineTo(N.getNode(), VZLoad);
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
         DCI.recursivelyDeleteUnusedNodes(LN);
@@ -40075,7 +40079,8 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
 /// If we are inverting an PTEST/TESTP operand, attempt to adjust the CC
 /// to avoid the inversion.
 static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
-                              SelectionDAG &DAG) {
+                              SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget) {
   // TODO: Handle X86ISD::KTEST/X86ISD::KORTEST.
   if (EFLAGS.getOpcode() != X86ISD::PTEST &&
       EFLAGS.getOpcode() != X86ISD::TESTP)
@@ -40137,6 +40142,9 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
 
     if (Op0 == Op1) {
       SDValue BC = peekThroughBitcasts(Op0);
+      EVT BCVT = BC.getValueType();
+      assert(BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT) &&
+             "Unexpected vector type");
 
       // TESTZ(AND(X,Y),AND(X,Y)) == TESTZ(X,Y)
       if (BC.getOpcode() == ISD::AND || BC.getOpcode() == X86ISD::FAND) {
@@ -40151,6 +40159,35 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
         return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT,
                            DAG.getBitcast(OpVT, BC.getOperand(0)),
                            DAG.getBitcast(OpVT, BC.getOperand(1)));
+      }
+
+      // If every element is an all-sign value, see if we can use MOVMSK to
+      // more efficiently extract the sign bits and compare that.
+      // TODO: Handle TESTC with comparison inversion.
+      // TODO: Can we remove SimplifyMultipleUseDemandedBits and rely on
+      // MOVMSK combines to make sure its never worse than PTEST?
+      unsigned EltBits = BCVT.getScalarSizeInBits();
+      if (DAG.ComputeNumSignBits(BC) == EltBits) {
+        assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
+        APInt SignMask = APInt::getSignMask(EltBits);
+        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+        if (SDValue Res =
+                TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
+          // For vXi16 cases we need to use pmovmksb and extract every other
+          // sign bit.
+          SDLoc DL(EFLAGS);
+          if (EltBits == 16) {
+            MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
+            Res = DAG.getBitcast(MovmskVT, Res);
+            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+            Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
+                              DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
+          } else {
+            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+          }
+          return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
+                             DAG.getConstant(0, DL, MVT::i32));
+        }
       }
     }
 
@@ -40179,7 +40216,7 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
   if (SDValue R = checkBoolTestSetCCCombine(EFLAGS, CC))
     return R;
 
-  if (SDValue R = combinePTESTCC(EFLAGS, CC, DAG))
+  if (SDValue R = combinePTESTCC(EFLAGS, CC, DAG, Subtarget))
     return R;
 
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);
@@ -44541,21 +44578,16 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
     assert(InVT.is128BitVector() && "Expected 128-bit input vector");
     LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-    // Unless the load is volatile or atomic.
-    if (LN->isSimple()) {
+    unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
+    MVT MemVT = MVT::getIntegerVT(NumBits);
+    MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
+    if (SDValue VZLoad = narrowLoadToVZLoad(LN, MemVT, LoadVT, DAG)) {
       SDLoc dl(N);
-      unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
-      MVT MemVT = MVT::getIntegerVT(NumBits);
-      MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
-      SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
-      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-      SDValue VZLoad = DAG.getMemIntrinsicNode(
-          X86ISD::VZEXT_LOAD, dl, Tys, Ops, MemVT, LN->getPointerInfo(),
-          LN->getOriginalAlign(), LN->getMemOperand()->getFlags());
       SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
                                     DAG.getBitcast(InVT, VZLoad));
       DCI.CombineTo(N, Convert);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+      DCI.recursivelyDeleteUnusedNodes(LN);
       return SDValue(N, 0);
     }
   }
@@ -44575,21 +44607,16 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
     assert(InVT.is128BitVector() && "Expected 128-bit input vector");
     LoadSDNode *LN = cast<LoadSDNode>(In);
-    // Unless the load is volatile or atomic.
-    if (LN->isSimple()) {
+    unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
+    MVT MemVT = MVT::getFloatingPointVT(NumBits);
+    MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
+    if (SDValue VZLoad = narrowLoadToVZLoad(LN, MemVT, LoadVT, DAG)) {
       SDLoc dl(N);
-      unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
-      MVT MemVT = MVT::getFloatingPointVT(NumBits);
-      MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
-      SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
-      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-      SDValue VZLoad = DAG.getMemIntrinsicNode(
-          X86ISD::VZEXT_LOAD, dl, Tys, Ops, MemVT, LN->getPointerInfo(),
-          LN->getOriginalAlign(), LN->getMemOperand()->getFlags());
       SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
                                     DAG.getBitcast(InVT, VZLoad));
       DCI.CombineTo(N, Convert);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+      DCI.recursivelyDeleteUnusedNodes(LN);
       return SDValue(N, 0);
     }
   }
@@ -44665,18 +44692,13 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
     // Convert a full vector load into vzload when not all bits are needed.
     if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
       LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-      // Unless the load is volatile or atomic.
-      if (LN->isSimple()) {
+      if (SDValue VZLoad = narrowLoadToVZLoad(LN, MVT::i64, MVT::v2i64, DAG)) {
         SDLoc dl(N);
-        SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
-        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-        SDValue VZLoad = DAG.getMemIntrinsicNode(
-            X86ISD::VZEXT_LOAD, dl, Tys, Ops, MVT::i64, LN->getPointerInfo(),
-            LN->getOriginalAlign(), LN->getMemOperand()->getFlags());
         SDValue Convert = DAG.getNode(N->getOpcode(), dl, MVT::v4f32,
                                       DAG.getBitcast(MVT::v8i16, VZLoad));
         DCI.CombineTo(N, Convert);
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
         return SDValue(N, 0);
       }
     }

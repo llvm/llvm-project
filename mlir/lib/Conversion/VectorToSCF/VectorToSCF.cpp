@@ -235,39 +235,38 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       SmallVector<Type, 1> resultType;
       if (options.unroll)
         resultType.push_back(vectorType);
-      auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
-          ScopedContext::getLocation(), resultType, inBoundsCondition,
-          /*withElseRegion=*/true);
 
-      // 3.a. If in-bounds, progressively lower to a 1-D transfer read.
-      BlockBuilder(&ifOp.thenRegion().front(), Append())([&] {
-        Value vector = load1DVector(majorIvsPlusOffsets);
-        // 3.a.i. If `options.unroll` is true, insert the 1-D vector in the
-        // aggregate. We must yield and merge with the `else` branch.
-        if (options.unroll) {
-          vector = vector_insert(vector, result, majorIvs);
-          (loop_yield(vector));
-          return;
-        }
-        // 3.a.ii. Otherwise, just go through the temporary `alloc`.
-        std_store(vector, alloc, majorIvs);
-      });
+      // 3. If in-bounds, progressively lower to a 1-D transfer read, otherwise
+      // splat a 1-D vector.
+      ValueRange ifResults = conditionBuilder(
+          resultType, inBoundsCondition,
+          [&]() -> scf::ValueVector {
+            Value vector = load1DVector(majorIvsPlusOffsets);
+            // 3.a. If `options.unroll` is true, insert the 1-D vector in the
+            // aggregate. We must yield and merge with the `else` branch.
+            if (options.unroll) {
+              vector = vector_insert(vector, result, majorIvs);
+              return {vector};
+            }
+            // 3.b. Otherwise, just go through the temporary `alloc`.
+            std_store(vector, alloc, majorIvs);
+            return {};
+          },
+          [&]() -> scf::ValueVector {
+            Value vector = std_splat(minorVectorType, xferOp.padding());
+            // 3.c. If `options.unroll` is true, insert the 1-D vector in the
+            // aggregate. We must yield and merge with the `then` branch.
+            if (options.unroll) {
+              vector = vector_insert(vector, result, majorIvs);
+              return {vector};
+            }
+            // 3.d. Otherwise, just go through the temporary `alloc`.
+            std_store(vector, alloc, majorIvs);
+            return {};
+          });
 
-      // 3.b. If not in-bounds, splat a 1-D vector.
-      BlockBuilder(&ifOp.elseRegion().front(), Append())([&] {
-        Value vector = std_splat(minorVectorType, xferOp.padding());
-        // 3.a.i. If `options.unroll` is true, insert the 1-D vector in the
-        // aggregate. We must yield and merge with the `then` branch.
-        if (options.unroll) {
-          vector = vector_insert(vector, result, majorIvs);
-          (loop_yield(vector));
-          return;
-        }
-        // 3.b.ii. Otherwise, just go through the temporary `alloc`.
-        std_store(vector, alloc, majorIvs);
-      });
       if (!resultType.empty())
-        result = *ifOp.results().begin();
+        result = *ifResults.begin();
     } else {
       // 4. Guaranteed in-bounds, progressively lower to a 1-D transfer read.
       Value loaded1D = load1DVector(majorIvsPlusOffsets);
@@ -336,11 +335,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
     if (inBoundsCondition) {
       // 2.a. If the condition is not null, we need an IfOp, to write
       // conditionally. Progressively lower to a 1-D transfer write.
-      auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
-          ScopedContext::getLocation(), TypeRange{}, inBoundsCondition,
-          /*withElseRegion=*/false);
-      BlockBuilder(&ifOp.thenRegion().front(),
-                   Append())([&] { emitTransferWrite(majorIvsPlusOffsets); });
+      conditionBuilder(inBoundsCondition,
+                       [&] { emitTransferWrite(majorIvsPlusOffsets); });
     } else {
       // 2.b. Guaranteed in-bounds. Progressively lower to a 1-D transfer write.
       emitTransferWrite(majorIvsPlusOffsets);

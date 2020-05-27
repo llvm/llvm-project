@@ -64,7 +64,7 @@ public:
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}
   virtual void printGroupSections() {}
-  virtual void printHashHistogram() {}
+  virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
   virtual void printAddrsig() {}
   virtual void printNotes() {}
