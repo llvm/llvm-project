@@ -73,6 +73,14 @@ public:
   /// MacroDefined calls checkMacro for macros in the main file
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
+    if (MD->getMacroInfo()->isBuiltinMacro())
+      return;
+    if (PP->getSourceManager().isWrittenInBuiltinFile(
+            MacroNameTok.getLocation()))
+      return;
+    if (PP->getSourceManager().isWrittenInCommandLineFile(
+            MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(PP->getSourceManager(), MacroNameTok, MD->getMacroInfo());
   }
 
