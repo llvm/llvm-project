@@ -262,3 +262,64 @@ Sections:
     Type:    SHT_PROGBITS
 ## Length is set to 0xFF, though the actual section length is 4.
     Content: "FF000000"
+
+## Check we report an error when we can't read the content of the .eh_frame section.
+
+## Case A: test we report an error when the p_offset of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+
+# RUN: yaml2obj --docnum=4 %s -o %t4 -DOFFSET=0xffff0000 -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t4 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t4 --check-prefix=BROKEN-CONTENT -DOFFSET=0xffff0000 -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t5 -DOFFSET=0x1 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t5 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t5 --check-prefix=BROKEN-CONTENT -DOFFSET=0x1 -DSIZE=0xffff0000
+
+# BROKEN-CONTENT:      EHFrameHeader {
+# BROKEN-CONTENT-NEXT:   Address: 0x0
+# BROKEN-CONTENT-NEXT:   Offset:  [[OFFSET]]
+# BROKEN-CONTENT-NEXT:   Size:    [[SIZE]]
+# BROKEN-CONTENT-NEXT:   Corresponding Section:
+# BROKEN-CONTENT-NEXT: error: '[[FILE]]': program header  [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that is greater than the file size (0xe0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_NONE
+ProgramHeaders:
+  - Type: PT_GNU_EH_FRAME
+    MemSize:  [[SIZE]]
+    FileSize: [[SIZE]]
+    Offset:   [[OFFSET]]
+    Sections: []
+
+## Case B: test we report an error when the file size of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+# RUN: yaml2obj --docnum=4 %s -o %t6 -DOFFSET=0x100 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t6 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t6 --check-prefix=BROKEN-CONTENT -DOFFSET=0x100 -DSIZE=0xffff0000
+
+## Case C: test we report an error when the offset + the file size of the PT_GNU_EH_FRAME is so large a
+##         value that it overflows the platform address size type.
+
+# RUN: yaml2obj --docnum=4 %s -o %t7 -DOFFSET=0x1 -DSIZE=0xffffffff -DBITS=32
+# RUN: not llvm-readobj --unwind %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t8 -DOFFSET=0xffffffff -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffff -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t9 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff -DBITS=64
+# RUN: not llvm-readelf --unwind %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t10 -DOFFSET=0xffffffffffffffff -DSIZE=0x1 -DBITS=64
+# RUN: not llvm-readelf --unwind %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffffffffffff -DSIZE=0x1
+
+# BROKEN-CONTENT2:      EHFrameHeader {
+# BROKEN-CONTENT2-NEXT:   Address: 0x0
+# BROKEN-CONTENT2-NEXT:   Offset: [[OFFSET]]
+# BROKEN-CONTENT2-NEXT:   Size:   [[SIZE]]
+# BROKEN-CONTENT2-NEXT:   Corresponding Section:
+# BROKEN-CONTENT2-NEXT: error: '[[FILE]]': program header [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that cannot be represented

@@ -33,8 +33,7 @@ class PrinterContext {
   ScopedPrinter &W;
   const object::ELFObjectFile<ELFT> *ObjF;
 
-  void printEHFrameHdr(uint64_t Offset, uint64_t Address, uint64_t Size) const;
-
+  void printEHFrameHdr(const typename ELFT::Phdr *EHFramePHdr) const;
   void printEHFrame(const typename ELFT::Shdr *EHFrameShdr) const;
 
 public:
@@ -60,7 +59,6 @@ findSectionByAddress(const object::ELFObjectFile<ELFT> *ObjF, uint64_t Addr) {
 template <typename ELFT>
 void PrinterContext<ELFT>::printUnwindInformation() const {
   const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const typename ELFT::Phdr *EHFramePhdr = nullptr;
 
   auto PHs = Obj->program_headers();
   if (Error E = PHs.takeError())
@@ -68,18 +66,14 @@ void PrinterContext<ELFT>::printUnwindInformation() const {
 
   for (const auto &Phdr : *PHs) {
     if (Phdr.p_type == ELF::PT_GNU_EH_FRAME) {
-      EHFramePhdr = &Phdr;
       if (Phdr.p_memsz != Phdr.p_filesz)
         reportError(object::createError(
                         "p_memsz does not match p_filesz for GNU_EH_FRAME"),
                     ObjF->getFileName());
+      printEHFrameHdr(&Phdr);
       break;
     }
   }
-
-  if (EHFramePhdr)
-    printEHFrameHdr(EHFramePhdr->p_offset, EHFramePhdr->p_vaddr,
-                    EHFramePhdr->p_memsz);
 
   auto Sections = Obj->sections();
   if (Error E = Sections.takeError())
@@ -96,16 +90,16 @@ void PrinterContext<ELFT>::printUnwindInformation() const {
 }
 
 template <typename ELFT>
-void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
-                                           uint64_t EHFrameHdrAddress,
-                                           uint64_t EHFrameHdrSize) const {
+void PrinterContext<ELFT>::printEHFrameHdr(const typename ELFT::Phdr *EHFramePHdr) const {
   DictScope L(W, "EHFrameHeader");
+  uint64_t EHFrameHdrAddress = EHFramePHdr->p_vaddr;
   W.startLine() << format("Address: 0x%" PRIx64 "\n", EHFrameHdrAddress);
-  W.startLine() << format("Offset: 0x%" PRIx64 "\n", EHFrameHdrOffset);
-  W.startLine() << format("Size: 0x%" PRIx64 "\n", EHFrameHdrSize);
+  W.startLine() << format("Offset: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_offset);
+  W.startLine() << format("Size: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_memsz);
 
   const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const auto *EHFrameHdrShdr = findSectionByAddress(ObjF, EHFrameHdrAddress);
+  const typename ELFT::Shdr *EHFrameHdrShdr =
+      findSectionByAddress(ObjF, EHFramePHdr->p_vaddr);
   if (EHFrameHdrShdr) {
     auto SectionName = Obj->getSectionName(EHFrameHdrShdr);
     if (Error E = SectionName.takeError())
@@ -114,7 +108,11 @@ void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
     W.printString("Corresponding Section", *SectionName);
   }
 
-  DataExtractor DE(makeArrayRef(Obj->base() + EHFrameHdrOffset, EHFrameHdrSize),
+  Expected<ArrayRef<uint8_t>> Content = Obj->getSegmentContents(EHFramePHdr);
+  if (!Content)
+    reportError(Content.takeError(), ObjF->getFileName());
+
+  DataExtractor DE(*Content,
                    ELFT::TargetEndianness == support::endianness::little,
                    ELFT::Is64Bits ? 8 : 4);
 
@@ -154,7 +152,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
 
   unsigned NumEntries = 0;
   uint64_t PrevPC = 0;
-  while (Offset + 8 <= EHFrameHdrSize && NumEntries < FDECount) {
+  while (Offset + 8 <= EHFramePHdr->p_memsz && NumEntries < FDECount) {
     DictScope D(W, std::string("entry ")  + std::to_string(NumEntries));
 
     auto InitialPC = DE.getSigned(&Offset, 4) + EHFrameHdrAddress;
