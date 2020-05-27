@@ -4562,15 +4562,11 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
 // Additionally cumulative coverage of symbols for each set of buckets.
 template <class ELFT>
 void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
-  // Print histogram for .hash section
-  if (const Elf_Hash *HashTable = this->dumper()->getHashTable()) {
-    if (!checkHashTable(Obj, HashTable, this->FileName))
-      return;
-
-    size_t NBucket = HashTable->nbucket;
-    size_t NChain = HashTable->nchain;
-    ArrayRef<Elf_Word> Buckets = HashTable->buckets();
-    ArrayRef<Elf_Word> Chains = HashTable->chains();
+  auto PrintHashHist = [&](const Elf_Hash &HashTable) {
+    size_t NBucket = HashTable.nbucket;
+    size_t NChain = HashTable.nchain;
+    ArrayRef<Elf_Word> Buckets = HashTable.buckets();
+    ArrayRef<Elf_Word> Chains = HashTable.chains();
     size_t TotalSyms = 0;
     // If hash table is correct, we have at least chains with 0 length
     size_t MaxChain = 1;
@@ -4604,7 +4600,7 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
     if (!TotalSyms)
       return;
 
-    std::vector<size_t> Count(MaxChain, 0) ;
+    std::vector<size_t> Count(MaxChain, 0);
     // Count how long is the chain for each bucket
     for (size_t B = 0; B < NBucket; B++)
       ++Count[ChainLen[B]];
@@ -4619,17 +4615,16 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
                    (Count[I] * 100.0) / NBucket,
                    (CumulativeNonZero * 100.0) / TotalSyms);
     }
-  }
+  };
 
-  // Print histogram for .gnu.hash section
-  if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable()) {
-    size_t NBucket = GnuHashTable->nbuckets;
-    ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
+  auto PrintGnuHashHist = [&](const Elf_GnuHash &GnuHashTable) {
+    size_t NBucket = GnuHashTable.nbuckets;
+    ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
     unsigned NumSyms = this->dumper()->dynamic_symbols().size();
     if (!NumSyms)
       return;
-    ArrayRef<Elf_Word> Chains = GnuHashTable->values(NumSyms);
-    size_t Symndx = GnuHashTable->symndx;
+    ArrayRef<Elf_Word> Chains = GnuHashTable.values(NumSyms);
+    size_t Symndx = GnuHashTable.symndx;
     size_t TotalSyms = 0;
     size_t MaxChain = 1;
     size_t CumulativeNonZero = 0;
@@ -4655,7 +4650,7 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
     if (!TotalSyms)
       return;
 
-    std::vector<size_t> Count(MaxChain, 0) ;
+    std::vector<size_t> Count(MaxChain, 0);
     for (size_t B = 0; B < NBucket; B++)
       ++Count[ChainLen[B]];
     // Print Number of buckets with each chain lengths and their cumulative
@@ -4663,13 +4658,22 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
     OS << "Histogram for `.gnu.hash' bucket list length (total of " << NBucket
        << " buckets)\n"
        << " Length  Number     % of total  Coverage\n";
-    for (size_t I = 0; I <MaxChain; I++) {
+    for (size_t I = 0; I < MaxChain; I++) {
       CumulativeNonZero += Count[I] * I;
       OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
                    (Count[I] * 100.0) / NBucket,
                    (CumulativeNonZero * 100.0) / TotalSyms);
     }
-  }
+  };
+
+  // Print histogram for the .hash section.
+  if (const Elf_Hash *HashTable = this->dumper()->getHashTable())
+    if (checkHashTable(Obj, HashTable, this->FileName))
+      PrintHashHist(*HashTable);
+
+  // Print histogram for the .gnu.hash section.
+  if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable())
+    PrintGnuHashHist(*GnuHashTable);
 }
 
 template <class ELFT>

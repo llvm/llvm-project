@@ -207,3 +207,62 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Check we dump a histogram for the .gnu.hash table even when the .hash table is skipped.
+
+## Case A: the .hash table has no data to build histogram and it is skipped.
+##         (NBUCKET == 0x1 is a no-op: it does not change the number of buckets described with the "Bucket" key).
+# RUN: yaml2obj --docnum=5 -DNBUCKET=0x1 %s -o %t5.o
+# RUN: llvm-readelf --elf-hash-histogram %t5.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=GNU-HASH --implicit-check-not="Histogram"
+
+## Case B: the .hash table has a broken nbucket field. We report a warning
+##         and skip dumping of the .hash table.
+# RUN: yaml2obj --docnum=5 -DNBUCKET=0xffffffff %s -o %t6.o
+# RUN: llvm-readelf --elf-hash-histogram %t6.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.o --check-prefixes=WARN,GNU-HASH
+
+# WARN:     warning: '[[FILE]]': the hash table at offset 0x78 goes past the end of the file (0x350), nbucket = 4294967295, nchain = 1
+# GNU-HASH: Histogram for `.gnu.hash' bucket list length (total of 1 buckets)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 0 ]
+    NBucket: [[NBUCKET]]
+    Chain:   [ 0 ]
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x00000001, 0x00000004, 0x00000000 ]
+    HashValues:  [ 0x0B887388 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_GNU_HASH
+## sizeof(.hash) == 0x28.
+        Value: 0x28
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .gnu.hash
+      - Section: .dynamic
