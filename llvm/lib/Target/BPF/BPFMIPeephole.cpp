@@ -301,18 +301,15 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
       //
       //   MOV rA, rA
       //
-      // This is particularly possible to happen when sub-register support
-      // enabled. The special type cast insn MOV_32_64 involves different
-      // register class on src (i32) and dst (i64), RA could generate useless
-      // instruction due to this.
+      // Note that we cannot remove
+      //   MOV_32_64  rA, wA
+      //   MOV_rr_32  wA, wA
+      // as these two instructions having side effects, zeroing out
+      // top 32 bits of rA.
       unsigned Opcode = MI.getOpcode();
-      if (Opcode == BPF::MOV_32_64 ||
-          Opcode == BPF::MOV_rr || Opcode == BPF::MOV_rr_32) {
+      if (Opcode == BPF::MOV_rr) {
         Register dst = MI.getOperand(0).getReg();
         Register src = MI.getOperand(1).getReg();
-
-        if (Opcode == BPF::MOV_32_64)
-          dst = TRI->getSubReg(dst, BPF::sub_32);
 
         if (dst != src)
           continue;
