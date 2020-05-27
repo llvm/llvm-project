@@ -23,7 +23,7 @@ class SpecialCaseList;
 namespace coverage {
 class CoverageMapping;
 struct FunctionRecord;
-}; // namespace coverage
+} // namespace coverage
 
 /// Matches specific functions that pass the requirement of this filter.
 class CoverageFilter {
