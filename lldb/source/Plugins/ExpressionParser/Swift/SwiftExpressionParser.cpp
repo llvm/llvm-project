@@ -1609,9 +1609,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       new swift::Lowering::TypeConverter(
           *parsed_expr->source_file.getParentModule()));
 
-  std::unique_ptr<swift::SILModule> sil_module(swift::performSILGeneration(
-      parsed_expr->source_file, *sil_types,
-      swift_ast_ctx->GetSILOptions()));
+  std::unique_ptr<swift::SILModule> sil_module = swift::performASTLowering(
+      parsed_expr->source_file, *sil_types, swift_ast_ctx->GetSILOptions());
 
   if (log) {
     std::string s;
