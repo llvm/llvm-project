@@ -40,12 +40,14 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   idx2 = idx1;
   idx1 = idx3;
 
-  // Now renaming is complete. No one refers Real symbol. We could leave
-  // Real as-is, but if Real is written to the symbol table, that may
-  // contain irrelevant values. So, we copy all values from Sym to Real.
-  StringRef s = real->getName();
-  memcpy(real, sym, sizeof(SymbolUnion));
-  real->setName(s);
+  // Now renaming is complete, and no one refers to real. We drop real from
+  // .symtab and .dynsym. If real is undefined, it is important that we don't
+  // leave it in .dynsym, because otherwise it might lead to an undefined symbol
+  // error in a subsequent link. If real is defined, we could emit real as an
+  // alias for sym, but that could degrade the user experience of some tools
+  // that can print out only one symbol for each location: sym is a preferred
+  // name than real, but they might print out real instead.
+  real->isUsedInRegularObj = false;
 }
 
 // Find an existing symbol or create a new one.
