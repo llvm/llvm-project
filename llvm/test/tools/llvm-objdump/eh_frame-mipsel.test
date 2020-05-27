@@ -19,6 +19,7 @@
 # CHECK:   DW_CFA_offset: reg31 -4
 # CHECK:   DW_CFA_nop:
 
+## FIXME: GNU objdump prints "00000038 ZERO terminator" instead.
 # CHECK: 00000038 00000000 00000000 CIE
 # CHECK:   Version:               0
 # CHECK:   Augmentation:          ""
