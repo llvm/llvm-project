@@ -43,12 +43,12 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefinePwr7 = 1 << 11,
     ArchDefinePwr8 = 1 << 12,
     ArchDefinePwr9 = 1 << 13,
-    ArchDefinePwr10 = 1 << 14,
-    ArchDefineFuture = 1 << 15,
-    ArchDefineA2 = 1 << 16,
-    ArchDefineA2q = 1 << 17,
-    ArchDefineE500 = 1 << 18
+    ArchDefineFuture = 1 << 14,
+    ArchDefineA2 = 1 << 15,
+    ArchDefineA2q = 1 << 16,
+    ArchDefineE500 = 1 << 17
   } ArchDefineTypes;
+
 
   ArchDefineTypes ArchDefs = ArchDefineNone;
   static const Builtin::Info BuiltinInfo[];
@@ -119,20 +119,20 @@ public:
               .Case("a2q", ArchDefineName | ArchDefineA2 | ArchDefineA2q)
               .Cases("power3", "pwr3", ArchDefinePpcgr)
               .Cases("power4", "pwr4",
-                     ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power5", "pwr5",
-                     ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
+                    ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
               .Cases("power5x", "pwr5x",
-                     ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                         ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                        ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power6", "pwr6",
-                     ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power6x", "pwr6x",
-                     ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
-                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
+                    ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
+                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
               .Cases("power7", "pwr7",
                      ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
@@ -146,16 +146,11 @@ public:
                      ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                          ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                          ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power10", "pwr10",
-                     ArchDefinePwr10 | ArchDefinePwr9 | ArchDefinePwr8 |
-                         ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
-                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
               .Case("future",
-                    ArchDefineFuture | ArchDefinePwr10 | ArchDefinePwr9 |
-                        ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
-                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                    ArchDefineFuture | ArchDefinePwr9 | ArchDefinePwr8 |
+                        ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
+                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                        ArchDefinePpcsq)
               .Cases("8548", "e500", ArchDefineE500)
               .Default(ArchDefineNone);
     }

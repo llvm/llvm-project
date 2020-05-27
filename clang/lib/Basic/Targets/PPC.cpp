@@ -151,8 +151,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_ARCH_PWR8");
   if (ArchDefs & ArchDefinePwr9)
     Builder.defineMacro("_ARCH_PWR9");
-  if (ArchDefs & ArchDefinePwr10)
-    Builder.defineMacro("_ARCH_PWR10");
   if (ArchDefs & ArchDefineA2)
     Builder.defineMacro("_ARCH_A2");
   if (ArchDefs & ArchDefineA2q) {
@@ -265,51 +263,41 @@ bool PPCTargetInfo::initFeatureMap(
                             .Case("pwr7", true)
                             .Case("pwr8", true)
                             .Case("pwr9", true)
-                            .Case("pwr10", true)
                             .Case("ppc64", true)
                             .Case("ppc64le", true)
                             .Default(false);
 
   Features["qpx"] = (CPU == "a2q");
-  Features["power9-vector"] = llvm::StringSwitch<bool>(CPU)
-                                  .Case("pwr10", true)
-                                  .Case("pwr9", true)
-                                  .Default(false);
+  Features["power9-vector"] = (CPU == "pwr9");
   Features["crypto"] = llvm::StringSwitch<bool>(CPU)
                            .Case("ppc64le", true)
-                           .Case("pwr10", true)
                            .Case("pwr9", true)
                            .Case("pwr8", true)
                            .Default(false);
   Features["power8-vector"] = llvm::StringSwitch<bool>(CPU)
                                   .Case("ppc64le", true)
-                                  .Case("pwr10", true)
                                   .Case("pwr9", true)
                                   .Case("pwr8", true)
                                   .Default(false);
   Features["bpermd"] = llvm::StringSwitch<bool>(CPU)
                            .Case("ppc64le", true)
-                           .Case("pwr10", true)
                            .Case("pwr9", true)
                            .Case("pwr8", true)
                            .Case("pwr7", true)
                            .Default(false);
   Features["extdiv"] = llvm::StringSwitch<bool>(CPU)
                            .Case("ppc64le", true)
-                           .Case("pwr10", true)
                            .Case("pwr9", true)
                            .Case("pwr8", true)
                            .Case("pwr7", true)
                            .Default(false);
   Features["direct-move"] = llvm::StringSwitch<bool>(CPU)
                                 .Case("ppc64le", true)
-                                .Case("pwr10", true)
                                 .Case("pwr9", true)
                                 .Case("pwr8", true)
                                 .Default(false);
   Features["vsx"] = llvm::StringSwitch<bool>(CPU)
                         .Case("ppc64le", true)
-                        .Case("pwr10", true)
                         .Case("pwr9", true)
                         .Case("pwr8", true)
                         .Case("pwr7", true)
@@ -325,10 +313,10 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
-  // Future CPU should include all of the features of Power 10 as well as any
+  // Future CPU should include all of the features of Power 9 as well as any
   // additional features (yet to be determined) specific to it.
   if (CPU == "future") {
-    initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
+    initFeatureMap(Features, Diags, "pwr9", FeaturesVec);
     addFutureSpecificFeatures(Features);
   }
 
@@ -475,17 +463,18 @@ ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"generic"},     {"440"},     {"450"},     {"601"},       {"602"},
-    {"603"},         {"603e"},    {"603ev"},   {"604"},       {"604e"},
-    {"620"},         {"630"},     {"g3"},      {"7400"},      {"g4"},
-    {"7450"},        {"g4+"},     {"750"},     {"8548"},      {"970"},
-    {"g5"},          {"a2"},      {"a2q"},     {"e500"},      {"e500mc"},
-    {"e5500"},       {"power3"},  {"pwr3"},    {"power4"},    {"pwr4"},
-    {"power5"},      {"pwr5"},    {"power5x"}, {"pwr5x"},     {"power6"},
-    {"pwr6"},        {"power6x"}, {"pwr6x"},   {"power7"},    {"pwr7"},
-    {"power8"},      {"pwr8"},    {"power9"},  {"pwr9"},      {"power10"},
-    {"pwr10"},       {"powerpc"}, {"ppc"},     {"powerpc64"}, {"ppc64"},
-    {"powerpc64le"}, {"ppc64le"}, {"future"}};
+    {"generic"},   {"440"},       {"450"},         {"601"},         {"602"},
+    {"603"},       {"603e"},      {"603ev"},       {"604"},         {"604e"},
+    {"620"},       {"630"},       {"g3"},          {"7400"},        {"g4"},
+    {"7450"},      {"g4+"},       {"750"},         {"8548"},        {"970"},
+    {"g5"},        {"a2"},        {"a2q"},         {"e500"},        {"e500mc"},
+    {"e5500"},     {"power3"},    {"pwr3"},        {"power4"},      {"pwr4"},
+    {"power5"},    {"pwr5"},      {"power5x"},     {"pwr5x"},       {"power6"},
+    {"pwr6"},      {"power6x"},   {"pwr6x"},       {"power7"},      {"pwr7"},
+    {"power8"},    {"pwr8"},      {"power9"},      {"pwr9"},        {"powerpc"},
+    {"ppc"},       {"powerpc64"}, {"ppc64"},       {"powerpc64le"}, {"ppc64le"},
+    {"future"}
+};
 
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
