@@ -821,6 +821,10 @@ macro(add_llvm_executable name)
 
   if(NOT ARG_NO_INSTALL_RPATH)
     llvm_setup_rpath(${name})
+  elseif (LLVM_LOCAL_RPATH)
+    set_target_properties(${name} PROPERTIES
+                          BUILD_WITH_INSTALL_RPATH On
+                          INSTALL_RPATH "${LLVM_LOCAL_RPATH}")
   endif()
 
   if(DEFINED windows_resource_file)

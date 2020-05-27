@@ -439,6 +439,9 @@ set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
 option(LLVM_FORCE_USE_OLD_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
 
+set(LLVM_LOCAL_RPATH "" CACHE FILEPATH
+  "If set, an absolute path added as rpath on binaries that do not already contain an executable-relative rpath.")
+
 option(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN
        "Set to ON to only warn when using a toolchain which is about to be deprecated, instead of emitting an error." OFF)
 
