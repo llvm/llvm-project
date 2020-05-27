@@ -3435,18 +3435,25 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
     const parser::Name &name, Attrs attrs, const ProcInterface &interface) {
   Symbol &symbol{DeclareEntity<ProcEntityDetails>(name, attrs)};
   if (auto *details{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (interface.type()) {
-      symbol.set(Symbol::Flag::Function);
-    } else if (interface.symbol()) {
-      if (interface.symbol()->test(Symbol::Flag::Function)) {
+    if (details->IsInterfaceSet()) {
+      SayWithDecl(name, symbol,
+          "The interface for procedure '%s' has already been "
+          "declared"_err_en_US);
+      context().SetError(symbol);
+    } else {
+      if (interface.type()) {
         symbol.set(Symbol::Flag::Function);
-      } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
-        symbol.set(Symbol::Flag::Subroutine);
+      } else if (interface.symbol()) {
+        if (interface.symbol()->test(Symbol::Flag::Function)) {
+          symbol.set(Symbol::Flag::Function);
+        } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
+          symbol.set(Symbol::Flag::Subroutine);
+        }
       }
+      details->set_interface(interface);
+      SetBindNameOn(symbol);
+      SetPassNameOn(symbol);
     }
-    details->set_interface(interface);
-    SetBindNameOn(symbol);
-    SetPassNameOn(symbol);
   }
   return symbol;
 }
@@ -3460,18 +3467,22 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
     }
     if (!arraySpec().empty()) {
       if (details->IsArray()) {
-        Say(name,
-            "The dimensions of '%s' have already been declared"_err_en_US);
-        context().SetError(symbol);
+        if (!context().HasError(symbol)) {
+          Say(name,
+              "The dimensions of '%s' have already been declared"_err_en_US);
+          context().SetError(symbol);
+        }
       } else {
         details->set_shape(arraySpec());
       }
     }
     if (!coarraySpec().empty()) {
       if (details->IsCoarray()) {
-        Say(name,
-            "The codimensions of '%s' have already been declared"_err_en_US);
-        context().SetError(symbol);
+        if (!context().HasError(symbol)) {
+          Say(name,
+              "The codimensions of '%s' have already been declared"_err_en_US);
+          context().SetError(symbol);
+        }
       } else {
         details->set_coshape(coarraySpec());
       }
@@ -3913,7 +3924,7 @@ bool DeclarationVisitor::Pre(const parser::ProcComponentDefStmt &) {
   CHECK(!interfaceName_);
   return true;
 }
-void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &stmt) {
+void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &) {
   interfaceName_ = nullptr;
 }
 bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
@@ -4702,9 +4713,11 @@ void DeclarationVisitor::SetType(
   } else if (!symbol.test(Symbol::Flag::Implicit)) {
     SayWithDecl(
         name, symbol, "The type of '%s' has already been declared"_err_en_US);
+    context().SetError(symbol);
   } else if (type != *prevType) {
     SayWithDecl(name, symbol,
         "The type of '%s' has already been implicitly declared"_err_en_US);
+    context().SetError(symbol);
   } else {
     symbol.set(Symbol::Flag::Implicit, false);
   }
@@ -5697,17 +5710,21 @@ void DeclarationVisitor::PointerInitialization(
     const parser::Name &name, const parser::InitialDataTarget &target) {
   if (name.symbol) {
     Symbol &ultimate{name.symbol->GetUltimate()};
-    if (IsPointer(ultimate)) {
-      if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
-        CHECK(!details->init());
-        Walk(target);
-        if (MaybeExpr expr{EvaluateExpr(target)}) {
-          CheckInitialDataTarget(ultimate, *expr, target.value().source);
-          details->set_init(std::move(*expr));
+    if (!context().HasError(ultimate)) {
+      if (IsPointer(ultimate)) {
+        if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+          CHECK(!details->init());
+          Walk(target);
+          if (MaybeExpr expr{EvaluateExpr(target)}) {
+            CheckInitialDataTarget(ultimate, *expr, target.value().source);
+            details->set_init(std::move(*expr));
+          }
         }
+      } else {
+        Say(name,
+            "'%s' is not a pointer but is initialized like one"_err_en_US);
+        context().SetError(ultimate);
       }
-    } else {
-      Say(name, "'%s' is not a pointer but is initialized like one"_err_en_US);
     }
   }
 }
@@ -5715,22 +5732,25 @@ void DeclarationVisitor::PointerInitialization(
     const parser::Name &name, const parser::ProcPointerInit &target) {
   if (name.symbol) {
     Symbol &ultimate{name.symbol->GetUltimate()};
-    if (IsProcedurePointer(ultimate)) {
-      auto &details{ultimate.get<ProcEntityDetails>()};
-      CHECK(!details.init());
-      Walk(target);
-      if (const auto *targetName{std::get_if<parser::Name>(&target.u)}) {
-        CheckInitialProcTarget(ultimate, *targetName, name.source);
-        if (targetName->symbol) {
-          details.set_init(*targetName->symbol);
+    if (!context().HasError(ultimate)) {
+      if (IsProcedurePointer(ultimate)) {
+        auto &details{ultimate.get<ProcEntityDetails>()};
+        CHECK(!details.init());
+        Walk(target);
+        if (const auto *targetName{std::get_if<parser::Name>(&target.u)}) {
+          CheckInitialProcTarget(ultimate, *targetName, name.source);
+          if (targetName->symbol) {
+            details.set_init(*targetName->symbol);
+          }
+        } else {
+          details.set_init(nullptr); // explicit NULL()
         }
       } else {
-        details.set_init(nullptr); // explicit NULL()
+        Say(name,
+            "'%s' is not a procedure pointer but is initialized "
+            "like one"_err_en_US);
+        context().SetError(ultimate);
       }
-    } else {
-      Say(name,
-          "'%s' is not a procedure pointer but is initialized "
-          "like one"_err_en_US);
     }
   }
 }
