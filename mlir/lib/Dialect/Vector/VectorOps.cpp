@@ -957,6 +957,13 @@ static LogicalResult verify(InsertStridedSliceOp op) {
 // OuterProductOp
 //===----------------------------------------------------------------------===//
 
+/// Build an op without mask, use the type of `acc` as the return type.
+void OuterProductOp::build(OpBuilder &builder, OperationState &result,
+                           Value lhs, Value rhs, Value acc) {
+  result.addOperands({lhs, rhs, acc});
+  result.addTypes(acc.getType());
+}
+
 static void print(OpAsmPrinter &p, OuterProductOp op) {
   p << op.getOperationName() << " " << op.lhs() << ", " << op.rhs();
   if (!op.acc().empty())
