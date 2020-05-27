@@ -3471,7 +3471,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
-    if (MemOp)
+    if (MemOp && HasVectorReg)
       MemOp->Mem.Size = MemSize[I];
     Match[I] = Match_MnemonicFail;
     if (MemOp || !HasVectorReg) {
