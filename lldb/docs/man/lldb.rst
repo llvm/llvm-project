@@ -303,10 +303,13 @@ CONFIGURATION FILES
 -------------------
 
 :program:`lldb` reads things like settings, aliases and commands from the
-.lldbinit file. It will first look for ~/.lldbinit and load that first.
-Secondly, it will look for an .lldbinit file in the current working directory.
-For security reasons, :program:`lldb` will print a warning and not source this
-file by default. This behavior can be changed by changing the
+.lldbinit file. First, it will read the application specific init file whose
+name is ~/.lldbinit followed by a "-" and the name of the current program. This
+would be ~/.lldbinit-lldb for the command line :program:`lldb` and
+~/.lldbinit-Xcode for Xcode. Secondly, the global ~/.lldbinit will be read.
+Finally, :program:`lldb` will look for an .lldbinit file in the current working
+directory. For security reasons, :program:`lldb` will print a warning and not
+source this file by default. This behavior can be changed by changing the
 target.load-cwd-lldbinit setting.
 
 To always load the .lldbinit file in the current working directory, add the
