@@ -15,17 +15,18 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
-    ; CHECK: G_STORE [[GEP]](p0), [[COPY]](p0) :: (store 8)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[COPY]](p0) :: (store 8)
     ; CHECK: [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8)
-    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD1]], [[C]](s64)
-    ; CHECK: G_STORE [[GEP1]](p0), [[COPY]](p0) :: (store 8)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD1]], [[C]](s64)
+    ; CHECK: G_STORE [[PTR_ADD1]](p0), [[COPY]](p0) :: (store 8)
     ; CHECK: [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-    ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD2]], [[C1]](s64)
-    ; CHECK: [[PTR_MASK:%[0-9]+]]:_(p0) = G_PTR_MASK [[GEP2]], 4
-    ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_MASK]], [[C]](s64)
-    ; CHECK: G_STORE [[GEP3]](p0), [[COPY]](p0) :: (store 8)
+    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD2]], [[C1]](s64)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[C1]](s64)
+    ; CHECK: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[PTR_ADD2]], [[COPY1]](s64)
+    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C]](s64)
+    ; CHECK: G_STORE [[PTR_ADD3]](p0), [[COPY]](p0) :: (store 8)
     %0:_(p0) = COPY $x0
 
     %1:_(s8) = G_VAARG %0(p0), 1
