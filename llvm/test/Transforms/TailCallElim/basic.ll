@@ -46,8 +46,16 @@ endif.0:		; preds = %entry
 ; plunked it into the demo script, so maybe they care about it.
 define i32 @test3(i32 %c) {
 ; CHECK: i32 @test3
+; CHECK: tailrecurse:
+; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %else ]
+; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %else ]
+; CHECK: else:
 ; CHECK-NOT: call
-; CHECK: ret i32 0
+; CHECK: %current.ret.tr = select i1 %ret.known.tr, i32 %ret.tr, i32 0
+; CHECK-NOT: ret
+; CHECK: return:
+; CHECK: %current.ret.tr1 = select i1 %ret.known.tr, i32 %ret.tr, i32 0
+; CHECK: ret i32 %current.ret.tr1
 entry:
 	%tmp.1 = icmp eq i32 %c, 0		; <i1> [#uses=1]
 	br i1 %tmp.1, label %return, label %else

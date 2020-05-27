@@ -460,6 +460,16 @@ class TailRecursionEliminator {
   SmallVector<PHINode *, 8> ArgumentPHIs;
   bool RemovableCallsMustBeMarkedTail = false;
 
+  // PHI node to store our return value.
+  PHINode *RetPN = nullptr;
+
+  // i1 PHI node to track if we have a valid return value stored in RetPN.
+  PHINode *RetKnownPN = nullptr;
+
+  // Vector of select instructions we insereted. These selects use RetKnownPN
+  // to either propagate RetPN or select a new return value.
+  SmallVector<SelectInst *, 8> RetSelects;
+
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
                           DomTreeUpdater &DTU)
@@ -577,6 +587,21 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
     PN->addIncoming(&*I, NewEntry);
     ArgumentPHIs.push_back(PN);
   }
+
+  // If the function doen't return void, create the RetPN and RetKnownPN PHI
+  // nodes to track our return value. We initialize RetPN with undef and
+  // RetKnownPN with false since we can't know our return value at function
+  // entry.
+  Type *RetType = F.getReturnType();
+  if (!RetType->isVoidTy()) {
+    Type *BoolType = Type::getInt1Ty(F.getContext());
+    RetPN = PHINode::Create(RetType, 2, "ret.tr", InsertPos);
+    RetKnownPN = PHINode::Create(BoolType, 2, "ret.known.tr", InsertPos);
+
+    RetPN->addIncoming(UndefValue::get(RetType), NewEntry);
+    RetKnownPN->addIncoming(ConstantInt::getFalse(BoolType), NewEntry);
+  }
+
   // The entry block was changed from HeaderBB to NewEntry.
   // The forward DominatorTree needs to be recalculated when the EntryBB is
   // changed. In this corner-case we recalculate the entire tree.
@@ -616,11 +641,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // value for the accumulator is placed in this variable.  If this value is set
   // then we actually perform accumulator recursion elimination instead of
   // simple tail recursion elimination.  If the operation is an LLVM instruction
-  // (eg: "add") then it is recorded in AccumulatorRecursionInstr.  If not, then
-  // we are handling the case when the return instruction returns a constant C
-  // which is different to the constant returned by other return instructions
-  // (which is recorded in AccumulatorRecursionEliminationInitVal).  This is a
-  // special case of accumulator recursion, the operation being "return C".
+  // (eg: "add") then it is recorded in AccumulatorRecursionInstr.
   Value *AccumulatorRecursionEliminationInitVal = nullptr;
   Instruction *AccumulatorRecursionInstr = nullptr;
 
@@ -645,26 +666,6 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     } else {
       return false;   // Otherwise, we cannot eliminate the tail recursion!
     }
-  }
-
-  // We can only transform call/return pairs that either ignore the return value
-  // of the call and return void, ignore the value of the call and return a
-  // constant, return the value returned by the tail call, or that are being
-  // accumulator recursion variable eliminated.
-  if (Ret->getNumOperands() == 1 && Ret->getReturnValue() != CI &&
-      !isa<UndefValue>(Ret->getReturnValue()) &&
-      AccumulatorRecursionEliminationInitVal == nullptr &&
-      !getCommonReturnValue(nullptr, CI)) {
-    // One case remains that we are able to handle: the current return
-    // instruction returns a constant, and all other return instructions
-    // return a different constant.
-    if (!isDynamicConstant(Ret->getReturnValue(), CI, Ret))
-      return false; // Current return instruction does not return a constant.
-    // Check that all other return instructions return a common constant.  If
-    // so, record it in AccumulatorRecursionEliminationInitVal.
-    AccumulatorRecursionEliminationInitVal = getCommonReturnValue(Ret, CI);
-    if (!AccumulatorRecursionEliminationInitVal)
-      return false;
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -698,20 +699,15 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     PHINode *AccPN = insertAccumulator(AccumulatorRecursionEliminationInitVal);
 
     Instruction *AccRecInstr = AccumulatorRecursionInstr;
-    if (AccRecInstr) {
-      // Add an incoming argument for the current block, which is computed by
-      // our associative and commutative accumulator instruction.
-      AccPN->addIncoming(AccRecInstr, BB);
 
-      // Next, rewrite the accumulator recursion instruction so that it does not
-      // use the result of the call anymore, instead, use the PHI node we just
-      // inserted.
-      AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
-    } else {
-      // Add an incoming argument for the current block, which is just the
-      // constant returned by the current return instruction.
-      AccPN->addIncoming(Ret->getReturnValue(), BB);
-    }
+    // Add an incoming argument for the current block, which is computed by
+    // our associative and commutative accumulator instruction.
+    AccPN->addIncoming(AccRecInstr, BB);
+
+    // Next, rewrite the accumulator recursion instruction so that it does not
+    // use the result of the call anymore, instead, use the PHI node we just
+    // inserted.
+    AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
 
     // Finally, rewrite any return instructions in the program to return the PHI
     // node instead of the "initval" that they do currently.  This loop will
@@ -720,6 +716,25 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       if (ReturnInst *RI = dyn_cast<ReturnInst>(BBI.getTerminator()))
         RI->setOperand(0, AccPN);
     ++NumAccumAdded;
+  }
+
+  // Update our return value tracking
+  if (RetPN) {
+    if (Ret->getReturnValue() == CI || AccumulatorRecursionEliminationInitVal) {
+      // Defer selecting a return value
+      RetPN->addIncoming(RetPN, BB);
+      RetKnownPN->addIncoming(RetKnownPN, BB);
+    } else {
+      // We found a return value we want to use, insert a select instruction to
+      // select it if we don't already know what our return value will be and
+      // store the result in our return value PHI node.
+      SelectInst *SI = SelectInst::Create(
+          RetKnownPN, RetPN, Ret->getReturnValue(), "current.ret.tr", Ret);
+      RetSelects.push_back(SI);
+
+      RetPN->addIncoming(SI, BB);
+      RetKnownPN->addIncoming(ConstantInt::getTrue(RetKnownPN->getType()), BB);
+    }
   }
 
   // Now that all of the PHI nodes are in place, remove the call and
@@ -802,6 +817,30 @@ void TailRecursionEliminator::cleanupAndFinalize() {
     if (Value *PNV = SimplifyInstruction(PN, F.getParent()->getDataLayout())) {
       PN->replaceAllUsesWith(PNV);
       PN->eraseFromParent();
+    }
+  }
+
+  if (RetPN) {
+    if (RetSelects.empty()) {
+      // If we didn't insert any select instructions, then we know we didn't
+      // store a return value and we can remove the PHI nodes we inserted.
+      RetPN->dropAllReferences();
+      RetPN->eraseFromParent();
+
+      RetKnownPN->dropAllReferences();
+      RetKnownPN->eraseFromParent();
+    } else {
+      // We need to insert a select instruction before any return left in the
+      // function to select our stored return value if we have one.
+      for (BasicBlock &BB : F) {
+        ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+        if (!RI)
+          continue;
+
+        SelectInst *SI = SelectInst::Create(
+            RetKnownPN, RetPN, RI->getOperand(0), "current.ret.tr", RI);
+        RI->setOperand(0, SI);
+      }
     }
   }
 }
