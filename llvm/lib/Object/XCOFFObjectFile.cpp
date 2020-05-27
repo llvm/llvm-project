@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include <cstddef>
 #include <cstring>
 
