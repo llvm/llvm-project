@@ -499,12 +499,17 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   LLT DstTy = MRI->getType(DstReg);
   LLT SrcTy = MRI->getType(SrcReg);
   const unsigned SrcSize = SrcTy.getSizeInBits();
-  const unsigned DstSize = DstTy.getSizeInBits();
+  unsigned DstSize = DstTy.getSizeInBits();
 
   // TODO: Should handle any multiple of 32 offset.
   unsigned Offset = I.getOperand(2).getImm();
   if (Offset % 32 != 0 || DstSize > 128)
     return false;
+
+  // 16-bit operations really use 32-bit registers.
+  // FIXME: Probably should not allow 16-bit G_EXTRACT results.
+  if (DstSize == 16)
+    DstSize = 32;
 
   const TargetRegisterClass *DstRC =
     TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
@@ -728,7 +733,9 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   unsigned InsSize = Src1Ty.getSizeInBits();
 
   int64_t Offset = I.getOperand(3).getImm();
-  if (Offset % 32 != 0)
+
+  // FIXME: These cases should have been illegal and unnecessary to check here.
+  if (Offset % 32 != 0 || InsSize % 32 != 0)
     return false;
 
   unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32, InsSize / 32);

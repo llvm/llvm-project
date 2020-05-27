@@ -1,0 +1,19 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+# FIXME: This should not be legal and this test should be deleted
+# ERR: remark: <unknown>:0:0: cannot select: %3:sgpr(<4 x s16>) = G_INSERT %0:sgpr, %2:sgpr(s16), 0 (in function: insert_sgpr_2s16_to_v4s16_offset0)
+---
+name:            insert_sgpr_2s16_to_v4s16_offset0
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
+    %1:sgpr(s32) = COPY $sgpr2
+    %2:sgpr(s16) = G_TRUNC %1
+    %3:sgpr(<4 x s16>) = G_INSERT %0, %2, 0
+    S_ENDPGM 0, implicit %3
+
+...
