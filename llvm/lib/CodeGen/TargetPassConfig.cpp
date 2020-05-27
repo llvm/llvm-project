@@ -669,6 +669,7 @@ void TargetPassConfig::addIRPasses() {
 
     // Run loop strength reduction before anything else.
     if (!DisableLSR) {
+      addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
       if (PrintLSR)
         addPass(createPrintFunctionPass(dbgs(),
