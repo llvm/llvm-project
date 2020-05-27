@@ -53,7 +53,8 @@ bool ClangExternalASTSourceCallbacks::FindExternalVisibleDeclsByName(
   // Objective-C methods are not added into the LookupPtr when they originate
   // from an external source. SetExternalVisibleDeclsForName() adds them.
   if (auto *oid = llvm::dyn_cast<clang::ObjCInterfaceDecl>(DC)) {
-    for (auto *omd : oid->methods())
+    clang::ObjCContainerDecl::method_range noload_methods(oid->noload_decls());
+    for (auto *omd : noload_methods)
       if (omd->getDeclName() == Name)
         decls.push_back(omd);
   }
