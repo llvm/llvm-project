@@ -129,25 +129,29 @@ template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
 template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
 
+namespace mlir {
+namespace linalg {
 /// Specialization of loop nest generator for scf.parallel loops to handle
 /// iterator types that are not parallel. These are generated as sequential
 /// loops.
 template <>
-void mlir::linalg::GenerateLoopNest<scf::ForOp>::doit(
-    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
-    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
+void GenerateLoopNest<scf::ForOp>::doit(MutableArrayRef<Value> allIvs,
+                                        ArrayRef<SubViewOp::Range> loopRanges,
+                                        ArrayRef<Attribute> iteratorTypes,
+                                        std::function<void(void)> fun) {
   edsc::GenericLoopNestRangeBuilder<scf::ForOp>(allIvs, loopRanges)(fun);
 }
 
 template <>
-void mlir::linalg::GenerateLoopNest<AffineForOp>::doit(
-    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
-    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
+void GenerateLoopNest<AffineForOp>::doit(MutableArrayRef<Value> allIvs,
+                                         ArrayRef<SubViewOp::Range> loopRanges,
+                                         ArrayRef<Attribute> iteratorTypes,
+                                         std::function<void(void)> fun) {
   edsc::GenericLoopNestRangeBuilder<AffineForOp>(allIvs, loopRanges)(fun);
 }
 
 template <>
-void mlir::linalg::GenerateLoopNest<scf::ParallelOp>::doit(
+void GenerateLoopNest<scf::ParallelOp>::doit(
     MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
     ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
   // Check if there is nothing to do here. This is also the recursion
@@ -190,3 +194,5 @@ void mlir::linalg::GenerateLoopNest<scf::ParallelOp>::doit(
       allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar),
       iteratorTypes.take_front(nOuterPar), nestedFn);
 }
+} // namespace linalg
+} // namespace mlir
