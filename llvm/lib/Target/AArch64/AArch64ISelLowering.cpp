@@ -622,6 +622,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BITCAST, MVT::i16, Custom);
   setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+  setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
 
   // Indexed loads and stores are supported.
   for (unsigned im = (unsigned)ISD::PRE_INC;
@@ -633,6 +634,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setIndexedLoadAction(im, MVT::f64, Legal);
     setIndexedLoadAction(im, MVT::f32, Legal);
     setIndexedLoadAction(im, MVT::f16, Legal);
+    setIndexedLoadAction(im, MVT::bf16, Legal);
     setIndexedStoreAction(im, MVT::i8, Legal);
     setIndexedStoreAction(im, MVT::i16, Legal);
     setIndexedStoreAction(im, MVT::i32, Legal);
@@ -640,6 +642,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(im, MVT::f64, Legal);
     setIndexedStoreAction(im, MVT::f32, Legal);
     setIndexedStoreAction(im, MVT::f16, Legal);
+    setIndexedStoreAction(im, MVT::bf16, Legal);
   }
 
   // Trap.
@@ -2818,7 +2821,8 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
 }
 
 static SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getValueType() != MVT::f16)
+  EVT OpVT = Op.getValueType();
+  if (OpVT != MVT::f16 && OpVT != MVT::bf16)
     return SDValue();
 
   assert(Op.getOperand(0).getValueType() == MVT::i16);
@@ -2827,7 +2831,7 @@ static SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) {
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op.getOperand(0));
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
   return SDValue(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::f16, Op,
+      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, OpVT, Op,
                          DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32)),
       0);
 }
@@ -3582,9 +3586,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         RC = &AArch64::GPR32RegClass;
       else if (RegVT == MVT::i64)
         RC = &AArch64::GPR64RegClass;
-      else if (RegVT == MVT::f16)
-        RC = &AArch64::FPR16RegClass;
-      else if (RegVT == MVT::bf16)
+      else if (RegVT == MVT::f16 || RegVT == MVT::bf16)
         RC = &AArch64::FPR16RegClass;
       else if (RegVT == MVT::f32)
         RC = &AArch64::FPR32RegClass;
@@ -5279,8 +5281,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
                        Cmp);
   }
 
-  assert(LHS.getValueType() == MVT::f16 || LHS.getValueType() == MVT::f32 ||
-         LHS.getValueType() == MVT::f64);
+  assert(LHS.getValueType() == MVT::f16 || LHS.getValueType() == MVT::bf16 ||
+         LHS.getValueType() == MVT::f32 || LHS.getValueType() == MVT::f64);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.
@@ -7305,7 +7307,8 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
       return DAG.getNode(AArch64ISD::REV64, dl, VT, OpLHS);
     // vrev <4 x i16> -> REV32
     if (VT.getVectorElementType() == MVT::i16 ||
-        VT.getVectorElementType() == MVT::f16)
+        VT.getVectorElementType() == MVT::f16 ||
+        VT.getVectorElementType() == MVT::bf16)
       return DAG.getNode(AArch64ISD::REV32, dl, VT, OpLHS);
     // vrev <4 x i8> -> REV16
     assert(VT.getVectorElementType() == MVT::i8);
@@ -7318,7 +7321,7 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
     unsigned Opcode;
     if (EltTy == MVT::i8)
       Opcode = AArch64ISD::DUPLANE8;
-    else if (EltTy == MVT::i16 || EltTy == MVT::f16)
+    else if (EltTy == MVT::i16 || EltTy == MVT::f16 || EltTy == MVT::bf16)
       Opcode = AArch64ISD::DUPLANE16;
     else if (EltTy == MVT::i32 || EltTy == MVT::f32)
       Opcode = AArch64ISD::DUPLANE32;
@@ -7425,7 +7428,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
 static unsigned getDUPLANEOp(EVT EltType) {
   if (EltType == MVT::i8)
     return AArch64ISD::DUPLANE8;
-  if (EltType == MVT::i16 || EltType == MVT::f16)
+  if (EltType == MVT::i16 || EltType == MVT::f16 || EltType == MVT::bf16)
     return AArch64ISD::DUPLANE16;
   if (EltType == MVT::i32 || EltType == MVT::f32)
     return AArch64ISD::DUPLANE32;
@@ -7661,6 +7664,7 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
     break;
   case MVT::f16:
+  case MVT::bf16:
   case MVT::f32:
   case MVT::f64:
     // Fine as is
@@ -8367,8 +8371,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (VT.getVectorElementType().isFloatingPoint()) {
       SmallVector<SDValue, 8> Ops;
       EVT EltTy = VT.getVectorElementType();
-      assert ((EltTy == MVT::f16 || EltTy == MVT::f32 || EltTy == MVT::f64) &&
-              "Unsupported floating-point vector type");
+      assert ((EltTy == MVT::f16 || EltTy == MVT::bf16 || EltTy == MVT::f32 ||
+               EltTy == MVT::f64) && "Unsupported floating-point vector type");
       LLVM_DEBUG(
           dbgs() << "LowerBUILD_VECTOR: float constant splats, creating int "
                     "BITCASTS, and try again\n");
@@ -8487,11 +8491,12 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   // Insertion/extraction are legal for V128 types.
   if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
       VT == MVT::v2i64 || VT == MVT::v4f32 || VT == MVT::v2f64 ||
-      VT == MVT::v8f16)
+      VT == MVT::v8f16 || VT == MVT::v8bf16)
     return Op;
 
   if (VT != MVT::v8i8 && VT != MVT::v4i16 && VT != MVT::v2i32 &&
-      VT != MVT::v1i64 && VT != MVT::v2f32 && VT != MVT::v4f16)
+      VT != MVT::v1i64 && VT != MVT::v2f32 && VT != MVT::v4f16 &&
+      VT != MVT::v4bf16)
     return SDValue();
 
   // For V64 types, we perform insertion by expanding the value
@@ -8521,11 +8526,12 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   // Insertion/extraction are legal for V128 types.
   if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
       VT == MVT::v2i64 || VT == MVT::v4f32 || VT == MVT::v2f64 ||
-      VT == MVT::v8f16)
+      VT == MVT::v8f16 || VT == MVT::v8bf16)
     return Op;
 
   if (VT != MVT::v8i8 && VT != MVT::v4i16 && VT != MVT::v2i32 &&
-      VT != MVT::v1i64 && VT != MVT::v2f32 && VT != MVT::v4f16)
+      VT != MVT::v1i64 && VT != MVT::v2f32 && VT != MVT::v4f16 &&
+      VT != MVT::v4bf16)
     return SDValue();
 
   // For V64 types, we perform extraction by expanding the value
@@ -13690,7 +13696,8 @@ static void ReplaceBITCASTResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
 
-  if (N->getValueType(0) != MVT::i16 || Op.getValueType() != MVT::f16)
+  if (N->getValueType(0) != MVT::i16 ||
+      (Op.getValueType() != MVT::f16 && Op.getValueType() != MVT::bf16))
     return;
 
   Op = SDValue(
