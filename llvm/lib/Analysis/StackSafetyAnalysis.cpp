@@ -249,17 +249,17 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
     return ConstantRange::getEmpty(PointerSize);
   assert(!isUnsafe(SizeRange));
 
-  ConstantRange AccessRange = offsetFrom(Addr, Base);
-  if (isUnsafe(AccessRange))
+  ConstantRange Offsets = offsetFrom(Addr, Base);
+  if (isUnsafe(Offsets))
     return UnknownRange;
 
-  if (AccessRange.signedAddMayOverflow(SizeRange) !=
+  if (Offsets.signedAddMayOverflow(SizeRange) !=
       ConstantRange::OverflowResult::NeverOverflows)
     return UnknownRange;
-  AccessRange = AccessRange.add(SizeRange);
-  if (isUnsafe(AccessRange))
+  Offsets = Offsets.add(SizeRange);
+  if (isUnsafe(Offsets))
     return UnknownRange;
-  return AccessRange;
+  return Offsets;
 }
 
 ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
@@ -284,13 +284,13 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
 
   const SCEV *Expr =
       SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
-  ConstantRange LenRange = SE.getSignedRange(Expr);
-  assert(!isUnsafe(LenRange));
-  if (LenRange.getUpper().isNegative())
+  ConstantRange Sizes = SE.getSignedRange(Expr);
+  assert(!isUnsafe(Sizes));
+  if (Sizes.getUpper().isNegative())
     return UnknownRange;
-  LenRange = LenRange.sextOrTrunc(PointerSize);
+  Sizes = Sizes.sextOrTrunc(PointerSize);
   ConstantRange SizeRange(APInt::getNullValue(PointerSize),
-                          LenRange.getUpper() - 1);
+                          Sizes.getUpper() - 1);
   return getAccessRange(U, Base, SizeRange);
 }
 
