@@ -82,6 +82,10 @@ Non-comprehensive list of changes in this release
   linker. If the user links the program with the ``clang`` or ``clang-cl``
   drivers, the driver will pass this flag for them.
 
+- Clang's profile files generated through ``-fprofile-instr-generate`` are using
+  a fixed hashing algorithm that prevents some collision when loading
+  out-of-date profile informations. Clang can still read old profile files.
+
 New Compiler Flags
 ------------------
 
