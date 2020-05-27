@@ -131,6 +131,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size",
   let results = (outs Shape_SizeType:$result);
 
   let assemblyFormat = "attr-dict $value";
+  let hasFolder = 1;
 }
 
 def Shape_FromExtentsOp : Shape_Op<"from_extents", [
@@ -186,6 +187,37 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", []> {
 
   let arguments = (ins Shape_ShapeType:$input);
   let results = (outs IndexTensor:$result);
+
+  let hasFolder = 1;
+}
+
+def Shape_GetExtentOp : Shape_Op<"get_extent",
+    [NoSideEffect, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Gets the specified extent from a shape";
+  let description = [{
+    Gets the extent indexed by `dim` from `shape`.
+
+    If the shape is an error, it returns an error size.
+  }];
+  let arguments = (ins
+    Shape_ShapeType:$shape,
+    Confined<I64Attr, [IntNonNegative]>:$dim
+  );
+  let results = (outs Shape_SizeType:$extent);
+  let assemblyFormat = "$shape `,` $dim attr-dict";
+
+  let builders = [
+    // Builder that allows passing a simple integer instead of an IntegerAttr.
+    OpBuilder<
+      [{
+        OpBuilder &builder, OperationState &result,
+        Value shape, int64_t dim
+      }],
+      [{
+        build(builder, result, shape, builder.getI64IntegerAttr(dim));
+      }]
+    >
+  ];
 
   let hasFolder = 1;
 }
