@@ -747,9 +747,11 @@ func @load_i8(%arg0: memref<i8>) {
 // CHECK-LABEL: @load_i16
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32)
 func @load_i16(%arg0: memref<10xi16>, %index : index) {
-  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
-  //     CHECK: %[[FLAT_IDX:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
   //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[OFFSET:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  //     CHECK: %[[UPDATE:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
+  //     CHECK: %[[FLAT_IDX:.+]] = spv.IAdd %[[OFFSET]], %[[UPDATE]] : i32
   //     CHECK: %[[TWO1:.+]] = spv.constant 2 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[FLAT_IDX]], %[[TWO1]] : i32
   //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
@@ -811,9 +813,11 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
 // CHECK-LABEL: @store_i16
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32)
 func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
-  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
-  //     CHECK: %[[FLAT_IDX:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
   //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[OFFSET:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  //     CHECK: %[[UPDATE:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
+  //     CHECK: %[[FLAT_IDX:.+]] = spv.IAdd %[[OFFSET]], %[[UPDATE]] : i32
   //     CHECK: %[[TWO:.+]] = spv.constant 2 : i32
   //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
   //     CHECK: %[[IDX:.+]] = spv.SMod %[[FLAT_IDX]], %[[TWO]] : i32

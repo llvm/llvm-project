@@ -218,6 +218,10 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
   return llvm::None;
 }
 
+Optional<int64_t> SPIRVTypeConverter::getConvertedTypeNumBytes(Type t) {
+  return getTypeNumBytes(t);
+}
+
 /// Converts a scalar `type` to a suitable type under the given `targetEnv`.
 static Optional<Type>
 convertScalarType(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
@@ -383,8 +387,11 @@ static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
   auto arrayType =
       spirv::ArrayType::get(*arrayElemType, arrayElemCount, *arrayElemSize);
 
-  // Wrap in a struct to satisfy Vulkan interface requirements.
-  auto structType = spirv::StructType::get(arrayType, 0);
+  // Wrap in a struct to satisfy Vulkan interface requirements. Memrefs with
+  // workgroup storage class do not need the struct to be laid out explicitly.
+  auto structType = *storageClass == spirv::StorageClass::Workgroup
+                        ? spirv::StructType::get(arrayType)
+                        : spirv::StructType::get(arrayType, 0);
   return spirv::PointerType::get(structType, *storageClass);
 }
 
@@ -574,35 +581,40 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
     SPIRVTypeConverter &typeConverter, MemRefType baseType, Value basePtr,
     ArrayRef<Value> indices, Location loc, OpBuilder &builder) {
   // Get base and offset of the MemRefType and verify they are static.
+
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(baseType, strides, offset)) ||
-      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset())) {
+      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) ||
+      offset == MemRefType::getDynamicStrideOrOffset()) {
     return nullptr;
   }
 
   auto indexType = typeConverter.getIndexType(builder.getContext());
-
-  Value ptrLoc = nullptr;
-  assert(indices.size() == strides.size() &&
-         "must provide indices for all dimensions");
-  for (auto index : enumerate(indices)) {
-    Value strideVal = builder.create<spirv::ConstantOp>(
-        loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
-    Value update = builder.create<spirv::IMulOp>(loc, strideVal, index.value());
-    ptrLoc =
-        (ptrLoc ? builder.create<spirv::IAddOp>(loc, ptrLoc, update).getResult()
-                : update);
-  }
   SmallVector<Value, 2> linearizedIndices;
   // Add a '0' at the start to index into the struct.
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
   linearizedIndices.push_back(zero);
-  // If it is a zero-rank memref type, extract the element directly.
-  if (!ptrLoc) {
-    ptrLoc = zero;
+
+  if (baseType.getRank() == 0) {
+    linearizedIndices.push_back(zero);
+  } else {
+    // TODO: Instead of this logic, use affine.apply and add patterns for
+    // lowering affine.apply to standard ops. These will get lowered to SPIR-V
+    // ops by the DialectConversion framework.
+    Value ptrLoc = builder.create<spirv::ConstantOp>(
+        loc, indexType, IntegerAttr::get(indexType, offset));
+    assert(indices.size() == strides.size() &&
+           "must provide indices for all dimensions");
+    for (auto index : enumerate(indices)) {
+      Value strideVal = builder.create<spirv::ConstantOp>(
+          loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
+      Value update =
+          builder.create<spirv::IMulOp>(loc, strideVal, index.value());
+      ptrLoc = builder.create<spirv::IAddOp>(loc, ptrLoc, update);
+    }
+    linearizedIndices.push_back(ptrLoc);
   }
-  linearizedIndices.push_back(ptrLoc);
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
 }
 

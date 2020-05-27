@@ -41,6 +41,12 @@ class SPIRVTypeConverter : public TypeConverter {
 public:
   explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
 
+  /// Gets the number of bytes used for a type when converted to SPIR-V
+  /// type. Note that it doesnt account for whether the type is legal for a
+  /// SPIR-V target (described by spirv::TargetEnvAttr). Returns None on
+  /// failure.
+  static Optional<int64_t> getConvertedTypeNumBytes(Type);
+
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
 
