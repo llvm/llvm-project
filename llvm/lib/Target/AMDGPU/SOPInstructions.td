@@ -1218,8 +1218,7 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_WAITCNT_DEPCTR :
     SOPP <0x023, (ins s16imm:$simm16), "s_waitcnt_depctr $simm16">;
 
-  let hasSideEffects = 1, Uses = [MODE], Defs = [MODE] in {
-    // FIXME: Should remove hasSideEffects
+  let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
       SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
     def S_DENORM_MODE :
