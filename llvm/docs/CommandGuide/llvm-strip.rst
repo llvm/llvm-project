@@ -181,6 +181,10 @@ them.
  segments. Note that many tools will not be able to use an object without
  section headers.
 
+.. option:: -T
+
+ Remove Swift symbols.
+
 EXIT STATUS
 -----------
 

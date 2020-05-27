@@ -283,6 +283,28 @@ void MachOReader::readIndirectSymbolTable(Object &O) const {
   }
 }
 
+void MachOReader::readSwiftVersion(Object &O) const {
+  struct ObjCImageInfo {
+    uint32_t Version;
+    uint32_t Flags;
+  } ImageInfo;
+
+  for (const LoadCommand &LC : O.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections)
+      if (Sec->Sectname == "__objc_imageinfo" &&
+          (Sec->Segname == "__DATA" || Sec->Segname == "__DATA_CONST" ||
+           Sec->Segname == "__DATA_DIRTY") &&
+          Sec->Content.size() >= sizeof(ObjCImageInfo)) {
+        memcpy(&ImageInfo, Sec->Content.data(), sizeof(ObjCImageInfo));
+        if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost) {
+          sys::swapByteOrder(ImageInfo.Version);
+          sys::swapByteOrder(ImageInfo.Flags);
+        }
+        O.SwiftVersion = (ImageInfo.Flags >> 8) & 0xff;
+        return;
+      }
+}
+
 std::unique_ptr<Object> MachOReader::create() const {
   auto Obj = std::make_unique<Object>();
   readHeader(*Obj);
@@ -297,6 +319,7 @@ std::unique_ptr<Object> MachOReader::create() const {
   readDataInCodeData(*Obj);
   readFunctionStartsData(*Obj);
   readIndirectSymbolTable(*Obj);
+  readSwiftVersion(*Obj);
   return Obj;
 }
 
