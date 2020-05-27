@@ -254,6 +254,10 @@ public:
     return Fortran::lower::translateSomeExprToFIRType(&mlirContext, defaults,
                                                       &expr);
   }
+  mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
+    return Fortran::lower::translateVariableToFIRType(&mlirContext, defaults,
+                                                      var);
+  }
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
     return Fortran::lower::translateSymbolToFIRType(&mlirContext, defaults,
                                                     sym);
@@ -1509,7 +1513,7 @@ private:
         if (!sym.GetType()->AsIntrinsic()) {
           TODO(); // Derived type / polymorphic
         }
-        auto symTy = genType(sym);
+        auto symTy = genType(var);
         auto loc = toLocation();
         global = builder->createGlobal(
             loc, symTy, globalName, isConst,
@@ -1519,7 +1523,7 @@ private:
               builder.create<fir::HasValueOp>(loc, castTo);
             });
       } else {
-        global = builder->createGlobal(toLocation(), genType(sym), globalName);
+        global = builder->createGlobal(toLocation(), genType(var), globalName);
       }
       auto addrOf = builder->create<fir::AddrOfOp>(
           toLocation(), global.resultType(), global.getSymbol());
@@ -1567,11 +1571,7 @@ private:
                              const Fortran::lower::pft::Variable &var,
                              llvm::ArrayRef<mlir::Value> shape = {}) {
     auto nm = var.getSymbol().name().ToString();
-    auto ty = genType(var.getSymbol());
-    if (var.isPointer())
-      ty = fir::PointerType::get(ty);
-    else if (var.isHeapAlloc())
-      ty = fir::HeapType::get(ty);
+    auto ty = genType(var);
     if (shape.size())
       if (auto arrTy = ty.dyn_cast<fir::SequenceType>()) {
         // elide the constant dimensions before construction
@@ -1674,7 +1674,7 @@ private:
                     !Fortran::semantics::IsAllocatableOrPointer(sym);
       if (sia.staticSize) {
         // object shape is constant
-        auto castTy = builder->getRefType(genType(sym));
+        auto castTy = builder->getRefType(genType(var));
         if (addr)
           addr = builder->createConvert(loc, castTy, addr);
         if (sia.lboundIsAllOnes()) {
@@ -1703,7 +1703,7 @@ private:
         }
       } else {
         // cast to the known constant parts from the declaration
-        auto castTy = builder->getRefType(genType(sym));
+        auto castTy = builder->getRefType(genType(var));
         if (addr) {
           // XXX: special handling for boxchar; see proviso above
           if (auto box =
@@ -1780,7 +1780,7 @@ private:
         return;
       }
       assert(!mustBeDummy);
-      auto charTy = genType(sym);
+      auto charTy = genType(var);
       auto c = sia.getCharLenConst();
       mlir::Value local = c ? builder->createCharacterTemp(charTy, *c)
                             : builder->createCharacterTemp(charTy, len);
