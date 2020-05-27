@@ -81,21 +81,21 @@ constexpr StringRef getPaddingAttrName() { return "padding"; }
 
 /// Use to encode that a particular iterator type has parallel semantics.
 constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
-constexpr bool isParallelIterator(Attribute attr) {
+bool isParallelIterator(Attribute attr) {
   auto strAttr = attr.dyn_cast_or_null<StringAttr>();
   return strAttr && strAttr.getValue() == getParallelIteratorTypeName();
 }
 
 /// Use to encode that a particular iterator type has reduction semantics.
 constexpr StringRef getReductionIteratorTypeName() { return "reduction"; }
-constexpr bool isReductionIterator(Attribute attr) {
+bool isReductionIterator(Attribute attr) {
   auto strAttr = attr.dyn_cast_or_null<StringAttr>();
   return strAttr && strAttr.getValue() == getReductionIteratorTypeName();
 }
 
 /// Use to encode that a particular iterator type has window semantics.
 constexpr StringRef getWindowIteratorTypeName() { return "window"; }
-constexpr bool isWindowIterator(Attribute attr) {
+bool isWindowIterator(Attribute attr) {
   auto strAttr = attr.dyn_cast_or_null<StringAttr>();
   return strAttr && strAttr.getValue() == getWindowIteratorTypeName();
 }
