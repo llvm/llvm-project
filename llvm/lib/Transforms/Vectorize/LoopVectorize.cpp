@@ -2795,8 +2795,8 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   std::tie(FirstCheckInst, MemRuntimeCheck) =
       addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
                        RtPtrChecking.getChecks(), RtPtrChecking.getSE());
-  if (!MemRuntimeCheck)
-    return;
+  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
+                            "claimed checks are required");
 
   if (MemCheckBlock->getParent()->hasOptSize()) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
