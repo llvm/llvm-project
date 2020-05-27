@@ -365,6 +365,20 @@ namespace clang {
   };
 
   llvm::StringRef getParameterABISpelling(ParameterABI kind);
+
+  inline llvm::StringRef getAccessSpelling(AccessSpecifier AS) {
+    switch (AS) {
+    case AccessSpecifier::AS_public:
+      return "public";
+    case AccessSpecifier::AS_protected:
+      return "protected";
+    case AccessSpecifier::AS_private:
+      return "private";
+    case AccessSpecifier::AS_none:
+      return {};
+    }
+    llvm_unreachable("Unknown AccessSpecifier");
+  }
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_SPECIFIERS_H

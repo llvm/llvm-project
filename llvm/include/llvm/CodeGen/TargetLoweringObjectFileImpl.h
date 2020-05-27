@@ -262,6 +262,9 @@ public:
   /// For functions, this will always return a function descriptor symbol.
   MCSymbol *getTargetSymbol(const GlobalValue *GV,
                             const TargetMachine &TM) const override;
+
+  MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+                                        const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

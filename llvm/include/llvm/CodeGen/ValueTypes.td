@@ -163,7 +163,7 @@ def nxv8f16  : ValueType<128, 128>; // n x  8 x f16 vector value
 def nxv2bf16 : ValueType<32 , 129>; // n x  2 x bf16 vector value
 def nxv4bf16 : ValueType<64 , 130>; // n x  4 x bf16 vector value
 def nxv8bf16 : ValueType<128, 131>; // n x  8 x bf16 vector value
-def nxv1bf32 : ValueType<32 , 132>; // n x  1 x f32 vector value
+def nxv1f32  : ValueType<32 , 132>; // n x  1 x f32 vector value
 def nxv2f32  : ValueType<64 , 133>; // n x  2 x f32 vector value
 def nxv4f32  : ValueType<128, 134>; // n x  4 x f32 vector value
 def nxv8f32  : ValueType<256, 135>; // n x  8 x f32 vector value

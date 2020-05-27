@@ -1482,6 +1482,9 @@ def Vector_PrintOp :
 
 //===----------------------------------------------------------------------===//
 // Ops used for supporting progressive lowering and conversion type changes.
+// The Ops are typically not used directly by higher level dialects, but are
+// used by intra-dialect rewriting rules to bring vector operations closer
+// to the hardware ISA.
 //===----------------------------------------------------------------------===//
 
 /// Vector dialect matrix multiplication op that operates on flattened 1-D
@@ -1510,11 +1513,19 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
   let description = [{
     This is the counterpart of llvm.matrix.multiply in MLIR. It serves the
     purposes of more progressive lowering and localized type conversion.
+    Higher levels typically lower matrix multiplications into 'vector.contract'
+    operations. Subsequent rewriting rule progressively lower these operations
+    into 'vector.matrix_multiply' operations to bring the operations closer
+    to the hardware ISA.
 
     The ‘vector.matrix_multiply’ op treats `lhs` as matrix with <lhs_rows> rows
     and <lhs_columns> columns, `rhs` as matrix with <lhs_columns> rows and
     <rhs_columns> and multiplies them. The result matrix is returned embedded in
     the result vector.
+
+    Also see:
+
+    http://llvm.org/docs/LangRef.html#llvm-matrix-multiply-intrinsic
 
     Example:
 
@@ -1539,6 +1550,50 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
   let verifier = ?;
   let assemblyFormat = "$lhs `,` $rhs attr-dict "
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
+}
+
+/// Vector dialect matrix tranposition op that operates on flattened 1-D
+/// MLIR vectors. This is the counterpart of llvm.matrix.transpose in MLIR.
+/// This may seem redundant with vector.transpose but it serves the purposes of
+/// more progressive lowering and localized type conversion on the path:
+///   `vector<...x...xf32> -> vector<...xf32> -> !llvm<... x float>`.
+def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
+  PredOpTrait<"source operand and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+    Arguments<(
+      // TODO(ntv, fhahn, ajcbik): tighten vector element types that make sense.
+      ins VectorOfRankAndType<[1],
+            [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$matrix,
+          I32Attr:$rows, I32Attr:$columns)>,
+    Results<(
+      outs VectorOfRankAndType<[1],
+             [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$res)> {
+  let summary = "Vector matrix transposition on flattened 1-D MLIR vectors";
+  let description = [{
+    This is the counterpart of llvm.matrix.transpose in MLIR. It serves
+    the purposes of more progressive lowering and localized type conversion.
+    Higher levels typically lower matrix tranpositions into 'vector.transpose'
+    operations. Subsequent rewriting rule progressively lower these operations
+    into 'vector.flat_transpose' operations to bring the operations closer
+    to the hardware ISA.
+
+    The ‘vector.flat_transpose’ op treats the 1-D input `matrix` as
+    a 2-D matrix with <rows> rows and <columns> columns, and returns the
+    transposed matrix in flattened form in 'res'.
+
+    Also see:
+
+    http://llvm.org/docs/LangRef.html#llvm-matrix-transpose-intrinsic
+
+    Example:
+
+    ```mlir
+    %1 = vector.flat_transpose %0 { rows = 4: i32, columns = 4: i32 }
+       : (vector<16xf32>) -> vector<16xf32>
+    ```
+  }];
+  let verifier = ?;
+  let assemblyFormat = "$matrix attr-dict `:` type($matrix) `->` type($res)";
 }
 
 #endif // VECTOR_OPS

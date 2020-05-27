@@ -43,3 +43,15 @@ bool OrderedInstructions::dfsBefore(const Instruction *InstA,
   DomTreeNode *DB = DT->getNode(InstB->getParent());
   return DA->getDFSNumIn() < DB->getDFSNumIn();
 }
+
+bool OrderedInstructions::domTreeLevelBefore(const Instruction *InstA,
+                                             const Instruction *InstB) const {
+  // Use ordered basic block in case the 2 instructions are in the same basic
+  // block.
+  if (InstA->getParent() == InstB->getParent())
+    return localDominates(InstA, InstB);
+
+  DomTreeNode *DA = DT->getNode(InstA->getParent());
+  DomTreeNode *DB = DT->getNode(InstB->getParent());
+  return DA->getLevel() < DB->getLevel();
+}

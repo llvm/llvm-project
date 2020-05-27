@@ -1145,6 +1145,13 @@ func @transpose_dim_size_mismatch(%arg0: vector<11x7x3x2xi32>) {
 
 // -----
 
+func @flat_transpose_type_mismatch(%arg0: vector<16xf32>) {
+  // expected-error@+1 {{'vector.flat_transpose' op failed to verify that source operand and result have same element type}}
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf64>
+}
+
+// -----
+
 func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>>) {
   // expected-error@+1 {{expects operand to be a memref with no layout}}
   %0 = vector.type_cast %arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>> to memref<vector<4x3xf32>>

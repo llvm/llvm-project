@@ -842,6 +842,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMAX);
   setTargetDAGCombine(ISD::ATOMIC_LOAD_FADD);
 
+  // FIXME: In other contexts we pretend this is a per-function property.
+  setStackPointerRegisterToSaveRestore(AMDGPU::SGPR32);
+
   setSchedulingPreference(Sched::RegPressure);
 }
 

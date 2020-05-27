@@ -866,10 +866,26 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
 
   SI.GCArgs = ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
   SI.StatepointInstr = ISP.getInstruction();
-  SI.GCTransitionArgs = ArrayRef<const Use>(ISP.gc_transition_args_begin(),
-                                            ISP.gc_transition_args_end());
   SI.ID = ISP.getID();
-  SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
+
+  if (auto Opt = ISP.getCall()->getOperandBundle(LLVMContext::OB_deopt)) {
+    assert(ISP.deopt_begin() == ISP.deopt_end() &&
+           "can't list both deopt operands and deopt bundle");
+    auto &Inputs = Opt->Inputs;
+    SI.DeoptState = ArrayRef<const Use>(Inputs.begin(), Inputs.end());
+  } else {
+    SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
+  }
+  if (auto Opt = ISP.getCall()->getOperandBundle(LLVMContext::OB_gc_transition)) {
+    assert(ISP.gc_transition_args_begin() == ISP.gc_transition_args_end() &&
+           "can't list both gc_transition operands and bundle");
+    auto &Inputs = Opt->Inputs;
+    SI.GCTransitionArgs = ArrayRef<const Use>(Inputs.begin(), Inputs.end());
+  } else {
+    SI.GCTransitionArgs = ArrayRef<const Use>(ISP.gc_transition_args_begin(),
+                                              ISP.gc_transition_args_end());
+  }
+
   SI.StatepointFlags = ISP.getFlags();
   SI.NumPatchBytes = ISP.getNumPatchBytes();
   SI.EHPadBB = EHPadBB;

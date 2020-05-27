@@ -64,7 +64,7 @@ class StringRef;
 
 namespace vfs {
 class FileSystem;
-};
+}
 
 class SpecialCaseList {
 public:
