@@ -149,18 +149,21 @@ struct CodeGenIntrinsic {
     ReadOnly,
     WriteOnly,
     ReadNone,
-    ImmArg
+    ImmArg,
+    Alignment
   };
 
   struct ArgAttribute {
     unsigned Index;
     ArgAttrKind Kind;
+    uint64_t Value;
 
-    ArgAttribute(unsigned Idx, ArgAttrKind K)
-        : Index(Idx), Kind(K) {}
+    ArgAttribute(unsigned Idx, ArgAttrKind K, uint64_t V)
+        : Index(Idx), Kind(K), Value(V) {}
 
     bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Index, Kind) < std::tie(Other.Index, Other.Kind);
+      return std::tie(Index, Kind, Value) <
+             std::tie(Other.Index, Other.Kind, Other.Value);
     }
   };
 
