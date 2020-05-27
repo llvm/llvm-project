@@ -18,6 +18,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "llvm/ADT/ScopeExit.h"
 
 // These are for the Sourcename completers.
 // FIXME: Make a separate file for the completers.
@@ -269,6 +270,7 @@ void CommandObject::Cleanup() {
 void CommandObject::HandleCompletion(CompletionRequest &request) {
 
   m_exe_ctx = m_interpreter.GetExecutionContext();
+  auto reset_ctx = llvm::make_scope_exit([this]() { Cleanup(); });
 
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
@@ -296,8 +298,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
     // If we got here, the last word is not an option or an option argument.
     HandleArgumentCompletion(request, opt_element_vector);
   }
-
-  m_exe_ctx.Clear();
 }
 
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
