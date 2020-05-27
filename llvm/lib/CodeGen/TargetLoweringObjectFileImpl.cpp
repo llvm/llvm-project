@@ -2150,6 +2150,14 @@ XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
   llvm_unreachable("Unknown linkage type!");
 }
 
+MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
+    const Function *F, const TargetMachine &TM) const {
+  SmallString<128> NameStr;
+  NameStr.push_back('.');
+  getNameWithPrefix(NameStr, F, TM);
+  return getContext().getOrCreateSymbol(NameStr);
+}
+
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
     const Function *F, const TargetMachine &TM) const {
   SmallString<128> NameStr;
