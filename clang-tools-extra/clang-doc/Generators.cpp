@@ -27,20 +27,6 @@ findGeneratorByName(llvm::StringRef Format) {
 
 // Enum conversion
 
-std::string getAccess(AccessSpecifier AS) {
-  switch (AS) {
-  case AccessSpecifier::AS_public:
-    return "public";
-  case AccessSpecifier::AS_protected:
-    return "protected";
-  case AccessSpecifier::AS_private:
-    return "private";
-  case AccessSpecifier::AS_none:
-    return {};
-  }
-  llvm_unreachable("Unknown AccessSpecifier");
-}
-
 std::string getTagType(TagTypeKind AS) {
   switch (AS) {
   case TagTypeKind::TTK_Class:

@@ -157,7 +157,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
     First = false;
   }
   writeHeader(I.Name, 3, OS);
-  std::string Access = getAccess(I.Access);
+  std::string Access = getAccessSpelling(I.Access).str();
   if (Access != "")
     writeLine(genItalic(Access + " " + I.ReturnType.Type.Name + " " + I.Name +
                         "(" + Stream.str() + ")"),
@@ -250,7 +250,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Members.empty()) {
     writeHeader("Members", 2, OS);
     for (const auto &Member : I.Members) {
-      std::string Access = getAccess(Member.Access);
+      std::string Access = getAccessSpelling(Member.Access).str();
       if (Access != "")
         writeLine(Access + " " + Member.Type.Name + " " + Member.Name, OS);
       else
