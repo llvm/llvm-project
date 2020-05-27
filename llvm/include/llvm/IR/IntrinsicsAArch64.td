@@ -1311,6 +1311,7 @@ def int_aarch64_sve_ldnf1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ldff1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 
 def int_aarch64_sve_ld1rq : AdvSIMD_1Vec_PredLoad_Intrinsic;
+def int_aarch64_sve_ld1ro : AdvSIMD_1Vec_PredLoad_Intrinsic;
 
 //
 // Stores
