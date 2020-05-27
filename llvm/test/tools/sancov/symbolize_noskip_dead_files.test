@@ -1,4 +1,4 @@
-REQUIRES: x86_64-linux
+REQUIRES: x86-registered-target && host-byteorder-little-endian
 RUN: sancov -symbolize -skip-dead-files=0 -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
 
 CHECK: {
