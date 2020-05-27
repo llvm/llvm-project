@@ -94,16 +94,9 @@ public:
   /// pointer to it.  Propagates errors in case of failure.
   llvm::Expected<void (*)(void **)> lookup(StringRef name) const;
 
-  /// Invokes the function with the given name passing it the list of arguments.
-  /// The arguments are accepted by lvalue-reference since the packed function
-  /// interface expects a list of non-null pointers.
-  template <typename... Args>
-  llvm::Error invoke(StringRef name, Args &... args);
-
   /// Invokes the function with the given name passing it the list of arguments
-  /// as a list of opaque pointers. This is the arity-agnostic equivalent of
-  /// the templated `invoke`.
-  llvm::Error invoke(StringRef name, MutableArrayRef<void *> args);
+  /// as a list of opaque pointers.
+  llvm::Error invoke(StringRef name, MutableArrayRef<void *> args = llvm::None);
 
   /// Set the target triple on the module. This is implicitly done when creating
   /// the engine.
@@ -134,19 +127,6 @@ private:
   /// Perf notification listener.
   llvm::JITEventListener *perfListener;
 };
-
-template <typename... Args>
-llvm::Error ExecutionEngine::invoke(StringRef name, Args &... args) {
-  auto expectedFPtr = lookup(name);
-  if (!expectedFPtr)
-    return expectedFPtr.takeError();
-  auto fptr = *expectedFPtr;
-
-  SmallVector<void *, 8> packedArgs{static_cast<void *>(&args)...};
-  (*fptr)(packedArgs.data());
-
-  return llvm::Error::success();
-}
 
 } // end namespace mlir
 
