@@ -45,6 +45,9 @@ struct TestLinalgTransforms
           "Test a fused pass that applies patterns from matmul to vectors via "
           "2-d tiling"),
       llvm::cl::init(false)};
+  Option<bool> testPromotionOptions{*this, "test-linalg-promotion-options",
+                                    llvm::cl::desc("Test promotion options"),
+                                    llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -100,6 +103,14 @@ static void applyPatterns(FuncOp funcOp) {
   patterns.insert<LinalgTilingPattern<MatvecOp>>(
       ctx, LinalgTilingOptions().setTileSizes({5, 6}).setInterchange({1, 0}),
       LinalgMarker({"__with_perm__"}, "L1__with_perm__"));
+
+  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+      ctx,
+      LinalgTilingOptions()
+          .setTileSizes({16, 8, 4})
+          .setInterchange({1, 2, 0})
+          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgMarker({"par__with_perm__"}, "after_par__with_perm__"));
 
   //===--------------------------------------------------------------------===//
   // Linalg to loops patterns.
@@ -189,10 +200,77 @@ static void fillL1TilingAndMatmulToVectorPatterns(
               LinalgVectorizationPattern<CopyOp>>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// Test promotion callbacks
+//===----------------------------------------------------------------------===//
+
+// Allocation call back
+static Optional<Value> allocCallBackFn(OpBuilder &b, SubViewOp subView,
+                                       ArrayRef<Value> boundingSubViewSize,
+                                       OperationFolder *folder) {
+  SmallVector<int64_t, 4> shape(boundingSubViewSize.size(), -1);
+  return b
+      .create<AllocOp>(subView.getLoc(),
+                       MemRefType::get(shape,
+                                       subView.getType().getElementType(),
+                                       /*affineMapComposition =*/{}, 3),
+                       boundingSubViewSize)
+      .getResult();
+}
+
+// Deallocation callback
+static LogicalResult deallocCallBackFn(OpBuilder &b, Value buffer) {
+  b.create<DeallocOp>(buffer.getLoc(), buffer);
+  return success();
+}
+
+// Copy in call back
+static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
+                                    bool isOutput) {
+  auto floatType = src.getType().cast<MemRefType>().getElementType();
+  if (!floatType.isa<FloatType>())
+    return failure();
+  if (!isOutput)
+    b.create<FillOp>(
+        src.getLoc(), dst,
+        b.create<ConstantOp>(src.getLoc(), FloatAttr::get(floatType, 42.0)));
+  b.create<CopyOp>(src.getLoc(), src, dst);
+  return success();
+}
+
+void fillPromotionCallBackPatterns(MLIRContext *context,
+                                   OwningRewritePatternList &patterns) {
+  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+      context, LinalgTilingOptions().setTileSizes({16, 16, 16}),
+      LinalgMarker({"START"}, "PROMOTE"));
+  patterns.insert<LinalgPromotionPattern<MatmulOp>>(
+      context,
+      LinalgPromotionOptions()
+          .setOperandsToPromote({0, 2})
+          .setUseFullTileBuffers({false, false})
+          .setAllocationDeallocationFns(allocCallBackFn, deallocCallBackFn)
+          .setCopyInOutFns(
+              [](OpBuilder &b, Value src, Value dst) -> LogicalResult {
+                copyCallBackFn(b, src, dst, false);
+                return success();
+              },
+              [](OpBuilder &b, Value src, Value dst) -> LogicalResult {
+                copyCallBackFn(b, src, dst, true);
+                return success();
+              }),
+      LinalgMarker({"PROMOTE"}));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
   if (testPatterns) {
     applyPatterns(getFunction());
+    return;
+  }
+  if (testPromotionOptions) {
+    OwningRewritePatternList patterns;
+    fillPromotionCallBackPatterns(&getContext(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
   } else {
     SmallVector<OwningRewritePatternList, 4> stage1Patterns;
     if (testMatmulToVectorPatterns1dTiling) {

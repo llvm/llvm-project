@@ -1,5 +1,7 @@
 # RUN: not --crash llc -mtriple=ppc32-- %s -run-pass=phi-node-elimination \
 # RUN:   -verify-machineinstrs -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=ppc32-- %s -start-before=phi-node-elimination \
+# RUN:   -verify-machineinstrs -o /dev/null 2>&1
 
 --- |
   define void @VerifyTwoAddressCrash(i16 %div.0.i.i.i.i, i32 %L_num.0.i.i.i.i, i32 %tmp1.i.i206.i.i, i16* %P) {
@@ -16,6 +18,56 @@
 ...
 ---
 name:            VerifyTwoAddressCrash
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gprc, preferred-register: '' }
+  - { id: 1, class: gprc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: crbitrc, preferred-register: '' }
+  - { id: 7, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 8, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 9, class: gprc, preferred-register: '' }
+  - { id: 10, class: gprc, preferred-register: '' }
+  - { id: 11, class: gprc, preferred-register: '' }
+liveins:
+  - { reg: '$r3', virtual-reg: '%0' }
+  - { reg: '$r4', virtual-reg: '%1' }
+  - { reg: '$r5', virtual-reg: '%2' }
+  - { reg: '$r6', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r3, $r4, $r5, $r6
@@ -40,6 +92,6 @@ body:             |
 # CHECK-LABEL: Bad machine code: Two-address instruction operands must be identical
 # CHECK-NEXT:  - function:    VerifyTwoAddressCrash
 # CHECK-NEXT:  - basic block: %bb.0
-# CHECK-NEXT:  - instruction: %10:gprc = RLWIMI killed %9:gprc(tied-def 0), killed %3:gprc, 1, 0, 30
+# CHECK-NEXT:  - instruction: %10:gprc = RLWIMI killed %9:gprc(tied-def 0), killed %0:gprc, 1, 0, 30
 # CHECK-NEXT:  - operand 1:   killed %9:gprc(tied-def 0)
 # CHECK-NEXT:  LLVM ERROR: Found 1 machine code errors.

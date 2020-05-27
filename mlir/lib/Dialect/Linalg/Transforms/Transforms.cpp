@@ -179,12 +179,19 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     return failure();
   if (failed(promoteSubviewsPrecondition(op, options)))
     return failure();
-  rewriter.updateRootInPlace(op, [&]() {
-    auto promotedOp = promoteSubViews(rewriter, op, options);
-    (void)promotedOp;
-    assert(promotedOp && "Unexpected pattern failure");
-    marker.replaceLinalgMarker(rewriter, op);
-  });
+
+  // TODO: We cannot use root update here. This pattern is creating other ops,
+  // so if the promotion fails, those need to be cleaned up, which doesnt seem
+  // to be happening here. So to fail properly, we should be cloning the op and
+  // deleting the previous op. This needs more investigation.
+  rewriter.startRootUpdate(op);
+  Optional<LinalgOp> promotedOp = promoteSubViews(rewriter, op, options);
+  if (!promotedOp) {
+    rewriter.cancelRootUpdate(op);
+    return op->emitError("subview promotion failed");
+  }
+  rewriter.finalizeRootUpdate(op);
+  marker.replaceLinalgMarker(rewriter, op);
   return success();
 }
 
