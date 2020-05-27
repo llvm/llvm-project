@@ -4,6 +4,7 @@
   ; CHECK: %0:gr64 = nuw ADD64ri8 %9, 4, implicit-def dead $eflags
   ; 
   ; When instructions are sunk to prevent register spills, line numbers should not be retained.
+   target triple = "x86_64-unknown-linux-gnu"
 
   %struct.A = type { i32, i32, i32, i32, i32, i32 }
   

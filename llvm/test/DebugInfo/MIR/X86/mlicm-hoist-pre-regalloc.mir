@@ -1,4 +1,4 @@
---- |
+--- | 
   ; RUN: llc -run-pass=machinelicm -o - %s | FileCheck %s
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ; Doing so causes poor stepping bevavior.
@@ -23,6 +23,7 @@
   ;
   ; ModuleID = 'tx.ll'
   source_filename = "t.c"
+  target triple = "x86_64-unknown-linux-gnu"
 
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 

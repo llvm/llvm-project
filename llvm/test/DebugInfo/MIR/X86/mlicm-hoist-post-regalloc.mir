@@ -1,5 +1,6 @@
 --- |
-  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -o - %s  | FileCheck %s
+  ; REQUIRES: asserts
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s  | FileCheck %s
   ; Ensure we execute machinelicm post register allocation.
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ;
@@ -7,6 +8,7 @@
   ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load 8 from got)
   ; CHECK-LABEL:  bb.1.while.body:
   ;
+  target triple = "x86_64-unknown-linux-gnu"
 
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
