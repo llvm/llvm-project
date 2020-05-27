@@ -18,6 +18,24 @@
 // RUN:   --offload-arch=gfx906  %T/obj1.o %T/obj2.o 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NOUT %s
 
+// -fgpu-rdc link with output and --emit-static-lib
+// RUN: touch %T/obj1.o
+// RUN: touch %T/obj2.o
+// RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   --hip-link -o libTest.a -fgpu-rdc --cuda-gpu-arch=gfx900 \
+// RUN:   --emit-static-lib \
+// RUN:   --offload-arch=gfx906  %T/obj1.o %T/obj2.o 2>&1 | \
+// RUN:   FileCheck -check-prefixes=CHECK,SLO %s
+
+// -fgpu-rdc link without output and --emit-static-lib
+// RUN: touch %T/obj1.o
+// RUN: touch %T/obj2.o
+// RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   --hip-link -fgpu-rdc --cuda-gpu-arch=gfx900 \
+// RUN:   --emit-static-lib \
+// RUN:   --offload-arch=gfx906  %T/obj1.o %T/obj2.o 2>&1 | \
+// RUN:   FileCheck -check-prefixes=CHECK,SLNO %s
+
 // CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj1-host-x86_64-unknown-linux-gnu.o,obj1-hip-amdgcn-amd-amdhsa-gfx900.o,obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
 // CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj2-host-x86_64-unknown-linux-gnu.o,obj2-hip-amdgcn-amd-amdhsa-gfx900.o,obj2-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
 // CHECK-NOT: llvm-link
@@ -31,3 +49,5 @@
 // CHECK-SAME: "[[OBJBUNDLE:.*.o]]" "{{.*}}.mcin" "--filetype=obj"
 // OUT: "{{.*ld.*}}" {{.*}} "-o" "executable" {{.*}} "[[OBJBUNDLE]]"
 // NOUT: "{{.*ld.*}}" {{.*}} "-o" "a.out" {{.*}} "[[OBJBUNDLE]]"
+// SLO: "{{.*llvm-ar.*}}" "rcsD" "libTest.a" {{.*}} "[[OBJBUNDLE]]"
+// SLNO: "{{.*llvm-ar.*}}" "rcsD" "a.out" {{.*}} "[[OBJBUNDLE]]"

@@ -3542,7 +3542,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   if (!LinkerInputs.empty()) {
     if (Action *Wrapper = OffloadBuilder.makeHostLinkAction())
       LinkerInputs.push_back(Wrapper);
-    Action *LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
+    Action *LA;
+    // Check if this Linker Job should emit a static library.
+    if (ShouldEmitStaticLibrary(Args)) {
+      LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
+    } else {
+      LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
+    }
     LA = OffloadBuilder.processHostLinkAction(LA);
     Actions.push_back(LA);
   }
@@ -5042,6 +5048,13 @@ bool Driver::ShouldUseFlangCompiler(const JobAction &JA) const {
     return false;
 
   return true;
+}
+
+bool Driver::ShouldEmitStaticLibrary(const ArgList &Args) const {
+  // Only emit static library if the flag is set explicitly.
+  if (Args.hasArg(options::OPT_emit_static_lib))
+    return true;
+  return false;
 }
 
 /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and return the
