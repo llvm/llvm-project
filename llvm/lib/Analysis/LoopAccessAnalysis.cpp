@@ -701,14 +701,12 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      ScalarEvolution *SE, Loop *TheLoop,
                                      const ValueToValueMap &StridesMap,
                                      bool ShouldCheckWrap) {
-  if (!IsRTCheckAnalysisNeeded)
-    return true;
-
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
 
-  RtCheck.Need = false;
+  bool NeedRTCheck = false;
+  if (!IsRTCheckAnalysisNeeded) return true;
 
   bool IsDepCheckNeeded = isDependencyCheckNeeded();
 
@@ -749,10 +747,10 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     // check them.  But there is no need to checks if there is only one
     // dependence set for this alias set.
     //
-    // Note that this function computes CanDoRT and RtCheck.Need independently.
-    // For example CanDoRT=false, RtCheck.Need=false means that we have a
-    // pointer for which we couldn't find the bounds but we don't actually need
-    // to emit any checks so it does not matter.
+    // Note that this function computes CanDoRT and NeedRTCheck independently.
+    // For example CanDoRT=false, NeedRTCheck=false means that we have a pointer
+    // for which we couldn't find the bounds but we don't actually need to emit
+    // any checks so it does not matter.
     bool NeedsAliasSetRTCheck = false;
     if (!(IsDepCheckNeeded && CanDoAliasSetRT && RunningDepId == 2))
       NeedsAliasSetRTCheck = (NumWritePtrChecks >= 2 ||
@@ -775,7 +773,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
 
     CanDoRT &= CanDoAliasSetRT;
-    RtCheck.Need |= NeedsAliasSetRTCheck;
+    NeedRTCheck |= NeedsAliasSetRTCheck;
     ++ASId;
   }
 
@@ -809,19 +807,15 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     }
   }
 
-  if (RtCheck.Need && CanDoRT)
+  if (NeedRTCheck && CanDoRT)
     RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
 
-  // If we can do run-time checks, but there are no checks, no runtime checks
-  // are needed. This can happen when all pointers point to the same underlying
-  // object for example.
-  if (CanDoRT)
-    RtCheck.Need = RtCheck.getNumberOfChecks() != 0;
+  RtCheck.Need = NeedRTCheck;
 
-  bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
+  bool CanDoRTIfNeeded = !NeedRTCheck || CanDoRT;
   if (!CanDoRTIfNeeded)
     RtCheck.reset();
   return CanDoRTIfNeeded;
