@@ -356,11 +356,10 @@ for.cond.cleanup:
   ret i8 %add
 }
 
-; FIXME: we don't understand that %sz in the memset call is limited to 128 by the preceding check.
 define dso_local void @SizeCheck(i32 %sz) {
 ; CHECK-LABEL: @SizeCheck{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: sz[]: [0,1){{$}}
+; CHECK-NEXT: sz[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x1[128]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
