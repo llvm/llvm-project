@@ -137,8 +137,8 @@ struct ProgramStateTrait<ConstraintRange>
 
 class RangedConstraintManager : public SimpleConstraintManager {
 public:
-  RangedConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB) {}
+  RangedConstraintManager(ExprEngine *EE, SValBuilder &SB)
+      : SimpleConstraintManager(EE, SB) {}
 
   ~RangedConstraintManager() override;
 
