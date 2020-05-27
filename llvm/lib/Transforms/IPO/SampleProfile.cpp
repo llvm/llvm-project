@@ -1843,9 +1843,9 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI, CallGraph *CG) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
   if (!ProfileIsValid)
     return false;
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr)
