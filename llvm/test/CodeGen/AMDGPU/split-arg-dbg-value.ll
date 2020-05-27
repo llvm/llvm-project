@@ -80,6 +80,7 @@ define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unname
 ; GCN-NEXT:    .loc 0 12 5 prologue_end ; /tmp/dbg.cl:12:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp9:
+; GCN:    .cfi_endproc
   call void @llvm.dbg.value(metadata <4 x half> %arg, metadata !42, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !43
   ret <4 x half> %arg, !dbg !44
 }
@@ -121,6 +122,7 @@ define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_un
 ; GCN-NEXT:    .loc 0 20 5 prologue_end ; /tmp/dbg.cl:20:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp13:
+; GCN:    .cfi_endproc
   call void @llvm.dbg.value(metadata <2 x double> %arg, metadata !59, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !60
   ret <2 x double> %arg, !dbg !61
 }
