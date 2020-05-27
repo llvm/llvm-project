@@ -366,29 +366,29 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     SmallVector<BasicBlock *, 8> NewBlocks;
     // Maps Blocks[It] -> Blocks[It-1]
     DenseMap<Value *, Value *> PrevItValueMap;
+    SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
+    NewLoops[L] = L;
+    NewLoops[SubLoop] = SubLoop;
 
     for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
       ValueToValueMapTy VMap;
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
       Header->getParent()->getBasicBlockList().push_back(New);
 
-      if (ForeBlocks.count(*BB)) {
-        L->addBasicBlockToLoop(New, *LI);
+      // Tell LI about New.
+      addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
 
+      if (ForeBlocks.count(*BB)) {
         if (*BB == ForeBlocksFirst[0])
           ForeBlocksFirst.push_back(New);
         if (*BB == ForeBlocksLast[0])
           ForeBlocksLast.push_back(New);
       } else if (SubLoopBlocks.count(*BB)) {
-        SubLoop->addBasicBlockToLoop(New, *LI);
-
         if (*BB == SubLoopBlocksFirst[0])
           SubLoopBlocksFirst.push_back(New);
         if (*BB == SubLoopBlocksLast[0])
           SubLoopBlocksLast.push_back(New);
       } else if (AftBlocks.count(*BB)) {
-        L->addBasicBlockToLoop(New, *LI);
-
         if (*BB == AftBlocksFirst[0])
           AftBlocksFirst.push_back(New);
         if (*BB == AftBlocksLast[0])
