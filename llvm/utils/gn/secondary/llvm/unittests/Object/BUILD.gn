@@ -8,6 +8,8 @@ unittest("ObjectTests") {
   ]
   sources = [
     "ArchiveTest.cpp",
+    "ELFObjectFileTest.cpp",
+    "ELFTest.cpp",
     "MinidumpTest.cpp",
     "ObjectFileTest.cpp",
     "SymbolSizeTest.cpp",
