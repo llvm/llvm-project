@@ -489,3 +489,18 @@ func @elements_attr_i32(%arg0: tensor<1x2xi32>) {
   "test.i32ElementsAttr"() {attr = dense<[1, 2]>:tensor<2xi32>} : () -> ()
   return
 }
+
+// -----
+
+func @elements_attr_index() {
+  "test.indexElementsAttr"() {attr = dense<[1, 2]>:tensor<2xindex>} : () -> ()
+  return
+}
+
+// -----
+
+func @elements_attr_not_index() {
+  // expected-error@+1 {{index elements attribute}}
+  "test.indexElementsAttr"() {attr = dense<[1, 2]>:tensor<2xi32>} : () -> ()
+  return
+}

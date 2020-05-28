@@ -1218,6 +1218,13 @@ class IntElementsAttrBase<Pred condition, string description> :
   let convertFromStorage = "$_self";
 }
 
+def IndexElementsAttr
+    : IntElementsAttrBase<CPred<[{$_self.cast<DenseIntElementsAttr>()
+                                      .getType()
+                                      .getElementType()
+                                      .isIndex()}]>,
+                          "index elements attribute">;
+
 class AnyIntElementsAttr<int width> : IntElementsAttrBase<
   CPred<"$_self.cast<DenseIntElementsAttr>().getType()."
         "getElementType().isInteger(" # width # ")">,

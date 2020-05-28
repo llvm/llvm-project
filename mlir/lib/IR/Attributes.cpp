@@ -624,6 +624,8 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
                            owner.getContext());
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   }
+  if (eltTy.isa<IndexType>())
+    return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   if (auto floatEltTy = eltTy.dyn_cast<FloatType>()) {
     IntElementIterator intIt(owner, index);
     FloatElementIterator floatIt(floatEltTy.getFloatSemantics(), intIt);
