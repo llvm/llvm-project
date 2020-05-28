@@ -232,6 +232,11 @@ public:
   /// a problem with a generic expression.
   SourceLocation getExprLoc() const LLVM_READONLY;
 
+  /// Determine whether an lvalue-to-rvalue conversion should implicitly be
+  /// applied to this expression if it appears as a discarded-value expression
+  /// in C++11 onwards. This applies to certain forms of volatile glvalues.
+  bool isReadIfDiscardedInCPlusPlus11() const;
+
   /// isUnusedResultAWarning - Return true if this immediate expression should
   /// be warned about if the result is unused.  If so, fill in expr, location,
   /// and ranges with expr to warn on and source locations/ranges appropriate
