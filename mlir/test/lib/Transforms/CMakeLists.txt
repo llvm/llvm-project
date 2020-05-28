@@ -1,21 +1,3 @@
-if (MLIR_CUDA_CONVERSIONS_ENABLED)
-  set(NVPTX_LIBS
-    MC
-    NVPTXCodeGen
-    NVPTXDesc
-    NVPTXInfo
-  )
-endif()
-
-if (MLIR_ROCM_CONVERSIONS_ENABLED)
-  set(AMDGPU_LIBS
-    MC
-    AMDGPUCodeGen
-    AMDGPUDesc
-    AMDGPUInfo
-  )
-endif()
-
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
@@ -49,10 +31,6 @@ add_mlir_library(MLIRTestTransforms
   DEPENDS
   MLIRStandardOpsIncGen
   MLIRTestVectorTransformPatternsIncGen
-
-  LINK_COMPONENTS
-  ${AMDGPU_LIBS}
-  ${NVPTX_LIBS}
 
   LINK_LIBS PUBLIC
   MLIRAffineOps
