@@ -1346,6 +1346,7 @@ private:
   bool validateOpSel(const MCInst &Inst);
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOP3Literal(const MCInst &Inst) const;
+  bool validateMAIAccWrite(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -3147,6 +3148,30 @@ bool AMDGPUAsmParser::validateMovrels(const MCInst &Inst) {
   return !isSGPR(mc2PseudoReg(Reg), TRI);
 }
 
+bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst) {
+
+  const unsigned Opc = Inst.getOpcode();
+
+  if (Opc != AMDGPU::V_ACCVGPR_WRITE_B32_vi)
+    return true;
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  assert(Src0Idx != -1);
+
+  const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+  if (!Src0.isReg())
+    return true;
+
+  auto Reg = Src0.getReg();
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  if (isSGPR(mc2PseudoReg(Reg), TRI)) {
+    Error(getLoc(), "source operand must be either a VGPR or an inline constant");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
@@ -3615,6 +3640,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateSMEMOffset(Inst, Operands)) {
+    return false;
+  }
+  if (!validateMAIAccWrite(Inst)) {
     return false;
   }
 
