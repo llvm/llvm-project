@@ -433,6 +433,8 @@ private:
       return VisitBinaryOperator<BO_Or>(LHS, RHS, T);
     case BO_And:
       return VisitBinaryOperator<BO_And>(LHS, RHS, T);
+    case BO_Rem:
+      return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
     default:
       return infer(T);
     }
@@ -494,6 +496,46 @@ private:
   template <BinaryOperator::Opcode Op>
   RangeSet VisitBinaryOperator(Range LHS, Range RHS, QualType T) {
     return infer(T);
+  }
+
+  /// Return a symmetrical range for the given range and type.
+  ///
+  /// If T is signed, return the smallest range [-x..x] that covers the original
+  /// range, or [-min(T), max(T)] if the aforementioned symmetric range doesn't
+  /// exist due to original range covering min(T)).
+  ///
+  /// If T is unsigned, return the smallest range [0..x] that covers the
+  /// original range.
+  Range getSymmetricalRange(Range Origin, QualType T) {
+    APSIntType RangeType = ValueFactory.getAPSIntType(T);
+
+    if (RangeType.isUnsigned()) {
+      return Range(ValueFactory.getMinValue(RangeType), Origin.To());
+    }
+
+    if (Origin.From().isMinSignedValue()) {
+      // If mini is a minimal signed value, absolute value of it is greater
+      // than the maximal signed value.  In order to avoid these
+      // complications, we simply return the whole range.
+      return {ValueFactory.getMinValue(RangeType),
+              ValueFactory.getMaxValue(RangeType)};
+    }
+
+    // At this point, we are sure that the type is signed and we can safely
+    // use unary - operator.
+    //
+    // While calculating absolute maximum, we can use the following formula
+    // because of these reasons:
+    //   * If From >= 0 then To >= From and To >= -From.
+    //     AbsMax == To == max(To, -From)
+    //   * If To <= 0 then -From >= -To and -From >= From.
+    //     AbsMax == -From == max(-From, To)
+    //   * Otherwise, From <= 0, To >= 0, and
+    //     AbsMax == max(abs(From), abs(To))
+    llvm::APSInt AbsMax = std::max(-Origin.From(), Origin.To());
+
+    // Intersection is guaranteed to be non-empty.
+    return {ValueFactory.getValue(-AbsMax), ValueFactory.getValue(AbsMax)};
   }
 
   /// Return a range set subtracting zero from \p Domain.
@@ -633,6 +675,63 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_And>(Range LHS,
 
   // Nothing much else to do here.
   return infer(T);
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  llvm::APSInt Zero = ValueFactory.getAPSIntType(T).getZeroValue();
+
+  Range ConservativeRange = getSymmetricalRange(RHS, T);
+
+  llvm::APSInt Max = ConservativeRange.To();
+  llvm::APSInt Min = ConservativeRange.From();
+
+  if (Max == Zero) {
+    // It's an undefined behaviour to divide by 0 and it seems like we know
+    // for sure that RHS is 0.  Let's say that the resulting range is
+    // simply infeasible for that matter.
+    return RangeFactory.getEmptySet();
+  }
+
+  // At this point, our conservative range is closed.  The result, however,
+  // couldn't be greater than the RHS' maximal absolute value.  Because of
+  // this reason, we turn the range into open (or half-open in case of
+  // unsigned integers).
+  //
+  // While we operate on integer values, an open interval (a, b) can be easily
+  // represented by the closed interval [a + 1, b - 1].  And this is exactly
+  // what we do next.
+  //
+  // If we are dealing with unsigned case, we shouldn't move the lower bound.
+  if (Min.isSigned()) {
+    ++Min;
+  }
+  --Max;
+
+  bool IsLHSPositiveOrZero = LHS.From() >= Zero;
+  bool IsRHSPositiveOrZero = RHS.From() >= Zero;
+
+  // Remainder operator results with negative operands is implementation
+  // defined.  Positive cases are much easier to reason about though.
+  if (IsLHSPositiveOrZero && IsRHSPositiveOrZero) {
+    // If maximal value of LHS is less than maximal value of RHS,
+    // the result won't get greater than LHS.To().
+    Max = std::min(LHS.To(), Max);
+    // We want to check if it is a situation similar to the following:
+    //
+    // <------------|---[  LHS  ]--------[  RHS  ]----->
+    //  -INF        0                              +INF
+    //
+    // In this situation, we can conclude that (LHS / RHS) == 0 and
+    // (LHS % RHS) == LHS.
+    Min = LHS.To() < RHS.From() ? LHS.From() : Zero;
+  }
+
+  // Nevertheless, the symmetrical range for RHS is a conservative estimate
+  // for any sign of either LHS, or RHS.
+  return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
 }
 
 class RangeConstraintManager : public RangedConstraintManager {

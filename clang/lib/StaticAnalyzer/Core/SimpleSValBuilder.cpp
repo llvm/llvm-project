@@ -652,6 +652,11 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         if (LHSValue == 0)
           return evalCastFromNonLoc(lhs, resultTy);
         return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      case BO_Rem:
+        // 0 % x == 0
+        if (LHSValue == 0)
+          return makeZeroVal(resultTy);
+        LLVM_FALLTHROUGH;
       default:
         return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       }
