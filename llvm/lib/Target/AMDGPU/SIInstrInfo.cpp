@@ -2936,13 +2936,21 @@ static bool changesVGPRIndexingMode(const MachineInstr &MI) {
 bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                        const MachineBasicBlock *MBB,
                                        const MachineFunction &MF) const {
-  // XXX - Do we want the SP check in the base implementation?
+  // Skipping the check for SP writes in the base implementation. The reason it
+  // was added was apparently due to compile time concerns.
+  //
+  // TODO: Do we really want this barrier? It triggers unnecessary hazard nops
+  // but is probably avoidable.
+
+  // Copied from base implementation.
+  // Terminators and labels can't be scheduled around.
+  if (MI.isTerminator() || MI.isPosition())
+    return true;
 
   // Target-independent instructions do not have an implicit-use of EXEC, even
   // when they operate on VGPRs. Treating EXEC modifications as scheduling
   // boundaries prevents incorrect movements of such instructions.
-  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF) ||
-         MI.modifiesRegister(AMDGPU::EXEC, &RI) ||
+  return MI.modifiesRegister(AMDGPU::EXEC, &RI) ||
          MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
          MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
          MI.getOpcode() == AMDGPU::S_DENORM_MODE ||
