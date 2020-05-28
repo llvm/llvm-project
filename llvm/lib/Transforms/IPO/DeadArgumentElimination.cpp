@@ -1056,7 +1056,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
         }
         // Replace the return instruction with one returning the new return
         // value (possibly 0 if we became void).
-        ReturnInst::Create(F->getContext(), RetVal, RI);
+        auto *NewRet = ReturnInst::Create(F->getContext(), RetVal, RI);
+        NewRet->setDebugLoc(RI->getDebugLoc());
         BB.getInstList().erase(RI);
       }
 
