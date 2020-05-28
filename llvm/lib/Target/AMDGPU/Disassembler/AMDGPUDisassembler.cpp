@@ -362,13 +362,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
   } while (false);
 
-  if (Res && (MaxInstBytesNum - Bytes.size()) == 12 && (!HasLiteral ||
-        !(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3))) {
-    MaxInstBytesNum = 8;
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
-    eatBytes<uint64_t>(Bytes);
-  }
-
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx10 ||
