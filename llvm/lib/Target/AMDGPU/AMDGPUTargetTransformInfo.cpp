@@ -886,17 +886,34 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::ptrmask: {
     unsigned OldAS = OldV->getType()->getPointerAddressSpace();
     unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-    if (!getTLI()->isNoopAddrSpaceCast(OldAS, NewAS))
-      return nullptr;
-
-    Module *M = II->getParent()->getParent()->getParent();
     Value *MaskOp = II->getArgOperand(1);
     Type *MaskTy = MaskOp->getType();
-    Function *NewDecl = Intrinsic::getDeclaration(M, Intrinsic::ptrmask,
-                                                  {NewV->getType(), MaskTy});
-    CallInst *NewCall = CallInst::Create(NewDecl->getFunctionType(), NewDecl,
-                                         {NewV, MaskOp}, "", II);
-    return NewCall;
+
+    bool DoTruncate = false;
+    if (!getTLI()->isNoopAddrSpaceCast(OldAS, NewAS)) {
+      // All valid 64-bit to 32-bit casts work by chopping off the high
+      // bits. Any masking only clearing the low bits will also apply in the new
+      // address space.
+      if (DL.getPointerSizeInBits(OldAS) != 64 ||
+          DL.getPointerSizeInBits(NewAS) != 32)
+        return nullptr;
+
+      // TODO: Do we need to thread more context in here?
+      KnownBits Known = computeKnownBits(MaskOp, DL, 0, nullptr, II);
+      if (Known.countMinLeadingOnes() < 32)
+        return nullptr;
+
+      DoTruncate = true;
+    }
+
+    IRBuilder<> B(II);
+    if (DoTruncate) {
+      MaskTy = B.getInt32Ty();
+      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
+    }
+
+    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
+                             {NewV, MaskOp});
   }
   default:
     return nullptr;
