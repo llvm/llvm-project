@@ -69,7 +69,19 @@ void RangeSet::IntersectInRange(BasicValueFactory &BV, Factory &F,
 
 const llvm::APSInt &RangeSet::getMinValue() const {
   assert(!isEmpty());
-  return ranges.begin()->From();
+  return begin()->From();
+}
+
+const llvm::APSInt &RangeSet::getMaxValue() const {
+  assert(!isEmpty());
+  // NOTE: It's a shame that we can't implement 'getMaxValue' without scanning
+  //       the whole tree to get to the last element.
+  //       llvm::ImmutableSet should support decrement for 'end' iterators
+  //       or reverse order iteration.
+  auto It = begin();
+  for (auto End = end(); std::next(It) != End; ++It) {
+  }
+  return It->To();
 }
 
 bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
@@ -426,22 +438,106 @@ private:
     }
   }
 
-  RangeSet VisitOrOperator(RangeSet LHS, RangeSet RHS, QualType T) {
-    // TODO: generalize for the ranged RHS.
-    if (const llvm::APSInt *RHSConstant = RHS.getConcreteValue()) {
-      // For unsigned types, the output is greater-or-equal than RHS.
-      if (T->isUnsignedIntegerType()) {
-        return LHS.Intersect(ValueFactory, RangeFactory, *RHSConstant,
-                             ValueFactory.getMaxValue(T));
-      }
+  //===----------------------------------------------------------------------===//
+  //                         Ranges and operators
+  //===----------------------------------------------------------------------===//
 
-      // Bitwise-or with a non-zero constant is always non-zero.
-      const llvm::APSInt &Zero = ValueFactory.getAPSIntType(T).getZeroValue();
-      if (*RHSConstant != Zero) {
-        return assumeNonZero(LHS, T);
-      }
+  /// Return a rough approximation of the given range set.
+  ///
+  /// For the range set:
+  ///   { [x_0, y_0], [x_1, y_1], ... , [x_N, y_N] }
+  /// it will return the range [x_0, y_N].
+  static Range fillGaps(RangeSet Origin) {
+    assert(!Origin.isEmpty());
+    return {Origin.getMinValue(), Origin.getMaxValue()};
+  }
+
+  /// Try to convert given range into the given type.
+  ///
+  /// It will return llvm::None only when the trivial conversion is possible.
+  llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
+    if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
+        To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {
+      return llvm::None;
     }
-    return infer(T);
+    return Range(ValueFactory.Convert(To, Origin.From()),
+                 ValueFactory.Convert(To, Origin.To()));
+  }
+
+  RangeSet VisitOrOperator(RangeSet LHS, RangeSet RHS, QualType T) {
+    // We should propagate information about unfeasbility of one of the
+    // operands to the resulting range.
+    if (LHS.isEmpty() || RHS.isEmpty()) {
+      return RangeFactory.getEmptySet();
+    }
+
+    APSIntType ResultType = ValueFactory.getAPSIntType(T);
+    RangeSet DefaultRange = infer(T);
+
+    Range CoarseLHS = fillGaps(LHS);
+    Range CoarseRHS = fillGaps(RHS);
+
+    // We need to convert ranges to the resulting type, so we can compare values
+    // and combine them in a meaningful (in terms of the given operation) way.
+    auto ConvertedCoarseLHS = convert(CoarseLHS, ResultType);
+    auto ConvertedCoarseRHS = convert(CoarseRHS, ResultType);
+
+    // It is hard to reason about ranges when conversion changes
+    // borders of the ranges.
+    if (!ConvertedCoarseLHS || !ConvertedCoarseRHS) {
+      return DefaultRange;
+    }
+
+    llvm::APSInt Zero = ResultType.getZeroValue();
+
+    bool IsLHSPositiveOrZero = ConvertedCoarseLHS->From() >= Zero;
+    bool IsRHSPositiveOrZero = ConvertedCoarseRHS->From() >= Zero;
+
+    bool IsLHSNegative = ConvertedCoarseLHS->To() < Zero;
+    bool IsRHSNegative = ConvertedCoarseRHS->To() < Zero;
+
+    // Check if both ranges have the same sign.
+    if ((IsLHSPositiveOrZero && IsRHSPositiveOrZero) ||
+        (IsLHSNegative && IsRHSNegative)) {
+      // The result is definitely greater or equal than any of the operands.
+      const llvm::APSInt &Min =
+          std::max(ConvertedCoarseLHS->From(), ConvertedCoarseRHS->From());
+
+      // We estimate maximal value for positives as the maximal value for the
+      // given type.  For negatives, we estimate it with -1 (e.g. 0x11111111).
+      //
+      // TODO: We basically, limit the resulting range from below (in absolute
+      //       numbers), but don't do anything with the upper bound.
+      //       For positive operands, it can be done as follows: for the upper
+      //       bound of LHS and RHS we calculate the most significant bit set.
+      //       Let's call it the N-th bit.  Then we can estimate the maximal
+      //       number to be 2^(N+1)-1, i.e. the number with all the bits up to
+      //       the N-th bit set.
+      const llvm::APSInt &Max = IsLHSNegative
+                                    ? ValueFactory.getValue(--Zero)
+                                    : ValueFactory.getMaxValue(ResultType);
+
+      return {RangeFactory, ValueFactory.getValue(Min), Max};
+    }
+
+    // Otherwise, let's check if at least one of the operands is negative.
+    if (IsLHSNegative || IsRHSNegative) {
+      // This means that the result is definitely negative as well.
+      return {RangeFactory, ValueFactory.getMinValue(ResultType),
+              ValueFactory.getValue(--Zero)};
+    }
+
+    // It is pretty hard to reason about operands with different signs
+    // (and especially with possibly different signs).  We simply check if it
+    // can be zero.  In order to conclude that the result could not be zero,
+    // at least one of the operands should be definitely not zero itself.
+    if (!ConvertedCoarseLHS->Includes(Zero) ||
+        !ConvertedCoarseRHS->Includes(Zero)) {
+      return assumeNonZero(DefaultRange, T);
+    }
+
+    // Nothing much else to do here.
+    return DefaultRange;
   }
 
   RangeSet VisitAndOperator(RangeSet LHS, RangeSet RHS, QualType T) {
