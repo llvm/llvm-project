@@ -17,6 +17,7 @@
 #include "FileCheckImpl.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
@@ -31,6 +32,8 @@ StringRef ExpressionFormat::toString() const {
     return StringRef("<none>");
   case Kind::Unsigned:
     return StringRef("%u");
+  case Kind::Signed:
+    return StringRef("%d");
   case Kind::HexUpper:
     return StringRef("%X");
   case Kind::HexLower:
@@ -43,6 +46,8 @@ Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
   switch (Value) {
   case Kind::Unsigned:
     return StringRef("[0-9]+");
+  case Kind::Signed:
+    return StringRef("-?[0-9]+");
   case Kind::HexUpper:
     return StringRef("[0-9A-F]+");
   case Kind::HexLower:
@@ -54,43 +59,188 @@ Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
 }
 
 Expected<std::string>
-ExpressionFormat::getMatchingString(uint64_t IntegerValue) const {
+ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
+  if (Value == Kind::Signed) {
+    Expected<int64_t> SignedValue = IntegerValue.getSignedValue();
+    if (!SignedValue)
+      return SignedValue.takeError();
+    return itostr(*SignedValue);
+  }
+
+  Expected<uint64_t> UnsignedValue = IntegerValue.getUnsignedValue();
+  if (!UnsignedValue)
+    return UnsignedValue.takeError();
   switch (Value) {
   case Kind::Unsigned:
-    return utostr(IntegerValue);
+    return utostr(*UnsignedValue);
   case Kind::HexUpper:
-    return utohexstr(IntegerValue, /*LowerCase=*/false);
+    return utohexstr(*UnsignedValue, /*LowerCase=*/false);
   case Kind::HexLower:
-    return utohexstr(IntegerValue, /*LowerCase=*/true);
+    return utohexstr(*UnsignedValue, /*LowerCase=*/true);
   default:
     return createStringError(std::errc::invalid_argument,
                              "trying to match value with invalid format");
   }
 }
 
-Expected<uint64_t>
+Expected<ExpressionValue>
 ExpressionFormat::valueFromStringRepr(StringRef StrVal,
                                       const SourceMgr &SM) const {
-  bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
-  uint64_t IntegerValue;
-  if (StrVal.getAsInteger(Hex ? 16 : 10, IntegerValue))
-    return ErrorDiagnostic::get(SM, StrVal,
-                                "unable to represent numeric value");
+  bool ValueIsSigned = Value == Kind::Signed;
+  StringRef OverflowErrorStr = "unable to represent numeric value";
+  if (ValueIsSigned) {
+    int64_t SignedValue;
 
-  return IntegerValue;
+    if (StrVal.getAsInteger(10, SignedValue))
+      return ErrorDiagnostic::get(SM, StrVal, OverflowErrorStr);
+
+    return ExpressionValue(SignedValue);
+  }
+
+  bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
+  uint64_t UnsignedValue;
+  if (StrVal.getAsInteger(Hex ? 16 : 10, UnsignedValue))
+    return ErrorDiagnostic::get(SM, StrVal, OverflowErrorStr);
+
+  return ExpressionValue(UnsignedValue);
 }
 
-Expected<uint64_t> NumericVariableUse::eval() const {
-  Optional<uint64_t> Value = Variable->getValue();
+static int64_t getAsSigned(uint64_t UnsignedValue) {
+  // Use memcpy to reinterpret the bitpattern in Value since casting to
+  // signed is implementation-defined if the unsigned value is too big to be
+  // represented in the signed type and using an union violates type aliasing
+  // rules.
+  int64_t SignedValue;
+  memcpy(&SignedValue, &UnsignedValue, sizeof(SignedValue));
+  return SignedValue;
+}
+
+Expected<int64_t> ExpressionValue::getSignedValue() const {
+  if (Negative)
+    return getAsSigned(Value);
+
+  if (Value > std::numeric_limits<int64_t>::max())
+    return make_error<OverflowError>();
+
+  // Value is in the representable range of int64_t so we can use cast.
+  return static_cast<int64_t>(Value);
+}
+
+Expected<uint64_t> ExpressionValue::getUnsignedValue() const {
+  if (Negative)
+    return make_error<OverflowError>();
+
+  return Value;
+}
+
+ExpressionValue ExpressionValue::getAbsolute() const {
+  if (!Negative)
+    return *this;
+
+  int64_t SignedValue = getAsSigned(Value);
+  int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
+  // Absolute value can be represented as int64_t.
+  if (SignedValue >= -MaxInt64)
+    return ExpressionValue(-getAsSigned(Value));
+
+  // -X == -(max int64_t + Rem), negate each component independently.
+  SignedValue += MaxInt64;
+  uint64_t RemainingValueAbsolute = -SignedValue;
+  return ExpressionValue(MaxInt64 + RemainingValueAbsolute);
+}
+
+Expected<ExpressionValue> llvm::operator+(const ExpressionValue &LeftOperand,
+                                          const ExpressionValue &RightOperand) {
+  if (LeftOperand.isNegative() && RightOperand.isNegative()) {
+    int64_t LeftValue = cantFail(LeftOperand.getSignedValue());
+    int64_t RightValue = cantFail(RightOperand.getSignedValue());
+    Optional<int64_t> Result = checkedAdd<int64_t>(LeftValue, RightValue);
+    if (!Result)
+      return make_error<OverflowError>();
+
+    return ExpressionValue(*Result);
+  }
+
+  // (-A) + B == B - A.
+  if (LeftOperand.isNegative())
+    return RightOperand - LeftOperand.getAbsolute();
+
+  // A + (-B) == A - B.
+  if (RightOperand.isNegative())
+    return LeftOperand - RightOperand.getAbsolute();
+
+  // Both values are positive at this point.
+  uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
+  uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+  Optional<uint64_t> Result =
+      checkedAddUnsigned<uint64_t>(LeftValue, RightValue);
+  if (!Result)
+    return make_error<OverflowError>();
+
+  return ExpressionValue(*Result);
+}
+
+Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
+                                          const ExpressionValue &RightOperand) {
+  // Result will be negative and thus might underflow.
+  if (LeftOperand.isNegative() && !RightOperand.isNegative()) {
+    int64_t LeftValue = cantFail(LeftOperand.getSignedValue());
+    uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+    // Result <= -1 - (max int64_t) which overflows on 1- and 2-complement.
+    if (RightValue > std::numeric_limits<int64_t>::max())
+      return make_error<OverflowError>();
+    Optional<int64_t> Result =
+        checkedSub(LeftValue, static_cast<int64_t>(RightValue));
+    if (!Result)
+      return make_error<OverflowError>();
+
+    return ExpressionValue(*Result);
+  }
+
+  // (-A) - (-B) == B - A.
+  if (LeftOperand.isNegative())
+    return RightOperand.getAbsolute() - LeftOperand.getAbsolute();
+
+  // A - (-B) == A + B.
+  if (RightOperand.isNegative())
+    return LeftOperand + RightOperand.getAbsolute();
+
+  // Both values are positive at this point.
+  uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
+  uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+  if (LeftValue >= RightValue)
+    return ExpressionValue(LeftValue - RightValue);
+  else {
+    uint64_t AbsoluteDifference = RightValue - LeftValue;
+    uint64_t MaxInt64 = std::numeric_limits<int64_t>::max();
+    // Value might underflow.
+    if (AbsoluteDifference > MaxInt64) {
+      AbsoluteDifference -= MaxInt64;
+      int64_t Result = -MaxInt64;
+      int64_t MinInt64 = std::numeric_limits<int64_t>::min();
+      // Underflow, tested by:
+      //   abs(Result + (max int64_t)) > abs((min int64_t) + (max int64_t))
+      if (AbsoluteDifference > static_cast<uint64_t>(-(MinInt64 - Result)))
+        return make_error<OverflowError>();
+      Result -= static_cast<int64_t>(AbsoluteDifference);
+      return ExpressionValue(Result);
+    }
+
+    return ExpressionValue(-static_cast<int64_t>(AbsoluteDifference));
+  }
+}
+
+Expected<ExpressionValue> NumericVariableUse::eval() const {
+  Optional<ExpressionValue> Value = Variable->getValue();
   if (Value)
     return *Value;
 
   return make_error<UndefVarError>(getExpressionStr());
 }
 
-Expected<uint64_t> BinaryOperation::eval() const {
-  Expected<uint64_t> LeftOp = LeftOperand->eval();
-  Expected<uint64_t> RightOp = RightOperand->eval();
+Expected<ExpressionValue> BinaryOperation::eval() const {
+  Expected<ExpressionValue> LeftOp = LeftOperand->eval();
+  Expected<ExpressionValue> RightOp = RightOperand->eval();
 
   // Bubble up any error (e.g. undefined variables) in the recursive
   // evaluation.
@@ -136,7 +286,8 @@ BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
 Expected<std::string> NumericSubstitution::getResult() const {
   assert(ExpressionPointer->getAST() != nullptr &&
          "Substituting empty expression");
-  Expected<uint64_t> EvaluatedValue = ExpressionPointer->getAST()->eval();
+  Expected<ExpressionValue> EvaluatedValue =
+      ExpressionPointer->getAST()->eval();
   if (!EvaluatedValue)
     return EvaluatedValue.takeError();
   ExpressionFormat Format = ExpressionPointer->getFormat();
@@ -192,6 +343,7 @@ static char popFront(StringRef &S) {
   return C;
 }
 
+char OverflowError::ID = 0;
 char UndefVarError::ID = 0;
 char ErrorDiagnostic::ID = 0;
 char NotFoundError::ID = 0;
@@ -295,13 +447,18 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
   }
 
   // Otherwise, parse it as a literal.
-  uint64_t LiteralValue;
-  StringRef OperandExpr = Expr;
+  int64_t SignedLiteralValue;
+  uint64_t UnsignedLiteralValue;
+  StringRef SaveExpr = Expr;
+  // Accept both signed and unsigned literal, default to signed literal.
   if (!Expr.consumeInteger((AO == AllowedOperand::LegacyLiteral) ? 10 : 0,
-                           LiteralValue)) {
-    return std::make_unique<ExpressionLiteral>(
-        OperandExpr.drop_back(Expr.size()), LiteralValue);
-  }
+                           UnsignedLiteralValue))
+    return std::make_unique<ExpressionLiteral>(SaveExpr.drop_back(Expr.size()),
+                                               UnsignedLiteralValue);
+  Expr = SaveExpr;
+  if (AO == AllowedOperand::Any && !Expr.consumeInteger(0, SignedLiteralValue))
+    return std::make_unique<ExpressionLiteral>(SaveExpr.drop_back(Expr.size()),
+                                               SignedLiteralValue);
 
   return ErrorDiagnostic::get(SM, Expr,
                               "invalid operand format '" + Expr + "'");
@@ -339,14 +496,6 @@ Pattern::parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
   return SubExprResult;
 }
 
-static uint64_t add(uint64_t LeftOp, uint64_t RightOp) {
-  return LeftOp + RightOp;
-}
-
-static uint64_t sub(uint64_t LeftOp, uint64_t RightOp) {
-  return LeftOp - RightOp;
-}
-
 Expected<std::unique_ptr<ExpressionAST>>
 Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
                     std::unique_ptr<ExpressionAST> LeftOp,
@@ -363,10 +512,10 @@ Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
   binop_eval_t EvalBinop;
   switch (Operator) {
   case '+':
-    EvalBinop = add;
+    EvalBinop = operator+;
     break;
   case '-':
-    EvalBinop = sub;
+    EvalBinop = operator-;
     break;
   default:
     return ErrorDiagnostic::get(
@@ -414,6 +563,9 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     switch (popFront(Expr)) {
     case 'u':
       ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
+      break;
+    case 'd':
+      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::Signed);
       break;
     case 'x':
       ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexLower);
@@ -819,7 +971,7 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
   if (!Substitutions.empty()) {
     TmpStr = RegExStr;
     if (LineNumber)
-      Context->LineVariable->setValue(*LineNumber);
+      Context->LineVariable->setValue(ExpressionValue(*LineNumber));
 
     size_t InsertOffset = 0;
     // Substitute all string variables and expressions whose values are only
@@ -828,8 +980,18 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
       Expected<std::string> Value = Substitution->getResult();
-      if (!Value)
-        return Value.takeError();
+      if (!Value) {
+        // Convert to an ErrorDiagnostic to get location information. This is
+        // done here rather than PrintNoMatch since now we know which
+        // substitution block caused the overflow.
+        Error Err =
+            handleErrors(Value.takeError(), [&](const OverflowError &E) {
+              return ErrorDiagnostic::get(SM, Substitution->getFromString(),
+                                          "unable to substitute variable or "
+                                          "numeric expression: overflow error");
+            });
+        return std::move(Err);
+      }
 
       // Plop it into the regex at the adjusted offset.
       TmpStr.insert(TmpStr.begin() + Substitution->getIndex() + InsertOffset,
@@ -870,7 +1032,8 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
 
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
-    Expected<uint64_t> Value = Format.valueFromStringRepr(MatchedValue, SM);
+    Expected<ExpressionValue> Value =
+        Format.valueFromStringRepr(MatchedValue, SM);
     if (!Value)
       return Value.takeError();
     DefinedNumericVariable->setValue(*Value);
@@ -914,17 +1077,20 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       // variables it uses.
       if (!MatchedValue) {
         bool UndefSeen = false;
-        handleAllErrors(MatchedValue.takeError(), [](const NotFoundError &E) {},
-                        // Handled in PrintNoMatch().
-                        [](const ErrorDiagnostic &E) {},
-                        [&](const UndefVarError &E) {
-                          if (!UndefSeen) {
-                            OS << "uses undefined variable(s):";
-                            UndefSeen = true;
-                          }
-                          OS << " ";
-                          E.log(OS);
-                        });
+        handleAllErrors(
+            MatchedValue.takeError(), [](const NotFoundError &E) {},
+            // Handled in PrintNoMatch().
+            [](const ErrorDiagnostic &E) {},
+            // Handled in match().
+            [](const OverflowError &E) {},
+            [&](const UndefVarError &E) {
+              if (!UndefSeen) {
+                OS << "uses undefined variable(s):";
+                UndefSeen = true;
+              }
+              OS << " ";
+              E.log(OS);
+            });
       } else {
         // Substitution succeeded. Print substituted value.
         OS << "with \"";
@@ -2086,7 +2252,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // to, since the expression of a command-line variable definition should
       // only use variables defined earlier on the command-line. If not, this
       // is an error and we report it.
-      Expected<uint64_t> Value = Expression->getAST()->eval();
+      Expected<ExpressionValue> Value = Expression->getAST()->eval();
       if (!Value) {
         Errs = joinErrors(std::move(Errs), Value.takeError());
         continue;
