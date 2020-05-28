@@ -6,7 +6,7 @@ define i8 addrspace(1)* @test.not.ok.0(i8 addrspace(1)* %arg) gc "statepoint-exa
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   br label %merge
 
  right:
@@ -26,7 +26,7 @@ define i8 addrspace(1)* @test.not.ok.1(i8 addrspace(1)* %arg) gc "statepoint-exa
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   br label %merge
 
  right:
@@ -46,7 +46,7 @@ define i8 addrspace(1)* @test.ok.0(i8 addrspace(1)* %arg) gc "statepoint-example
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   br label %merge
 
  right:
@@ -154,7 +154,7 @@ define void @test.unrelocated-phi.cmp.ok(i8 addrspace(1)* %arg) gc "statepoint-e
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0)
   br label %merge
 
  right:
