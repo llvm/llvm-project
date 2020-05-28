@@ -70,7 +70,7 @@ define void @StoreInBounds4() {
 ; CHECK-LABEL: @StoreInBounds4 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [2,-1){{$}}
+; CHECK-NEXT: x[4]: [-9223372036854775808,9223372036854775807){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -178,7 +178,7 @@ define void @NonConstantOffset(i1 zeroext %z) {
 ; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; FIXME: SCEV can't look through selects.
-; CHECK-NEXT: x[4]: [0,4){{$}}
+; CHECK-NEXT: x[4]: [-4,4){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -189,12 +189,39 @@ entry:
   ret void
 }
 
+define void @NegativeOffset() {
+; CHECK-LABEL: @NegativeOffset dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[40]: [-1600000000000,-1599999999996){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i32, i32 10, align 4
+  %x2 = getelementptr i32, i32* %x, i64 -400000000000
+  store i32 0, i32* %x2, align 1
+  ret void
+}
+
+define void @PossiblyNegativeOffset(i16 %z) {
+; CHECK-LABEL: @PossiblyNegativeOffset dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: z[]: full-set
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[40]: [-131072,131072){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i32, i32 10, align 4
+  %x2 = getelementptr i32, i32* %x, i16 %z
+  store i32 0, i32* %x2, align 1
+  ret void
+}
+
 define void @NonConstantOffsetOOB(i1 zeroext %z) {
 ; CHECK-LABEL: @NonConstantOffsetOOB dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [0,6){{$}}
+; CHECK-NEXT: x[4]: [-8,8){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -251,7 +278,7 @@ entry:
 define void @DynamicAlloca(i64 %size) {
 ; CHECK-LABEL: @DynamicAlloca dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: [0,-12){{$}}
+; CHECK-NEXT: size[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
@@ -266,7 +293,7 @@ entry:
 define void @DynamicAllocaFiniteSizeRange(i1 zeroext %z) {
 ; CHECK-LABEL: @DynamicAllocaFiniteSizeRange dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: [0,-12){{$}}
+; CHECK-NEXT: z[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
