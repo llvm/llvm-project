@@ -1,5 +1,9 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // Regression test for https://github.com/golang/go/issues/39186
+
+// pthread barriers are not available on OS X
+// UNSUPPORTED: darwin
+
 #include "java.h"
 #include <string.h>
 
