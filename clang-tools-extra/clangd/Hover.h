@@ -59,6 +59,9 @@ struct HoverInfo {
   /// Source code containing the definition of the symbol.
   std::string Definition;
 
+  /// Access specifier for declarations inside class/struct/unions, empty for
+  /// others.
+  std::string AccessSpecifier;
   /// Pretty-printed variable type.
   /// Set only for variables.
   llvm::Optional<std::string> Type;
