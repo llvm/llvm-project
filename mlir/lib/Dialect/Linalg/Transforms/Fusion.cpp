@@ -575,8 +575,8 @@ private:
       if (auto yieldOp = dyn_cast<YieldOp>(op)) {
         // Lookup the value the yield operation is mapped to.
         Value yieldVal = yieldOp.getOperand(0);
-        auto clonedVal = mapper.lookup(yieldVal);
-        mapper.map(consumerBlock.getArgument(consumerIdx), clonedVal);
+        if (Value clonedVal = mapper.lookupOrNull(yieldVal))
+          mapper.map(consumerBlock.getArgument(consumerIdx), clonedVal);
         continue;
       }
       rewriter.clone(op, mapper);

@@ -24,6 +24,8 @@ template <typename T> class OperationPass;
 class OwningRewritePatternList;
 class Pass;
 
+std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
+
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFusionPass();
 std::unique_ptr<Pass> createLinalgFusionOfTensorOpsPass();
 
@@ -58,6 +60,11 @@ createConvertLinalgOnTensorsToBuffersPass();
 /// Patterns for fusing linalg operation on tensors.
 void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
                                            OwningRewritePatternList &patterns);
+
+/// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
+/// tensors.
+void populateLinalgFoldUnitExtentDimsPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns);
 
 } // namespace mlir
 
