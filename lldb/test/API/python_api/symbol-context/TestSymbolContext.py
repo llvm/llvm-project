@@ -23,6 +23,7 @@ class SymbolContextAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()
