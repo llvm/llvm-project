@@ -95,39 +95,3 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
-
-; GLOBAL-LABEL: @InterposableAliasWrite1 interposable{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @PreemptableAliasWrite1 dso_preemptable{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasToPreemptableAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @BitcastAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
-
-; GLOBAL-LABEL: @AliasToBitcastAliasWrite1{{$}}
-; GLOBAL-NEXT: args uses:
-; GLOBAL-NEXT: <N/A>[]: [0,1), @Write1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: allocas uses:
-; GLOBAL-NOT: ]:
