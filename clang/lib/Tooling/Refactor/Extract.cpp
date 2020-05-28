@@ -431,22 +431,26 @@ static void findArgumentsPassedByNonConstReference(
   auto NonPointerReceiver =
       expr(unless(hasType(qualType(pointerType())))).bind("arg");
   auto NonConstMethodCallee = callee(cxxMethodDecl(unless(isConst())));
-  auto Matches =
-      match(findAll(expr(anyOf(
-                cxxMemberCallExpr(NonConstMethodCallee, on(NonPointerReceiver)),
-                cxxOperatorCallExpr(NonConstMethodCallee,
-                                    hasArgument(0, NonPointerReceiver))))),
-            *S, Context);
+  auto Matches = match(
+      traverse(
+          TK_AsIs,
+          findAll(expr(anyOf(
+              cxxMemberCallExpr(NonConstMethodCallee, on(NonPointerReceiver)),
+              cxxOperatorCallExpr(NonConstMethodCallee,
+                                  hasArgument(0, NonPointerReceiver)))))),
+      *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
   // Check parameters in calls.
   auto RefParameter = forEachArgumentWithParam(
       expr().bind("arg"), parmVarDecl(hasType(qualType(referenceType(unless(
                               pointee(qualType(isConstQualified()))))))));
-  Matches = match(findAll(callExpr(RefParameter)), *S, Context);
+  Matches =
+      match(traverse(TK_AsIs, findAll(callExpr(RefParameter))), *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
-  Matches = match(findAll(cxxConstructExpr(RefParameter)), *S, Context);
+  Matches = match(traverse(TK_AsIs, findAll(cxxConstructExpr(RefParameter))),
+                  *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<Expr>("arg"));
 }
@@ -459,10 +463,13 @@ static void findAddressExpressionsPassedByConstPointer(
       ignoringParenImpCasts(unaryOperator(hasOperatorName("&")).bind("arg")),
       parmVarDecl(hasType(
           qualType(pointerType(pointee(qualType(isConstQualified())))))));
-  auto Matches = match(findAll(callExpr(ConstPtrParameter)), *S, Context);
+  auto Matches = match(traverse(TK_AsIs, findAll(callExpr(ConstPtrParameter))),
+                       *S, Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<UnaryOperator>("arg"));
-  Matches = match(findAll(cxxConstructExpr(ConstPtrParameter)), *S, Context);
+  Matches =
+      match(traverse(TK_AsIs, findAll(cxxConstructExpr(ConstPtrParameter))), *S,
+            Context);
   for (const auto &Match : Matches)
     Handler(Match.getNodeAs<UnaryOperator>("arg"));
 }
