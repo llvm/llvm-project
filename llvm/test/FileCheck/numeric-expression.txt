@@ -164,6 +164,20 @@ DEF EXPR GOOD MATCH  // CHECK-LABEL: DEF EXPR GOOD MATCH
 EMPTY NUM EXPR  // CHECK-LABEL: EMPTY NUM EXPR
 foo 104 bar  // CHECK-NEXT: {{^}}foo [[#]] bar
 
+; Numeric expressions using parentheses.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix PAREN-OP \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix PAREN-OP-MSG %s
+
+PAREN EXPRESSIONS // PAREN-OP-LABEL: PAREN EXPRESSIONS
+11  // PAREN-OP-NEXT: [[#(NUMVAR+2)-1]]
+11  // PAREN-OP-NEXT: [[#NUMVAR+(2-1)]]
+11  // PAREN-OP-NEXT: [[#NUMVAR+(2-1]]
+PAREN-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:36: error: missing ')' at end of nested expression
+PAREN-OP-MSG-NEXT: {{P}}AREN-OP-NEXT: {{\[\[#NUMVAR\+\(2\-1]\]}}
+PAREN-OP-MSG-NEXT: {{^}}                                   ^{{$}}
+
 ; Numeric expression using undefined variables.
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \

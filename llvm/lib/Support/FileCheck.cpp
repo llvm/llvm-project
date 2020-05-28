@@ -273,6 +273,13 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
 Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     StringRef &Expr, AllowedOperand AO, Optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
+  if (Expr.startswith("(")) {
+    if (AO != AllowedOperand::Any)
+      return ErrorDiagnostic::get(
+          SM, Expr, "parenthesized expression not permitted here");
+    return parseParenExpr(Expr, LineNumber, Context, SM);
+  }
+
   if (AO == AllowedOperand::LineVar || AO == AllowedOperand::Any) {
     // Try to parse as a numeric variable use.
     Expected<Pattern::VariableProperties> ParseVarResult =
@@ -298,6 +305,38 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
 
   return ErrorDiagnostic::get(SM, Expr,
                               "invalid operand format '" + Expr + "'");
+}
+
+Expected<std::unique_ptr<ExpressionAST>>
+Pattern::parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
+                        FileCheckPatternContext *Context, const SourceMgr &SM) {
+  Expr = Expr.ltrim(SpaceChars);
+  assert(Expr.startswith("("));
+
+  // Parse right operand.
+  Expr.consume_front("(");
+  Expr = Expr.ltrim(SpaceChars);
+  if (Expr.empty())
+    return ErrorDiagnostic::get(SM, Expr, "missing operand in expression");
+
+  // Note: parseNumericOperand handles nested opening parentheses.
+  Expected<std::unique_ptr<ExpressionAST>> SubExprResult =
+      parseNumericOperand(Expr, AllowedOperand::Any, LineNumber, Context, SM);
+  Expr = Expr.ltrim(SpaceChars);
+  while (SubExprResult && !Expr.empty() && !Expr.startswith(")")) {
+    StringRef OrigExpr = Expr;
+    SubExprResult = parseBinop(OrigExpr, Expr, std::move(*SubExprResult), false,
+                               LineNumber, Context, SM);
+    Expr = Expr.ltrim(SpaceChars);
+  }
+  if (!SubExprResult)
+    return SubExprResult;
+
+  if (!Expr.consume_front(")")) {
+    return ErrorDiagnostic::get(SM, Expr,
+                                "missing ')' at end of nested expression");
+  }
+  return SubExprResult;
 }
 
 static uint64_t add(uint64_t LeftOp, uint64_t RightOp) {
