@@ -3429,16 +3429,16 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   if (auto *GEPVTy = dyn_cast<VectorType>(GEP.getType())) {
     // Additional checks for vector GEPs.
-    unsigned GEPWidth = GEPVTy->getNumElements();
+    ElementCount GEPWidth = GEPVTy->getElementCount();
     if (GEP.getPointerOperandType()->isVectorTy())
       Assert(
           GEPWidth ==
-              cast<VectorType>(GEP.getPointerOperandType())->getNumElements(),
+              cast<VectorType>(GEP.getPointerOperandType())->getElementCount(),
           "Vector GEP result width doesn't match operand's", &GEP);
     for (Value *Idx : Idxs) {
       Type *IndexTy = Idx->getType();
       if (auto *IndexVTy = dyn_cast<VectorType>(IndexTy)) {
-        unsigned IndexWidth = IndexVTy->getNumElements();
+        ElementCount IndexWidth = IndexVTy->getElementCount();
         Assert(IndexWidth == GEPWidth, "Invalid GEP index vector width", &GEP);
       }
       Assert(IndexTy->isIntOrIntVectorTy(),
