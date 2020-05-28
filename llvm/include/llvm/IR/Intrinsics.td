@@ -1530,7 +1530,7 @@ def int_preserve_struct_access_index : Intrinsic<[llvm_anyptr_ty],
 def int_ptrauth_sign : Intrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, llvm_i32_ty,
                                   LLVMMatchType<0>],
-                                 [IntrNoMem,ImmArg<1>]>;
+                                 [IntrNoMem,ImmArg<ArgIndex<1>>]>;
 
 // Authenticate a signed pointer, using the specified key and discriminator.
 // Returns the first operand, with the signature bits removed.
@@ -1538,7 +1538,7 @@ def int_ptrauth_sign : Intrinsic<[llvm_anyint_ty],
 def int_ptrauth_auth : Intrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, llvm_i32_ty,
                                   LLVMMatchType<0>],
-                                 [IntrNoMem,ImmArg<1>]>;
+                                 [IntrNoMem,ImmArg<ArgIndex<1>>]>;
 
 // Authenticate a signed pointer (using the first set of key/discriminator),
 // and resign it (using the second).
@@ -1548,14 +1548,15 @@ def int_ptrauth_resign : Intrinsic<[llvm_anyint_ty],
                                    [LLVMMatchType<0>, llvm_i32_ty,
                                     LLVMMatchType<0>, llvm_i32_ty,
                                     LLVMMatchType<0>],
-                                   [IntrNoMem,ImmArg<1>,ImmArg<3>]>;
+                                   [IntrNoMem,ImmArg<ArgIndex<1>>,
+                                    ImmArg<ArgIndex<3>>]>;
 
 // Strip the embedded signature out of a signed pointer.
 // This behaves like @llvm.ptrauth.auth, but doesn't check for the validity of
 // the embedded signature.
 def int_ptrauth_strip : Intrinsic<[llvm_anyint_ty],
                                   [LLVMMatchType<0>, llvm_i32_ty],
-                                  [IntrNoMem,ImmArg<1>]>;
+                                  [IntrNoMem,ImmArg<ArgIndex<1>>]>;
 
 // Blend a small integer discriminator with an address discriminator, producing
 // a new discriminator value.
