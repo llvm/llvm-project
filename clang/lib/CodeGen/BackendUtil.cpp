@@ -353,7 +353,7 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
 
 static void addMemTagOptimizationPasses(const PassManagerBuilder &Builder,
                                         legacy::PassManagerBase &PM) {
-  PM.add(createStackSafetyGlobalInfoWrapperPass(/*SetMetadata=*/true));
+  PM.add(createStackSafetyGlobalInfoWrapperPass());
 }
 
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
