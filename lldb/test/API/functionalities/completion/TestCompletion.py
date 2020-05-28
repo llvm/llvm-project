@@ -85,6 +85,13 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_plugin_completion(self):
+        subcommands = ['attach -P', 'connect -p', 'launch -p']
+
+        for subcommand in subcommands:
+            self.complete_from_to('process ' + subcommand + ' mac',
+                                  'process ' + subcommand + ' mach-o-core')
+
     def test_process_signal(self):
         # The tab completion for "process signal"  won't work without a running process.
         self.complete_from_to('process signal ',

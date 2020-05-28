@@ -243,6 +243,9 @@ public:
 
   static const char *GetProcessPluginDescriptionAtIndex(uint32_t idx);
 
+  static void AutoCompleteProcessName(llvm::StringRef partial_name,
+                                      CompletionRequest &request);
+
   // ScriptInterpreter
   static bool RegisterPlugin(ConstString name, const char *description,
                              lldb::ScriptLanguage script_lang,
