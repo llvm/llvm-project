@@ -37363,14 +37363,20 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // MOVMSK only uses the MSB from each vector element.
     KnownBits KnownSrc;
-    if (SimplifyDemandedBits(Src, APInt::getSignMask(SrcBits), DemandedElts,
-                             KnownSrc, TLO, Depth + 1))
+    APInt DemandedSrcBits = APInt::getSignMask(SrcBits);
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, KnownSrc, TLO,
+                             Depth + 1))
       return true;
 
     if (KnownSrc.One[SrcBits - 1])
       Known.One.setLowBits(NumElts);
     else if (KnownSrc.Zero[SrcBits - 1])
       Known.Zero.setLowBits(NumElts);
+
+    // Attempt to avoid multi-use os if we don't need anything from it.
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, DemandedSrcBits, DemandedElts, TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     return false;
   }
   case X86ISD::BEXTR: {
