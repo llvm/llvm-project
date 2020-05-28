@@ -1,6 +1,5 @@
 if (MLIR_CUDA_CONVERSIONS_ENABLED)
   set(NVPTX_LIBS
-    MC
     NVPTXCodeGen
     NVPTXDesc
     NVPTXInfo
@@ -9,7 +8,6 @@ endif()
 
 if (MLIR_ROCM_CONVERSIONS_ENABLED)
   set(AMDGPU_LIBS
-    MC
     AMDGPUCodeGen
     AMDGPUDesc
     AMDGPUInfo
@@ -26,6 +24,7 @@ add_mlir_conversion_library(MLIRGPUtoGPURuntimeTransforms
 
   LINK_COMPONENTS
   Core
+  MC
   ${AMDGPU_LIBS}
   ${NVPTX_LIBS}
 
