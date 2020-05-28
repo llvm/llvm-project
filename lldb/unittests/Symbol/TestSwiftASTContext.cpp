@@ -150,7 +150,7 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
     llvm::Triple target(triple_string);
     return SwiftASTContextTester::GetResourceDir(
         sdk_path,
-        SwiftASTContextTester::GetSwiftStdlibOSDir(target, host).str(),
+        SwiftASTContextTester::GetSwiftStdlibOSDir(target, host),
         std::string(swift_dir), std::string(xcode_contents),
         std::string(toolchain), std::string(cl_tools));
   };
