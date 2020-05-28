@@ -78,19 +78,20 @@ void testMixedTypeComparisons (char a, unsigned long b) {
 }
 
 void testBitwiseRules(unsigned int a, int b, int c) {
-  clang_analyzer_eval((a | 1) >= 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval((a | 1) >= 1);   // expected-warning{{TRUE}}
   clang_analyzer_eval((a | -1) >= -1); // expected-warning{{TRUE}}
-  clang_analyzer_eval((a | 2) >= 2); // expected-warning{{TRUE}}
-  clang_analyzer_eval((a | 5) >= 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval((a | 2) >= 2);   // expected-warning{{TRUE}}
+  clang_analyzer_eval((a | 5) >= 5);   // expected-warning{{TRUE}}
   clang_analyzer_eval((a | 10) >= 10); // expected-warning{{TRUE}}
 
   // Argument order should not influence this
   clang_analyzer_eval((1 | a) >= 1); // expected-warning{{TRUE}}
 
-  clang_analyzer_eval((a & 1) <= 1); // expected-warning{{TRUE}}
-  clang_analyzer_eval((a & 2) <= 2); // expected-warning{{TRUE}}
-  clang_analyzer_eval((a & 5) <= 5); // expected-warning{{TRUE}}
-  clang_analyzer_eval((a & 10) <= 10); // expected-warning{{TRUE}}
+  clang_analyzer_eval((a & 1) <= 1);    // expected-warning{{TRUE}}
+  clang_analyzer_eval((a & 1) >= 0);    // expected-warning{{TRUE}}
+  clang_analyzer_eval((a & 2) <= 2);    // expected-warning{{TRUE}}
+  clang_analyzer_eval((a & 5) <= 5);    // expected-warning{{TRUE}}
+  clang_analyzer_eval((a & 10) <= 10);  // expected-warning{{TRUE}}
   clang_analyzer_eval((a & -10) <= 10); // expected-warning{{UNKNOWN}}
 
   // Again, check for different argument order.
@@ -104,22 +105,37 @@ void testBitwiseRules(unsigned int a, int b, int c) {
   clang_analyzer_eval((b | 1) > 0); // expected-warning{{UNKNOWN}}
 
   // Even for signed values, bitwise OR with a non-zero is always non-zero.
-  clang_analyzer_eval((b | 1) == 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval((b | 1) == 0);  // expected-warning{{FALSE}}
   clang_analyzer_eval((b | -2) == 0); // expected-warning{{FALSE}}
   clang_analyzer_eval((b | 10) == 0); // expected-warning{{FALSE}}
-  clang_analyzer_eval((b | 0) == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval((b | 0) == 0);  // expected-warning{{UNKNOWN}}
   clang_analyzer_eval((b | -2) >= 0); // expected-warning{{FALSE}}
 
   // Check that we can operate with negative ranges
   if (b < 0) {
     clang_analyzer_eval((b | -1) == -1);   // expected-warning{{TRUE}}
     clang_analyzer_eval((b | -10) >= -10); // expected-warning{{TRUE}}
+    clang_analyzer_eval((b & 0) == 0);     // expected-warning{{TRUE}}
+    clang_analyzer_eval((b & -10) <= -10); // expected-warning{{TRUE}}
+    clang_analyzer_eval((b & 5) >= 0);     // expected-warning{{TRUE}}
 
     int e = (b | -5);
     clang_analyzer_eval(e >= -5 && e <= -1); // expected-warning{{TRUE}}
 
     if (b < -20) {
-      clang_analyzer_eval((b | e) >= -5); // expected-warning{{TRUE}}
+      clang_analyzer_eval((b | e) >= -5);    // expected-warning{{TRUE}}
+      clang_analyzer_eval((b & -10) < -20);  // expected-warning{{TRUE}}
+      clang_analyzer_eval((b & e) < -20);    // expected-warning{{TRUE}}
+      clang_analyzer_eval((b & -30) <= -30); // expected-warning{{TRUE}}
+
+      if (c >= -30 && c <= -10) {
+        clang_analyzer_eval((b & c) <= -20); // expected-warning{{TRUE}}
+      }
+    }
+
+    if (a <= 40) {
+      int g = (int)a & b;
+      clang_analyzer_eval(g <= 40 && g >= 0); // expected-warning{{TRUE}}
     }
 
     // Check that we can reason about the result even if know nothing
@@ -135,6 +151,11 @@ void testBitwiseRules(unsigned int a, int b, int c) {
     // the types are not the same, but we still can convert operand
     // ranges.
     clang_analyzer_eval((a | b) >= 10); // expected-warning{{TRUE}}
+    clang_analyzer_eval((a & b) <= 30); // expected-warning{{TRUE}}
+
+    if (b <= 20) {
+      clang_analyzer_eval((a & b) <= 20); // expected-warning{{TRUE}}
+    }
   }
 
   // Check that dynamically computed constants also work.
@@ -149,11 +170,7 @@ void testBitwiseRules(unsigned int a, int b, int c) {
     clang_analyzer_eval((a | 20) >= 20); // expected-warning{{TRUE}}
   }
 
-  // TODO: We misuse intersection of ranges for bitwise AND and OR operators.
-  //       Resulting ranges for the following cases are infeasible.
-  //       This is what causes paradoxical results below.
   if (a > 10) {
-    clang_analyzer_eval((a & 1) <= 1); // expected-warning{{FALSE}}
-    clang_analyzer_eval((a & 1) > 1);  // expected-warning{{FALSE}}
+    clang_analyzer_eval((a & 1) <= 1); // expected-warning{{TRUE}}
   }
 }
