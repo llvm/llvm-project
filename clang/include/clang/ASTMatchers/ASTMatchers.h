@@ -4257,6 +4257,34 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   return Matched;
 }
 
+/// Matches the ParmVarDecl nodes that are at the N'th position in the parameter
+/// list. The parameter list could be that of either a block, function, or
+/// objc-method.
+///
+///
+/// Given
+///
+/// \code
+/// void f(int a, int b, int c) {
+/// }
+/// \endcode
+///
+/// ``parmVarDecl(isAtPosition(0))`` matches ``int a``.
+///
+/// ``parmVarDecl(isAtPosition(1))`` matches ``int b``.
+AST_MATCHER_P(clang::ParmVarDecl, isAtPosition, unsigned, N) {
+  const clang::DeclContext *Context = Node.getParentFunctionOrMethod();
+
+  if (const auto *Decl = dyn_cast_or_null<FunctionDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+  if (const auto *Decl = dyn_cast_or_null<BlockDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+  if (const auto *Decl = dyn_cast_or_null<ObjCMethodDecl>(Context))
+    return N < Decl->param_size() && Decl->getParamDecl(N) == &Node;
+
+  return false;
+}
+
 /// Matches any parameter of a function or an ObjC method declaration or a
 /// block.
 ///
