@@ -1,5 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
+#define UINT_MAX (~0U)
+#define INT_MAX (int)(UINT_MAX & (UINT_MAX >> 1))
+#define INT_MIN (int)(UINT_MAX & ~(UINT_MAX >> 1))
+
 void clang_analyzer_eval(int);
 
 // There should be no warnings unless otherwise indicated.
@@ -172,5 +176,78 @@ void testBitwiseRules(unsigned int a, int b, int c) {
 
   if (a > 10) {
     clang_analyzer_eval((a & 1) <= 1); // expected-warning{{TRUE}}
+  }
+}
+
+void testRemainderRules(unsigned int a, unsigned int b, int c, int d) {
+  // Check that we know that remainder of zero divided by any number is still 0.
+  clang_analyzer_eval((0 % c) == 0); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval((10 % a) <= 10); // expected-warning{{TRUE}}
+
+  if (a <= 30 && b <= 50) {
+    clang_analyzer_eval((40 % a) < 30); // expected-warning{{TRUE}}
+    clang_analyzer_eval((a % b) < 50);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((b % a) < 30);  // expected-warning{{TRUE}}
+
+    if (a >= 10) {
+      // Even though it seems like a valid assumption, it is not.
+      // Check that we are not making this mistake.
+      clang_analyzer_eval((a % b) >= 10); // expected-warning{{UNKNOWN}}
+
+      // Check that we can we can infer when remainder is equal
+      // to the dividend.
+      clang_analyzer_eval((4 % a) == 4); // expected-warning{{TRUE}}
+      if (b < 7) {
+        clang_analyzer_eval((b % a) < 7); // expected-warning{{TRUE}}
+      }
+    }
+  }
+
+  if (c > -10) {
+    clang_analyzer_eval((d % c) < INT_MAX);     // expected-warning{{TRUE}}
+    clang_analyzer_eval((d % c) > INT_MIN + 1); // expected-warning{{TRUE}}
+  }
+
+  // Check that we can reason about signed integers when they are
+  // known to be positive.
+  if (c >= 10 && c <= 30 && d >= 20 && d <= 50) {
+    clang_analyzer_eval((5 % c) == 5);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((c % d) <= 30); // expected-warning{{TRUE}}
+    clang_analyzer_eval((c % d) >= 0);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((d % c) < 30);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((d % c) >= 0);  // expected-warning{{TRUE}}
+  }
+
+  if (c >= -30 && c <= -10 && d >= -20 && d <= 50) {
+    // Test positive LHS with negative RHS.
+    clang_analyzer_eval((40 % c) < 30);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((40 % c) > -30); // expected-warning{{TRUE}}
+
+    // Test negative LHS with possibly negative RHS.
+    clang_analyzer_eval((-10 % d) < 50);  // expected-warning{{TRUE}}
+    clang_analyzer_eval((-20 % d) > -50); // expected-warning{{TRUE}}
+
+    // Check that we don't make wrong assumptions
+    clang_analyzer_eval((-20 % d) > -20); // expected-warning{{UNKNOWN}}
+
+    // Check that we can reason about negative ranges...
+    clang_analyzer_eval((c % d) < 50); // expected-warning{{TRUE}}
+    /// ...both ways
+    clang_analyzer_eval((d % c) < 30); // expected-warning{{TRUE}}
+
+    if (a <= 10) {
+      // Result is unsigned.  This means that 'c' is casted to unsigned.
+      // We don't want to reason about ranges changing boundaries with
+      // conversions.
+      clang_analyzer_eval((a % c) < 30); // expected-warning{{UNKNOWN}}
+    }
+  }
+
+  // Check that we work correctly when minimal unsigned value from a range is
+  // equal to the signed minimum for the same bit width.
+  unsigned int x = INT_MIN;
+  if (a >= x && a <= x + 10) {
+    clang_analyzer_eval((b % a) < x + 10); // expected-warning{{TRUE}}
   }
 }
