@@ -1925,7 +1925,8 @@ LLVMType LLVMType::setStructTyBody(LLVMType structType,
 LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
   // Lock access to the dialect as this may modify the LLVM context.
   return getLocked(&elementType.getDialect(), [=] {
-    return llvm::VectorType::get(elementType.getUnderlyingType(), numElements);
+    return llvm::FixedVectorType::get(elementType.getUnderlyingType(),
+                                      numElements);
   });
 }
 
