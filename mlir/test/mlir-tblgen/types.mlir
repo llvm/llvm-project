@@ -438,7 +438,7 @@ func @operand_rank_equals_result_size_failure(%arg : tensor<1x2x3x4xi32>) {
 // -----
 
 func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>) {
-  // expected-error@+1 {{all of {x, res} have same type}}
+  // expected-error@+1 {{type incompatible with return type of operation}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<* x i32>, tensor<* x f32>) -> tensor<* x f32>
   return
 }
@@ -446,7 +446,7 @@ func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>
 // -----
 
 func @same_types_shape_mismatch(%arg0: tensor<1x2xi32>, %arg1: tensor<2x1xi32>) {
-  // expected-error@+1 {{all of {x, res} have same type}}
+  // expected-error@+1 {{type incompatible with return type of operation}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<1x2xi32>, tensor<2x1xi32>) -> tensor<2x1xi32>
   return
 }

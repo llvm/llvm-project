@@ -1,4 +1,4 @@
-# Table-driven Operation Definition Specification (ODS)
+# Operation Definition Specification (ODS)
 
 In addition to specializing the `mlir::Op` C++ template, MLIR also supports
 defining operations in a table-driven manner. This is achieved via
@@ -526,10 +526,9 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
 // All operands/attributes have aggregate parameters.
-// Generated if InferTypeOpInterface interface is specified.
+// Generated if return type can be inferred.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
-                  ValueRange operands,
-                  ArrayRef<NamedAttribute> attributes);
+                  ValueRange operands, ArrayRef<NamedAttribute> attributes);
 
 // (And manually specified builders depending on the specific op.)
 ```
@@ -553,6 +552,12 @@ behavior is essentially due to C++ function parameter default value placement
 restrictions.) Otherwise, the builder of the third form will still be generated
 but default values for the attributes not at the end of the `arguments` list
 will not be supplied in the builder's signature.
+
+ODS will generate a builder that doesn't require return type specified if
+
+*   Op implements InferTypeOpInterface interface;
+*   All return types are either buildable types or are the same as a given
+    operand (e.g., `AllTypesMatch` constraint between operand and result);
 
 And there may potentially exist other builders depending on the specific op;
 please refer to the
