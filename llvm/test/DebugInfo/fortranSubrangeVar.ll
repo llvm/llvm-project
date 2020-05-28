@@ -1,6 +1,7 @@
 ;; This test checks DISubrange bounds for DIVariable
+; REQUIRES: x86_64-linux
 
-; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ;; Test whether bounds are generated correctly.
 ; CHECK: [[DIE1:0x.+]]:       DW_TAG_variable
