@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ObjectTests
   ArchiveTest.cpp
+  ELFObjectFileTest.cpp
+  ELFTest.cpp
   MinidumpTest.cpp
   ObjectFileTest.cpp
   SymbolSizeTest.cpp

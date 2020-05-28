@@ -1435,6 +1435,8 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_STXP7X,        "STMicroelectronics STxP7x family"),
   ENUM_ENT(EM_NDS32,         "Andes Technology compact code size embedded RISC processor family"),
   ENUM_ENT(EM_ECOG1,         "Cyan Technology eCOG1 microprocessor"),
+  // FIXME: Following EM_ECOG1X definitions is dead code since EM_ECOG1X has
+  //        an identical number to EM_ECOG1.
   ENUM_ENT(EM_ECOG1X,        "Cyan Technology eCOG1X family"),
   ENUM_ENT(EM_MAXQ30,        "Dallas Semiconductor MAXQ30 Core microcontrollers"),
   ENUM_ENT(EM_XIMO16,        "New Japan Radio (NJR) 16-bit DSP Processor"),
@@ -1469,6 +1471,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_RISCV,         "RISC-V"),
   ENUM_ENT(EM_LANAI,         "EM_LANAI"),
   ENUM_ENT(EM_BPF,           "EM_BPF"),
+  ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {
