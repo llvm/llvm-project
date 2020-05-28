@@ -970,7 +970,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
 void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // The result value of the gc_result is simply the result of the actual
   // call.  We've already emitted this, so just grab the value.
-  const Instruction *I = CI.getStatepoint();
+  const GCStatepointInst *I = CI.getStatepoint();
 
   if (I->getParent() != CI.getParent()) {
     // Statepoint is in different basic block so we should have stored call
@@ -979,7 +979,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
     // register because statepoint and actual call return types can be
     // different, and getValue() will use CopyFromReg of the wrong type,
     // which is always i32 in our case.
-    Type *RetTy = cast<GCStatepointInst>(I)->getActualReturnType();
+    Type *RetTy = I->getActualReturnType();
     SDValue CopyFromReg = getCopyFromRegs(I, RetTy);
 
     assert(CopyFromReg.getNode());
