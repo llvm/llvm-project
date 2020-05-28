@@ -70,6 +70,10 @@ Changes to the LLVM IR
   behavior was undocumented. To preserve optimizations, frontends may need to
   be updated to generate appropriate `align` attributes and metadata.
 
+* The DIModule metadata is extended to contain file and line number
+  information. This information is used to represent Fortran modules debug
+  info at IR level.
+
 Changes to building LLVM
 ------------------------
 
