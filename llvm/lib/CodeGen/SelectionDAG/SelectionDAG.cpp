@@ -5461,21 +5461,24 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   case ISD::EXTRACT_SUBVECTOR:
-    assert(VT.isVector() && N1.getValueType().isVector() &&
-           "Extract subvector VTs must be a vectors!");
-    assert(VT.getVectorElementType() ==
-               N1.getValueType().getVectorElementType() &&
+    EVT N1VT = N1.getValueType();
+    assert(VT.isVector() && N1VT.isVector() &&
+           "Extract subvector VTs must be vectors!");
+    assert(VT.getVectorElementType() == N1VT.getVectorElementType() &&
            "Extract subvector VTs must have the same element type!");
-    assert(VT.getVectorNumElements() <=
-               N1.getValueType().getVectorNumElements() &&
+    assert((VT.isFixedLengthVector() || N1VT.isScalableVector()) &&
+           "Cannot extract a scalable vector from a fixed length vector!");
+    assert((VT.isScalableVector() != N1VT.isScalableVector() ||
+            VT.getVectorMinNumElements() <= N1VT.getVectorMinNumElements()) &&
            "Extract subvector must be from larger vector to smaller vector!");
     assert(N2C && "Extract subvector index must be a constant");
-    assert(VT.getVectorNumElements() + N2C->getZExtValue() <=
-               N1.getValueType().getVectorNumElements() &&
+    assert((VT.isScalableVector() != N1VT.isScalableVector() ||
+            (VT.getVectorMinNumElements() + N2C->getZExtValue()) <=
+                N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
 
     // Trivial extraction.
-    if (VT == N1.getValueType())
+    if (VT == N1VT)
       return N1;
 
     // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
@@ -5665,22 +5668,27 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Inserting undef into undef is still undef.
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
-    assert(VT.isVector() && N1.getValueType().isVector() &&
-           N2.getValueType().isVector() &&
-           "Insert subvector VTs must be a vectors");
+
+    EVT N2VT = N2.getValueType();
     assert(VT == N1.getValueType() &&
            "Dest and insert subvector source types must match!");
-    assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
+    assert(VT.isVector() && N2VT.isVector() &&
+           "Insert subvector VTs must be vectors!");
+    assert((VT.isScalableVector() || N2VT.isFixedLengthVector()) &&
+           "Cannot insert a scalable vector into a fixed length vector!");
+    assert((VT.isScalableVector() != N2VT.isScalableVector() ||
+            VT.getVectorMinNumElements() >= N2VT.getVectorMinNumElements()) &&
            "Insert subvector must be from smaller vector to larger vector!");
     assert(isa<ConstantSDNode>(N3) &&
            "Insert subvector index must be constant");
-    assert(N2.getValueType().getVectorNumElements() +
-                   cast<ConstantSDNode>(N3)->getZExtValue() <=
-               VT.getVectorNumElements() &&
+    assert((VT.isScalableVector() != N2VT.isScalableVector() ||
+            (N2VT.getVectorMinNumElements() +
+             cast<ConstantSDNode>(N3)->getZExtValue()) <=
+                VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
 
     // Trivial insertion.
-    if (VT == N2.getValueType())
+    if (VT == N2VT)
       return N2;
 
     // If this is an insert of an extracted vector into an undef vector, we
