@@ -31,6 +31,9 @@ using namespace llvm;
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
 
+static cl::opt<int> StackSafetyPrint("stack-safety-print", cl::init(0),
+                                     cl::Hidden);
+
 namespace {
 
 /// Rewrite an SCEV expression for a memory access address to an expression that
@@ -681,6 +684,8 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
       }
     }
     Info.reset(new InfoTy{createGlobalStackSafetyInfo(std::move(Functions))});
+    if (StackSafetyPrint)
+      print(errs());
   }
   return *Info;
 }
@@ -689,7 +694,10 @@ StackSafetyGlobalInfo::StackSafetyGlobalInfo() = default;
 
 StackSafetyGlobalInfo::StackSafetyGlobalInfo(
     Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI)
-    : M(M), GetSSI(GetSSI) {}
+    : M(M), GetSSI(GetSSI) {
+  if (StackSafetyPrint > 1)
+    getInfo();
+}
 
 StackSafetyGlobalInfo::StackSafetyGlobalInfo(StackSafetyGlobalInfo &&) =
     default;
