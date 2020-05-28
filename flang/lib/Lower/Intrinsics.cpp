@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RTBuilder.h"
+#include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -84,6 +85,13 @@ enum class ExtremumBehavior {
 // TODO error handling -> return a code or directly emit messages ?
 struct IntrinsicLibrary {
 
+  // Constructors.
+  explicit IntrinsicLibrary(Fortran::lower::FirOpBuilder &builder,
+                            mlir::Location loc)
+      : builder{builder}, loc{loc} {}
+  IntrinsicLibrary() = delete;
+  IntrinsicLibrary(const IntrinsicLibrary &) = delete;
+
   /// Generate FIR for call to Fortran intrinsic \p name with arguments \p arg
   /// and expected result type \p resultType.
   mlir::Value genIntrinsicCall(llvm::StringRef name, mlir::Type resultType,
@@ -132,6 +140,7 @@ struct IntrinsicLibrary {
                                llvm::ArrayRef<mlir::Value> args);
 
   Fortran::lower::FirOpBuilder &builder;
+  mlir::Location loc;
 };
 
 /// Table that drives the fir generation depending on the intrinsic.
@@ -559,7 +568,6 @@ IntrinsicLibrary::outlineInWrapper(Generator generator, llvm::StringRef name,
                                    mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   auto module = builder.getModule();
-  auto *mlirContext = module.getContext();
   auto funcType = getFunctionType(resultType, args, builder);
   std::string wrapperName = getIntrinsicWrapperName(name, funcType);
   auto function = builder.getNamedFunction(wrapperName);
@@ -581,14 +589,16 @@ IntrinsicLibrary::outlineInWrapper(Generator generator, llvm::StringRef name,
 
     // Location of code inside wrapper of the wrapper is independent from
     // the location of the intrinsic call.
-    auto localLoc = mlir::UnknownLoc::get(mlirContext);
+    auto savedLoc = loc;
+    auto localLoc = localBuilder->getUnknownLoc();
     localBuilder->setLocation(localLoc);
-    IntrinsicLibrary localLib{*localBuilder};
+    IntrinsicLibrary localLib{*localBuilder, localLoc};
     mlir::Value result =
         generator ? std::invoke(generator, localLib, resultType, localArguments)
                   : std::invoke(&IntrinsicLibrary::genRuntimeCall, localLib,
                                 name, resultType, localArguments);
     localBuilder->createHere<mlir::ReturnOp>(result);
+    loc = savedLoc;
   } else {
     // Wrapper was already built, ensure it has the sought type
     assert(function.getType() == funcType);
@@ -667,7 +677,8 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
   }
   if (fir::isa_complex(type)) {
     // Use HYPOT to fulfill the no underflow/overflow requirement.
-    auto parts = builder.extractParts(arg);
+    auto parts =
+        Fortran::lower::ComplexExprHelper{builder, loc}.extractParts(arg);
     llvm::SmallVector<mlir::Value, 2> args = {parts.first, parts.second};
     return genIntrinsicCall("hypot", resultType, args);
   }
@@ -678,7 +689,8 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  return builder.extractComplexPart(args[0], true /* isImagPart */);
+  return Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
+      args[0], true /* isImagPart */);
 }
 
 // CEILING
@@ -702,9 +714,12 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
     llvm_unreachable("argument type mismatch");
 
   mlir::Value cplx = args[0];
-  auto imag = builder.extractComplexPart(cplx, /*isImagPart=*/true);
+  auto imag =
+      Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
+          cplx, /*isImagPart=*/true);
   auto negImag = builder.createHere<fir::NegfOp>(imag);
-  return builder.insertComplexPart(cplx, negImag, /*isImagPart=*/true);
+  return Fortran::lower::ComplexExprHelper{builder, loc}.insertComplexPart(
+      cplx, negImag, /*isImagPart=*/true);
 }
 
 // FLOOR
@@ -870,7 +885,8 @@ template <typename T>
 mlir::Value Fortran::lower::IntrinsicCallOpsBuilder<T>::genIntrinsicCall(
     llvm::StringRef name, mlir::Type resultType,
     llvm::ArrayRef<mlir::Value> args) {
-  return IntrinsicLibrary{impl()}.genIntrinsicCall(name, resultType, args);
+  return IntrinsicLibrary{impl(), impl().getLoc()}.genIntrinsicCall(
+      name, resultType, args);
 }
 template mlir::Value
     Fortran::lower::IntrinsicCallOpsBuilder<Fortran::lower::FirOpBuilder>::
@@ -881,7 +897,7 @@ template <typename T>
 mlir::Value Fortran::lower::IntrinsicCallOpsBuilder<T>::genMax(
     llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "max requires at least one argument");
-  return IntrinsicLibrary{impl()}
+  return IntrinsicLibrary{impl(), impl().getLoc()}
       .genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
 }
@@ -892,7 +908,7 @@ template <typename T>
 mlir::Value Fortran::lower::IntrinsicCallOpsBuilder<T>::genMin(
     llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "min requires at least one argument");
-  return IntrinsicLibrary{impl()}
+  return IntrinsicLibrary{impl(), impl().getLoc()}
       .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
 }
@@ -903,7 +919,8 @@ template <typename T>
 mlir::Value Fortran::lower::IntrinsicCallOpsBuilder<T>::genPow(mlir::Type type,
                                                                mlir::Value x,
                                                                mlir::Value y) {
-  return IntrinsicLibrary{impl()}.genRuntimeCall("pow", type, {x, y});
+  return IntrinsicLibrary{impl(), impl().getLoc()}.genRuntimeCall("pow", type,
+                                                                  {x, y});
 }
 template mlir::Value Fortran::lower::IntrinsicCallOpsBuilder<
     Fortran::lower::FirOpBuilder>::genPow(mlir::Type, mlir::Value, mlir::Value);
