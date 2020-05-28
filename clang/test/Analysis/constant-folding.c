@@ -115,7 +115,22 @@ void testBitwiseRules(unsigned int a, int b) {
 #endif
 
   // Check that dynamically computed constants also work.
-  int constant = 1 << 3;
+  unsigned int constant = 1 << 3;
   unsigned int d = a | constant;
-  clang_analyzer_eval(constant > 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d >= constant); // expected-warning{{TRUE}}
+
+  // Check that nested expressions also work.
+  clang_analyzer_eval(((a | 10) | 5) >= 10); // expected-warning{{TRUE}}
+
+  // TODO: We misuse intersection of ranges for bitwise AND and OR operators.
+  //       Resulting ranges for the following cases are infeasible.
+  //       This is what causes paradoxical results below.
+  if (a > 10) {
+    clang_analyzer_eval((a & 1) <= 1); // expected-warning{{FALSE}}
+    clang_analyzer_eval((a & 1) > 1);  // expected-warning{{FALSE}}
+  }
+  if (a < 10) {
+    clang_analyzer_eval((a | 20) >= 20); // expected-warning{{FALSE}}
+    clang_analyzer_eval((a | 20) < 20);  // expected-warning{{FALSE}}
+  }
 }
