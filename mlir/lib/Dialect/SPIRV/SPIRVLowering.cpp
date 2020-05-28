@@ -579,7 +579,7 @@ Value mlir::spirv::getBuiltinVariableValue(Operation *op,
 
 spirv::AccessChainOp mlir::spirv::getElementPtr(
     SPIRVTypeConverter &typeConverter, MemRefType baseType, Value basePtr,
-    ArrayRef<Value> indices, Location loc, OpBuilder &builder) {
+    ValueRange indices, Location loc, OpBuilder &builder) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -591,6 +591,7 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
   }
 
   auto indexType = typeConverter.getIndexType(builder.getContext());
+
   SmallVector<Value, 2> linearizedIndices;
   // Add a '0' at the start to index into the struct.
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
@@ -606,7 +607,7 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
         loc, indexType, IntegerAttr::get(indexType, offset));
     assert(indices.size() == strides.size() &&
            "must provide indices for all dimensions");
-    for (auto index : enumerate(indices)) {
+    for (auto index : llvm::enumerate(indices)) {
       Value strideVal = builder.create<spirv::ConstantOp>(
           loc, indexType, IntegerAttr::get(indexType, strides[index.index()]));
       Value update =
