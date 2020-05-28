@@ -1131,7 +1131,7 @@ def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
 def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
 def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
 
-def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
+def hwreg : NamedOperandU32<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
 def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 

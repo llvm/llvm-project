@@ -139,3 +139,8 @@ void test_fence() {
   const char ptr[] = "workgroup";
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
 }
+
+void test_s_setreg(int x, int y) {
+  __builtin_amdgcn_s_setreg(x, 0); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
+  __builtin_amdgcn_s_setreg(x, y); // expected-error {{argument to '__builtin_amdgcn_s_setreg' must be a constant integer}}
+}
