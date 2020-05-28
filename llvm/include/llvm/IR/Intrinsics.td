@@ -81,6 +81,11 @@ class NoAlias<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+class Align<AttrIndex idx, int align> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  int Align = align;
+}
+
 // Returned - The specified argument is always the return value of the
 // intrinsic.
 class Returned<AttrIndex idx> : IntrinsicProperty {
