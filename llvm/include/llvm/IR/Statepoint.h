@@ -65,26 +65,46 @@ bool isGCRelocate(const Value *V);
 bool isGCResult(const CallBase *Call);
 bool isGCResult(const Value *V);
 
+/// Represents a gc.statepoint intrinsic call.  This extends directly from
+/// CallBase as the IntrinsicInst only supports calls and gc.statepoint is
+/// invokable.
+class GCStatepointInst : public CallBase {
+public:
+  GCStatepointInst() = delete;
+  GCStatepointInst(const GCStatepointInst &) = delete;
+  GCStatepointInst &operator=(const GCStatepointInst &) = delete;
+
+  static bool classof(const CallBase *I) {
+    if (const Function *CF = I->getCalledFunction())
+      return CF->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
+  }
+};
+
 /// A wrapper around a GC intrinsic call, this provides most of the actual
 /// functionality for Statepoint and ImmutableStatepoint.  It is
 /// templatized to allow easily specializing of const and non-const
 /// concrete subtypes.
 template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallBaseTy>
+          typename CallTy>
 class StatepointBase {
-  CallBaseTy *StatepointCall;
+  CallTy *StatepointCall;
 
 protected:
   explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = isStatepoint(I) ? cast<CallBaseTy>(I) : nullptr;
+    StatepointCall = isStatepoint(I) ? cast<CallTy>(I) : nullptr;
   }
 
-  explicit StatepointBase(CallBaseTy *Call) {
+  explicit StatepointBase(CallTy *Call) {
     StatepointCall = isStatepoint(Call) ? Call : nullptr;
   }
 
 public:
-  using arg_iterator = typename CallBaseTy::const_op_iterator;
+  using arg_iterator = typename CallTy::const_op_iterator;
 
   enum {
     IDPos = 0,
@@ -104,7 +124,7 @@ public:
   }
 
   /// Return the underlying call instruction.
-  CallBaseTy *getCall() const {
+  CallTy *getCall() const {
     assert(*this && "check validity first!");
     return StatepointCall;
   }
@@ -291,9 +311,9 @@ public:
 /// to a gc.statepoint.
 class ImmutableStatepoint
     : public StatepointBase<const Function, const Instruction, const Value,
-                            const CallBase> {
+                            const GCStatepointInst> {
   using Base = StatepointBase<const Function, const Instruction, const Value,
-                              const CallBase>;
+                              const GCStatepointInst>;
 
 public:
   explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
@@ -303,8 +323,8 @@ public:
 /// A specialization of it's base class for read-write access
 /// to a gc.statepoint.
 class Statepoint
-    : public StatepointBase<Function, Instruction, Value, CallBase> {
-  using Base = StatepointBase<Function, Instruction, Value, CallBase>;
+    : public StatepointBase<Function, Instruction, Value, GCStatepointInst> {
+  using Base = StatepointBase<Function, Instruction, Value, GCStatepointInst>;
 
 public:
   explicit Statepoint(Instruction *I) : Base(I) {}
@@ -402,9 +422,9 @@ public:
 };
 
 template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallBaseTy>
+          typename CallTy>
 std::vector<const GCRelocateInst *>
-StatepointBase<FunTy, InstructionTy, ValueTy, CallBaseTy>::getRelocates()
+StatepointBase<FunTy, InstructionTy, ValueTy, CallTy>::getRelocates()
     const {
   std::vector<const GCRelocateInst *> Result;
 
