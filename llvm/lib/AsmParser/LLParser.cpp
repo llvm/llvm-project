@@ -4500,21 +4500,41 @@ bool LLParser::ParseGenericDINode(MDNode *&Result, bool IsDistinct) {
 /// ParseDISubrange:
 ///   ::= !DISubrange(count: 30, lowerBound: 2)
 ///   ::= !DISubrange(count: !node, lowerBound: 2)
+///   ::= !DISubrange(lowerBound: !node1, upperBound: !node2, stride: !node3)
 bool LLParser::ParseDISubrange(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(count, MDSignedOrMDField, (-1, -1, INT64_MAX, false));              \
-  OPTIONAL(lowerBound, MDSignedField, );
+  OPTIONAL(count, MDSignedOrMDField, (-1, -1, INT64_MAX, false));              \
+  OPTIONAL(lowerBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(upperBound, MDSignedOrMDField, );                                   \
+  OPTIONAL(stride, MDSignedOrMDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  Metadata *Count = nullptr;
+  Metadata *LowerBound = nullptr;
+  Metadata *UpperBound = nullptr;
+  Metadata *Stride = nullptr;
   if (count.isMDSignedField())
-    Result = GET_OR_DISTINCT(
-        DISubrange, (Context, count.getMDSignedValue(), lowerBound.Val));
+    Count = ConstantAsMetadata::get(ConstantInt::getSigned(
+        Type::getInt64Ty(Context), count.getMDSignedValue()));
   else if (count.isMDField())
-    Result = GET_OR_DISTINCT(
-        DISubrange, (Context, count.getMDFieldValue(), lowerBound.Val));
-  else
-    return true;
+    Count = count.getMDFieldValue();
+
+  auto convToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+    if (Bound.isMDSignedField())
+      return ConstantAsMetadata::get(ConstantInt::getSigned(
+          Type::getInt64Ty(Context), Bound.getMDSignedValue()));
+    if (Bound.isMDField())
+      return Bound.getMDFieldValue();
+    return nullptr;
+  };
+
+  LowerBound = convToMetadata(lowerBound);
+  UpperBound = convToMetadata(upperBound);
+  Stride = convToMetadata(stride);
+
+  Result = GET_OR_DISTINCT(DISubrange,
+                           (Context, Count, LowerBound, UpperBound, Stride));
 
   return false;
 }

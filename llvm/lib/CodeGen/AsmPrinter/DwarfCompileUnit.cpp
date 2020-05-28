@@ -768,9 +768,18 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
     Result.push_back(DLVar);
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
-      auto Count = Subrange->getCount();
-      if (auto *Dependency = Count.dyn_cast<DIVariable *>())
-        Result.push_back(Dependency);
+      if (auto Count = Subrange->getCount())
+        if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto LB = Subrange->getLowerBound())
+        if (auto *Dependency = LB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto UB = Subrange->getUpperBound())
+        if (auto *Dependency = UB.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
+      if (auto ST = Subrange->getStride())
+        if (auto *Dependency = ST.dyn_cast<DIVariable *>())
+          Result.push_back(Dependency);
     }
   }
   return Result;

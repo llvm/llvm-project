@@ -336,15 +336,103 @@ DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
                                 StorageType Storage, bool ShouldCreate) {
   auto *CountNode = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), Count));
-  return getImpl(Context, CountNode, Lo, Storage, ShouldCreate);
+  auto *LB = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), Lo));
+  return getImpl(Context, CountNode, LB, nullptr, nullptr, Storage,
+                 ShouldCreate);
 }
 
 DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
                                 int64_t Lo, StorageType Storage,
                                 bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DISubrange, (CountNode, Lo));
-  Metadata *Ops[] = { CountNode };
-  DEFINE_GETIMPL_STORE(DISubrange, (CountNode, Lo), Ops);
+  auto *LB = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), Lo));
+  return getImpl(Context, CountNode, LB, nullptr, nullptr, Storage,
+                 ShouldCreate);
+}
+
+DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
+                                Metadata *LB, Metadata *UB, Metadata *Stride,
+                                StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DISubrange, (CountNode, LB, UB, Stride));
+  Metadata *Ops[] = {CountNode, LB, UB, Stride};
+  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DISubrange, Ops);
+}
+
+DISubrange::CountType DISubrange::getCount() const {
+  if (!getRawCountNode())
+    return CountType();
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(getRawCountNode()))
+    return CountType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *DV = dyn_cast<DIVariable>(getRawCountNode()))
+    return CountType(DV);
+
+  return CountType();
+}
+
+DISubrange::BoundType DISubrange::getLowerBound() const {
+  Metadata *LB = getRawLowerBound();
+  if (!LB)
+    return BoundType();
+
+  assert((isa<ConstantAsMetadata>(LB) || isa<DIVariable>(LB) ||
+          isa<DIExpression>(LB)) &&
+         "LowerBound must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(LB))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(LB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(LB))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
+DISubrange::BoundType DISubrange::getUpperBound() const {
+  Metadata *UB = getRawUpperBound();
+  if (!UB)
+    return BoundType();
+
+  assert((isa<ConstantAsMetadata>(UB) || isa<DIVariable>(UB) ||
+          isa<DIExpression>(UB)) &&
+         "UpperBound must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(UB))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(UB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(UB))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
+DISubrange::BoundType DISubrange::getStride() const {
+  Metadata *ST = getRawStride();
+  if (!ST)
+    return BoundType();
+
+  assert((isa<ConstantAsMetadata>(ST) || isa<DIVariable>(ST) ||
+          isa<DIExpression>(ST)) &&
+         "Stride must be signed constant or DIVariable or DIExpression");
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(ST))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(ST))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(ST))
+    return BoundType(MD);
+
+  return BoundType();
 }
 
 DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, APInt Value,
