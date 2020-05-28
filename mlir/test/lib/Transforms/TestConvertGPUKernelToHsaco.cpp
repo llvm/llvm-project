@@ -1,4 +1,4 @@
-//===- TestConvertGPUKernelToCubin.cpp - Test gpu kernel cubin lowering ---===//
+//===- TestConvertGPUKernelToHsaco.cpp - Test gpu kernel hsaco lowering ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,32 +9,32 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/NVVMIR.h"
+#include "mlir/Target/ROCDLIR.h"
 #include "llvm/Support/TargetSelect.h"
 using namespace mlir;
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
-static OwnedBlob compilePtxToCubinForTesting(const std::string &, Location,
+#if MLIR_ROCM_CONVERSIONS_ENABLED
+static OwnedBlob compileIsaToHsacoForTesting(const std::string &, Location,
                                              StringRef) {
-  const char data[] = "CUBIN";
+  const char data[] = "HSACO";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
 }
 
 namespace mlir {
-void registerTestConvertGPUKernelToCubinPass() {
+void registerTestConvertGPUKernelToHsacoPass() {
   PassPipelineRegistration<>(
-      "test-kernel-to-cubin",
-      "Convert all kernel functions to CUDA cubin blobs",
+      "test-kernel-to-hsaco",
+      "Convert all kernel functions to ROCm hsaco blobs",
       [](OpPassManager &pm) {
-        // Initialize LLVM NVPTX backend.
-        LLVMInitializeNVPTXTarget();
-        LLVMInitializeNVPTXTargetInfo();
-        LLVMInitializeNVPTXTargetMC();
-        LLVMInitializeNVPTXAsmPrinter();
+        // Initialize LLVM AMDGPU backend.
+        LLVMInitializeAMDGPUTarget();
+        LLVMInitializeAMDGPUTargetInfo();
+        LLVMInitializeAMDGPUTargetMC();
+        LLVMInitializeAMDGPUAsmPrinter();
 
         pm.addPass(createConvertGPUKernelToBlobPass(
-            translateModuleToNVVMIR, compilePtxToCubinForTesting,
-            "nvptx64-nvidia-cuda", "sm_35", "+ptx60", "nvvm.cubin"));
+            translateModuleToROCDLIR, compileIsaToHsacoForTesting,
+            "amdgcn-amd-amdhsa", "gfx900", "-code-object-v3", "rocdl.hsaco"));
       });
 }
 } // namespace mlir

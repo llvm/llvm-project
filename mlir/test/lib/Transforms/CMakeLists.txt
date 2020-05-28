@@ -1,3 +1,21 @@
+if (MLIR_CUDA_CONVERSIONS_ENABLED)
+  set(NVPTX_LIBS
+    MC
+    NVPTXCodeGen
+    NVPTXDesc
+    NVPTXInfo
+  )
+endif()
+
+if (MLIR_ROCM_CONVERSIONS_ENABLED)
+  set(AMDGPU_LIBS
+    MC
+    AMDGPUCodeGen
+    AMDGPUDesc
+    AMDGPUInfo
+  )
+endif()
+
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
@@ -5,6 +23,7 @@ add_mlir_library(MLIRTestTransforms
   TestCallGraph.cpp
   TestConstantFold.cpp
   TestConvertGPUKernelToCubin.cpp
+  TestConvertGPUKernelToHsaco.cpp
   TestDominance.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
@@ -31,18 +50,26 @@ add_mlir_library(MLIRTestTransforms
   MLIRStandardOpsIncGen
   MLIRTestVectorTransformPatternsIncGen
 
+  LINK_COMPONENTS
+  ${AMDGPU_LIBS}
+  ${NVPTX_LIBS}
+
   LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
-  MLIRGPUtoCUDATransforms
+  MLIRGPUtoGPURuntimeTransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
+  MLIRNVVMIR
   MLIRSCF
   MLIRGPU
   MLIRPass
+  MLIRROCDLIR
   MLIRStandardOpsTransforms
+  MLIRTargetNVVMIR
+  MLIRTargetROCDLIR
   MLIRTestDialect
   MLIRTransformUtils
   MLIRVectorToSCF
