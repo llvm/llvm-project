@@ -795,25 +795,25 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       hasSideEffects = true;
     else if (Property->isSubClassOf("NoCapture")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, NoCapture));
+      ArgumentAttributes.emplace_back(ArgNo, NoCapture);
     } else if (Property->isSubClassOf("NoAlias")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, NoAlias));
+      ArgumentAttributes.emplace_back(ArgNo, NoAlias);
     } else if (Property->isSubClassOf("Returned")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, Returned));
+      ArgumentAttributes.emplace_back(ArgNo, Returned);
     } else if (Property->isSubClassOf("ReadOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadOnly));
+      ArgumentAttributes.emplace_back(ArgNo, ReadOnly);
     } else if (Property->isSubClassOf("WriteOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, WriteOnly));
+      ArgumentAttributes.emplace_back(ArgNo, WriteOnly);
     } else if (Property->isSubClassOf("ReadNone")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadNone));
+      ArgumentAttributes.emplace_back(ArgNo, ReadNone);
     } else if (Property->isSubClassOf("ImmArg")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.push_back(std::make_pair(ArgNo, ImmArg));
+      ArgumentAttributes.emplace_back(ArgNo, ImmArg);
     } else
       llvm_unreachable("Unknown property!");
   }
@@ -833,7 +833,8 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 }
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
-  std::pair<unsigned, ArgAttribute> Val = {ParamIdx, ImmArg};
+  // Convert argument index to attribute index starting from `FirstArgIndex`.
+  ArgAttribute Val{ParamIdx + 1, ImmArg};
   return std::binary_search(ArgumentAttributes.begin(),
                             ArgumentAttributes.end(), Val);
 }
