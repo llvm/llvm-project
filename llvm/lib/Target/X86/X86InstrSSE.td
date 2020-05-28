@@ -1792,82 +1792,57 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
 
 // sse12_cmp_scalar - sse 1 & 2 compare scalar instructions
 multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
-                            SDNode OpNode, ValueType VT,
+                            Operand memop, SDNode OpNode, ValueType VT,
                             PatFrag ld_frag, string asm,
-                            X86FoldableSchedWrite sched> {
-  let isCommutable = 1 in
-  def rr : SIi8<0xC2, MRMSrcReg,
-                (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
-                [(set RC:$dst, (OpNode (VT RC:$src1), RC:$src2, timm:$cc))]>,
-                Sched<[sched]>, SIMD_EXC;
-  def rm : SIi8<0xC2, MRMSrcMem,
-                (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
-                [(set RC:$dst, (OpNode (VT RC:$src1),
-                                         (ld_frag addr:$src2), timm:$cc))]>,
-                Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
-}
-
-let isCodeGenOnly = 1 in {
-  let ExeDomain = SSEPackedSingle in
-  defm VCMPSS : sse12_cmp_scalar<FR32, f32mem, X86cmps, f32, loadf32,
-                   "cmpss\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                   SchedWriteFCmpSizes.PS.Scl>, XS, VEX_4V, VEX_LIG, VEX_WIG;
-  let ExeDomain = SSEPackedDouble in
-  defm VCMPSD : sse12_cmp_scalar<FR64, f64mem, X86cmps, f64, loadf64,
-                   "cmpsd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                   SchedWriteFCmpSizes.PD.Scl>,
-                   XD, VEX_4V, VEX_LIG, VEX_WIG;
-
-  let Constraints = "$src1 = $dst" in {
-    let ExeDomain = SSEPackedSingle in
-    defm CMPSS : sse12_cmp_scalar<FR32, f32mem, X86cmps, f32, loadf32,
-                    "cmpss\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                    SchedWriteFCmpSizes.PS.Scl>, XS;
-    let ExeDomain = SSEPackedDouble in
-    defm CMPSD : sse12_cmp_scalar<FR64, f64mem, X86cmps, f64, loadf64,
-                    "cmpsd\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                    SchedWriteFCmpSizes.PD.Scl>, XD;
-  }
-}
-
-multiclass sse12_cmp_scalar_int<Operand memop,
-                         Intrinsic Int, string asm, X86FoldableSchedWrite sched,
-                         PatFrags mem_frags> {
+                            X86FoldableSchedWrite sched,
+                            PatFrags mem_frags> {
   def rr_Int : SIi8<0xC2, MRMSrcReg, (outs VR128:$dst),
-                      (ins VR128:$src1, VR128:$src2, u8imm:$cc), asm,
-                        [(set VR128:$dst, (Int VR128:$src1,
-                                               VR128:$src2, timm:$cc))]>,
+                    (ins VR128:$src1, VR128:$src2, u8imm:$cc), asm,
+                    [(set VR128:$dst, (OpNode (VT VR128:$src1),
+                                              VR128:$src2, timm:$cc))]>,
            Sched<[sched]>, SIMD_EXC;
   let mayLoad = 1 in
   def rm_Int : SIi8<0xC2, MRMSrcMem, (outs VR128:$dst),
-                      (ins VR128:$src1, memop:$src2, u8imm:$cc), asm,
-                        [(set VR128:$dst, (Int VR128:$src1,
-                                               (mem_frags addr:$src2), timm:$cc))]>,
+                    (ins VR128:$src1, memop:$src2, u8imm:$cc), asm,
+                    [(set VR128:$dst, (OpNode (VT VR128:$src1),
+                                              (mem_frags addr:$src2), timm:$cc))]>,
            Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+
+  let isCodeGenOnly = 1 in {
+    let isCommutable = 1 in
+    def rr : SIi8<0xC2, MRMSrcReg,
+                  (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
+                  [(set RC:$dst, (OpNode RC:$src1, RC:$src2, timm:$cc))]>,
+                  Sched<[sched]>, SIMD_EXC;
+    def rm : SIi8<0xC2, MRMSrcMem,
+                  (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
+                  [(set RC:$dst, (OpNode RC:$src1,
+                                         (ld_frag addr:$src2), timm:$cc))]>,
+                  Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+  }
 }
 
-// Aliases to match intrinsics which expect XMM operand(s).
 let ExeDomain = SSEPackedSingle in
-defm VCMPSS  : sse12_cmp_scalar_int<ssmem, int_x86_sse_cmp_ss,
-                     "cmpss\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                     SchedWriteFCmpSizes.PS.Scl, sse_load_f32>,
-                     XS, VEX_4V, VEX_LIG, VEX_WIG;
+defm VCMPSS : sse12_cmp_scalar<FR32, f32mem, ssmem, X86cmps, v4f32, loadf32,
+                 "cmpss\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
+                 SchedWriteFCmpSizes.PS.Scl, sse_load_f32>,
+                 XS, VEX_4V, VEX_LIG, VEX_WIG;
 let ExeDomain = SSEPackedDouble in
-defm VCMPSD  : sse12_cmp_scalar_int<sdmem, int_x86_sse2_cmp_sd,
-                     "cmpsd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
-                     SchedWriteFCmpSizes.PD.Scl, sse_load_f64>,
-                     XD, VEX_4V, VEX_LIG, VEX_WIG;
+defm VCMPSD : sse12_cmp_scalar<FR64, f64mem, sdmem, X86cmps, v2f64, loadf64,
+                 "cmpsd\t{$cc, $src2, $src1, $dst|$dst, $src1, $src2, $cc}",
+                 SchedWriteFCmpSizes.PD.Scl, sse_load_f64>,
+                 XD, VEX_4V, VEX_LIG, VEX_WIG;
+
 let Constraints = "$src1 = $dst" in {
   let ExeDomain = SSEPackedSingle in
-  defm CMPSS  : sse12_cmp_scalar_int<ssmem, int_x86_sse_cmp_ss,
-                       "cmpss\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                       SchedWriteFCmpSizes.PS.Scl, sse_load_f32>, XS;
+  defm CMPSS : sse12_cmp_scalar<FR32, f32mem, ssmem, X86cmps, v4f32, loadf32,
+                  "cmpss\t{$cc, $src2, $dst|$dst, $src2, $cc}",
+                  SchedWriteFCmpSizes.PS.Scl, sse_load_f32>, XS;
   let ExeDomain = SSEPackedDouble in
-  defm CMPSD  : sse12_cmp_scalar_int<sdmem, int_x86_sse2_cmp_sd,
-                       "cmpsd\t{$cc, $src2, $dst|$dst, $src2, $cc}",
-                       SchedWriteFCmpSizes.PD.Scl, sse_load_f64>, XD;
+  defm CMPSD : sse12_cmp_scalar<FR64, f64mem, sdmem, X86cmps, v2f64, loadf64,
+                  "cmpsd\t{$cc, $src2, $dst|$dst, $src2, $cc}",
+                  SchedWriteFCmpSizes.PD.Scl, sse_load_f64>, XD;
 }
-
 
 // sse12_ord_cmp - Unordered/Ordered scalar fp compare and set EFLAGS
 multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
