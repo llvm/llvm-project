@@ -358,6 +358,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
+  const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld") {
     // Tell the linker to load the plugin. This has to come before
@@ -374,10 +375,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 #endif
 
     SmallString<1024> Plugin;
-    llvm::sys::path::native(Twine(ToolChain.getDriver().Dir) +
-                                "/../lib" CLANG_LIBDIR_SUFFIX "/LLVMgold" +
-                                Suffix,
-                            Plugin);
+    llvm::sys::path::native(
+        Twine(D.Dir) + "/../lib" CLANG_LIBDIR_SUFFIX "/LLVMgold" + Suffix,
+        Plugin);
     CmdArgs.push_back(Args.MakeArgString(Plugin));
   }
 
@@ -417,7 +417,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
 
-  StringRef Parallelism = getLTOParallelism(Args, ToolChain.getDriver());
+  StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-plugin-opt=jobs=" + Twine(Parallelism)));
@@ -449,7 +449,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
     StringRef FName = A->getValue();
     if (!llvm::sys::fs::exists(FName))
-      ToolChain.getDriver().Diag(diag::err_drv_no_such_file) << FName;
+      D.Diag(diag::err_drv_no_such_file) << FName;
     else
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-plugin-opt=sample-profile=") + FName));
@@ -492,11 +492,12 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   // Setup statistics file output.
-  SmallString<128> StatsFile =
-      getStatsFileName(Args, Output, Input, ToolChain.getDriver());
+  SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-plugin-opt=stats-file=") + StatsFile));
+
+  addX86AlignBranchArgs(D, Args, CmdArgs, /*IsLTO=*/true);
 }
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
@@ -1422,4 +1423,54 @@ SmallString<128> tools::getStatsFileName(const llvm::opt::ArgList &Args,
 void tools::addMultilibFlag(bool Enabled, const char *const Flag,
                             Multilib::flags_list &Flags) {
   Flags.push_back(std::string(Enabled ? "+" : "-") + Flag);
+}
+
+void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
+                                  ArgStringList &CmdArgs, bool IsLTO) {
+  auto addArg = [&, IsLTO](const Twine &Arg) {
+    if (IsLTO) {
+      CmdArgs.push_back(Args.MakeArgString("-plugin-opt=" + Arg));
+    } else {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString(Arg));
+    }
+  };
+
+  if (Args.hasArg(options::OPT_mbranches_within_32B_boundaries)) {
+    addArg(Twine("-x86-branches-within-32B-boundaries"));
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_malign_branch_boundary_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned Boundary;
+    if (Value.getAsInteger(10, Boundary) || Boundary < 16 ||
+        !llvm::isPowerOf2_64(Boundary)) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+    } else {
+      addArg("-x86-align-branch-boundary=" + Twine(Boundary));
+    }
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_malign_branch_EQ)) {
+    std::string AlignBranch;
+    for (StringRef T : A->getValues()) {
+      if (T != "fused" && T != "jcc" && T != "jmp" && T != "call" &&
+          T != "ret" && T != "indirect")
+        D.Diag(diag::err_drv_invalid_malign_branch_EQ)
+            << T << "fused, jcc, jmp, call, ret, indirect";
+      if (!AlignBranch.empty())
+        AlignBranch += '+';
+      AlignBranch += T;
+    }
+    addArg("-x86-align-branch=" + Twine(AlignBranch));
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_mpad_max_prefix_size_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned PrefixSize;
+    if (Value.getAsInteger(10, PrefixSize)) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+    } else {
+      addArg("-x86-pad-max-prefix-size=" + Twine(PrefixSize));
+    }
+  }
 }
