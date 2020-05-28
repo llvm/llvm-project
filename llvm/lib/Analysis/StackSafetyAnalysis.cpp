@@ -118,7 +118,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   if (APSize.isNonPositive())
     return R;
   if (AI.isArrayAllocation()) {
-    auto C = dyn_cast<ConstantInt>(AI.getArraySize());
+    const auto *C = dyn_cast<ConstantInt>(AI.getArraySize());
     if (!C)
       return R;
     bool Overflow = false;
@@ -163,7 +163,7 @@ struct FunctionInfo {
     if (F) {
       size_t Pos = 0;
       for (auto &I : instructions(F)) {
-        if (auto AI = dyn_cast<AllocaInst>(&I)) {
+        if (const auto *AI = dyn_cast<AllocaInst>(&I)) {
           auto &AS = Allocas[Pos];
           O << "      " << AI->getName() << "["
             << getStaticAllocaSizeRange(*AI).getUpper() << "]: " << AS << "\n";
@@ -263,7 +263,7 @@ ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
     const MemIntrinsic *MI, const Use &U, Value *Base) {
-  if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
+  if (const auto *MTI = dyn_cast<MemTransferInst>(MI)) {
     if (MTI->getRawSource() != U && MTI->getRawDest() != U)
       return ConstantRange::getEmpty(PointerSize);
   } else {
@@ -297,7 +297,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr, UseInfo &US) {
   while (!WorkList.empty()) {
     const Value *V = WorkList.pop_back_val();
     for (const Use &UI : V->uses()) {
-      auto I = cast<const Instruction>(UI.getUser());
+      const auto *I = cast<const Instruction>(UI.getUser());
       assert(V == UI.get());
 
       switch (I->getOpcode()) {
@@ -352,13 +352,11 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr, UseInfo &US) {
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
 
-        auto B = CB.arg_begin(), E = CB.arg_end();
         int Found = 0;
-        for (auto A = B; A != E; ++A) {
-          if (A->get() == V) {
+        for (size_t ArgNo = 0; ArgNo < CB.getNumArgOperands(); ++ArgNo) {
+          if (CB.getArgOperand(ArgNo) == V) {
             ++Found;
-            ConstantRange Offset = offsetFrom(UI, Ptr);
-            US.Calls.emplace_back(Callee, A - B, Offset);
+            US.Calls.emplace_back(Callee, ArgNo, offsetFrom(UI, Ptr));
           }
         }
         if (!Found) {
@@ -387,7 +385,7 @@ FunctionInfo StackSafetyLocalAnalysis::run() {
   LLVM_DEBUG(dbgs() << "[StackSafety] " << F.getName() << "\n");
 
   for (auto &I : instructions(F)) {
-    if (auto AI = dyn_cast<AllocaInst>(&I)) {
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
       Info.Allocas.emplace_back(PointerSize);
       UseInfo &AS = Info.Allocas.back();
       analyzeAllUses(AI, AS);
@@ -556,7 +554,7 @@ bool setStackSafetyMetadata(Module &M, const GVToSSI &SSGI) {
     const FunctionInfo &Summary = Iter->second;
     size_t Pos = 0;
     for (auto &I : instructions(F)) {
-      if (auto AI = dyn_cast<AllocaInst>(&I)) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         auto &AS = Summary.Allocas[Pos];
         if (getStaticAllocaSizeRange(*AI).contains(AS.Range)) {
           AI->setMetadata(M.getMDKindID("stack-safe"),
@@ -570,7 +568,7 @@ bool setStackSafetyMetadata(Module &M, const GVToSSI &SSGI) {
   return Changed;
 }
 
-const Function *FindCalleeInModule(const GlobalValue *GV) {
+const Function *findCalleeInModule(const GlobalValue *GV) {
   while (GV) {
     if (GV->isInterposable() || !GV->isDSOLocal())
       return nullptr;
@@ -586,10 +584,10 @@ const Function *FindCalleeInModule(const GlobalValue *GV) {
   return nullptr;
 }
 
-void ResolveAllCalls(UseInfo &Use) {
+void resolveAllCalls(UseInfo &Use) {
   ConstantRange FullSet(Use.Range.getBitWidth(), true);
   for (auto &C : Use.Calls) {
-    const Function *F = FindCalleeInModule(C.Callee);
+    const Function *F = findCalleeInModule(C.Callee);
     if (F) {
       C.Callee = F;
       continue;
@@ -599,9 +597,9 @@ void ResolveAllCalls(UseInfo &Use) {
   }
 }
 
-void ResolveAllCalls(SmallVectorImpl<UseInfo> &Values) {
+void resolveAllCalls(SmallVectorImpl<UseInfo> &Values) {
   for (auto &V : Values)
-    ResolveAllCalls(V);
+    resolveAllCalls(V);
 }
 
 GVToSSI createGlobalStackSafetyInfo(
@@ -614,7 +612,7 @@ GVToSSI createGlobalStackSafetyInfo(
   auto Copy = Functions;
 
   for (auto &FI : Copy)
-    ResolveAllCalls(FI.second.Params);
+    resolveAllCalls(FI.second.Params);
 
   uint32_t PointerSize = Copy.begin()
                              ->first->getParent()
@@ -627,7 +625,7 @@ GVToSSI createGlobalStackSafetyInfo(
     size_t Pos = 0;
     auto &SrcF = Functions[F.first];
     for (auto &A : FI.Allocas) {
-      ResolveAllCalls(A);
+      resolveAllCalls(A);
       for (auto &C : A.Calls) {
         A.updateRange(
             SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
