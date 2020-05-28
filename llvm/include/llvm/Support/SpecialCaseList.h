@@ -52,17 +52,19 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TrigramIndex.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace llvm {
 class MemoryBuffer;
-class Regex;
 class StringRef;
+
+namespace vfs {
+class FileSystem;
+};
 
 class SpecialCaseList {
 public:
