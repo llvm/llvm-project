@@ -531,6 +531,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
           PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
+      Push->cloneMemRefs(MF, *Store);
       break;
     case X86::MOV32mr:
     case X86::MOV64mr: {
@@ -562,6 +563,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
+        Push->cloneMergedMemRefs(MF, {&*DefMov, &*Store});
 
         DefMov->eraseFromParent();
       } else {
@@ -569,6 +571,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                    .addReg(Reg)
                    .getInstr();
+        Push->cloneMemRefs(MF, *Store);
       }
       break;
     }
