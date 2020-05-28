@@ -2944,10 +2944,12 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // Target-independent instructions do not have an implicit-use of EXEC, even
   // when they operate on VGPRs. Treating EXEC modifications as scheduling
   // boundaries prevents incorrect movements of such instructions.
+
+  // TODO: Don't treat setreg with known constant that only changes MODE as
+  // barrier.
   return MI.modifiesRegister(AMDGPU::EXEC, &RI) ||
          MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
          MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
-         MI.getOpcode() == AMDGPU::S_DENORM_MODE ||
          changesVGPRIndexingMode(MI);
 }
 
