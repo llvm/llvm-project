@@ -115,6 +115,25 @@ public:
   uint64_t getFlags() const {
     return cast<ConstantInt>(getArgOperand(FlagsPos))->getZExtValue();
   }
+
+  /// Return the value actually being called or invoked.
+  Value *getActualCalledOperand() const {
+    return getArgOperand(CalledFunctionPos);
+  }
+
+  /// Returns the function called if this is a wrapping a direct call, and null
+  /// otherwise.
+  Function *getActualCalledFunction() const {
+    return dyn_cast_or_null<Function>(getActualCalledOperand());
+  }
+
+  /// Return the type of the value returned by the call underlying the
+  /// statepoint.
+  Type *getActualReturnType() const {
+    auto *CalleeTy =
+      cast<PointerType>(getActualCalledOperand()->getType())->getElementType();
+    return cast<FunctionType>(CalleeTy)->getReturnType();
+  }
 };
 
 /// A wrapper around a GC intrinsic call, this provides most of the actual
@@ -139,7 +158,6 @@ public:
   using arg_iterator = typename CallTy::const_op_iterator;
 
   enum {
-    CalledFunctionPos = GCStatepointInst::CalledFunctionPos,
     CallArgsBeginPos = GCStatepointInst::CallArgsBeginPos,
   };
 
@@ -162,21 +180,17 @@ public:
   uint64_t getID() const { return getCall()->getID(); }
   uint32_t getNumPatchBytes() const { return getCall()->getNumPatchBytes(); }
   int getNumCallArgs() const { return getCall()->getNumCallArgs(); }
-
-
-  /// Return the value actually being called or invoked.
   ValueTy *getCalledValue() const {
-    return getCall()->getArgOperand(CalledFunctionPos);
+    return getCall()->getActualCalledOperand();
+  }
+  Type *getActualReturnType() const { return getCall()->getActualReturnType(); }
+  FunTy *getCalledFunction() const {
+    return getCall()->getActualCalledFunction();
   }
 
+  
   // FIXME: Migrate users of this to `getCall` and remove it.
   InstructionTy *getInstruction() const { return getCall(); }
-
-  /// Return the function being called if this is a direct call, otherwise
-  /// return null (if it's an indirect call).
-  FunTy *getCalledFunction() const {
-    return dyn_cast<Function>(getCalledValue());
-  }
 
   /// Return the caller function for this statepoint.
   FunTy *getCaller() const { return getCall()->getCaller(); }
@@ -187,13 +201,6 @@ public:
     return getCall()->doesNotThrow() || (F ? F->doesNotThrow() : false);
   }
 
-  /// Return the type of the value returned by the call underlying the
-  /// statepoint.
-  Type *getActualReturnType() const {
-    auto *FTy = cast<FunctionType>(
-        cast<PointerType>(getCalledValue()->getType())->getElementType());
-    return FTy->getReturnType();
-  }
 
   size_t arg_size() const { return getNumCallArgs(); }
   arg_iterator arg_begin() const {
