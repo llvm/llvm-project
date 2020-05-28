@@ -4387,7 +4387,8 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
   // TODO: This is probably something which should be expanded to all
   // intrinsics since the entire point of intrinsics is that
   // they are understandable by the optimizer.
-  if (isStatepoint(&Call) || isGCRelocate(&Call) || isGCResult(&Call))
+  if (isa<GCStatepointInst>(Call) || isa<GCRelocateInst>(Call) ||
+      isa<GCResultInst>(Call))
     return false;
 
   // The size of ByVal or InAlloca arguments is derived from the type, so we

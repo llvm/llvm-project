@@ -1134,7 +1134,7 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   }
 
   if (!I.isTerminator() && !HasTailCall &&
-      !isStatepoint(&I)) // statepoints handle their exports internally
+      !isa<GCStatepointInst>(I)) // statepoints handle their exports internally
     CopyToExportRegsIfNeeded(&I);
 
   CurInst = nullptr;
@@ -2827,7 +2827,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   // available as a virtual register.
   // We already took care of the exported value for the statepoint instruction
   // during call to the LowerStatepoint.
-  if (!isStatepoint(I)) {
+  if (!isa<GCStatepointInst>(I)) {
     CopyToExportRegsIfNeeded(&I);
   }
 

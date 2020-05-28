@@ -4702,14 +4702,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
              LandingPad->getParent());
       Assert(InvokeBB->getTerminator(), "safepoint block should be well formed",
              InvokeBB);
-      Assert(isStatepoint(InvokeBB->getTerminator()),
+      Assert(isa<GCStatepointInst>(InvokeBB->getTerminator()),
              "gc relocate should be linked to a statepoint", InvokeBB);
     } else {
       // In all other cases relocate should be tied to the statepoint directly.
       // This covers relocates on a normal return path of invoke statepoint and
       // relocates of a call statepoint.
       auto Token = Call.getArgOperand(0);
-      Assert(isa<Instruction>(Token) && isStatepoint(cast<Instruction>(Token)),
+      Assert(isa<GCStatepointInst>(Token),
              "gc relocate is incorrectly tied to the statepoint", Call, Token);
     }
 

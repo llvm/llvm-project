@@ -1518,8 +1518,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         // to keep track of gc-relocates for a particular gc-statepoint. This is
         // done by SelectionDAGBuilder::LowerAsSTATEPOINT, called before
         // visitGCRelocate.
-        if (isa<CallInst>(Inst) && !isStatepoint(Inst) && !isGCRelocate(Inst) &&
-            !isGCResult(Inst)) {
+        if (isa<CallInst>(Inst) && !isa<GCStatepointInst>(Inst) &&
+            !isa<GCRelocateInst>(Inst) && !isa<GCResultInst>(Inst)) {
           OptimizationRemarkMissed R("sdagisel", "FastISelFailure",
                                      Inst->getDebugLoc(), LLVMBB);
 
