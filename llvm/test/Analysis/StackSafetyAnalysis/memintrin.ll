@@ -53,7 +53,7 @@ entry:
 define void @MemsetNonConst(i32 %size) {
 ; CHECK-LABEL: MemsetNonConst dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: [0,1){{$}}
+; CHECK-NEXT: size[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
@@ -69,7 +69,7 @@ entry:
 define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-LABEL: MemsetNonConstInBounds dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: [0,1){{$}}
+; CHECK-NEXT: z[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
@@ -78,6 +78,24 @@ entry:
   %x1 = bitcast i32* %x to i8*
   %size = select i1 %z, i32 3, i32 4
   call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %size, i1 false)
+  ret void
+}
+
+define void @MemsetNonConstSize() {
+; CHECK-LABEL: MemsetNonConstSize dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4294967295){{$}}
+; CHECK-NEXT: y[4]: empty-set{{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i32, align 4
+  %y = alloca i32, align 4
+  %x1 = bitcast i32* %x to i8*
+  %xint = ptrtoint i32* %x to i32
+  %yint = ptrtoint i32* %y to i32
+  %d = sub i32 %xint, %yint
+  call void @llvm.memset.p0i8.i32(i8* %x1, i8 42, i32 %d, i1 false)
   ret void
 }
 
