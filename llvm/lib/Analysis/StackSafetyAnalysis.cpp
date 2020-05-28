@@ -85,7 +85,11 @@ struct UseInfo {
 
   explicit UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
-  void updateRange(ConstantRange R) { Range = Range.unionWith(R); }
+  void updateRange(const ConstantRange &R) {
+    assert(!R.isUpperSignWrapped());
+    Range = Range.unionWith(R);
+    assert(!Range.isUpperSignWrapped());
+  }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const UseInfo &U) {
@@ -189,6 +193,11 @@ StackSafetyInfo makeSSI(FunctionInfo Info) {
 
 namespace {
 
+// Check if we should bailout for such ranges.
+bool isUnsafe(const ConstantRange &R) {
+  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
+}
+
 class StackSafetyLocalAnalysis {
   Function &F;
   const DataLayout &DL;
@@ -227,7 +236,7 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
   AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
   ConstantRange Offset = SE.getSignedRange(Expr);
-  if (Offset.isEmptySet() || Offset.isFullSet() || Offset.isSignWrappedSet())
+  if (isUnsafe(Offset))
     return UnknownRange;
   return Offset.sextOrTrunc(PointerSize);
 }
@@ -238,18 +247,26 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
   // Zero-size loads and stores do not access memory.
   if (SizeRange.isEmptySet())
     return ConstantRange::getEmpty(PointerSize);
+  assert(!isUnsafe(SizeRange));
 
-  ConstantRange AccessStartRange = offsetFrom(Addr, Base);
-  ConstantRange AccessRange = AccessStartRange.add(SizeRange);
-  assert(!AccessRange.isEmptySet());
+  ConstantRange AccessRange = offsetFrom(Addr, Base);
+  if (isUnsafe(AccessRange))
+    return UnknownRange;
+
+  if (AccessRange.signedAddMayOverflow(SizeRange) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return UnknownRange;
+  AccessRange = AccessRange.add(SizeRange);
+  if (isUnsafe(AccessRange))
+    return UnknownRange;
   return AccessRange;
 }
 
 ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
-  ConstantRange SizeRange =
-      Size.isScalable() ? UnknownRange : getRange(0, Size.getFixedSize());
-  return getAccessRange(Addr, Base, SizeRange);
+  if (Size.isScalable())
+    return UnknownRange;
+  return getAccessRange(Addr, Base, getRange(0, Size.getFixedSize()));
 }
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
@@ -268,9 +285,8 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   const SCEV *Expr =
       SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
   ConstantRange LenRange = SE.getSignedRange(Expr);
-  assert(!LenRange.isEmptySet());
-  if (LenRange.isSignWrappedSet() || LenRange.isFullSet() ||
-      LenRange.getUpper().isNegative())
+  assert(!isUnsafe(LenRange));
+  if (LenRange.getUpper().isNegative())
     return UnknownRange;
   LenRange = LenRange.sextOrTrunc(PointerSize);
   ConstantRange SizeRange(APInt::getNullValue(PointerSize),
