@@ -42,16 +42,6 @@ public:
   AllocaOffsetRewriter(ScalarEvolution &SE, const Value *AllocaPtr)
       : SCEVRewriteVisitor(SE), AllocaPtr(AllocaPtr) {}
 
-  const SCEV *visit(const SCEV *Expr) {
-    // Only re-write the expression if the alloca is used in an addition
-    // expression (it can be used in other types of expressions if it's cast to
-    // an int and passed as an argument.)
-    if (!isa<SCEVAddRecExpr>(Expr) && !isa<SCEVAddExpr>(Expr) &&
-        !isa<SCEVUnknown>(Expr))
-      return Expr;
-    return SCEVRewriteVisitor<AllocaOffsetRewriter>::visit(Expr);
-  }
-
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
     // FIXME: look through one or several levels of definitions?
     // This can be inttoptr(AllocaPtr) and SCEV would not unwrap
@@ -237,7 +227,8 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
   AllocaOffsetRewriter Rewriter(SE, Base);
   const SCEV *Expr = Rewriter.visit(SE.getSCEV(Addr));
   ConstantRange Offset = SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
-  assert(!Offset.isEmptySet());
+  if (Offset.isEmptySet())
+    return UnknownRange;
   return Offset;
 }
 
