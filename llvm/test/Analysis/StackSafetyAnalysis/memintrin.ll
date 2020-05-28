@@ -55,7 +55,7 @@ define void @MemsetNonConst(i32 %size) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: size[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: full-set{{$}}
+; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -71,7 +71,7 @@ define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: z[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: full-set{{$}}
+; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4

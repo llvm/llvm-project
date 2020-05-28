@@ -247,9 +247,8 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
 
 ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
-  ConstantRange SizeRange = Size.isScalable()
-                                ? ConstantRange::getFull(PointerSize)
-                                : getRange(0, Size.getFixedSize());
+  ConstantRange SizeRange =
+      Size.isScalable() ? UnknownRange : getRange(0, Size.getFixedSize());
   return getAccessRange(Addr, Base, SizeRange);
 }
 
@@ -262,13 +261,21 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
     if (MI->getRawDest() != U)
       return getRange(0, 1);
   }
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
-  // Non-constant size => unsafe. FIXME: try SCEV getRange.
-  if (!Len)
+  auto *CalculationTy = IntegerType::getIntNTy(SE.getContext(), PointerSize);
+  if (!SE.isSCEVable(MI->getLength()->getType()))
     return UnknownRange;
-  ConstantRange AccessRange =
-      getAccessRange(U, Base, getRange(0, Len->getZExtValue()));
-  return AccessRange;
+
+  const SCEV *Expr =
+      SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
+  ConstantRange LenRange = SE.getSignedRange(Expr);
+  assert(!LenRange.isEmptySet());
+  if (LenRange.isSignWrappedSet() || LenRange.isFullSet() ||
+      LenRange.getUpper().isNegative())
+    return UnknownRange;
+  LenRange = LenRange.sextOrTrunc(PointerSize);
+  ConstantRange SizeRange(APInt::getNullValue(PointerSize),
+                          LenRange.getUpper() - 1);
+  return getAccessRange(U, Base, SizeRange);
 }
 
 /// The function analyzes all local uses of Ptr (alloca or argument) and
