@@ -801,13 +801,13 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
-let hasSideEffects = 1 in {
+let hasSideEffects = 1, mayLoad = 0, mayStore =0 in {
 
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
-  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]> {
+  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
   let Defs = [MODE];
   let Uses = [MODE];
 }

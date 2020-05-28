@@ -1207,6 +1207,16 @@ def int_amdgcn_s_getreg :
   [IntrInaccessibleMemOnly, IntrReadMem, IntrSpeculatable, ImmArg<ArgIndex<0>>]
 >;
 
+// Note this can be used to set FP environment properties that are
+// unsafe to change in non-strictfp functions. The register properties
+// available (and value required to access them) may differ per
+// subtarget. llvm.amdgcn.s.setreg(hwmode, value)
+def int_amdgcn_s_setreg :
+  GCCBuiltin<"__builtin_amdgcn_s_setreg">,
+  Intrinsic<[], [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]
+>;
+
 // int_amdgcn_s_getpc is provided to allow a specific style of position
 // independent code to determine the high part of its address when it is
 // known (through convention) that the code and any data of interest does
