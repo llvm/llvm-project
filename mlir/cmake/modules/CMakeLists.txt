@@ -14,6 +14,7 @@ export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
 get_property(MLIR_ALL_LIBS GLOBAL PROPERTY MLIR_ALL_LIBS)
 get_property(MLIR_DIALECT_LIBS GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(MLIR_CONVERSION_LIBS GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(MLIR_TRANSLATION_LIBS GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
 
 # Generate MlirConfig.cmake for the build tree.
 set(MLIR_CONFIG_CMAKE_DIR "${mlir_cmake_builddir}")
