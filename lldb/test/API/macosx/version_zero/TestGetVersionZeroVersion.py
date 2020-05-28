@@ -5,7 +5,7 @@ Read in a library with a version number of 0.0.0, make sure we produce a good ve
 
 
 import lldb
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
