@@ -1403,6 +1403,24 @@ Ref-counted types hold their ref-countable data by a raw pointer and allow impli
 
  struct Derived : RefCntblBase { }; // warn
 
+.. _webkit-WebKitNoUncountedMemberChecker:
+
+webkit.WebKitNoUncountedMemberChecker
+""""""""""""""""""""""""""""""""""""
+Raw pointers and references to uncounted types can't be used as class members. Only ref-counted types are allowed.
+
+.. code-block:: cpp
+ struct RefCntbl {
+   void ref() {}
+   void deref() {}
+ };
+
+ struct Foo {
+   RefCntbl * ptr; // warn
+   RefCntbl & ptr; // warn
+   // ...
+ };
+
 .. _alpha-checkers:
 
 Experimental Checkers
