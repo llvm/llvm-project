@@ -147,11 +147,11 @@ class StatepointBase {
 
 protected:
   explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = isStatepoint(I) ? cast<CallTy>(I) : nullptr;
+    StatepointCall = dyn_cast<GCStatepointInst>(I);
   }
 
   explicit StatepointBase(CallTy *Call) {
-    StatepointCall = isStatepoint(Call) ? Call : nullptr;
+    StatepointCall = dyn_cast<GCStatepointInst>(Call);
   }
 
 public:
@@ -369,15 +369,13 @@ public:
   }
 
   /// The statepoint with which this gc.relocate is associated.
-  const CallBase *getStatepoint() const {
+  const GCStatepointInst *getStatepoint() const {
     const Value *Token = getArgOperand(0);
 
     // This takes care both of relocates for call statepoints and relocates
     // on normal path of invoke statepoint.
-    if (!isa<LandingPadInst>(Token)) {
-      assert(isStatepoint(Token));
-      return cast<CallBase>(Token);
-    }
+    if (!isa<LandingPadInst>(Token))
+      return cast<GCStatepointInst>(Token);
 
     // This relocate is on exceptional path of an invoke statepoint
     const BasicBlock *InvokeBB =
@@ -386,9 +384,8 @@ public:
     assert(InvokeBB && "safepoints should have unique landingpads");
     assert(InvokeBB->getTerminator() &&
            "safepoint block should be well formed");
-    assert(isStatepoint(InvokeBB->getTerminator()));
 
-    return cast<CallBase>(InvokeBB->getTerminator());
+    return cast<GCStatepointInst>(InvokeBB->getTerminator());
   }
 };
 
