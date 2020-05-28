@@ -114,6 +114,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // FLAT_SCRATCH segment. Must be 0 for non-FLAT instructions.
   field bit IsNonFlatSeg = 0;
 
+  // Reads the mode register, usually for FP environment.
+  field bit ReadsModeReg = 0;
+
   // This bit indicates that this uses the floating point double precision
   // rounding mode flags
   field bit FPDPRounding = 0;

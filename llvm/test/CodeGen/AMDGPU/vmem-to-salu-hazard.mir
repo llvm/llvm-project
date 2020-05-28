@@ -94,7 +94,7 @@ body:             |
     $sgpr4 = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...
 # GCN-LABEL: name: vmem_swait0_write_sgpr

@@ -72,9 +72,9 @@ body: |
     %12:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET killed %11, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     undef %13.sub1:vreg_128 = COPY %9.sub1
     %13.sub2:vreg_128 = COPY %9.sub2
-    %14:sreg_64 = V_CMP_GT_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %12.sub3, 0, implicit $exec
-    %15:vgpr_32 = V_ADD_F32_e32 1065353216, undef %16:vgpr_32, implicit $exec
-    %17:sreg_64 = V_CMP_GT_F32_e64 0, 0, 0, killed %15, 0, implicit $exec
+    %14:sreg_64 = nofpexcept V_CMP_GT_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %12.sub3, 0, implicit $mode, implicit $exec
+    %15:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, undef %16:vgpr_32, implicit $mode, implicit $exec
+    %17:sreg_64 = nofpexcept V_CMP_GT_F32_e64 0, 0, 0, killed %15, 0, implicit $mode, implicit $exec
     %18:sreg_64 = S_AND_B64 killed %17, killed %14, implicit-def dead $scc
     %19:sreg_64 = COPY %10
     %20:vreg_128 = COPY %13
@@ -127,8 +127,8 @@ body: |
 
   bb.13:
     successors: %bb.14(0x80000000)
-    %32:vgpr_32 = V_MUL_F32_e32 undef %33:vgpr_32, killed %30.sub1, implicit $exec
-    %34:vgpr_32 = V_MUL_F32_e32 undef %35:vgpr_32, killed %32, implicit $exec
+    %32:vgpr_32 = nofpexcept V_MUL_F32_e32 undef %33:vgpr_32, killed %30.sub1, implicit $mode, implicit $exec
+    %34:vgpr_32 = nofpexcept V_MUL_F32_e32 undef %35:vgpr_32, killed %32, implicit $mode, implicit $exec
     undef %36.sub0:vreg_128 = COPY %34
     %31:vreg_128 = COPY killed %36
 
@@ -144,30 +144,30 @@ body: |
 
   bb.16:
     successors: %bb.17(0x80000000)
-    %39:vgpr_32 = V_FMA_F32 0, undef %40:vgpr_32, 0, killed %37.sub0, 0, undef %41:vgpr_32, 0, 0, implicit $exec
-    %42:vgpr_32 = V_FMA_F32 0, undef %43:vgpr_32, 0, undef %44:vgpr_32, 0, killed %39, 0, 0, implicit $exec
-    %45:vgpr_32 = V_FMA_F32 0, undef %46:vgpr_32, 0, undef %47:vgpr_32, 0, killed %42, 0, 0, implicit $exec
-    dead %48:vgpr_32 = V_MUL_F32_e32 undef %49:vgpr_32, killed %45, implicit $exec
-    %50:vgpr_32 = V_MUL_F32_e32 undef %51:vgpr_32, undef %52:vgpr_32, implicit $exec
+    %39:vgpr_32 = nofpexcept V_FMA_F32 0, undef %40:vgpr_32, 0, killed %37.sub0, 0, undef %41:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %42:vgpr_32 = nofpexcept V_FMA_F32 0, undef %43:vgpr_32, 0, undef %44:vgpr_32, 0, killed %39, 0, 0, implicit $mode, implicit $exec
+    %45:vgpr_32 = nofpexcept V_FMA_F32 0, undef %46:vgpr_32, 0, undef %47:vgpr_32, 0, killed %42, 0, 0, implicit $mode, implicit $exec
+    dead %48:vgpr_32 = nofpexcept V_MUL_F32_e32 undef %49:vgpr_32, killed %45, implicit $mode, implicit $exec
+    %50:vgpr_32 = nofpexcept V_MUL_F32_e32 undef %51:vgpr_32, undef %52:vgpr_32, implicit $mode, implicit $exec
     undef %53.sub1:vreg_128 = COPY %50
     %38:vreg_128 = COPY killed %53
 
   bb.17:
     %54:vreg_128 = COPY killed %38
-    %55:vgpr_32 = V_FMA_F32 0, killed %54.sub1, 0, target-flags(amdgpu-gotprel32-lo) 1056964608, 0, 1056964608, 0, 0, implicit $exec
+    %55:vgpr_32 = nofpexcept V_FMA_F32 0, killed %54.sub1, 0, target-flags(amdgpu-gotprel32-lo) 1056964608, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
     EXP 1, undef %56:vgpr_32, killed %55, undef %57:vgpr_32, undef %58:vgpr_32, -1, 0, 15, implicit $exec
     S_ENDPGM 0
 
   bb.18:
     successors: %bb.7(0x80000000)
-    dead %59:vgpr_32 = V_FMA_F32 0, killed %9.sub2, 0, undef %60:vgpr_32, 0, undef %61:vgpr_32, 0, 0, implicit $exec
+    dead %59:vgpr_32 = nofpexcept V_FMA_F32 0, killed %9.sub2, 0, undef %60:vgpr_32, 0, undef %61:vgpr_32, 0, 0, implicit $mode, implicit $exec
     dead %62:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN undef %63:vgpr_32, undef %64:sgpr_128, undef %65:sreg_32, 0, 0, 0, 0, 0, 0, implicit $exec
     undef %66.sub1:vreg_128 = COPY %13.sub1
     %66.sub2:vreg_128 = COPY %13.sub2
-    %67:sreg_64 = V_CMP_NGT_F32_e64 0, 0, 0, undef %68:vgpr_32, 0, implicit $exec
-    %69:vgpr_32 = V_ADD_F32_e32 1065353216, undef %70:vgpr_32, implicit $exec
-    %71:vgpr_32 = V_ADD_F32_e32 1065353216, killed %69, implicit $exec
-    %72:sreg_64 = V_CMP_NGT_F32_e64 0, 0, 0, killed %71, 0, implicit $exec
+    %67:sreg_64 = nofpexcept V_CMP_NGT_F32_e64 0, 0, 0, undef %68:vgpr_32, 0, implicit $mode, implicit $exec
+    %69:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, undef %70:vgpr_32, implicit $mode, implicit $exec
+    %71:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, killed %69, implicit $mode, implicit $exec
+    %72:sreg_64 = nofpexcept V_CMP_NGT_F32_e64 0, 0, 0, killed %71, 0, implicit $mode, implicit $exec
     %73:sreg_64 = S_OR_B64 killed %72, killed %67, implicit-def dead $scc
     %74:sreg_64 = S_OR_B64 killed %73, killed %10, implicit-def dead $scc
     %19:sreg_64 = COPY killed %74

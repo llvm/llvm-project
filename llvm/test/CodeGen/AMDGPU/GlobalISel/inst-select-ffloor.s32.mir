@@ -14,7 +14,7 @@ body: |
     ; CHECK-LABEL: name: ffloor_s32_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FFLOOR %0
@@ -34,7 +34,7 @@ body: |
     ; CHECK-LABEL: name: ffloor_s32_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FFLOOR %0
@@ -54,7 +54,7 @@ body: |
     ; CHECK-LABEL: name: ffloor_fneg_s32_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_FNEG %0
@@ -74,7 +74,7 @@ body: |
     ; CHECK-LABEL: name: ffloor_fneg_s32_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0

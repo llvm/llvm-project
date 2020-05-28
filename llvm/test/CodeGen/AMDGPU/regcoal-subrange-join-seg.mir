@@ -188,7 +188,7 @@ body:             |
     %45 = BUFFER_LOAD_DWORD_OFFEN killed %13, undef %15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load 4)
     %46 = V_AND_B32_e32 1, killed %45, implicit $exec
     %21 = S_BUFFER_LOAD_DWORD_SGPR undef %22, undef %23, 0, 0 :: (dereferenceable invariant load 4)
-    %25 = V_CMP_GE_F32_e64 0, 0, 0, killed %21, 0, implicit $exec
+    %25 = nofpexcept V_CMP_GE_F32_e64 0, 0, 0, killed %21, 0, implicit $mode, implicit $exec
     %26 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %25, implicit $exec
     %62 = IMPLICIT_DEF
 
@@ -211,13 +211,13 @@ body:             |
     S_BRANCH %bb.31
 
   bb.30:
-    %33 = V_MAD_F32 1, killed %53.sub0, 0, undef %34, 0, 0, 0, 0, implicit $exec
-    %35 = V_MAC_F32_e32 killed %33, undef %36, undef %35, implicit $exec
-    %38 = V_MAX_F32_e32 0, killed %35, implicit $exec
-    %39 = V_LOG_F32_e32 killed %38, implicit $exec
-    %40 = V_MUL_F32_e32 killed %39, undef %41, implicit $exec
-    %42 = V_EXP_F32_e32 killed %40, implicit $exec
-    dead %43 = V_MUL_F32_e32 killed %42, undef %44, implicit $exec
+    %33 = nofpexcept V_MAD_F32 1, killed %53.sub0, 0, undef %34, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %35 = nofpexcept V_MAC_F32_e32 killed %33, undef %36, undef %35, implicit $mode, implicit $exec
+    %38 = nofpexcept V_MAX_F32_e32 0, killed %35, implicit $mode, implicit $exec
+    %39 = nofpexcept V_LOG_F32_e32 killed %38, implicit $mode, implicit $exec
+    %40 = nofpexcept V_MUL_F32_e32 killed %39, undef %41, implicit $mode, implicit $exec
+    %42 = nofpexcept V_EXP_F32_e32 killed %40, implicit $mode, implicit $exec
+    dead %43 = nofpexcept V_MUL_F32_e32 killed %42, undef %44, implicit $mode, implicit $exec
     %63 = COPY killed %51
 
   bb.31:
