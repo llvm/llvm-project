@@ -4671,6 +4671,23 @@ cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
 </pre></td></tr>
 
+
+<tr><td>Matcher&lt;clang::ParmVarDecl&gt;</td><td class="name" onclick="toggle('isAtPosition0')"><a name="isAtPosition0Anchor">isAtPosition</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="isAtPosition0"><pre>Matches the ParmVarDecl nodes that are at the N'th position in the parameter
+list. The parameter list could be that of either a block, function, or
+objc-method.
+
+
+Given
+
+void f(int a, int b, int c) {
+}
+
+``parmVarDecl(isAtPosition(0))`` matches ``int a``.
+
+``parmVarDecl(isAtPosition(1))`` matches ``int b``.
+</pre></td></tr>
+
 <!--END_NARROWING_MATCHERS -->
 </table>
 
