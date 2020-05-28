@@ -333,6 +333,32 @@ OpFoldResult GetExtentOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// NumElementsOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult NumElementsOp::fold(ArrayRef<Attribute> operands) {
+
+  // Fold only when argument constant.
+  Attribute shape = operands[0];
+  if (!shape)
+    return {};
+
+  APInt product(64, 1);
+  for (auto value : shape.cast<DenseIntElementsAttr>())
+    product *= value;
+  Builder builder(getContext());
+  return builder.getIndexAttr(product.getLimitedValue());
+}
+
+LogicalResult NumElementsOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(SizeType::get(context));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeOfOp
 //===----------------------------------------------------------------------===//
 

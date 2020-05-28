@@ -161,6 +161,28 @@ func @nonfoldable_index_to_size(%ci : index) -> !shape.size {
 }
 
 // -----
+// Fold number of elements computation.
+// CHECK-LABEL: func @num_elements
+func @num_elements() -> !shape.size {
+  // CHECK-NOT: shape.const_shape
+  %shape = shape.const_shape [4, 5, 6]
+  // CHECK-NOT: shape.num_elements
+  %num_elements = shape.num_elements %shape
+  // CHECK: %[[NUM:.*]] = shape.const_size 120
+  // CHECK-NEXT: return %[[NUM]] : !shape.size
+  return %num_elements : !shape.size
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_num_elements
+func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
+  // CHECK-NOT: shape.const_{{.*}}
+  %num_elements = shape.num_elements %shape
+  return %num_elements : !shape.size
+}
+
+// -----
 
 // Canonicalization of shape.get_extent
 
