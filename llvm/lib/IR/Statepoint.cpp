@@ -18,15 +18,11 @@
 using namespace llvm;
 
 bool llvm::isStatepoint(const CallBase *Call) {
-  if (auto *F = Call->getCalledFunction())
-    return F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
-  return false;
+  return isa<GCStatepointInst>(Call);
 }
 
 bool llvm::isStatepoint(const Value *V) {
-  if (auto *Call = dyn_cast<CallBase>(V))
-    return isStatepoint(Call);
-  return false;
+  return isa<GCStatepointInst>(V);
 }
 
 bool llvm::isStatepoint(const Value &V) {
