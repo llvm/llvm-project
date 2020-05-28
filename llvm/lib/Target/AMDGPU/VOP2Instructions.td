@@ -1262,9 +1262,9 @@ defm V_SUBBREV_U32        : VOP2be_Real_gfx6_gfx7<0x02a>;
 
 defm V_READLANE_B32 : VOP2Only_Real_gfx6_gfx7<0x001>;
 
-let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
+let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
   defm V_WRITELANE_B32 : VOP2Only_Real_gfx6_gfx7<0x002>;
-} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in)
+} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 
 let SubtargetPredicate = isGFX6GFX7 in {
   defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx6_gfx7>;

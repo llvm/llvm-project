@@ -839,9 +839,9 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
 
 defm V_READLANE_B32  : VOP3_Real_gfx10<0x360>;
 
-let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
+let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
   defm V_WRITELANE_B32 : VOP3_Real_gfx10<0x361>;
-} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in)
+} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 
 defm V_XOR3_B32           : VOP3_Real_gfx10<0x178>;
 defm V_LSHLREV_B64        : VOP3_Real_gfx10<0x2ff>;
