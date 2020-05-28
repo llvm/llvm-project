@@ -1139,6 +1139,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf64-amdgpu";
     case ELF::EM_BPF:
       return "elf64-bpf";
+    case ELF::EM_VE:
+      return "elf64-ve";
     default:
       return "elf64-unknown";
     }
@@ -1217,6 +1219,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;
 
+  case ELF::EM_VE:
+    return Triple::ve;
   default:
     return Triple::UnknownArch;
   }
