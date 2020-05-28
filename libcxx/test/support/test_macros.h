@@ -118,41 +118,41 @@
 #endif
 
 #if TEST_STD_VER >= 11
-#define TEST_ALIGNOF(...) alignof(__VA_ARGS__)
-#define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
-#define TEST_CONSTEXPR constexpr
-#define TEST_NOEXCEPT noexcept
-#define TEST_NOEXCEPT_FALSE noexcept(false)
-#define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
-# if TEST_STD_VER >= 14
-#   define TEST_CONSTEXPR_CXX14 constexpr
-# else
-#   define TEST_CONSTEXPR_CXX14
-# endif
-# if TEST_STD_VER > 14
-#   define TEST_THROW_SPEC(...)
-# else
-#   define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
-# endif
-# if TEST_STD_VER > 17
-#   define TEST_CONSTEXPR_CXX20 constexpr
-# else
-#   define TEST_CONSTEXPR_CXX20
-# endif
+# define TEST_ALIGNOF(...) alignof(__VA_ARGS__)
+# define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
+# define TEST_CONSTEXPR constexpr
+# define TEST_NOEXCEPT noexcept
+# define TEST_NOEXCEPT_FALSE noexcept(false)
+# define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
 #else
-#if defined(TEST_COMPILER_CLANG)
-# define TEST_ALIGNOF(...) _Alignof(__VA_ARGS__)
-#else
-# define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#   if defined(TEST_COMPILER_CLANG)
+#    define TEST_ALIGNOF(...) _Alignof(__VA_ARGS__)
+#   else
+#    define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#   endif
+# define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
+# define TEST_CONSTEXPR
+# define TEST_NOEXCEPT throw()
+# define TEST_NOEXCEPT_FALSE
+# define TEST_NOEXCEPT_COND(...)
 #endif
-#define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
-#define TEST_CONSTEXPR
-#define TEST_CONSTEXPR_CXX14
-#define TEST_CONSTEXPR_CXX20
-#define TEST_NOEXCEPT throw()
-#define TEST_NOEXCEPT_FALSE
-#define TEST_NOEXCEPT_COND(...)
-#define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
+
+#if TEST_STD_VER >= 17
+# define TEST_THROW_SPEC(...)
+#else
+# define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
+#endif
+
+#if TEST_STD_VER >= 14
+# define TEST_CONSTEXPR_CXX14 constexpr
+#else
+# define TEST_CONSTEXPR_CXX14
+#endif
+
+#if TEST_STD_VER >= 20
+# define TEST_CONSTEXPR_CXX20 constexpr
+#else
+# define TEST_CONSTEXPR_CXX20
 #endif
 
 // Sniff out to see if the underlying C library has C11 features
