@@ -27,8 +27,12 @@
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
@@ -45,6 +49,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -712,35 +717,304 @@ findRefs(const std::vector<const NamedDecl *> &Decls, ParsedAST &AST) {
   return std::move(RefFinder).take();
 }
 
+const Stmt *getFunctionBody(DynTypedNode N) {
+  if (const auto *FD = N.get<FunctionDecl>())
+    return FD->getBody();
+  if (const auto *FD = N.get<BlockDecl>())
+    return FD->getBody();
+  if (const auto *FD = N.get<LambdaExpr>())
+    return FD->getBody();
+  if (const auto *FD = N.get<ObjCMethodDecl>())
+    return FD->getBody();
+  return nullptr;
+}
+
+const Stmt *getLoopBody(DynTypedNode N) {
+  if (const auto *LS = N.get<ForStmt>())
+    return LS->getBody();
+  if (const auto *LS = N.get<CXXForRangeStmt>())
+    return LS->getBody();
+  if (const auto *LS = N.get<WhileStmt>())
+    return LS->getBody();
+  if (const auto *LS = N.get<DoStmt>())
+    return LS->getBody();
+  return nullptr;
+}
+
+// AST traversal to highlight control flow statements under some root.
+// Once we hit further control flow we prune the tree (or at least restrict
+// what we highlight) so we capture e.g. breaks from the outer loop only.
+class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
+  // Types of control-flow statements we might highlight.
+  enum Target {
+    Break = 1,
+    Continue = 2,
+    Return = 4,
+    Case = 8,
+    Throw = 16,
+    Goto = 32,
+    All = Break | Continue | Return | Case | Throw | Goto,
+  };
+  int Ignore = 0;     // bitmask of Target - what are we *not* highlighting?
+  SourceRange Bounds; // Half-open, restricts reported targets.
+  std::vector<SourceLocation> &Result;
+  const SourceManager &SM;
+
+  // Masks out targets for a traversal into D.
+  // Traverses the subtree using Delegate() if any targets remain.
+  template <typename Func>
+  bool filterAndTraverse(DynTypedNode D, const Func &Delegate) {
+    auto RestoreIgnore = llvm::make_scope_exit(
+        [OldIgnore(Ignore), this] { Ignore = OldIgnore; });
+    if (getFunctionBody(D))
+      Ignore = All;
+    else if (getLoopBody(D))
+      Ignore |= Continue | Break;
+    else if (D.get<SwitchStmt>())
+      Ignore |= Break | Case;
+    // Prune tree if we're not looking for anything.
+    return (Ignore == All) ? true : Delegate();
+  }
+
+  void found(Target T, SourceLocation Loc) {
+    if (T & Ignore)
+      return;
+    if (SM.isBeforeInTranslationUnit(Loc, Bounds.getBegin()) ||
+        SM.isBeforeInTranslationUnit(Bounds.getEnd(), Loc))
+      return;
+    Result.push_back(Loc);
+  }
+
+public:
+  FindControlFlow(SourceRange Bounds, std::vector<SourceLocation> &Result,
+                  const SourceManager &SM)
+      : Bounds(Bounds), Result(Result), SM(SM) {}
+
+  // When traversing function or loops, limit targets to those that still
+  // refer to the original root.
+  bool TraverseDecl(Decl *D) {
+    return !D || filterAndTraverse(DynTypedNode::create(*D), [&] {
+      return RecursiveASTVisitor::TraverseDecl(D);
+    });
+  }
+  bool TraverseStmt(Stmt *S) {
+    return !S || filterAndTraverse(DynTypedNode::create(*S), [&] {
+      return RecursiveASTVisitor::TraverseStmt(S);
+    });
+  }
+
+  // Add leaves that we found and want.
+  bool VisitReturnStmt(ReturnStmt *R) {
+    found(Return, R->getReturnLoc());
+    return true;
+  }
+  bool VisitBreakStmt(BreakStmt *B) {
+    found(Break, B->getBreakLoc());
+    return true;
+  }
+  bool VisitContinueStmt(ContinueStmt *C) {
+    found(Continue, C->getContinueLoc());
+    return true;
+  }
+  bool VisitSwitchCase(SwitchCase *C) {
+    found(Case, C->getKeywordLoc());
+    return true;
+  }
+  bool VisitCXXThrowExpr(CXXThrowExpr *T) {
+    found(Throw, T->getThrowLoc());
+    return true;
+  }
+  bool VisitGotoStmt(GotoStmt *G) {
+    // Goto is interesting if its target is outside the root.
+    if (const auto *LD = G->getLabel()) {
+      if (SM.isBeforeInTranslationUnit(LD->getLocation(), Bounds.getBegin()) ||
+          SM.isBeforeInTranslationUnit(Bounds.getEnd(), LD->getLocation()))
+        found(Goto, G->getGotoLoc());
+    }
+    return true;
+  }
+};
+
+// Given a location within a switch statement, return the half-open range that
+// covers the case it's contained in.
+// We treat `case X: case Y: ...` as one case, and assume no other fallthrough.
+SourceRange findCaseBounds(const SwitchStmt &Switch, SourceLocation Loc,
+                           const SourceManager &SM) {
+  // Cases are not stored in order, sort them first.
+  // (In fact they seem to be stored in reverse order, don't rely on this)
+  std::vector<const SwitchCase *> Cases;
+  for (const SwitchCase *Case = Switch.getSwitchCaseList(); Case;
+       Case = Case->getNextSwitchCase())
+    Cases.push_back(Case);
+  llvm::sort(Cases, [&](const SwitchCase *L, const SwitchCase *R) {
+    return SM.isBeforeInTranslationUnit(L->getKeywordLoc(), R->getKeywordLoc());
+  });
+
+  // Find the first case after the target location, the end of our range.
+  auto CaseAfter = llvm::partition_point(Cases, [&](const SwitchCase *C) {
+    return !SM.isBeforeInTranslationUnit(Loc, C->getKeywordLoc());
+  });
+  SourceLocation End = CaseAfter == Cases.end() ? Switch.getEndLoc()
+                                                : (*CaseAfter)->getKeywordLoc();
+
+  // Our target can be before the first case - cases are optional!
+  if (CaseAfter == Cases.begin())
+    return SourceRange(Switch.getBeginLoc(), End);
+  // The start of our range is usually the previous case, but...
+  auto CaseBefore = std::prev(CaseAfter);
+  // ... rewind CaseBefore to the first in a `case A: case B: ...` sequence.
+  while (CaseBefore != Cases.begin() &&
+         (*std::prev(CaseBefore))->getSubStmt() == *CaseBefore)
+    --CaseBefore;
+  return SourceRange((*CaseBefore)->getKeywordLoc(), End);
+}
+
+// Returns the locations of control flow statements related to N. e.g.:
+//   for    => branches: break/continue/return/throw
+//   break  => controlling loop (forwhile/do), and its related control flow
+//   return => all returns/throws from the same function
+// When an inner block is selected, we include branches bound to outer blocks
+// as these are exits from the inner block. e.g. return in a for loop.
+// FIXME: We don't analyze catch blocks, throw is treated the same as return.
+std::vector<SourceLocation> relatedControlFlow(const SelectionTree::Node &N) {
+  const SourceManager &SM =
+      N.getDeclContext().getParentASTContext().getSourceManager();
+  std::vector<SourceLocation> Result;
+
+  // First, check if we're at a node that can resolve to a root.
+  enum class Cur { None, Break, Continue, Return, Case, Throw } Cursor;
+  if (N.ASTNode.get<BreakStmt>()) {
+    Cursor = Cur::Break;
+  } else if (N.ASTNode.get<ContinueStmt>()) {
+    Cursor = Cur::Continue;
+  } else if (N.ASTNode.get<ReturnStmt>()) {
+    Cursor = Cur::Return;
+  } else if (N.ASTNode.get<CXXThrowExpr>()) {
+    Cursor = Cur::Throw;
+  } else if (N.ASTNode.get<SwitchCase>()) {
+    Cursor = Cur::Case;
+  } else if (const GotoStmt *GS = N.ASTNode.get<GotoStmt>()) {
+    // We don't know what root to associate with, but highlight the goto/label.
+    Result.push_back(GS->getGotoLoc());
+    if (const auto *LD = GS->getLabel())
+      Result.push_back(LD->getLocation());
+    Cursor = Cur::None;
+  } else {
+    Cursor = Cur::None;
+  }
+
+  const Stmt *Root = nullptr; // Loop or function body to traverse.
+  SourceRange Bounds;
+  // Look up the tree for a root (or just at this node if we didn't find a leaf)
+  for (const auto *P = &N; P; P = P->Parent) {
+    // return associates with enclosing function
+    if (const Stmt *FunctionBody = getFunctionBody(P->ASTNode)) {
+      if (Cursor == Cur::Return || Cursor == Cur::Throw) {
+        Root = FunctionBody;
+      }
+      break; // other leaves don't cross functions.
+    }
+    // break/continue associate with enclosing loop.
+    if (const Stmt *LoopBody = getLoopBody(P->ASTNode)) {
+      if (Cursor == Cur::None || Cursor == Cur::Break ||
+          Cursor == Cur::Continue) {
+        Root = LoopBody;
+        // Highlight the loop keyword itself.
+        // FIXME: for do-while, this only covers the `do`..
+        Result.push_back(P->ASTNode.getSourceRange().getBegin());
+        break;
+      }
+    }
+    // For switches, users think of case statements as control flow blocks.
+    // We highlight only occurrences surrounded by the same case.
+    // We don't detect fallthrough (other than 'case X, case Y').
+    if (const auto *SS = P->ASTNode.get<SwitchStmt>()) {
+      if (Cursor == Cur::Break || Cursor == Cur::Case) {
+        Result.push_back(SS->getSwitchLoc()); // Highlight the switch.
+        Root = SS->getBody();
+        // Limit to enclosing case, if there is one.
+        Bounds = findCaseBounds(*SS, N.ASTNode.getSourceRange().getBegin(), SM);
+        break;
+      }
+    }
+    // If we didn't start at some interesting node, we're done.
+    if (Cursor == Cur::None)
+      break;
+  }
+  if (Root) {
+    if (!Bounds.isValid())
+      Bounds = Root->getSourceRange();
+    FindControlFlow(Bounds, Result, SM).TraverseStmt(const_cast<Stmt *>(Root));
+  }
+  return Result;
+}
+
+DocumentHighlight toHighlight(const ReferenceFinder::Reference &Ref,
+                              const SourceManager &SM) {
+  DocumentHighlight DH;
+  DH.range = Ref.range(SM);
+  if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
+    DH.kind = DocumentHighlightKind::Write;
+  else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
+    DH.kind = DocumentHighlightKind::Read;
+  else
+    DH.kind = DocumentHighlightKind::Text;
+  return DH;
+}
+
+llvm::Optional<DocumentHighlight> toHighlight(SourceLocation Loc,
+                                              const syntax::TokenBuffer &TB) {
+  Loc = TB.sourceManager().getFileLoc(Loc);
+  if (const auto *Tok = TB.spelledTokenAt(Loc)) {
+    DocumentHighlight Result;
+    Result.range = halfOpenToRange(
+        TB.sourceManager(),
+        CharSourceRange::getCharRange(Tok->location(), Tok->endLocation()));
+    return Result;
+  }
+  return llvm::None;
+}
+
 } // namespace
 
 std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   // FIXME: show references to macro within file?
-  DeclRelationSet Relations =
-      DeclRelation::TemplatePattern | DeclRelation::Alias;
   auto CurLoc = sourceLocationInMainFile(SM, Pos);
   if (!CurLoc) {
     llvm::consumeError(CurLoc.takeError());
     return {};
   }
-  auto References = findRefs(getDeclAtPosition(AST, *CurLoc, Relations), AST);
-
-  // FIXME: we may get multiple DocumentHighlights with the same location and
-  // different kinds, deduplicate them.
   std::vector<DocumentHighlight> Result;
-  for (const auto &Ref : References) {
-    DocumentHighlight DH;
-    DH.range = Ref.range(SM);
-    if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
-      DH.kind = DocumentHighlightKind::Write;
-    else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
-      DH.kind = DocumentHighlightKind::Read;
-    else
-      DH.kind = DocumentHighlightKind::Text;
-    Result.push_back(std::move(DH));
-  }
+  auto TryTree = [&](SelectionTree ST) {
+    if (const SelectionTree::Node *N = ST.commonAncestor()) {
+      DeclRelationSet Relations =
+          DeclRelation::TemplatePattern | DeclRelation::Alias;
+      auto Decls = targetDecl(N->ASTNode, Relations);
+      if (!Decls.empty()) {
+        auto Refs = findRefs({Decls.begin(), Decls.end()}, AST);
+        // FIXME: we may get multiple DocumentHighlights with the same location
+        // and different kinds, deduplicate them.
+        for (const auto &Ref : findRefs({Decls.begin(), Decls.end()}, AST))
+          Result.push_back(toHighlight(Ref, SM));
+        return true;
+      }
+      auto ControlFlow = relatedControlFlow(*N);
+      if (!ControlFlow.empty()) {
+        for (SourceLocation Loc : ControlFlow)
+          if (auto Highlight = toHighlight(Loc, AST.getTokens()))
+            Result.push_back(std::move(*Highlight));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  unsigned Offset =
+      AST.getSourceManager().getDecomposedSpellingLoc(*CurLoc).second;
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
+                            Offset, TryTree);
   return Result;
 }
 
