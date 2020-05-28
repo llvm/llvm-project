@@ -25,17 +25,18 @@ using namespace fir;
 
 namespace {
 
-// Conversion to the SCF dialect.
+// Conversion of fir control ops to more primitive control-flow.
 //
 // FIR loops that cannot be converted to the affine dialect will remain as
-// `fir.do_loop` operations.  These can be converted to `scf.for` operations.
-// MLIR includes a pass to lower `scf.for` operations to a CFG.
+// `fir.do_loop` operations.  These can be converted to control-flow operations.
 
 /// Convert `fir.do_loop` to `scf.for`
 class ScfLoopConv : public mlir::OpRewritePattern<fir::LoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
+  // FIXME: This should NOT be using scf.for. Instead, fir.do_loop should be
+  // lowered to a semantically correct CFG.
   mlir::LogicalResult
   matchAndRewrite(LoopOp loop, mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
@@ -53,30 +54,6 @@ public:
   }
 };
 
-/// Convert `fir.if` to `scf.if`
-class ScfIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(WhereOp where,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto loc = where.getLoc();
-    bool hasOtherRegion = !where.otherRegion().empty();
-    auto cond = where.condition();
-    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, cond, hasOtherRegion);
-    rewriter.inlineRegionBefore(where.whereRegion(), &ifOp.thenRegion().back());
-    ifOp.thenRegion().back().erase();
-    if (hasOtherRegion) {
-      rewriter.inlineRegionBefore(where.otherRegion(),
-                                  &ifOp.elseRegion().back());
-      ifOp.elseRegion().back().erase();
-    }
-    rewriter.eraseOp(where);
-    return success();
-  }
-};
-
 /// Convert `fir.result` to `scf.yield`
 class ScfResultConv : public mlir::OpRewritePattern<fir::ResultOp> {
 public:
@@ -90,6 +67,67 @@ public:
   }
 };
 
+/// Convert `fir.if` to control-flow
+class ScfIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(WhereOp where,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto loc = where.getLoc();
+
+    // Split the block containing the 'fir.if' into two parts.  The part before
+    // will contain the condition, the part after will be the continuation
+    // point.
+    auto *condBlock = rewriter.getInsertionBlock();
+    auto opPosition = rewriter.getInsertionPoint();
+    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+    mlir::Block *continueBlock;
+    if (where.getNumResults() == 0) {
+      continueBlock = remainingOpsBlock;
+    } else {
+      continueBlock =
+          rewriter.createBlock(remainingOpsBlock, where.getResultTypes());
+      rewriter.create<BranchOp>(loc, remainingOpsBlock);
+    }
+
+    // Move blocks from the "then" region to the region containing 'fir.if',
+    // place it before the continuation block, and branch to it.
+    auto &whereRegion = where.whereRegion();
+    auto *whereBlock = &whereRegion.front();
+    mlir::Operation *whereTerminator = whereRegion.back().getTerminator();
+    mlir::ValueRange whereTerminatorOperands = whereTerminator->getOperands();
+    rewriter.setInsertionPointToEnd(&whereRegion.back());
+    rewriter.create<BranchOp>(loc, continueBlock, whereTerminatorOperands);
+    rewriter.eraseOp(whereTerminator);
+    rewriter.inlineRegionBefore(whereRegion, continueBlock);
+
+    // Move blocks from the "else" region (if present) to the region containing
+    // 'fir.if', place it before the continuation block and branch to it.  It
+    // will be placed after the "then" regions.
+    auto *otherwiseBlock = continueBlock;
+    auto &otherwiseRegion = where.otherRegion();
+    if (!otherwiseRegion.empty()) {
+      otherwiseBlock = &otherwiseRegion.front();
+      mlir::Operation *otherwiseTerm = otherwiseRegion.back().getTerminator();
+      mlir::ValueRange otherwiseTermOperands = otherwiseTerm->getOperands();
+      rewriter.setInsertionPointToEnd(&otherwiseRegion.back());
+      rewriter.create<BranchOp>(loc, continueBlock, otherwiseTermOperands);
+      rewriter.eraseOp(otherwiseTerm);
+      rewriter.inlineRegionBefore(otherwiseRegion, continueBlock);
+    }
+
+    rewriter.setInsertionPointToEnd(condBlock);
+    rewriter.create<mlir::CondBranchOp>(
+        loc, where.condition(), whereBlock, llvm::ArrayRef<mlir::Value>(),
+        otherwiseBlock, llvm::ArrayRef<mlir::Value>());
+    rewriter.replaceOp(where, continueBlock->getArguments());
+    return success();
+  }
+};
+
+/// Convert `fir.iter_while` to control-flow.
 class ScfIterWhileConv : public mlir::OpRewritePattern<fir::IterWhileOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -157,8 +195,8 @@ public:
     // Remember to AND in the early-exit bool.
     auto comparison = rewriter.create<AndOp>(loc, comp1, iterateVar);
     rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
-                                  ArrayRef<Value>(), endBlock,
-                                  ArrayRef<Value>());
+                                  llvm::ArrayRef<mlir::Value>(), endBlock,
+                                  llvm::ArrayRef<mlir::Value>());
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
     rewriter.replaceOp(whileOp, conditionBlock->getArguments().drop_front());
