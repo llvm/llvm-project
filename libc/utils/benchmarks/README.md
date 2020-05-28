@@ -35,7 +35,7 @@ informations** and **benchmarking configuration**.
 
 ```shell
 cd llvm-project
-cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS=libc -DCMAKE_BUILD_TYPE=Release
+cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release
 make -C /tmp/build -j display-libc-memcpy-benchmark-small
 ```
 
