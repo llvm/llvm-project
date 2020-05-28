@@ -15,7 +15,7 @@
 
 // CK1-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK1-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK1-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK1-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CK1-LABEL: foo
 void foo() { extern void mayThrow(); mayThrow(); }
@@ -52,7 +52,7 @@ void parallel_master() {
 
 // CK2-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK2-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK2-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK2-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void parallel_master_private() {
   int a;
@@ -98,12 +98,12 @@ void parallel_master_private() {
 
 // CK3-LABEL: define void @{{.+}}parallel_master{{.+}}
 // CK3:       [[A_VAL:%.+]] = alloca i32
-// CK3:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void 
+// CK3:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void
 
 // CK3:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]], i32* nonnull align 4 dereferenceable(4) [[A_VAL]])
 // CK3:       [[GTID_ADDR:%.+]] = alloca i32*
 // CK3:       [[BTID_ADDR:%.+]] = alloca i32*
-// CK3:       [[A_ADDR:%.+]] = alloca i32* 
+// CK3:       [[A_ADDR:%.+]] = alloca i32*
 // CK3:       store i32* [[GTID]], i32** [[GTID_ADDR]]
 // CK3:       store i32* [[BTID]], i32** [[BTID_ADDR]]
 // CK3:       store i32* [[A_VAL]], i32** [[A_ADDR]]
@@ -145,7 +145,7 @@ void parallel_master_default_firstprivate() {
 // CK31:       [[CONV:%.+]] = bitcast i64* [[A_CASTED]] to i32*
 // CK31:       store i32 [[ZERO_VAL]], i32* [[CONV]]
 // CK31:       [[ONE_VAL:%.+]] = load i64, i64* [[A_CASTED]]
-// CK31:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i64 [[ONE_VAL]])
+// CK31:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.*}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i64 [[ONE_VAL]])
 // CK31:       ret void
 
 // CK31:       [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
@@ -157,14 +157,14 @@ void parallel_master_default_firstprivate() {
 // CK31:       [[CONV]] = bitcast i64* [[A_ADDR]]
 // CK31:       [[ZERO_VAL]] = load i32*, i32** [[GLOBAL_TID_ADDR]]
 // CK31:       [[ONE_VAL]] = load i32, i32* [[ZERO_VAL]]
-// CK31:       [[TWO_VAL:%.+]] = call i32 @__kmpc_master(%struct.ident_t* @0, i32 [[ONE_VAL]])
+// CK31:       [[TWO_VAL:%.+]] = call i32 @__kmpc_master(%struct.ident_t* @{{.*}}, i32 [[ONE_VAL]])
 // CK31:       [[THREE:%.+]] = icmp ne i32 [[TWO_VAL]], 0
 // CK31:       br i1 %3, label [[OMP_IF_THEN:%.+]], label [[OMP_IF_END:%.+]]
 
 // CK31:       [[FOUR:%.+]] = load i32, i32* [[CONV:%.+]]
 // CK31:       [[INC:%.+]] = add nsw i32 [[FOUR]]
 // CK31:       store i32 [[INC]], i32* [[CONV]]
-// CK31:       call void @__kmpc_end_master(%struct.ident_t* @0, i32 [[ONE_VAL]])
+// CK31:       call void @__kmpc_end_master(%struct.ident_t* @{{.*}}, i32 [[ONE_VAL]])
 // CK31:       br label [[OMP_IF_END]]
 
 // CK31:       ret void
@@ -287,7 +287,7 @@ void parallel_master_default_firstprivate() {
 
 // CK4-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK4-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK4-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK4-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void parallel_master_firstprivate() {
   int a;
@@ -307,7 +307,7 @@ void parallel_master_firstprivate() {
 // CK4:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GLOBAL_TID:%.+]], i32* noalias [[BOUND_TID:%.+]], i64 [[A_VAL]])
 // CK4:       [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
 // CK4:       [[BOUND_TID_ADDR:%.+]] = alloca i32*
-// CK4:       [[A_ADDR:%.+]] = alloca i64 
+// CK4:       [[A_ADDR:%.+]] = alloca i64
 // CK4:       store i32* [[GLOBAL_TID]], i32** [[GLOBAL_TID_ADDR]]
 // CK4:       store i32* [[BOUND_TID]], i32** [[BOUND_TID_ADDR]]
 // CK4:       store i64 [[A_VAL]], i64* [[A_ADDR]]
@@ -345,14 +345,14 @@ void parallel_master_firstprivate() {
 // CK5-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK5-DAG: [[A:@.+]] = {{.+}} i32 0
 // CK5-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK5-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK5-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // CK5-DAG: [[A_CACHE:@.+]] = common global i8** null
-// CK5-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK5-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // TLS-CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // TLS-CHECK-DAG: [[A:@.+]] = thread_local global i32 0
 // TLS-CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// TLS-CHECK-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// TLS-CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// TLS-CHECK-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// TLS-CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 int a;
 #pragma omp threadprivate(a)
@@ -443,9 +443,9 @@ void parallel_master_copyin() {
 
 // CK6-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK6-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK6-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK6-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // CK6-DAG: [[GOMP:@.+]] = common global [8 x i32] zeroinitializer
-// CK6-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK6-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void parallel_master_reduction() {
   int g;
@@ -510,7 +510,7 @@ void parallel_master_reduction() {
 
 // CK7-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK7-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK7-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK7-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void parallel_master_if() {
 #pragma omp parallel master if (parallel: false)
@@ -525,7 +525,7 @@ void parallel_master_if() {
 // CK7:       ret void
 
 // CK7:       define internal void @.omp_outlined.(i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]])
-// CK7:       [[EXECUTE:%.+]] = call i32 @__kmpc_master(%struct.ident_t* @0, i32 %1)
+// CK7:       [[EXECUTE:%.+]] = call i32 @__kmpc_master(%struct.ident_t* @1, i32 %1)
 // CK7:       call void @__kmpc_end_master(%struct.ident_t* [[DEF_LOC_1]], i32 %1)
 
 #endif
@@ -544,7 +544,7 @@ typedef __INTPTR_TYPE__ intptr_t;
 
 // CK8-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
 // CK8-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK8-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK8-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant [[IDENT_T_TY]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void foo();
 
@@ -600,7 +600,7 @@ int main() {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // CK9-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK9-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CK9-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CK9-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
