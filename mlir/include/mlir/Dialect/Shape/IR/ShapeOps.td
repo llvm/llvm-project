@@ -278,6 +278,24 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
   let results = (outs Shape_SizeType:$result);
 }
 
+def Shape_NumElementsOp : Shape_Op<"num_elements", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+
+  let summary = "Returns the number of elements for a given shape";
+  let description = [{
+    Returns the number of elements for a given shape which is the product of its
+    dimensions.
+  }];
+
+  let arguments = (ins Shape_ShapeType:$shape);
+  let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "attr-dict $shape";
+
+  let hasFolder = 1;
+}
+
 def Shape_ReduceOp : Shape_Op<"reduce", []> {
   let summary = "Returns an expression reduced over a shape";
   let description = [{
