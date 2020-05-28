@@ -1073,11 +1073,11 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   if (PTO.Coroutines)
     OptimizePM.addPass(CoroCleanupPass());
 
+  for (auto &C : OptimizerLastEPCallbacks)
+    C(OptimizePM, Level);
+
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM)));
-
-  for (auto &C : OptimizerLastEPCallbacks)
-    C(MPM, Level);
 
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass());
