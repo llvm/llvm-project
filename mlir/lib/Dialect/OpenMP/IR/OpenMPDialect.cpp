@@ -11,7 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/OpImplementation.h"
+
+#include "llvm/ADT/StringSwitch.h"
+
+#include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::omp;
