@@ -409,6 +409,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   {"name": "__cpp_lib_array_constexpr",
    "values": {
      "c++17": int(201603),
+     "c++2a": int(201811),
    },
    "headers": ["iterator", "array"],
    },
