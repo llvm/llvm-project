@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/WithColor.h"
 #include <cstdint>
 
 namespace llvm {
