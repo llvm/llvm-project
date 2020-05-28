@@ -99,21 +99,40 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo &U) {
   return OS;
 }
 
-/// Calculate the allocation size of a given alloca. Returns 0 if the
-/// size can not be statically determined.
-uint64_t getStaticAllocaAllocationSize(const AllocaInst *AI) {
-  const DataLayout &DL = AI->getModule()->getDataLayout();
-  TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
+// Check if we should bailout for such ranges.
+bool isUnsafe(const ConstantRange &R) {
+  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
+}
+
+/// Calculate the allocation size of a given alloca. Returns empty range
+// in case of confution.
+ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
+  const DataLayout &DL = AI.getModule()->getDataLayout();
+  TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
+  unsigned PointerSize = DL.getMaxPointerSizeInBits();
+  // Fallback to empty range for alloca size.
+  ConstantRange R = ConstantRange::getEmpty(PointerSize);
   if (TS.isScalable())
-    return 0;
-  uint64_t Size = TS.getFixedSize();
-  if (AI->isArrayAllocation()) {
-    auto C = dyn_cast<ConstantInt>(AI->getArraySize());
+    return R;
+  APInt APSize(PointerSize, TS.getFixedSize(), true);
+  if (APSize.isNonPositive())
+    return R;
+  if (AI.isArrayAllocation()) {
+    auto C = dyn_cast<ConstantInt>(AI.getArraySize());
     if (!C)
-      return 0;
-    Size *= C->getZExtValue();
+      return R;
+    bool Overflow = false;
+    APInt Mul = C->getValue();
+    if (Mul.isNonPositive())
+      return R;
+    Mul = Mul.sextOrTrunc(PointerSize);
+    APSize = APSize.smul_ov(Mul, Overflow);
+    if (Overflow)
+      return R;
   }
-  return Size;
+  R = ConstantRange(APInt::getNullValue(PointerSize), APSize);
+  assert(!isUnsafe(R));
+  return R;
 }
 
 /// Describes uses of allocas and parameters inside of a single function.
@@ -159,7 +178,7 @@ struct FunctionInfo {
         if (auto AI = dyn_cast<AllocaInst>(&I)) {
           auto &AS = Allocas[Pos];
           O << "      " << AI->getName() << "["
-            << getStaticAllocaAllocationSize(AI) << "]: " << AS << "\n";
+            << getStaticAllocaSizeRange(*AI).getUpper() << "]: " << AS << "\n";
           ++Pos;
         }
       }
@@ -193,11 +212,6 @@ StackSafetyInfo makeSSI(FunctionInfo Info) {
 
 namespace {
 
-// Check if we should bailout for such ranges.
-bool isUnsafe(const ConstantRange &R) {
-  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
-}
-
 class StackSafetyLocalAnalysis {
   Function &F;
   const DataLayout &DL;
@@ -214,10 +228,6 @@ class StackSafetyLocalAnalysis {
                                            Value *Base);
 
   bool analyzeAllUses(Value *Ptr, UseInfo &AS);
-
-  ConstantRange getRange(uint64_t Lower, uint64_t Upper) const {
-    return ConstantRange(APInt(PointerSize, Lower), APInt(PointerSize, Upper));
-  }
 
 public:
   StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
@@ -266,7 +276,11 @@ ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
                                                        TypeSize Size) {
   if (Size.isScalable())
     return UnknownRange;
-  return getAccessRange(Addr, Base, getRange(0, Size.getFixedSize()));
+  APInt APSize(PointerSize, Size.getFixedSize(), true);
+  if (APSize.isNegative())
+    return UnknownRange;
+  return getAccessRange(
+      Addr, Base, ConstantRange(APInt::getNullValue(PointerSize), APSize));
 }
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
@@ -278,6 +292,7 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
     if (MI->getRawDest() != U)
       return ConstantRange::getEmpty(PointerSize);
   }
+
   auto *CalculationTy = IntegerType::getIntNTy(SE.getContext(), PointerSize);
   if (!SE.isSCEVable(MI->getLength()->getType()))
     return UnknownRange;
@@ -285,8 +300,7 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   const SCEV *Expr =
       SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
   ConstantRange Sizes = SE.getSignedRange(Expr);
-  assert(!isUnsafe(Sizes));
-  if (Sizes.getUpper().isNegative())
+  if (Sizes.getUpper().isNegative() || isUnsafe(Sizes))
     return UnknownRange;
   Sizes = Sizes.sextOrTrunc(PointerSize);
   ConstantRange SizeRange(APInt::getNullValue(PointerSize),
@@ -581,9 +595,7 @@ bool setStackSafetyMetadata(Module &M, const StackSafetyGlobalInfo &SSGI) {
     for (auto &I : instructions(F)) {
       if (auto AI = dyn_cast<AllocaInst>(&I)) {
         auto &AS = Summary.Allocas[Pos];
-        ConstantRange AllocaRange{
-            APInt(Width, 0), APInt(Width, getStaticAllocaAllocationSize(AI))};
-        if (AllocaRange.contains(AS.Range)) {
+        if (getStaticAllocaSizeRange(*AI).contains(AS.Range)) {
           AI->setMetadata(M.getMDKindID("stack-safe"),
                           MDNode::get(M.getContext(), None));
           Changed = true;
