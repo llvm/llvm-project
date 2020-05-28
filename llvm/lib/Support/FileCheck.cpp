@@ -119,7 +119,7 @@ Expected<int64_t> ExpressionValue::getSignedValue() const {
   if (Negative)
     return getAsSigned(Value);
 
-  if (Value > std::numeric_limits<int64_t>::max())
+  if (Value > (uint64_t)std::numeric_limits<int64_t>::max())
     return make_error<OverflowError>();
 
   // Value is in the representable range of int64_t so we can use cast.
@@ -187,7 +187,7 @@ Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
     int64_t LeftValue = cantFail(LeftOperand.getSignedValue());
     uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
     // Result <= -1 - (max int64_t) which overflows on 1- and 2-complement.
-    if (RightValue > std::numeric_limits<int64_t>::max())
+    if (RightValue > (uint64_t)std::numeric_limits<int64_t>::max())
       return make_error<OverflowError>();
     Optional<int64_t> Result =
         checkedSub(LeftValue, static_cast<int64_t>(RightValue));
