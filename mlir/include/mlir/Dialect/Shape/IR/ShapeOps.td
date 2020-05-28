@@ -163,7 +163,7 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
     extents match the values of the elements.
   }];
 
-  let arguments = (ins I32Tensor:$input);
+  let arguments = (ins IndexTensor:$input);
   let results = (outs Shape_ShapeType:$result);
 }
 
