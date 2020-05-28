@@ -2796,7 +2796,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       visitPatchpoint(I, EHPadBB);
       break;
     case Intrinsic::experimental_gc_statepoint:
-      LowerStatepoint(ImmutableStatepoint(&I), EHPadBB);
+      LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
     case Intrinsic::wasm_rethrow_in_catch: {
       // This is usually done in visitTargetIntrinsic, but this intrinsic is
@@ -6637,7 +6637,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitPatchpoint(I);
     return;
   case Intrinsic::experimental_gc_statepoint:
-    LowerStatepoint(ImmutableStatepoint(&I));
+    LowerStatepoint(cast<GCStatepointInst>(I));
     return;
   case Intrinsic::experimental_gc_result:
     visitGCResult(cast<GCResultInst>(I));
