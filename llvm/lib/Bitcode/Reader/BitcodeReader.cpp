@@ -6239,6 +6239,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_TYPE_ID_METADATA:
       parseTypeIdCompatibleVtableSummaryRecord(Record);
       break;
+
+    case bitc::FS_BLOCK_COUNT:
+      TheIndex.addBlockCount(Record[0]);
     }
   }
   llvm_unreachable("Exit infinite loop");

@@ -341,6 +341,7 @@ namespace llvm {
     bool ParseModuleReference(StringRef &ModulePath);
     bool ParseGVReference(ValueInfo &VI, unsigned &GVId);
     bool ParseSummaryIndexFlags();
+    bool ParseBlockCount();
     bool ParseGVEntry(unsigned ID);
     bool ParseFunctionSummary(std::string Name, GlobalValue::GUID, unsigned ID);
     bool ParseVariableSummary(std::string Name, GlobalValue::GUID, unsigned ID);
