@@ -326,7 +326,7 @@ clang::api_notes::APINotesManager *TypeSystemSwiftTypeRef::GetAPINotesManager(
   std::string path;
   for (clang::Module *parent = module; parent; parent = parent->Parent) {
     if (!parent->APINotesFile.empty()) {
-      path = llvm::sys::path::parent_path(parent->APINotesFile);
+      path = std::string(llvm::sys::path::parent_path(parent->APINotesFile));
       break;
     }
   }
@@ -449,7 +449,7 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
       break;
 
     // Read the Swift name from the APINotes.
-    std::string swift_name = ident;
+    std::string swift_name = std::string(ident);
     if (unsigned id = clang_decl->getOwningModuleID()) {
       auto *clang_typesystem = llvm::dyn_cast_or_null<TypeSystemClang>(
           compiler_type.GetTypeSystem());
