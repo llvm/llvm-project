@@ -267,6 +267,27 @@ static void UnescapeString(std::string &Str) {
   }
 }
 
+/// UnescapeAliasString - Supports literal braces in InstAlias asm string which
+/// are escaped with '\\' to avoid being interpreted as variants. Braces must
+/// be unescaped before c++ code is generated as (e.g.):
+///
+///   AsmString = "foo \{$\x01\}";
+///
+/// causes non-standard escape character warnings.
+static void UnescapeAliasString(std::string &Str) {
+  for (unsigned i = 0; i != Str.size(); ++i) {
+    if (Str[i] == '\\' && i != Str.size()-1) {
+      switch (Str[i+1]) {
+      default: continue;  // Don't execute the code after the switch.
+      case '{': Str[i] = '{'; break;
+      case '}': Str[i] = '}'; break;
+      }
+      // Nuke the second character.
+      Str.erase(Str.begin()+i+1);
+    }
+  }
+}
+
 /// EmitPrintInstruction - Generate the code for the "printInstruction" method
 /// implementation. Destroys all instances of AsmWriterInst information, by
 /// clearing the Instructions vector.
@@ -803,6 +824,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       std::string FlatAliasAsmString =
           CodeGenInstruction::FlattenAsmStringVariants(CGA.AsmString, Variant);
+      UnescapeAliasString(FlatAliasAsmString);
 
       // Don't emit the alias if it has more operands than what it's aliasing.
       if (NumResultOps < CountNumOperands(FlatAliasAsmString, Variant))
