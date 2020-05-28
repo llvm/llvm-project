@@ -115,9 +115,9 @@ def Shape_ConstSizeOp : Shape_Op<"const_size",
     [ConstantLike,
      NoSideEffect,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-  let summary = "Creates a constant of !shape.size type.";
+  let summary = "Creates a constant of type `shape.size`";
   let description = [{
-    Creates a !shape.size type representing the constant size given by `value`.
+    Creates a `shape.size` type representing the constant size given by `value`.
 
     ```mlir
     %x = shape.const_size 10
@@ -217,10 +217,10 @@ def Shape_GetExtentOp : Shape_Op<"get_extent",
 def Shape_JoinOp : Shape_Op<"join", []> {
   let summary = "Returns the least general shape.size of its operands";
   let description = [{
-    An operation that computes the least general shape of input operands. This
-    effectively asserts that corresponding static dimensions are equal. The
-    behavior is to match each element of the `shape.type` and propagate the most
-    restrictive information, returning an invalid shape if there are
+    An operation that computes the least general shape of input operands.
+    This effectively asserts that corresponding static dimensions are equal.
+    The behavior is to match each element of the `shape.shape` and propagate the
+    most restrictive information, returning an invalid shape if there are
     contradictory requirements. E.g., using pseudo code
 
     ```
@@ -238,7 +238,7 @@ def Shape_JoinOp : Shape_Op<"join", []> {
     used to return an error to the user upon mismatch of dimensions.
 
     ```mlir
-    %c = shape.join %a, %b, error="<reason>" : !shape.type
+    %c = shape.join %a, %b, error="<reason>" : !shape.shape
     ```
   }];
 
@@ -279,14 +279,14 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
     number of elements
 
     ```mlir
-    func @shape_num_elements(%shape : !shape.type) -> !shape.size {
+    func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
       %0 = "shape.constant_dim"() {value = 1 : i32} : () -> !shape.size
       %1 = "shape.reduce"(%shape, %0) ( {
         ^bb0(%index: i32, %dim: !shape.size, %lci: !shape.size):
           %acc = "shape.mul"(%lci, %dim) :
             (!shape.size, !shape.size) -> !shape.size
           shape.yield %acc : !shape.size
-        }) : (!shape.type, !shape.size) -> (!shape.size)
+        }) : (!shape.shape, !shape.size) -> (!shape.size)
       return %1 : !shape.size
     }
     ```
