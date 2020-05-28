@@ -854,7 +854,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // separately with half the space. This would require a format rev and a
   // fairly major rework of the STATEPOINT node though.
   SmallSet<SDValue, 8> Seen;
-  for (const GCRelocateInst *Relocate : ISP.getRelocates()) {
+  for (const GCRelocateInst *Relocate : I.getGCRelocates()) {
     SI.GCRelocates.push_back(Relocate);
 
     SDValue DerivedSD = getValue(Relocate->getDerivedPtr());
@@ -893,7 +893,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const GCResultInst *GCResult = ISP.getGCResult();
+  const GCResultInst *GCResult = I.getGCResult();
   Type *RetTy = I.getActualReturnType();
   if (!RetTy->isVoidTy() && GCResult) {
     if (GCResult->getParent() != I.getParent()) {
