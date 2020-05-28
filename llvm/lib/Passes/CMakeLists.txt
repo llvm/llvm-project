@@ -13,4 +13,7 @@ add_llvm_component_library(LLVMPasses
 
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS
+  LLVMMLPolicies
   )
