@@ -81,6 +81,18 @@ using namespace llvm;
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 STATISTIC(NumRemoved, "Number of DBG_VALUE instructions removed");
 
+// Options to prevent pathological compile-time behavior. If InputBBLimit and
+// InputDbgValueLimit are both exceeded, range extension is disabled.
+static cl::opt<unsigned> InputBBLimit(
+    "livedebugvalues-input-bb-limit",
+    cl::desc("Maximum input basic blocks before DBG_VALUE limit applies"),
+    cl::init(10000), cl::Hidden);
+static cl::opt<unsigned> InputDbgValueLimit(
+    "livedebugvalues-input-dbg-value-limit",
+    cl::desc(
+        "Maximum input DBG_VALUE insts supported by debug range extension"),
+    cl::init(50000), cl::Hidden);
+
 // If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
 static Register isDbgValueDescribedByReg(const MachineInstr &MI) {
@@ -1753,6 +1765,22 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     Worklist.push(RPONumber);
     ++RPONumber;
   }
+
+  if (RPONumber > InputBBLimit) {
+    unsigned NumInputDbgValues = 0;
+    for (auto &MBB : MF)
+      for (auto &MI : MBB)
+        if (MI.isDebugValue())
+          ++NumInputDbgValues;
+    if (NumInputDbgValues > InputDbgValueLimit) {
+      LLVM_DEBUG(dbgs() << "Disabling LiveDebugValues: " << MF.getName()
+                        << " has " << RPONumber << " basic blocks and "
+                        << NumInputDbgValues
+                        << " input DBG_VALUEs, exceeding limits.\n");
+      return false;
+    }
+  }
+
   // This is a standard "union of predecessor outs" dataflow problem.
   // To solve it, we perform join() and process() using the two worklist method
   // until the ranges converge.
