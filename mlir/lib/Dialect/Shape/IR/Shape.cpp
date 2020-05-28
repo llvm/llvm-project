@@ -181,6 +181,34 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// ConcatOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConcatOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
+                           ValueRange operands, DictionaryAttr attributes,
+                           RegionRange regions,
+                           SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto shapeType = ShapeType::get(context);
+  inferredReturnTypes.push_back(shapeType);
+  return success();
+}
+
+OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0] || !operands[1])
+    return nullptr;
+  auto lhsShape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(
+      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape;
+  resultShape.append(lhsShape.begin(), lhsShape.end());
+  resultShape.append(rhsShape.begin(), rhsShape.end());
+  Builder builder(getContext());
+  return builder.getIndexTensorAttr(resultShape);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstShapeOp
 //===----------------------------------------------------------------------===//
 
@@ -339,34 +367,6 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
   results.push_back(builder.getIndexTensorAttr(shape.take_front(splitPoint)));
   results.push_back(builder.getIndexTensorAttr(shape.drop_front(splitPoint)));
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// ConcatOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-ConcatOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
-                           ValueRange operands, DictionaryAttr attributes,
-                           RegionRange regions,
-                           SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto shapeType = ShapeType::get(context);
-  inferredReturnTypes.push_back(shapeType);
-  return success();
-}
-
-OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[0] || !operands[1])
-    return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  SmallVector<int64_t, 6> resultShape;
-  resultShape.append(lhsShape.begin(), lhsShape.end());
-  resultShape.append(rhsShape.begin(), rhsShape.end());
-  Builder builder(getContext());
-  return builder.getIndexTensorAttr(resultShape);
 }
 
 //===----------------------------------------------------------------------===//
