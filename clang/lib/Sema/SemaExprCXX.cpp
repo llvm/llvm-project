@@ -7660,61 +7660,6 @@ ExprResult Sema::ActOnNoexceptExpr(SourceLocation KeyLoc, SourceLocation,
   return BuildCXXNoexceptExpr(KeyLoc, Operand, RParen);
 }
 
-static bool IsSpecialDiscardedValue(Expr *E) {
-  // In C++11, discarded-value expressions of a certain form are special,
-  // according to [expr]p10:
-  //   The lvalue-to-rvalue conversion (4.1) is applied only if the
-  //   expression is an lvalue of volatile-qualified type and it has
-  //   one of the following forms:
-  E = E->IgnoreParens();
-
-  //   - id-expression (5.1.1),
-  if (isa<DeclRefExpr>(E))
-    return true;
-
-  //   - subscripting (5.2.1),
-  if (isa<ArraySubscriptExpr>(E))
-    return true;
-
-  //   - class member access (5.2.5),
-  if (isa<MemberExpr>(E))
-    return true;
-
-  //   - indirection (5.3.1),
-  if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
-    if (UO->getOpcode() == UO_Deref)
-      return true;
-
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
-    //   - pointer-to-member operation (5.5),
-    if (BO->isPtrMemOp())
-      return true;
-
-    //   - comma expression (5.18) where the right operand is one of the above.
-    if (BO->getOpcode() == BO_Comma)
-      return IsSpecialDiscardedValue(BO->getRHS());
-  }
-
-  //   - conditional expression (5.16) where both the second and the third
-  //     operands are one of the above, or
-  if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(E))
-    return IsSpecialDiscardedValue(CO->getTrueExpr()) &&
-           IsSpecialDiscardedValue(CO->getFalseExpr());
-  // The related edge case of "*x ?: *x".
-  if (BinaryConditionalOperator *BCO =
-          dyn_cast<BinaryConditionalOperator>(E)) {
-    if (OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(BCO->getTrueExpr()))
-      return IsSpecialDiscardedValue(OVE->getSourceExpr()) &&
-             IsSpecialDiscardedValue(BCO->getFalseExpr());
-  }
-
-  // Objective-C++ extensions to the rule.
-  if (isa<PseudoObjectExpr>(E) || isa<ObjCIvarRefExpr>(E))
-    return true;
-
-  return false;
-}
-
 /// Perform the conversions required for an expression used in a
 /// context that ignores the result.
 ExprResult Sema::IgnoredValueConversions(Expr *E) {
@@ -7739,23 +7684,20 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     return E;
   }
 
-  if (getLangOpts().CPlusPlus)  {
+  if (getLangOpts().CPlusPlus) {
     // The C++11 standard defines the notion of a discarded-value expression;
     // normally, we don't need to do anything to handle it, but if it is a
     // volatile lvalue with a special form, we perform an lvalue-to-rvalue
     // conversion.
-    if (getLangOpts().CPlusPlus11 && E->isGLValue() &&
-        E->getType().isVolatileQualified()) {
-       if (IsSpecialDiscardedValue(E)) {
-        ExprResult Res = DefaultLvalueConversion(E);
-        if (Res.isInvalid())
-          return E;
-        E = Res.get();
-      } else {
-        // Per C++2a [expr.ass]p5, a volatile assignment is not deprecated if
-        // it occurs as a discarded-value expression.
-        CheckUnusedVolatileAssignment(E);
-      }
+    if (getLangOpts().CPlusPlus11 && E->isReadIfDiscardedInCPlusPlus11()) {
+      ExprResult Res = DefaultLvalueConversion(E);
+      if (Res.isInvalid())
+        return E;
+      E = Res.get();
+    } else {
+      // Per C++2a [expr.ass]p5, a volatile assignment is not deprecated if
+      // it occurs as a discarded-value expression.
+      CheckUnusedVolatileAssignment(E);
     }
 
     // C++1z:
