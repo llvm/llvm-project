@@ -40,7 +40,6 @@ class ProfileSummaryInfo {
 private:
   Module &M;
   std::unique_ptr<ProfileSummary> Summary;
-  bool computeSummary();
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
   Optional<uint64_t> HotCountThreshold, ColdCountThreshold;
@@ -56,15 +55,17 @@ private:
   Optional<uint64_t> computeThreshold(int PercentileCutoff);
   // The map that caches the threshold values. The keys are the percentile
   // cutoff values and the values are the corresponding threshold values.
-  DenseMap<int, uint64_t> ThresholdCache;
+  mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(Module &M) : M(M) {}
-  ProfileSummaryInfo(ProfileSummaryInfo &&Arg)
-      : M(Arg.M), Summary(std::move(Arg.Summary)) {}
+  ProfileSummaryInfo(Module &M) : M(M) { refresh(); }
+  ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
+
+  /// If no summary is present, attempt to refresh.
+  void refresh();
 
   /// Returns true if profile summary is available.
-  bool hasProfileSummary() { return computeSummary(); }
+  bool hasProfileSummary() const { return Summary != nullptr; }
 
   /// Returns true if module \c M has sample profile.
   bool hasSampleProfile() {
