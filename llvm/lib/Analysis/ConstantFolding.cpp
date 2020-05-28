@@ -1459,7 +1459,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::fmuladd:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
-  // The intrinsics below depend on rounding mode in MXCSR.
+  case Intrinsic::amdgcn_cos:
   case Intrinsic::amdgcn_cubeid:
   case Intrinsic::amdgcn_cubema:
   case Intrinsic::amdgcn_cubesc:
@@ -1467,6 +1467,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_fmul_legacy:
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_ldexp:
+  case Intrinsic::amdgcn_sin:
+  // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
@@ -1961,6 +1963,23 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFoldFP(cos, V, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, V, Ty);
+      case Intrinsic::amdgcn_cos:
+      case Intrinsic::amdgcn_sin:
+        if (V < -256.0 || V > 256.0)
+          // The gfx8 and gfx9 architectures handle arguments outside the range
+          // [-256, 256] differently. This should be a rare case so bail out
+          // rather than trying to handle the difference.
+          return nullptr;
+        bool IsCos = IntrinsicID == Intrinsic::amdgcn_cos;
+        double V4 = V * 4.0;
+        if (V4 == floor(V4)) {
+          // Force exact results for quarter-integer inputs.
+          const double SinVals[4] = { 0.0, 1.0, 0.0, -1.0 };
+          V = SinVals[((int)V4 + (IsCos ? 1 : 0)) & 3];
+        } else {
+          V = (IsCos ? cos : sin)(V * 2.0 * numbers::pi);
+        }
+        return GetConstantFoldFPValue(V, Ty);
     }
 
     if (!TLI)
