@@ -1069,66 +1069,60 @@ unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
 }
 
 static unsigned getIndirectVGPRWritePseudoOpc(unsigned VecSize) {
-  switch (VecSize) {
-  case 32: // 4 bytes
+  if (VecSize <= 32) // 4 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V1;
-  case 64: // 8 bytes
+  if (VecSize <= 64) // 8 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V2;
-  case 96: // 12 bytes
+  if (VecSize <= 96) // 12 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V3;
-  case 128: // 16 bytes
+  if (VecSize <= 128) // 16 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V4;
-  case 160: // 20 bytes
+  if (VecSize <= 160) // 20 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V5;
-  case 256: // 32 bytes
+  if (VecSize <= 256) // 32 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V8;
-  case 512: // 64 bytes
+  if (VecSize <= 512) // 64 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V16;
-  case 1024: // 128 bytes
+  if (VecSize <= 1024) // 128 bytes
     return AMDGPU::V_INDIRECT_REG_WRITE_B32_V32;
-  default:
-    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
-  }
+
+  llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
 }
 
 static unsigned getIndirectSGPRWritePseudo32(unsigned VecSize) {
-  switch (VecSize) {
-  case 32: // 4 bytes
+  if (VecSize <= 32) // 4 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V1;
-  case 64: // 8 bytes
+  if (VecSize <= 64) // 8 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V2;
-  case 96: // 12 bytes
+  if (VecSize <= 96) // 12 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V3;
-  case 128: // 16 bytes
+  if (VecSize <= 128) // 16 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V4;
-  case 160: // 20 bytes
+  if (VecSize <= 160) // 20 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V5;
-  case 256: // 32 bytes
+  if (VecSize <= 256) // 32 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V8;
-  case 512: // 64 bytes
+  if (VecSize <= 512) // 64 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V16;
-  case 1024: // 128 bytes
+  if (VecSize <= 1024) // 128 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B32_V32;
-  default:
-    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
-  }
+
+  llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
 }
 
 static unsigned getIndirectSGPRWritePseudo64(unsigned VecSize) {
-  switch (VecSize) {
-  case 64: // 8 bytes
+  if (VecSize <= 64) // 8 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B64_V1;
-  case 128: // 16 bytes
+  if (VecSize <= 128) // 16 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B64_V2;
-  case 256: // 32 bytes
+  if (VecSize <= 256) // 32 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B64_V4;
-  case 512: // 64 bytes
+  if (VecSize <= 512) // 64 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B64_V8;
-  case 1024: // 128 bytes
+  if (VecSize <= 1024) // 128 bytes
     return AMDGPU::S_INDIRECT_REG_WRITE_B64_V16;
-  default:
-    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
-  }
+
+  llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
 }
 
 const MCInstrDesc &SIInstrInfo::getIndirectRegWritePseudo(
