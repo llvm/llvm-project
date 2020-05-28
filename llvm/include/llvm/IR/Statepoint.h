@@ -181,6 +181,23 @@ public:
   iterator_range<const_op_iterator> gc_args() const {
     return make_range(gc_args_begin(), gc_args_end());
   }
+
+
+  /// Get list of all gc reloactes linked to this statepoint
+  /// May contain several relocations for the same base/derived pair.
+  /// For example this could happen due to relocations on unwinding
+  /// path of invoke.
+  inline std::vector<const GCRelocateInst *> getGCRelocates() const;
+
+  /// Get the experimental_gc_result call tied to this statepoint if there is
+  /// one, otherwise return nullptr.
+  const GCResultInst *getGCResult() const {
+    for (auto *U : users())
+      if (auto *GRI = dyn_cast<GCResultInst>(U))
+        return GRI;
+    return nullptr;
+  }
+
 };
 
 /// A wrapper around a GC intrinsic call, this provides most of the actual
@@ -322,20 +339,11 @@ public:
     return getCall()->gc_args();
   }
 
-  /// Get list of all gc reloactes linked to this statepoint
-  /// May contain several relocations for the same base/derived pair.
-  /// For example this could happen due to relocations on unwinding
-  /// path of invoke.
-  std::vector<const GCRelocateInst *> getRelocates() const;
-
-  /// Get the experimental_gc_result call tied to this statepoint.  Can be
-  /// nullptr if there isn't a gc_result tied to this statepoint.  Guaranteed to
-  /// be a CallInst if non-null.
+  std::vector<const GCRelocateInst *> getRelocates() const {
+    return getCall()->getGCRelocates();
+  }
   const GCResultInst *getGCResult() const {
-    for (auto *U : getInstruction()->users())
-      if (auto *GRI = dyn_cast<GCResultInst>(U))
-        return GRI;
-    return nullptr;
+    return getCall()->getGCResult();
   }
 
 #ifndef NDEBUG
@@ -470,21 +478,17 @@ public:
   }
 };
 
-template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallTy>
-std::vector<const GCRelocateInst *>
-StatepointBase<FunTy, InstructionTy, ValueTy, CallTy>::getRelocates()
-    const {
+std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
   std::vector<const GCRelocateInst *> Result;
 
   // Search for relocated pointers.  Note that working backwards from the
   // gc_relocates ensures that we only get pairs which are actually relocated
   // and used after the statepoint.
-  for (const User *U : StatepointCall->users())
+  for (const User *U : users())
     if (auto *Relocate = dyn_cast<GCRelocateInst>(U))
       Result.push_back(Relocate);
 
-  auto *StatepointInvoke = dyn_cast<InvokeInst>(StatepointCall);
+  auto *StatepointInvoke = dyn_cast<InvokeInst>(this);
   if (!StatepointInvoke)
     return Result;
 
