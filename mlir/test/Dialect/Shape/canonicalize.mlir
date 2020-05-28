@@ -108,6 +108,60 @@ func @no_fold(%arg0: index) -> !shape.shape {
 }
 
 // -----
+// Cast constant size to index and fold it away.
+// CHECK-LABEL: func @const_size_to_index
+func @const_size_to_index() -> index {
+  // CHECK-NOT: shape.index_cast
+  %cs = shape.const_size 123
+  // CHECK: constant 123 : index
+  %ci = shape.size_to_index %cs
+  return %ci : index
+}
+
+// -----
+// Cast constant index to size and fold it away.
+// CHECK-LABEL: func @const_index_to_size
+func @const_index_to_size() -> !shape.size {
+  // CHECK-NOT: index_cast
+  %ci = constant 123 : index
+  // CHECK: shape.const_size 123
+  %cs = shape.index_to_size %ci
+  return %cs : !shape.size
+}
+
+// -----
+// Cast constant index to size, then back, and fold it away.
+// CHECK-LABEL: func @const_index_to_size_to_index
+func @const_index_to_size_to_index() -> index {
+  // CHECK-NOT: shape.index_cast
+  %ci0 = constant 123 : index
+  %cs0 = shape.index_to_size %ci0
+  // CHECK: %[[CI:.*]] = constant 123 : index
+  // CHECK-NEXT: return %[[CI]] : index
+  %ci1 = shape.size_to_index %cs0
+  return %ci1 : index
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_size_to_index
+func @nonfoldable_size_to_index(%cs : !shape.size) -> index {
+  // CHECK: shape.size_to_index
+  %ci = shape.size_to_index %cs
+  return %ci : index
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_index_to_size
+func @nonfoldable_index_to_size(%ci : index) -> !shape.size {
+  // CHECK: shape.index_to_size
+  %cs = shape.index_to_size %ci
+  return %cs : !shape.size
+}
+
+// -----
+
 // Canonicalization of shape.get_extent
 
 // Basic folding.
