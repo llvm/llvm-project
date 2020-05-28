@@ -801,7 +801,6 @@ private:
   RangeSet::Factory F;
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
-  const RangeSet *getRangeForMinusSymbol(ProgramStateRef State, SymbolRef Sym);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
