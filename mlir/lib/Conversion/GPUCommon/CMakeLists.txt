@@ -1,9 +1,6 @@
-set(SOURCES
-  ConvertLaunchFuncToRuntimeCalls.cpp
-)
-
 add_mlir_conversion_library(MLIRGPUtoGPURuntimeTransforms
-  ${SOURCES}
+  ConvertLaunchFuncToRuntimeCalls.cpp
+  ConvertKernelFuncToBlob.cpp
 
   DEPENDS
   MLIRConversionPassIncGen
