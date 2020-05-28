@@ -1795,18 +1795,16 @@ multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
                             SDNode OpNode, ValueType VT,
                             PatFrag ld_frag, string asm,
                             X86FoldableSchedWrite sched> {
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
   let isCommutable = 1 in
   def rr : SIi8<0xC2, MRMSrcReg,
                 (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
                 [(set RC:$dst, (OpNode (VT RC:$src1), RC:$src2, timm:$cc))]>,
-                Sched<[sched]>;
+                Sched<[sched]>, SIMD_EXC;
   def rm : SIi8<0xC2, MRMSrcMem,
                 (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
                 [(set RC:$dst, (OpNode (VT RC:$src1),
                                          (ld_frag addr:$src2), timm:$cc))]>,
-                Sched<[sched.Folded, sched.ReadAfterFold]>;
-}
+                Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 }
 
 let isCodeGenOnly = 1 in {
@@ -1835,19 +1833,17 @@ let isCodeGenOnly = 1 in {
 multiclass sse12_cmp_scalar_int<Operand memop,
                          Intrinsic Int, string asm, X86FoldableSchedWrite sched,
                          PatFrags mem_frags> {
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
   def rr_Int : SIi8<0xC2, MRMSrcReg, (outs VR128:$dst),
                       (ins VR128:$src1, VR128:$src2, u8imm:$cc), asm,
                         [(set VR128:$dst, (Int VR128:$src1,
                                                VR128:$src2, timm:$cc))]>,
-           Sched<[sched]>;
-let mayLoad = 1 in
+           Sched<[sched]>, SIMD_EXC;
+  let mayLoad = 1 in
   def rm_Int : SIi8<0xC2, MRMSrcMem, (outs VR128:$dst),
                       (ins VR128:$src1, memop:$src2, u8imm:$cc), asm,
                         [(set VR128:$dst, (Int VR128:$src1,
                                                (mem_frags addr:$src2), timm:$cc))]>,
-           Sched<[sched.Folded, sched.ReadAfterFold]>;
-}
+           Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 }
 
 // Aliases to match intrinsics which expect XMM operand(s).
@@ -1878,18 +1874,17 @@ multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
                          ValueType vt, X86MemOperand x86memop,
                          PatFrag ld_frag, string OpcodeStr, Domain d,
                          X86FoldableSchedWrite sched = WriteFComX> {
-let hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1,
-    ExeDomain = d in {
+  let ExeDomain = d in {
   def rr: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                      [(set EFLAGS, (OpNode (vt RC:$src1), RC:$src2))]>,
-          Sched<[sched]>;
-let mayLoad = 1 in
+          Sched<[sched]>, SIMD_EXC;
+  let mayLoad = 1 in
   def rm: SI<opc, MRMSrcMem, (outs), (ins RC:$src1, x86memop:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                      [(set EFLAGS, (OpNode (vt RC:$src1),
                                            (ld_frag addr:$src2)))]>,
-          Sched<[sched.Folded, sched.ReadAfterFold]>;
+          Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 }
 }
 
@@ -1899,17 +1894,17 @@ multiclass sse12_ord_cmp_int<bits<8> opc, RegisterClass RC, SDNode OpNode,
                              PatFrags mem_frags, string OpcodeStr,
                              Domain d,
                              X86FoldableSchedWrite sched = WriteFComX> {
-let Uses = [MXCSR], mayRaiseFPException = 1, ExeDomain = d in {
+let ExeDomain = d in {
   def rr_Int: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                      [(set EFLAGS, (OpNode (vt RC:$src1), RC:$src2))]>,
-          Sched<[sched]>;
+          Sched<[sched]>, SIMD_EXC;
 let mayLoad = 1 in
   def rm_Int: SI<opc, MRMSrcMem, (outs), (ins RC:$src1, memop:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                      [(set EFLAGS, (OpNode (vt RC:$src1),
                                            (mem_frags addr:$src2)))]>,
-          Sched<[sched.Folded, sched.ReadAfterFold]>;
+          Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 }
 }
 
@@ -1961,18 +1956,16 @@ multiclass sse12_cmp_packed<RegisterClass RC, X86MemOperand x86memop,
                             ValueType VT, string asm,
                             X86FoldableSchedWrite sched,
                             Domain d, PatFrag ld_frag> {
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
   let isCommutable = 1 in
   def rri : PIi8<0xC2, MRMSrcReg,
              (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc), asm,
              [(set RC:$dst, (VT (X86any_cmpp RC:$src1, RC:$src2, timm:$cc)))], d>,
-            Sched<[sched]>;
+            Sched<[sched]>, SIMD_EXC;
   def rmi : PIi8<0xC2, MRMSrcMem,
              (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm,
              [(set RC:$dst,
                (VT (X86any_cmpp RC:$src1, (ld_frag addr:$src2), timm:$cc)))], d>,
-            Sched<[sched.Folded, sched.ReadAfterFold]>;
-}
+            Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
 }
 
 defm VCMPPS : sse12_cmp_packed<VR128, f128mem, v4f32,
