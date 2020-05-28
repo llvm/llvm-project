@@ -56,6 +56,11 @@ enum class VectorContractLowering {
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
   VectorContractLowering vectorContractLowering = VectorContractLowering::FMA;
+  VectorTransformsOptions &
+  setVectorTransformsOptions(VectorContractLowering opt) {
+    vectorContractLowering = opt;
+    return *this;
+  }
 };
 
 /// Collect a set of transformation patterns that are related to contracting

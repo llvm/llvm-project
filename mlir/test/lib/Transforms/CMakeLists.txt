@@ -20,7 +20,6 @@ add_mlir_library(MLIRTestTransforms
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestVectorToSCFConversion.cpp
   TestVectorTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
