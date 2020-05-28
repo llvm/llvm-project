@@ -467,8 +467,13 @@ void Session::modifyPassConfig(const Triple &FTT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
+
+      if (TT.getObjectFormat() == Triple::ELF)
+        return registerELFGraphInfo(*this, G);
+
       if (TT.getObjectFormat() == Triple::MachO)
-        return registerMachOStubsAndGOT(*this, G);
+        return registerMachOGraphInfo(*this, G);
+
       return make_error<StringError>("Unsupported object format for GOT/stub "
                                      "registration",
                                      inconvertibleErrorCode());
