@@ -2267,6 +2267,64 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
+bool Expr::isReadIfDiscardedInCPlusPlus11() const {
+  // In C++11, discarded-value expressions of a certain form are special,
+  // according to [expr]p10:
+  //   The lvalue-to-rvalue conversion (4.1) is applied only if the
+  //   expression is an lvalue of volatile-qualified type and it has
+  //   one of the following forms:
+  if (!isGLValue() || !getType().isVolatileQualified())
+    return false;
+
+  const Expr *E = IgnoreParens();
+
+  //   - id-expression (5.1.1),
+  if (isa<DeclRefExpr>(E))
+    return true;
+
+  //   - subscripting (5.2.1),
+  if (isa<ArraySubscriptExpr>(E))
+    return true;
+
+  //   - class member access (5.2.5),
+  if (isa<MemberExpr>(E))
+    return true;
+
+  //   - indirection (5.3.1),
+  if (auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return true;
+
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    //   - pointer-to-member operation (5.5),
+    if (BO->isPtrMemOp())
+      return true;
+
+    //   - comma expression (5.18) where the right operand is one of the above.
+    if (BO->getOpcode() == BO_Comma)
+      return BO->getRHS()->isReadIfDiscardedInCPlusPlus11();
+  }
+
+  //   - conditional expression (5.16) where both the second and the third
+  //     operands are one of the above, or
+  if (auto *CO = dyn_cast<ConditionalOperator>(E))
+    return CO->getTrueExpr()->isReadIfDiscardedInCPlusPlus11() &&
+           CO->getFalseExpr()->isReadIfDiscardedInCPlusPlus11();
+  // The related edge case of "*x ?: *x".
+  if (auto *BCO =
+          dyn_cast<BinaryConditionalOperator>(E)) {
+    if (auto *OVE = dyn_cast<OpaqueValueExpr>(BCO->getTrueExpr()))
+      return OVE->getSourceExpr()->isReadIfDiscardedInCPlusPlus11() &&
+             BCO->getFalseExpr()->isReadIfDiscardedInCPlusPlus11();
+  }
+
+  // Objective-C++ extensions to the rule.
+  if (isa<PseudoObjectExpr>(E) || isa<ObjCIvarRefExpr>(E))
+    return true;
+
+  return false;
+}
+
 /// isUnusedResultAWarning - Return true if this immediate expression should
 /// be warned about if the result is unused.  If so, fill in Loc and Ranges
 /// with location to warn on and the source range[s] to report with the
@@ -2555,20 +2613,31 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   }
   case CXXFunctionalCastExprClass:
   case CStyleCastExprClass: {
-    // Ignore an explicit cast to void unless the operand is a non-trivial
-    // volatile lvalue.
+    // Ignore an explicit cast to void, except in C++98 if the operand is a
+    // volatile glvalue for which we would trigger an implicit read in any
+    // other language mode. (Such an implicit read always happens as part of
+    // the lvalue conversion in C, and happens in C++ for expressions of all
+    // forms where it seems likely the user intended to trigger a volatile
+    // load.)
     const CastExpr *CE = cast<CastExpr>(this);
+    const Expr *SubE = CE->getSubExpr()->IgnoreParens();
     if (CE->getCastKind() == CK_ToVoid) {
-      if (CE->getSubExpr()->isGLValue() &&
-          CE->getSubExpr()->getType().isVolatileQualified()) {
-        const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens());
-        if (!(DRE && isa<VarDecl>(DRE->getDecl()) &&
-              cast<VarDecl>(DRE->getDecl())->hasLocalStorage()) &&
-            !isa<CallExpr>(CE->getSubExpr()->IgnoreParens())) {
-          return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc,
-                                                          R1, R2, Ctx);
-        }
+      if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+          SubE->isReadIfDiscardedInCPlusPlus11()) {
+        // Suppress the "unused value" warning for idiomatic usage of
+        // '(void)var;' used to suppress "unused variable" warnings.
+        if (auto *DRE = dyn_cast<DeclRefExpr>(SubE))
+          if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+            if (!VD->isExternallyVisible())
+              return false;
+
+        // The lvalue-to-rvalue conversion would have no effect for an array.
+        // It's implausible that the programmer expected this to result in a
+        // volatile array load, so don't warn.
+        if (SubE->getType()->isArrayType())
+          return false;
+
+        return SubE->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
       }
       return false;
     }
