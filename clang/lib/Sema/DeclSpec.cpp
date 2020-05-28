@@ -1269,7 +1269,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       // Note that this intentionally doesn't include _Complex _Bool.
       if (!S.getLangOpts().CPlusPlus)
         S.Diag(TSTLoc, diag::ext_integer_complex);
-    } else if (TypeSpecType != TST_float && TypeSpecType != TST_double) {
+    } else if (TypeSpecType != TST_float && TypeSpecType != TST_double &&
+               TypeSpecType != TST_float128) {
       S.Diag(TSCLoc, diag::err_invalid_complex_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecComplex = TSC_unspecified;
