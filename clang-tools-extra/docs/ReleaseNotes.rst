@@ -75,6 +75,13 @@ New module
 
 New checks
 ^^^^^^^^^^
+
+- New :doc:`abseil-string-find-str-contains
+  <clang-tidy/checks/abseil-string-find-str-contains>` check.
+
+  Finds ``s.find(...) == string::npos`` comparisons (for various string-like types)
+  and suggests replacing with ``absl::StrContains()``.
+
 - New :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
   Finds non-const global variables as described in check I.2 of C++ Core
