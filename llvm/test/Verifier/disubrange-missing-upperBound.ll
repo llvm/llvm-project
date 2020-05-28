@@ -2,4 +2,4 @@
 
 !named = !{!0}
 ; CHECK: Subrange must contain count or upperBound
-!0 = !DISubrange(lowerBound: -3)
+!0 = !DISubrange(lowerBound: 1, stride: 4)
