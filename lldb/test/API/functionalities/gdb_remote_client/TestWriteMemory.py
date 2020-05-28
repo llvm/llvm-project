@@ -6,6 +6,7 @@ from gdbclientutils import *
 
 class TestWriteMemory(GDBRemoteTestBase):
 
+    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test(self):
 
         class MyResponder(MockGDBServerResponder):

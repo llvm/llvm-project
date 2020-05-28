@@ -223,6 +223,7 @@ class LoadUnloadTestCase(TestBase):
         self.setSvr4Support(True)
         self.run_lldb_process_load_and_unload_commands()
 
+    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def run_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()
