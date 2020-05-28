@@ -253,8 +253,8 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
-  const char Input[] = "a\\b c\\\\d e\\\\\"f g\" h\\\"i j\\\\\\\"k \"lmn\" o pqr "
-                      "\"st \\\"u\" \\v";
+  const char Input[] =
+      R"(a\b c\\d e\\"f g" h\"i j\\\"k "lmn" o pqr "st \"u" \v)";
   const char *const Output[] = { "a\\b", "c\\\\d", "e\\f g", "h\"i", "j\\\"k",
                                  "lmn", "o", "pqr", "st \"u", "\\v" };
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
@@ -266,6 +266,17 @@ TEST(CommandLineTest, TokenizeWindowsCommandLine2) {
   const char *const Output[] = { "clang", "-c", "-DFOO=\"ABC\"", "x.cpp"};
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input, Output,
                            array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeWindowsCommandLineQuotedLastArgument) {
+  const char Input1[] = R"(a b c d "")";
+  const char *const Output1[] = {"a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input1, Output1,
+                           array_lengthof(Output1));
+  const char Input2[] = R"(a b c d ")";
+  const char *const Output2[] = {"a", "b", "c", "d"};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input2, Output2,
+                           array_lengthof(Output2));
 }
 
 TEST(CommandLineTest, TokenizeConfigFile1) {
