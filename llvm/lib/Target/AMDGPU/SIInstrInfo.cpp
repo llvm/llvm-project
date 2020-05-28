@@ -5248,18 +5248,24 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
                          ? AMDGPU::V_ADDC_U32_e64
                          : AMDGPU::V_SUBB_U32_e64;
       const auto *CarryRC = RI.getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
-      Register DummyCReg = MRI.createVirtualRegister(CarryRC);
-      Register CarryReg = MRI.createVirtualRegister(CarryRC);
+
+      Register CarryInReg = Inst.getOperand(4).getReg();
+      if (!MRI.constrainRegClass(CarryInReg, CarryRC)) {
+        Register NewCarryReg = MRI.createVirtualRegister(CarryRC);
+        BuildMI(*MBB, &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY), NewCarryReg)
+            .addReg(CarryInReg);
+      }
+
+      Register CarryOutReg = Inst.getOperand(1).getReg();
+
       Register DestReg = MRI.createVirtualRegister(RI.getEquivalentVGPRClass(
           MRI.getRegClass(Inst.getOperand(0).getReg())));
-      BuildMI(*MBB, &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY), CarryReg)
-          .addReg(Inst.getOperand(4).getReg());
       MachineInstr *CarryOp =
           BuildMI(*MBB, &Inst, Inst.getDebugLoc(), get(Opc), DestReg)
-              .addReg(DummyCReg, RegState::Define | RegState::Dead)
+              .addReg(CarryOutReg, RegState::Define)
               .add(Inst.getOperand(2))
               .add(Inst.getOperand(3))
-              .addReg(CarryReg, RegState::Kill)
+              .addReg(CarryInReg)
               .addImm(0);
       legalizeOperands(*CarryOp);
       MRI.replaceRegWith(Inst.getOperand(0).getReg(), DestReg);
