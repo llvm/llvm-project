@@ -32,6 +32,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -1001,6 +1002,15 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
                               const Triple &TargetTriple,
                               const LangOptions &LangOpts,
                               const CodeGenOptions &CodeGenOpts) {
+  if (CodeGenOpts.SanitizeCoverageType ||
+      CodeGenOpts.SanitizeCoverageIndirectCalls ||
+      CodeGenOpts.SanitizeCoverageTraceCmp) {
+    auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
+    MPM.addPass(ModuleSanitizerCoveragePass(
+        SancovOpts, CodeGenOpts.SanitizeCoverageWhitelistFiles,
+        CodeGenOpts.SanitizeCoverageBlacklistFiles));
+  }
+
   auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
     MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
     bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
@@ -1249,6 +1259,20 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(BoundsCheckingPass());
             });
+
+      if (CodeGenOpts.SanitizeCoverageType ||
+          CodeGenOpts.SanitizeCoverageIndirectCalls ||
+          CodeGenOpts.SanitizeCoverageTraceCmp) {
+        PB.registerOptimizerLastEPCallback(
+            [this](ModulePassManager &MPM,
+                   PassBuilder::OptimizationLevel Level) {
+              auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
+              MPM.addPass(ModuleSanitizerCoveragePass(
+                  SancovOpts, CodeGenOpts.SanitizeCoverageWhitelistFiles,
+                  CodeGenOpts.SanitizeCoverageBlacklistFiles));
+            });
+      }
+
       if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
         int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
         bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
@@ -1257,17 +1281,19 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
               MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
             });
         PB.registerOptimizerLastEPCallback(
-            [TrackOrigins, Recover](FunctionPassManager &FPM,
+            [TrackOrigins, Recover](ModulePassManager &MPM,
                                     PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
+              MPM.addPass(createModuleToFunctionPassAdaptor(
+                  MemorySanitizerPass({TrackOrigins, Recover, false})));
             });
       }
       if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
         PB.registerPipelineStartEPCallback(
             [](ModulePassManager &MPM) { MPM.addPass(ThreadSanitizerPass()); });
         PB.registerOptimizerLastEPCallback(
-            [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(ThreadSanitizerPass());
+            [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(
+                  createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
             });
       }
       if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
@@ -1278,10 +1304,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
         bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
         PB.registerOptimizerLastEPCallback(
-            [Recover, UseAfterScope](FunctionPassManager &FPM,
+            [Recover, UseAfterScope](ModulePassManager &MPM,
                                      PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(AddressSanitizerPass(
-                  /*CompileKernel=*/false, Recover, UseAfterScope));
+              MPM.addPass(
+                  createModuleToFunctionPassAdaptor(AddressSanitizerPass(
+                      /*CompileKernel=*/false, Recover, UseAfterScope)));
             });
         bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
@@ -1323,15 +1350,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
-    }
-
-    if (CodeGenOpts.SanitizeCoverageType ||
-        CodeGenOpts.SanitizeCoverageIndirectCalls ||
-        CodeGenOpts.SanitizeCoverageTraceCmp) {
-      auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-      MPM.addPass(ModuleSanitizerCoveragePass(
-          SancovOpts, CodeGenOpts.SanitizeCoverageWhitelistFiles,
-          CodeGenOpts.SanitizeCoverageBlacklistFiles));
     }
 
     if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
