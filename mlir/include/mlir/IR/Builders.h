@@ -128,6 +128,7 @@ public:
   /// as attributes.
   DenseIntElementsAttr getI32TensorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64TensorAttr(ArrayRef<int64_t> values);
+  DenseIntElementsAttr getIndexTensorAttr(ArrayRef<int64_t> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
   ArrayAttr getBoolArrayAttr(ArrayRef<bool> values);
