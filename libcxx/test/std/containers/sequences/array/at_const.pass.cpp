@@ -8,7 +8,7 @@
 
 // <array>
 
-// reference at (size_type); // constexpr in C++17
+// const_reference at (size_type) const; // constexpr in C++14
 
 #include <array>
 #include <cassert>
@@ -24,21 +24,17 @@
 #include "disable_missing_braces_warning.h"
 
 
-TEST_CONSTEXPR_CXX17 bool tests()
+TEST_CONSTEXPR_CXX14 bool tests()
 {
     {
         typedef double T;
         typedef std::array<T, 3> C;
-        C c = {1, 2, 3.5};
-        typename C::reference r1 = c.at(0);
+        C const c = {1, 2, 3.5};
+        typename C::const_reference r1 = c.at(0);
         assert(r1 == 1);
-        r1 = 5.5;
-        assert(c[0] == 5.5);
 
-        typename C::reference r2 = c.at(2);
+        typename C::const_reference r2 = c.at(2);
         assert(r2 == 3.5);
-        r2 = 7.5;
-        assert(c[2] == 7.5);
     }
     return true;
 }
@@ -47,7 +43,7 @@ void test_exceptions()
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        std::array<int, 4> array = {1, 2, 3, 4};
+        std::array<int, 4> const array = {1, 2, 3, 4};
 
         try {
             TEST_IGNORE_NODISCARD array.at(4);
@@ -106,7 +102,7 @@ int main(int, char**)
     tests();
     test_exceptions();
 
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 14
     static_assert(tests(), "");
 #endif
     return 0;

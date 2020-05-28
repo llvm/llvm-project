@@ -149,6 +149,12 @@
 # define TEST_CONSTEXPR_CXX14
 #endif
 
+#if TEST_STD_VER >= 17
+# define TEST_CONSTEXPR_CXX17 constexpr
+#else
+# define TEST_CONSTEXPR_CXX17
+#endif
+
 #if TEST_STD_VER >= 20
 # define TEST_CONSTEXPR_CXX20 constexpr
 #else
