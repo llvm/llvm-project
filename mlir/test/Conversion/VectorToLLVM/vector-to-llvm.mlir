@@ -952,3 +952,15 @@ func @genbool_1d() -> vector<8xi1> {
 // CHECK: %[[T8:.*]] = llvm.mlir.constant(3 : i64) : !llvm.i64
 // CHECK: %[[T9:.*]] = llvm.insertelement %[[T0]], %[[T7]][%[[T8]] : !llvm.i64] : !llvm<"<8 x i1>">
 // CHECK: llvm.return %9 : !llvm<"<8 x i1>">
+
+// CHECK-LABEL: func @flat_transpose
+// CHECK-SAME:  %[[A:.*]]: !llvm<"<16 x float>">
+// CHECK:       %[[T:.*]] = llvm.intr.matrix.transpose %[[A]]
+// CHECK-SAME:      {columns = 4 : i32, rows = 4 : i32} :
+// CHECK-SAME:      !llvm<"<16 x float>"> into !llvm<"<16 x float>">
+// CHECK:       llvm.return %[[T]] : !llvm<"<16 x float>">
+func @flat_transpose(%arg0: vector<16xf32>) -> vector<16xf32> {
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
+     : vector<16xf32> -> vector<16xf32>
+  return %0 : vector<16xf32>
+}

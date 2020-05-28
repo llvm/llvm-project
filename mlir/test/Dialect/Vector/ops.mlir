@@ -140,7 +140,7 @@ func @extract_strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
   indexing_maps = #contraction_to_scalar_accesses,
   iterator_types = ["reduction"]
 }
-// CHECK-LABEL: contraction_to_scalar
+// CHECK-LABEL: @contraction_to_scalar
 func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
   // CHECK:      %[[C0:.*]] = constant 0.000000e+00 : f32
   %f0 = constant 0.0: f32
@@ -172,7 +172,7 @@ func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32
   iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction",
                     "reduction"]
 }
-// CHECK-LABEL: contraction
+// CHECK-LABEL: @contraction
 func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
                   %arg2 : vector<8x15x5xf32>, %arg3 : vector<8x8x15x5xf32>,
                   %arg4 : index) {
@@ -196,7 +196,7 @@ func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf32>,
   return
 }
 
-// CHECK-LABEL: create_vector_mask
+// CHECK-LABEL: @create_vector_mask
 func @create_vector_mask() {
   // CHECK:      %[[C2:.*]] = constant 2 : index
   %c2 = constant 2 : index
@@ -208,14 +208,14 @@ func @create_vector_mask() {
   return
 }
 
-// CHECK-LABEL: constant_vector_mask
+// CHECK-LABEL: @constant_vector_mask
 func @constant_vector_mask() {
   // CHECK: vector.constant_mask [3, 2] : vector<4x3xi1>
   %0 = vector.constant_mask [3, 2] : vector<4x3xi1>
   return
 }
 
-// CHECK-LABEL: extract_slices
+// CHECK-LABEL: @extract_slices
 func @extract_slices(%arg0 : vector<4x2xf32>)
   -> (tuple<vector<2x2xf32>, vector<2x2xf32>>) {
   // CHECK: vector.extract_slices %{{.*}}, [2, 2], [1, 1] : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
@@ -227,7 +227,7 @@ func @extract_slices(%arg0 : vector<4x2xf32>)
   return %3 : tuple<vector<2x2xf32>, vector<2x2xf32>>
 }
 
-// CHECK-LABEL: insert_slices
+// CHECK-LABEL: @insert_slices
 func @insert_slices(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf32>>)
   -> (vector<4x2xf32>) {
   // CHECK: vector.insert_slices %{{.*}}, [2, 2], [1, 1] : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
@@ -243,7 +243,7 @@ func @vector_print(%arg0: vector<8x4xf32>) {
   return
 }
 
-// CHECK-LABEL: reshape
+// CHECK-LABEL: @reshape
 func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
   // CHECK:      %[[C2:.*]] = constant 2 : index
   %c2 = constant 2 : index
@@ -260,7 +260,7 @@ func @reshape(%arg0 : vector<3x2x4xf32>) -> (vector<2x3x4xf32>) {
   return %1 : vector<2x3x4xf32>
 }
 
-// CHECK-LABEL: shape_cast
+// CHECK-LABEL: @shape_cast
 func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>)
   -> (vector<15x2xf32>, tuple<vector<20x2xf32>, vector<12x2xf32>>) {
@@ -284,7 +284,7 @@ func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
   return
 }
 
-// CHECK-LABEL: reduce_fp
+// CHECK-LABEL: @reduce_fp
 func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   // CHECK:    vector.reduction "add", %{{.*}} : vector<16xf32> into f32
   vector.reduction "add", %arg0 : vector<16xf32> into f32
@@ -302,7 +302,7 @@ func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   return %0 : f32
 }
 
-// CHECK-LABEL: reduce_int
+// CHECK-LABEL: @reduce_int
 func @reduce_int(%arg0: vector<16xi32>) -> i32 {
   // CHECK:    vector.reduction "add", %{{.*}} : vector<16xi32> into i32
   vector.reduction "add", %arg0 : vector<16xi32> into i32
@@ -322,14 +322,34 @@ func @reduce_int(%arg0: vector<16xi32>) -> i32 {
   return %0 : i32
 }
 
-// CHECK-LABEL: transpose_fp
+// CHECK-LABEL: @transpose_fp
 func @transpose_fp(%arg0: vector<3x7xf32>) -> vector<7x3xf32> {
+  // CHECK: %[[X:.*]] = vector.transpose %{{.*}}, [1, 0] : vector<3x7xf32> to vector<7x3xf32>
   %0 = vector.transpose %arg0, [1, 0] : vector<3x7xf32> to vector<7x3xf32>
+  // CHECK: return %[[X]] : vector<7x3xf32>
   return %0 : vector<7x3xf32>
 }
 
-// CHECK-LABEL: transpose_int
+// CHECK-LABEL: @transpose_int
 func @transpose_int(%arg0: vector<11x7x3x2xi32>) -> vector<2x11x7x3xi32> {
+  // CHECK: %[[X:.*]] = vector.transpose %{{.*}}, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x11x7x3xi32>
   %0 = vector.transpose %arg0, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x11x7x3xi32>
+  // CHECK: return %[[X]] : vector<2x11x7x3xi32>
   return %0 : vector<2x11x7x3xi32>
+}
+
+// CHECK-LABEL: @flat_transpose_fp
+func @flat_transpose_fp(%arg0: vector<16xf32>) -> vector<16xf32> {
+  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 4 : i32, rows = 4 : i32} : vector<16xf32> -> vector<16xf32>
+  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf32>
+  // CHECK: return %[[X]] : vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: @flat_transpose_int
+func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
+  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 8 : i32, rows = 2 : i32} : vector<16xi32> -> vector<16xi32>
+  %0 = vector.flat_transpose %arg0 { rows = 2: i32, columns = 8: i32 } : vector<16xi32> -> vector<16xi32>
+  // CHECK: return %[[X]] : vector<16xi32>
+  return %0 : vector<16xi32>
 }
