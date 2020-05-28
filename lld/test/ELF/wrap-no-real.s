@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/wrap-no-real.s -o %t2.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/wrap-no-real2.s -o %t3.o
-// RUN: ld.lld -o %t3.so -shared %t3.o
+// RUN: ld.lld -o %t3.so -shared --soname=t3 %t3.o
 
 // RUN: ld.lld -o %t %t1.o %t2.o -wrap foo
 // RUN: llvm-objdump -d %t | FileCheck %s
@@ -23,9 +23,9 @@
 // RUN: llvm-readelf -s -x .got %t2 | FileCheck --check-prefix=READELF --implicit-check-not=__real_ %s
 
 // CHECK2: <_start>:
-// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 2022f8
-// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 2022f8
-// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 202300
+// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 2022b8
+// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 2022b8
+// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 2022c0
 
 .global _start
 _start:
