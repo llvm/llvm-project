@@ -576,7 +576,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     SmallVector<Instruction *, 2> Statepoints;
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        if (isStatepoint(I))
+        if (isa<GCStatepointInst>(I))
           Statepoints.push_back(&I);
     for (auto &I : Statepoints)
       EverMadeChange |= simplifyOffsetableRelocate(*I);

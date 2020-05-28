@@ -189,7 +189,8 @@ static bool needsStatepoint(CallBase *Call, const TargetLibraryInfo &TLI) {
       return false;
   }
 
-  return !(isStatepoint(Call) || isGCRelocate(Call) || isGCResult(Call));
+  return !(isa<GCStatepointInst>(Call) || isa<GCRelocateInst>(Call) ||
+           isa<GCResultInst>(Call));
 }
 
 /// Returns true if this loop is known to contain a call safepoint which
