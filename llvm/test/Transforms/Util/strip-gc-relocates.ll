@@ -17,8 +17,8 @@ entry:
 ; CHECK: gc.statepoint
 ; CHECK-NOT: gc.relocate
 ; CHECK: ret i32 addrspace(1)* %arg
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 1, i32 100, i32 addrspace(1)* %arg)
-  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 8, i32 8) ; (%arg, %arg)
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %arg) ["deopt" (i32 100)]
+  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7) ; (%arg, %arg)
   %arg.relocated.casted = bitcast i8 addrspace(1)* %arg.relocated to i32 addrspace(1)*
   ret i32 addrspace(1)* %arg.relocated.casted
 }
@@ -58,18 +58,18 @@ define i32 addrspace(1)* @test3(i32 addrspace(1)* %arg) gc "statepoint-example" 
 ; CHECK-LABEL: unwind_dest:
 ; CHECK-NOT: gc.relocate
 entry:
-  %statepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 1, i32 100, i32 addrspace(1)* %arg)
+  %statepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %arg) ["deopt" (i32 100)]
           to label %normal_dest unwind label %unwind_dest
 
 normal_dest:                                      ; preds = %entry
-  %arg.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 8, i32 8) ; (%arg, %arg)
+  %arg.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7) ; (%arg, %arg)
   %arg.relocated1.casted = bitcast i8 addrspace(1)* %arg.relocated1 to i32 addrspace(1)*
   ret i32 addrspace(1)* %arg.relocated1.casted
 
 unwind_dest:                                      ; preds = %entry
   %lpad = landingpad token
           cleanup
-  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %lpad, i32 8, i32 8) ; (%arg, %arg)
+  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %lpad, i32 7, i32 7) ; (%arg, %arg)
   %arg.relocated.casted = bitcast i8 addrspace(1)* %arg.relocated to i32 addrspace(1)*
   resume token undef
 }
@@ -110,8 +110,8 @@ entry:
 ; CHECK-LABEL: test5
 ; CHECK: gc.statepoint
 ; CHECK-NOT: gc.relocate
-  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 1, i32 100, i32 addrspace(1)* %arg)
-  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 8, i32 8) ; (%arg, %arg)
+  %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @g, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %arg) ["deopt" (i32 100)]
+  %arg.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7) ; (%arg, %arg)
   ret i8 addrspace(1)* %arg.relocated
 }
 
