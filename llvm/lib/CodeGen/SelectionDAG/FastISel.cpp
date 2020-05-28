@@ -619,7 +619,7 @@ bool FastISel::selectBinaryOp(const User *I, unsigned ISDOpcode) {
   // we don't have anything that canonicalizes operand order.
   if (const auto *CI = dyn_cast<ConstantInt>(I->getOperand(0)))
     if (isa<Instruction>(I) && cast<Instruction>(I)->isCommutative()) {
-      unsigned Op1 = getRegForValue(I->getOperand(1));
+      Register Op1 = getRegForValue(I->getOperand(1));
       if (!Op1)
         return false;
       bool Op1IsKill = hasTrivialKill(I->getOperand(1));
@@ -1941,7 +1941,7 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
       return selectCast(I, ISD::ZERO_EXTEND);
     if (DstVT.bitsLT(SrcVT))
       return selectCast(I, ISD::TRUNCATE);
-    unsigned Reg = getRegForValue(I->getOperand(0));
+    Register Reg = getRegForValue(I->getOperand(0));
     if (!Reg)
       return false;
     updateValueMap(I, Reg);
@@ -2071,7 +2071,7 @@ Register FastISel::constrainOperandRegClass(const MCInstrDesc &II, Register Op,
     if (!MRI.constrainRegClass(Op, RegClass)) {
       // If it's not legal to COPY between the register classes, something
       // has gone very wrong before we got here.
-      unsigned NewOp = createResultReg(RegClass);
+      Register NewOp = createResultReg(RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), NewOp).addReg(Op);
       return NewOp;
