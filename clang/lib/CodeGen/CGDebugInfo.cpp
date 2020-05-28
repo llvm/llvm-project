@@ -2732,9 +2732,17 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
   QualType QTy(Ty, 0);
   auto SizeExpr = SizeExprCache.find(QTy);
   if (SizeExpr != SizeExprCache.end())
-    Subscript = DBuilder.getOrCreateSubrange(0, SizeExpr->getSecond());
-  else
-    Subscript = DBuilder.getOrCreateSubrange(0, Count ? Count : -1);
+    Subscript = DBuilder.getOrCreateSubrange(
+        SizeExpr->getSecond() /*count*/, nullptr /*lowerBound*/,
+        nullptr /*upperBound*/, nullptr /*stride*/);
+  else {
+    auto *CountNode =
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+            llvm::Type::getInt64Ty(CGM.getLLVMContext()), Count ? Count : -1));
+    Subscript = DBuilder.getOrCreateSubrange(
+        CountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+        nullptr /*stride*/);
+  }
   llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
 
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
@@ -2754,8 +2762,18 @@ llvm::DIType *CGDebugInfo::CreateType(const ConstantMatrixType *Ty,
 
   // Create ranges for both dimensions.
   llvm::SmallVector<llvm::Metadata *, 2> Subscripts;
-  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumColumns()));
-  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumRows()));
+  auto *ColumnCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumColumns()));
+  auto *RowCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumRows()));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      ColumnCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      RowCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
   llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscripts);
   return DBuilder.createArrayType(Size, Align, ElementTy, SubscriptArray);
 }
@@ -2810,10 +2828,17 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
 
     auto SizeNode = SizeExprCache.find(EltTy);
     if (SizeNode != SizeExprCache.end())
-      Subscripts.push_back(
-          DBuilder.getOrCreateSubrange(0, SizeNode->getSecond()));
-    else
-      Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Count));
+      Subscripts.push_back(DBuilder.getOrCreateSubrange(
+          SizeNode->getSecond() /*count*/, nullptr /*lowerBound*/,
+          nullptr /*upperBound*/, nullptr /*stride*/));
+    else {
+      auto *CountNode =
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+              llvm::Type::getInt64Ty(CGM.getLLVMContext()), Count));
+      Subscripts.push_back(DBuilder.getOrCreateSubrange(
+          CountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+          nullptr /*stride*/));
+    }
     EltTy = Ty->getElementType();
   }
 

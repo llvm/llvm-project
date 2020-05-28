@@ -1858,9 +1858,34 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   if (auto *CE = N->getCount().dyn_cast<ConstantInt*>())
     Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
   else
-    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable*>(),
-                          /*ShouldSkipNull */ false);
-  Printer.printInt("lowerBound", N->getLowerBound());
+    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable *>(),
+                          /*ShouldSkipNull */ true);
+
+  // A lowerBound of constant 0 should not be skipped, since it is different
+  // from an unspecified lower bound (= nullptr).
+  auto *LBound = N->getRawLowerBound();
+  if (auto *LE = dyn_cast_or_null<ConstantAsMetadata>(LBound)) {
+    auto *LV = cast<ConstantInt>(LE->getValue());
+    Printer.printInt("lowerBound", LV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
+
+  auto *UBound = N->getRawUpperBound();
+  if (auto *UE = dyn_cast_or_null<ConstantAsMetadata>(UBound)) {
+    auto *UV = cast<ConstantInt>(UE->getValue());
+    Printer.printInt("upperBound", UV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
+
+  auto *Stride = N->getRawStride();
+  if (auto *SE = dyn_cast_or_null<ConstantAsMetadata>(Stride)) {
+    auto *SV = cast<ConstantInt>(SE->getValue());
+    Printer.printInt("stride", SV->getSExtValue(), /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
+
   Out << ")";
 }
 
