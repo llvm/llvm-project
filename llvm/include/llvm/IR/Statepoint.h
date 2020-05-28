@@ -134,6 +134,53 @@ public:
       cast<PointerType>(getActualCalledOperand()->getType())->getElementType();
     return cast<FunctionType>(CalleeTy)->getReturnType();
   }
+
+
+  /// Return the number of arguments to the underlying call.
+  size_t actual_arg_size() const { return getNumCallArgs(); }
+  /// Return an iterator to the begining of the arguments to the underlying call
+  const_op_iterator actual_arg_begin() const {
+    assert(CallArgsBeginPos <= (int)arg_size());
+    return arg_begin() + CallArgsBeginPos;
+  }
+  /// Return an end iterator of the arguments to the underlying call
+  const_op_iterator actual_arg_end() const {
+    auto I = actual_arg_begin() + actual_arg_size();
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+  /// range adapter for actual call arguments
+  iterator_range<const_op_iterator> actual_args() const {
+    return make_range(actual_arg_begin(), actual_arg_end());
+  }
+
+  /// Returns an iterator to the begining of the argument range describing gc
+  /// values for the statepoint.
+  const_op_iterator gc_args_begin() const {
+    // The current format has two length prefix bundles between call args and
+    // start of gc args.  This will be removed in the near future.
+    const Value *NumGCTransitionArgs = *actual_arg_end();
+    uint64_t NumTrans = cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
+    const_op_iterator trans_end = actual_arg_end() + 1 + NumTrans;
+    const Value *NumDeoptArgs = *trans_end;
+    uint64_t NumDeopt = cast<ConstantInt>(NumDeoptArgs)->getZExtValue();
+    auto I = trans_end + 1 + NumDeopt;
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+
+  /// Return an end iterator for the gc argument range
+  const_op_iterator gc_args_end() const { return arg_end(); }
+
+  /// Return the operand index at which the gc args begin
+  unsigned gcArgsStartIdx() const {
+    return gc_args_begin() - op_begin();
+  }
+
+  /// range adapter for gc arguments
+  iterator_range<const_op_iterator> gc_args() const {
+    return make_range(gc_args_begin(), gc_args_end());
+  }
 };
 
 /// A wrapper around a GC intrinsic call, this provides most of the actual
@@ -201,26 +248,16 @@ public:
     return getCall()->doesNotThrow() || (F ? F->doesNotThrow() : false);
   }
 
-
-  size_t arg_size() const { return getNumCallArgs(); }
-  arg_iterator arg_begin() const {
-    assert(CallArgsBeginPos <= (int)getCall()->arg_size());
-    return getCall()->arg_begin() + CallArgsBeginPos;
-  }
-  arg_iterator arg_end() const {
-    auto I = arg_begin() + arg_size();
-    assert((getCall()->arg_end() - I) >= 0);
-    return I;
+  size_t arg_size() const { return getCall()->actual_arg_size(); }
+  arg_iterator arg_begin() const { return getCall()->actual_arg_begin(); }
+  arg_iterator arg_end() const { return getCall()->actual_arg_end(); }
+  iterator_range<arg_iterator> call_args() const {
+    return getCall()->actual_args();
   }
 
   ValueTy *getArgument(unsigned Index) {
     assert(Index < arg_size() && "out of bounds!");
     return *(arg_begin() + Index);
-  }
-
-  /// range adapter for call arguments
-  iterator_range<arg_iterator> call_args() const {
-    return make_range(arg_begin(), arg_end());
   }
 
   /// Return true if the call or the callee has the given attribute.
@@ -274,16 +311,15 @@ public:
     return make_range(deopt_begin(), deopt_end());
   }
 
-  arg_iterator gc_args_begin() const { return deopt_end(); }
-  arg_iterator gc_args_end() const { return getCall()->arg_end(); }
-
-  unsigned gcArgsStartIdx() const {
-    return gc_args_begin() - getCall()->op_begin();
+  arg_iterator gc_args_begin() const {
+    auto I = getCall()->gc_args_begin();
+    assert(I == deopt_end());
+    return I;
   }
-
-  /// range adapter for gc arguments
+  arg_iterator gc_args_end() const { return getCall()->gc_args_end(); }
+  unsigned gcArgsStartIdx() const { return getCall()->gcArgsStartIdx(); }
   iterator_range<arg_iterator> gc_args() const {
-    return make_range(gc_args_begin(), gc_args_end());
+    return getCall()->gc_args();
   }
 
   /// Get list of all gc reloactes linked to this statepoint
