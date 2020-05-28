@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
@@ -100,4 +101,92 @@ mlir::linalg::getAssumedNonViewOperands(LinalgOp linalgOp) {
            "expected scalar or vector type");
   }
   return res;
+}
+
+bool mlir::linalg::isParallelIteratorType(Attribute attr) {
+  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
+    return strAttr.getValue() == getParallelIteratorTypeName();
+  }
+  return false;
+}
+
+bool mlir::linalg::isReductionIteratorType(Attribute attr) {
+  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
+    return strAttr.getValue() == getReductionIteratorTypeName();
+  }
+  return false;
+}
+
+bool mlir::linalg::isWindowIteratorType(Attribute attr) {
+  if (auto strAttr = attr.dyn_cast<StringAttr>()) {
+    return strAttr.getValue() == getWindowIteratorTypeName();
+  }
+  return false;
+}
+
+/// Explicit instantiation of loop nest generator for different loop types.
+template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
+template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
+template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
+
+/// Specialization of loop nest generator for scf.parallel loops to handle
+/// iterator types that are not parallel. These are generated as sequential
+/// loops.
+template <>
+void mlir::linalg::GenerateLoopNest<scf::ForOp>::doit(
+    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
+    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
+  edsc::GenericLoopNestRangeBuilder<scf::ForOp>(allIvs, loopRanges)(fun);
+}
+
+template <>
+void mlir::linalg::GenerateLoopNest<AffineForOp>::doit(
+    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
+    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
+  edsc::GenericLoopNestRangeBuilder<AffineForOp>(allIvs, loopRanges)(fun);
+}
+
+template <>
+void mlir::linalg::GenerateLoopNest<scf::ParallelOp>::doit(
+    MutableArrayRef<Value> allIvs, ArrayRef<SubViewOp::Range> loopRanges,
+    ArrayRef<Attribute> iteratorTypes, std::function<void(void)> fun) {
+  // Check if there is nothing to do here. This is also the recursion
+  // termination.
+  if (loopRanges.empty())
+    return;
+  size_t nOuterPar = iteratorTypes.take_front(loopRanges.size())
+                         .take_while(isParallelIteratorType)
+                         .size();
+  if (nOuterPar == 0 && loopRanges.size() == 1)
+    // Generate the sequential for loop for the remaining non-parallel loop.
+    return GenerateLoopNest<scf::ForOp>::doit(allIvs, loopRanges, iteratorTypes,
+                                              fun);
+  if (nOuterPar == 0) {
+    // The immediate outer loop is not parallel. Generate a scf.for op for this
+    // loop, but there might be subsequent loops that are parallel. Use
+    // recursion to find those.
+    auto nestedFn = [&]() {
+      GenerateLoopNest<scf::ParallelOp>::doit(allIvs.drop_front(),
+                                              loopRanges.drop_front(),
+                                              iteratorTypes.drop_front(), fun);
+    };
+    return GenerateLoopNest<scf::ForOp>::doit(allIvs[0], loopRanges[0],
+                                              iteratorTypes[0], nestedFn);
+  }
+  if (nOuterPar == loopRanges.size()) {
+    // All loops are parallel, so generate the scf.parallel op.
+    return edsc::GenericLoopNestRangeBuilder<scf::ParallelOp>(allIvs,
+                                                              loopRanges)(fun);
+  }
+  // Generate scf.parallel for the outer parallel loops. The next inner loop is
+  // sequential, but there might be more parallel loops after that. So recurse
+  // into the same method.
+  auto nestedFn = [&]() {
+    GenerateLoopNest<scf::ParallelOp>::doit(
+        allIvs.drop_front(nOuterPar), loopRanges.drop_front(nOuterPar),
+        iteratorTypes.drop_front(nOuterPar), fun);
+  };
+  return GenerateLoopNest<scf::ParallelOp>::doit(
+      allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar),
+      iteratorTypes.take_front(nOuterPar), nestedFn);
 }

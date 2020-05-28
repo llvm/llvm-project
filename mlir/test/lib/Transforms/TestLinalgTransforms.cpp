@@ -101,6 +101,14 @@ static void applyPatterns(FuncOp funcOp) {
       ctx, LinalgTilingOptions().setTileSizes({5, 6}).setInterchange({1, 0}),
       LinalgMarker({"__with_perm__"}, "L1__with_perm__"));
 
+  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+      ctx,
+      LinalgTilingOptions()
+          .setTileSizes({16, 8, 4})
+          .setInterchange({1, 2, 0})
+          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgMarker({"par__with_perm__"}, "after_par__with_perm__"));
+
   //===--------------------------------------------------------------------===//
   // Linalg to loops patterns.
   //===--------------------------------------------------------------------===//
