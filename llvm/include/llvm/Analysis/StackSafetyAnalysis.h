@@ -126,12 +126,11 @@ public:
 /// (legacy pass manager).
 class StackSafetyGlobalInfoWrapperPass : public ModulePass {
   StackSafetyGlobalInfo SSGI;
-  bool SetMetadata;
 
 public:
   static char ID;
 
-  StackSafetyGlobalInfoWrapperPass(bool SetMetadata = false);
+  StackSafetyGlobalInfoWrapperPass();
 
   const StackSafetyGlobalInfo &getResult() const { return SSGI; }
 
@@ -141,7 +140,7 @@ public:
   bool runOnModule(Module &M) override;
 };
 
-ModulePass *createStackSafetyGlobalInfoWrapperPass(bool SetMetadata);
+ModulePass *createStackSafetyGlobalInfoWrapperPass();
 
 } // end namespace llvm
 
