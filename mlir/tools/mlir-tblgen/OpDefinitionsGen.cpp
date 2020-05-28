@@ -1890,27 +1890,38 @@ public:
 private:
   explicit OpOperandAdaptorEmitter(const Operator &op);
 
-  Class adapterClass;
+  Class adaptor;
 };
 } // end namespace
 
 OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
-    : adapterClass(op.getCppClassName().str() + "OperandAdaptor") {
-  adapterClass.newField("ArrayRef<Value>", "odsOperands");
-  adapterClass.newField("DictionaryAttr", "odsAttrs");
+    : adaptor(op.getAdaptorName()) {
+  adaptor.newField("ValueRange", "odsOperands");
+  adaptor.newField("DictionaryAttr", "odsAttrs");
   const auto *attrSizedOperands =
       op.getTrait("OpTrait::AttrSizedOperandSegments");
-  auto &constructor = adapterClass.newConstructor(
-      attrSizedOperands
-          ? "ArrayRef<Value> values, DictionaryAttr attrs"
-          : "ArrayRef<Value> values, DictionaryAttr attrs = nullptr");
-  constructor.body() << "  odsOperands = values;\n";
-  constructor.body() << "  odsAttrs = attrs;\n";
+  {
+    auto &constructor = adaptor.newConstructor(
+        attrSizedOperands
+            ? "ValueRange values, DictionaryAttr attrs"
+            : "ValueRange values, DictionaryAttr attrs = nullptr");
+    constructor.addMemberInitializer("odsOperands", "values");
+    constructor.addMemberInitializer("odsAttrs", "attrs");
+  }
+
+  {
+    auto &constructor = adaptor.newConstructor(
+        llvm::formatv("{0}& op", op.getCppClassName()).str());
+    constructor.addMemberInitializer("odsOperands",
+                                     "op.getOperation()->getOperands()");
+    constructor.addMemberInitializer("odsAttrs",
+                                     "op.getOperation()->getAttrDictionary()");
+  }
 
   std::string sizeAttrInit =
       formatv(adapterSegmentSizeAttrInitCode, "operand_segment_sizes");
-  generateNamedOperandGetters(op, adapterClass, sizeAttrInit,
-                              /*rangeType=*/"ArrayRef<Value>",
+  generateNamedOperandGetters(op, adaptor, sizeAttrInit,
+                              /*rangeType=*/"ValueRange",
                               /*rangeBeginCall=*/"odsOperands.begin()",
                               /*rangeSizeCall=*/"odsOperands.size()",
                               /*getOperandCallPattern=*/"odsOperands[{0}]");
@@ -1919,7 +1930,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
   fctx.withBuilder("mlir::Builder(odsAttrs.getContext())");
 
   auto emitAttr = [&](StringRef name, Attribute attr) {
-    auto &body = adapterClass.newMethod(attr.getStorageType(), name).body();
+    auto &body = adaptor.newMethod(attr.getStorageType(), name).body();
     body << "  assert(odsAttrs && \"no attributes when constructing adapter\");"
          << "\n  " << attr.getStorageType() << " attr = "
          << "odsAttrs.get(\"" << name << "\").";
@@ -1949,11 +1960,11 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(const Operator &op)
 }
 
 void OpOperandAdaptorEmitter::emitDecl(const Operator &op, raw_ostream &os) {
-  OpOperandAdaptorEmitter(op).adapterClass.writeDeclTo(os);
+  OpOperandAdaptorEmitter(op).adaptor.writeDeclTo(os);
 }
 
 void OpOperandAdaptorEmitter::emitDef(const Operator &op, raw_ostream &os) {
-  OpOperandAdaptorEmitter(op).adapterClass.writeDefTo(os);
+  OpOperandAdaptorEmitter(op).adaptor.writeDefTo(os);
 }
 
 // Emits the opcode enum and op classes.

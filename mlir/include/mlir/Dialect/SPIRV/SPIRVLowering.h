@@ -124,7 +124,7 @@ Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
 // with AffineMap that has static strides. Extend to handle dynamic strides.
 spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
                                    MemRefType baseType, Value basePtr,
-                                   ArrayRef<Value> indices, Location loc,
+                                   ValueRange indices, Location loc,
                                    OpBuilder &builder);
 
 /// Sets the InterfaceVarABIAttr and EntryPointABIAttr for a function and its
