@@ -1519,11 +1519,6 @@ void ModuleBitcodeWriter::writeGenericDINode(const GenericDINode *N,
   Record.clear();
 }
 
-static uint64_t rotateSign(int64_t I) {
-  uint64_t U = I;
-  return I < 0 ? ~(U << 1) : U << 1;
-}
-
 void ModuleBitcodeWriter::writeDISubrange(const DISubrange *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned Abbrev) {
