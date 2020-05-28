@@ -345,11 +345,17 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr, UseInfo &US) {
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
 
         auto B = CB.arg_begin(), E = CB.arg_end();
+        int Found = 0;
         for (auto A = B; A != E; ++A) {
           if (A->get() == V) {
+            ++Found;
             ConstantRange Offset = offsetFrom(UI, Ptr);
             US.Calls.emplace_back(Callee, A - B, Offset);
           }
+        }
+        if (!Found) {
+          US.updateRange(UnknownRange);
+          return false;
         }
 
         break;
