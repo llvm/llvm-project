@@ -290,6 +290,8 @@ enum GlobalValueSummarySymtabCodes {
   //                                        numrefs, numrefs x valueid,
   //                                        n x (valueid, offset)]
   FS_PERMODULE_VTABLE_GLOBALVAR_INIT_REFS = 23,
+  // The total number of basic blocks in the module.
+  FS_BLOCK_COUNT = 24,
 };
 
 enum MetadataCodes {

@@ -2828,8 +2828,13 @@ void AssemblyWriter::printModuleSummaryIndex() {
   }
 
   // Don't emit flags when it's not really needed (value is zero by default).
-  if (TheIndex->getFlags())
+  if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";
+    ++NumSlots;
+  }
+
+  Out << "^" << NumSlots << " = blockcount: " << TheIndex->getBlockCount()
+      << "\n";
 }
 
 static const char *

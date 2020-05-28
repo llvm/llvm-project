@@ -20,6 +20,7 @@
 ; CHECK-NEXT:    <FLAGS
 ; See if the call to func is registered
 ; CHECK-NEXT:    <PERMODULE {{.*}} op4=1
+; CHECK-NEXT:    <BLOCK_COUNT op0=1/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK: <STRTAB_BLOCK
 ; CHECK-NEXT: blob data = 'undefinedglobmainfunc{{.*}}'
@@ -35,6 +36,7 @@
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered.
 ; COMBINED-NEXT:    <COMBINED {{.*}} op9=[[FUNCID]]/>
+; COMBINED-NEXT:    <BLOCK_COUNT op0=2/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'
