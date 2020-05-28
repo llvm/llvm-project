@@ -65,7 +65,7 @@
 
 // This type is anchored by an explicit template instantiation.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<int, DebugCXX::traits<int>>"
+// CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >"
 // CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
@@ -80,7 +80,7 @@
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIfEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<long, DebugCXX::traits<long>>"
+// CHECK-SAME:             name: "Template<long, DebugCXX::traits<long> >"
 // CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIlNS_6traitsIlEEEE")
@@ -89,7 +89,7 @@
 // no mangled name here yet.
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<float, DebugCXX::traits<float>>"
+// CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 

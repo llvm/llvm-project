@@ -110,7 +110,7 @@ struct j_wrap {
 };
 j_wrap<j<int>> j_wrap_j;
 // CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "j<int, int>"
-// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "j_wrap<j<int, int>>"
+// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "j_wrap<j<int, int> >"
 
 template <typename T>
 struct k {
