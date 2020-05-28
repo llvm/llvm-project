@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-convert-vector-to-scf -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-convert-vector-to-scf=full-unroll=true -split-input-file | FileCheck %s --check-prefix=FULL-UNROLL
+// RUN: mlir-opt %s -convert-vector-to-scf -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -split-input-file | FileCheck %s --check-prefix=FULL-UNROLL
 
 // CHECK-LABEL: func @materialize_read_1d() {
 func @materialize_read_1d() {

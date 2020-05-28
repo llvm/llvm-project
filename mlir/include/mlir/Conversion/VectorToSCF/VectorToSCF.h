@@ -14,6 +14,7 @@
 namespace mlir {
 class MLIRContext;
 class OwningRewritePatternList;
+class Pass;
 
 /// Control whether unrolling is used when lowering vector transfer ops to SCF.
 ///
@@ -162,6 +163,10 @@ struct VectorTransferRewriter : public RewritePattern {
 /// Collect a set of patterns to convert from the Vector dialect to SCF + std.
 void populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context,
+    const VectorTransferToSCFOptions &options = VectorTransferToSCFOptions());
+
+/// Create a pass to convert a subset of vector ops to SCF.
+std::unique_ptr<Pass> createConvertVectorToSCFPass(
     const VectorTransferToSCFOptions &options = VectorTransferToSCFOptions());
 
 } // namespace mlir
