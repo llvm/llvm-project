@@ -575,12 +575,11 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
   return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
 }
 
-template <typename T0, typename T1, typename T2, typename T3>
+template <typename T0, typename T1>
 static std::vector<Value *>
 getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
                   Value *ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs,
-                  ArrayRef<T1> TransitionArgs, ArrayRef<T2> DeoptArgs,
-                  ArrayRef<T3> GCArgs) {
+                  ArrayRef<T1> GCArgs) {
   std::vector<Value *> Args;
   Args.push_back(B.getInt64(ID));
   Args.push_back(B.getInt32(NumPatchBytes));
@@ -588,20 +587,40 @@ getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
   Args.push_back(B.getInt32(CallArgs.size()));
   Args.push_back(B.getInt32(Flags));
   Args.insert(Args.end(), CallArgs.begin(), CallArgs.end());
-  Args.push_back(B.getInt32(TransitionArgs.size()));
-  Args.insert(Args.end(), TransitionArgs.begin(), TransitionArgs.end());
-  Args.push_back(B.getInt32(DeoptArgs.size()));
-  Args.insert(Args.end(), DeoptArgs.begin(), DeoptArgs.end());
+  // GC Transition and Deopt args are now always handled via operand bundle.
+  // They will be removed from the signature of gc.statepoint shortly.
+  Args.push_back(B.getInt32(0));
+  Args.push_back(B.getInt32(0));
   Args.insert(Args.end(), GCArgs.begin(), GCArgs.end());
 
   return Args;
+}
+
+template<typename T1, typename T2>
+static std::vector<OperandBundleDef>
+getStatepointBundles(Optional<ArrayRef<T1>> TransitionArgs,
+                     Optional<ArrayRef<T2>> DeoptArgs) {
+  std::vector<OperandBundleDef> Rval;
+  if (DeoptArgs) {
+    SmallVector<Value*, 16> DeoptValues;
+    DeoptValues.insert(DeoptValues.end(), DeoptArgs->begin(), DeoptArgs->end());
+    Rval.emplace_back("deopt", DeoptValues);
+  }
+  if (TransitionArgs) {
+    SmallVector<Value*, 16> TransitionValues;
+    TransitionValues.insert(TransitionValues.end(),
+                            TransitionArgs->begin(), TransitionArgs->end());
+    Rval.emplace_back("gc-transition", TransitionValues);
+  }
+  return Rval;
 }
 
 template <typename T0, typename T1, typename T2, typename T3>
 static CallInst *CreateGCStatepointCallCommon(
     IRBuilderBase *Builder, uint64_t ID, uint32_t NumPatchBytes,
     Value *ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs,
-    ArrayRef<T1> TransitionArgs, ArrayRef<T2> DeoptArgs, ArrayRef<T3> GCArgs,
+    Optional<ArrayRef<T1>> TransitionArgs,
+    Optional<ArrayRef<T2>> DeoptArgs, ArrayRef<T3> GCArgs,
     const Twine &Name) {
   // Extract out the type of the callee.
   auto *FuncPtrType = cast<PointerType>(ActualCallee->getType());
@@ -617,13 +636,16 @@ static CallInst *CreateGCStatepointCallCommon(
 
   std::vector<Value *> Args =
       getStatepointArgs(*Builder, ID, NumPatchBytes, ActualCallee, Flags,
-                        CallArgs, TransitionArgs, DeoptArgs, GCArgs);
-  return createCallHelper(FnStatepoint, Args, Builder, Name);
+                        CallArgs, GCArgs);
+
+  return Builder->CreateCall(FnStatepoint, Args,
+                             getStatepointBundles(TransitionArgs, DeoptArgs),
+                             Name);
 }
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee,
-    ArrayRef<Value *> CallArgs, ArrayRef<Value *> DeoptArgs,
+    ArrayRef<Value *> CallArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointCallCommon<Value *, Value *, Value *, Value *>(
       this, ID, NumPatchBytes, ActualCallee, uint32_t(StatepointFlags::None),
@@ -632,8 +654,9 @@ CallInst *IRBuilderBase::CreateGCStatepointCall(
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee, uint32_t Flags,
-    ArrayRef<Use> CallArgs, ArrayRef<Use> TransitionArgs,
-    ArrayRef<Use> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
+    ArrayRef<Use> CallArgs, Optional<ArrayRef<Use>> TransitionArgs,
+    Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs,
+    const Twine &Name) {
   return CreateGCStatepointCallCommon<Use, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualCallee, Flags, CallArgs, TransitionArgs,
       DeoptArgs, GCArgs, Name);
@@ -641,7 +664,7 @@ CallInst *IRBuilderBase::CreateGCStatepointCall(
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee,
-    ArrayRef<Use> CallArgs, ArrayRef<Value *> DeoptArgs,
+    ArrayRef<Use> CallArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointCallCommon<Use, Value *, Value *, Value *>(
       this, ID, NumPatchBytes, ActualCallee, uint32_t(StatepointFlags::None),
@@ -652,8 +675,9 @@ template <typename T0, typename T1, typename T2, typename T3>
 static InvokeInst *CreateGCStatepointInvokeCommon(
     IRBuilderBase *Builder, uint64_t ID, uint32_t NumPatchBytes,
     Value *ActualInvokee, BasicBlock *NormalDest, BasicBlock *UnwindDest,
-    uint32_t Flags, ArrayRef<T0> InvokeArgs, ArrayRef<T1> TransitionArgs,
-    ArrayRef<T2> DeoptArgs, ArrayRef<T3> GCArgs, const Twine &Name) {
+    uint32_t Flags, ArrayRef<T0> InvokeArgs,
+    Optional<ArrayRef<T1>> TransitionArgs, Optional<ArrayRef<T2>> DeoptArgs,
+    ArrayRef<T3> GCArgs, const Twine &Name) {
   // Extract out the type of the callee.
   auto *FuncPtrType = cast<PointerType>(ActualInvokee->getType());
   assert(isa<FunctionType>(FuncPtrType->getElementType()) &&
@@ -666,15 +690,17 @@ static InvokeInst *CreateGCStatepointInvokeCommon(
 
   std::vector<Value *> Args =
       getStatepointArgs(*Builder, ID, NumPatchBytes, ActualInvokee, Flags,
-                        InvokeArgs, TransitionArgs, DeoptArgs, GCArgs);
+                        InvokeArgs, GCArgs);
+
   return Builder->CreateInvoke(FnStatepoint, NormalDest, UnwindDest, Args,
+                               getStatepointBundles(TransitionArgs, DeoptArgs),
                                Name);
 }
 
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest,
-    ArrayRef<Value *> InvokeArgs, ArrayRef<Value *> DeoptArgs,
+    ArrayRef<Value *> InvokeArgs, Optional<ArrayRef<Value *>> DeoptArgs,
     ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointInvokeCommon<Value *, Value *, Value *, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest,
@@ -685,8 +711,8 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest, uint32_t Flags,
-    ArrayRef<Use> InvokeArgs, ArrayRef<Use> TransitionArgs,
-    ArrayRef<Use> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
+    ArrayRef<Use> InvokeArgs, Optional<ArrayRef<Use>> TransitionArgs,
+    Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointInvokeCommon<Use, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest, Flags,
       InvokeArgs, TransitionArgs, DeoptArgs, GCArgs, Name);
@@ -695,7 +721,7 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest, ArrayRef<Use> InvokeArgs,
-    ArrayRef<Value *> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
+    Optional<ArrayRef<Value *>> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
   return CreateGCStatepointInvokeCommon<Use, Value *, Value *, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest,
       uint32_t(StatepointFlags::None), InvokeArgs, None, DeoptArgs, GCArgs,

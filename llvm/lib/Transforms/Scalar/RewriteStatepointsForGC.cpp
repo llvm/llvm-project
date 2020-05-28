@@ -1490,12 +1490,14 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
   ArrayRef<Use> CallArgs(Call->arg_begin(), Call->arg_end());
-  ArrayRef<Use> DeoptArgs = GetDeoptBundleOperands(Call);
-  ArrayRef<Use> TransitionArgs;
-  if (auto TransitionBundle =
-          Call->getOperandBundle(LLVMContext::OB_gc_transition)) {
+  Optional<ArrayRef<Use>> DeoptArgs;
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deopt))
+    DeoptArgs = Bundle->Inputs;
+  Optional<ArrayRef<Use>> TransitionArgs;
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_gc_transition)) {
+    TransitionArgs = Bundle->Inputs;
+    // TODO: This flag no longer serves a purpose and can be removed later
     Flags |= uint32_t(StatepointFlags::GCTransition);
-    TransitionArgs = TransitionBundle->Inputs;
   }
 
   // Instead of lowering calls to @llvm.experimental.deoptimize as normal calls
