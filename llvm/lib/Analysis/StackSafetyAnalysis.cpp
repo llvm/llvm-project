@@ -712,9 +712,8 @@ StackSafetyGlobalAnnotatorPass::run(Module &M, ModuleAnalysisManager &AM) {
 
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
-StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass(
-    bool SetMetadata)
-    : ModulePass(ID), SetMetadata(SetMetadata) {
+StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
+    : ModulePass(ID) {
   initializeStackSafetyGlobalInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
 }
@@ -738,11 +737,11 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
             .Info;
       });
   SSGI = SSDFA.run();
-  return SetMetadata ? SSGI.setMetadata(M) : false;
+  return SSGI.setMetadata(M);
 }
 
-ModulePass *llvm::createStackSafetyGlobalInfoWrapperPass(bool SetMetadata) {
-  return new StackSafetyGlobalInfoWrapperPass(SetMetadata);
+ModulePass *llvm::createStackSafetyGlobalInfoWrapperPass() {
+  return new StackSafetyGlobalInfoWrapperPass();
 }
 
 static const char LocalPassArg[] = "stack-safety-local";
