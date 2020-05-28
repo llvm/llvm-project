@@ -249,7 +249,7 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
   return success();
 }
 
-OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shape(); }
+OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 
 //===----------------------------------------------------------------------===//
 // ConstSizeOp
@@ -265,6 +265,26 @@ ConstSizeOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
 }
 
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
+
+//===----------------------------------------------------------------------===//
+// IndexToSizeOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult IndexToSizeOp::fold(ArrayRef<Attribute> operands) {
+  // Constant values of both types, `shape.size` and `index`, are represented as
+  // `IntegerAttr`s which makes constant folding simple.
+  if (Attribute arg = operands[0])
+    return arg;
+  return {};
+}
+
+LogicalResult IndexToSizeOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(SizeType::get(context));
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // FromExtentsOp
@@ -331,6 +351,26 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
     return nullptr;
   Builder builder(getContext());
   return builder.getIndexTensorAttr(type.getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// SizeToIndexOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
+  // Constant values of both types, `shape.size` and `index`, are represented as
+  // `IntegerAttr`s which makes constant folding simple.
+  if (Attribute arg = operands[0])
+    return arg;
+  return {};
+}
+
+LogicalResult SizeToIndexOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(IndexType::get(context));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

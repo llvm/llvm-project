@@ -214,6 +214,25 @@ def Shape_GetExtentOp : Shape_Op<"get_extent",
   let hasFolder = 1;
 }
 
+def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Converts a standard index to a shape size";
+  let description = [{
+    Converts a standard index to a `shape.size`.
+    This operation and its inverse, `size_to_index`, facilitate index conversion
+    between the standard and the shape dialect.
+    The behavior is undefined for negative indices.
+  }];
+
+  let arguments = (ins Index:$arg);
+  let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "attr-dict $arg";
+
+  let hasFolder = 1;
+}
+
 def Shape_JoinOp : Shape_Op<"join", []> {
   let summary = "Returns the least general shape.size of its operands";
   let description = [{
@@ -308,6 +327,25 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of",
   let results = (outs Shape_ShapeType:$result);
 
   let assemblyFormat = "attr-dict $arg `:` type($arg)";
+
+  let hasFolder = 1;
+}
+
+def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Casts between index types of the shape and standard dialect";
+  let description = [{
+    Converts a `shape.size` to a standard index.
+    This operation and its inverse, `index_to_size`, facilitate index conversion
+    between the standard and the shape dialect.
+    The behavior is undefined for unknown and invalid arguments.
+  }];
+
+  let arguments = (ins Shape_SizeType:$arg);
+  let results = (outs Index:$result);
+
+  let assemblyFormat = "attr-dict $arg";
 
   let hasFolder = 1;
 }
@@ -522,7 +560,6 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
 
   let assemblyFormat = "$inputs attr-dict";
 }
-
 
 // Canonicalization patterns.
 
