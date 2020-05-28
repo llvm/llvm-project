@@ -106,9 +106,8 @@ void ProfileSummaryInfo::refresh() {
   computeThresholds();
 }
 
-Optional<uint64_t> ProfileSummaryInfo::getProfileCount(const CallBase &Call,
-                                                       BlockFrequencyInfo *BFI,
-                                                       bool AllowSynthetic) {
+Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
+    const CallBase &Call, BlockFrequencyInfo *BFI, bool AllowSynthetic) const {
   assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
   if (hasSampleProfile()) {
@@ -129,7 +128,7 @@ Optional<uint64_t> ProfileSummaryInfo::getProfileCount(const CallBase &Call,
 /// Returns true if the function's entry is hot. If it returns false, it
 /// either means it is not hot or it is unknown whether it is hot or not (for
 /// example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
+bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) const {
   if (!F || !hasProfileSummary())
     return false;
   auto FunctionCount = F->getEntryCount();
@@ -144,8 +143,8 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
 /// hot total call edge count.
 /// If it returns false, it either means it is not hot or it is unknown
 /// (for example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
-                                                  BlockFrequencyInfo &BFI) {
+bool ProfileSummaryInfo::isFunctionHotInCallGraph(
+    const Function *F, BlockFrequencyInfo &BFI) const {
   if (!F || !hasProfileSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
@@ -173,8 +172,8 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
 /// the total call edge count is cold.
 /// If it returns false, it either means it is not cold or it is unknown
 /// (for example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
-                                                   BlockFrequencyInfo &BFI) {
+bool ProfileSummaryInfo::isFunctionColdInCallGraph(
+    const Function *F, BlockFrequencyInfo &BFI) const {
   if (!F || !hasProfileSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
@@ -197,14 +196,14 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
   return true;
 }
 
-bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) {
+bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) const {
   assert(hasPartialSampleProfile() && "Expect partial sample profile");
   return !F.getEntryCount().hasValue();
 }
 
-template<bool isHot>
+template <bool isHot>
 bool ProfileSummaryInfo::isFunctionHotOrColdInCallGraphNthPercentile(
-    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) {
+    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) const {
   if (!F || !hasProfileSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount()) {
@@ -238,13 +237,13 @@ bool ProfileSummaryInfo::isFunctionHotOrColdInCallGraphNthPercentile(
 
 // Like isFunctionHotInCallGraph but for a given cutoff.
 bool ProfileSummaryInfo::isFunctionHotInCallGraphNthPercentile(
-    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) {
+    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) const {
   return isFunctionHotOrColdInCallGraphNthPercentile<true>(
       PercentileCutoff, F, BFI);
 }
 
 bool ProfileSummaryInfo::isFunctionColdInCallGraphNthPercentile(
-    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) {
+    int PercentileCutoff, const Function *F, BlockFrequencyInfo &BFI) const {
   return isFunctionHotOrColdInCallGraphNthPercentile<false>(
       PercentileCutoff, F, BFI);
 }
@@ -252,7 +251,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraphNthPercentile(
 /// Returns true if the function's entry is a cold. If it returns false, it
 /// either means it is not cold or it is unknown whether it is cold or not (for
 /// example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
+bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   if (!F)
     return false;
   if (F->hasFnAttribute(Attribute::Cold))
@@ -287,7 +286,8 @@ void ProfileSummaryInfo::computeThresholds() {
       HotEntry.NumCounts > ProfileSummaryLargeWorkingSetSizeThreshold;
 }
 
-Optional<uint64_t> ProfileSummaryInfo::computeThreshold(int PercentileCutoff) {
+Optional<uint64_t>
+ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
     return None;
   auto iter = ThresholdCache.find(PercentileCutoff);
@@ -302,25 +302,25 @@ Optional<uint64_t> ProfileSummaryInfo::computeThreshold(int PercentileCutoff) {
   return CountThreshold;
 }
 
-bool ProfileSummaryInfo::hasHugeWorkingSetSize() {
+bool ProfileSummaryInfo::hasHugeWorkingSetSize() const {
   return HasHugeWorkingSetSize && HasHugeWorkingSetSize.getValue();
 }
 
-bool ProfileSummaryInfo::hasLargeWorkingSetSize() {
+bool ProfileSummaryInfo::hasLargeWorkingSetSize() const {
   return HasLargeWorkingSetSize && HasLargeWorkingSetSize.getValue();
 }
 
-bool ProfileSummaryInfo::isHotCount(uint64_t C) {
+bool ProfileSummaryInfo::isHotCount(uint64_t C) const {
   return HotCountThreshold && C >= HotCountThreshold.getValue();
 }
 
-bool ProfileSummaryInfo::isColdCount(uint64_t C) {
+bool ProfileSummaryInfo::isColdCount(uint64_t C) const {
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
 }
 
-template<bool isHot>
+template <bool isHot>
 bool ProfileSummaryInfo::isHotOrColdCountNthPercentile(int PercentileCutoff,
-                                                       uint64_t C) {
+                                                       uint64_t C) const {
   auto CountThreshold = computeThreshold(PercentileCutoff);
   if (isHot)
     return CountThreshold && C >= CountThreshold.getValue();
@@ -328,37 +328,39 @@ bool ProfileSummaryInfo::isHotOrColdCountNthPercentile(int PercentileCutoff,
     return CountThreshold && C <= CountThreshold.getValue();
 }
 
-bool ProfileSummaryInfo::isHotCountNthPercentile(int PercentileCutoff, uint64_t C) {
+bool ProfileSummaryInfo::isHotCountNthPercentile(int PercentileCutoff,
+                                                 uint64_t C) const {
   return isHotOrColdCountNthPercentile<true>(PercentileCutoff, C);
 }
 
-bool ProfileSummaryInfo::isColdCountNthPercentile(int PercentileCutoff, uint64_t C) {
+bool ProfileSummaryInfo::isColdCountNthPercentile(int PercentileCutoff,
+                                                  uint64_t C) const {
   return isHotOrColdCountNthPercentile<false>(PercentileCutoff, C);
 }
 
-uint64_t ProfileSummaryInfo::getOrCompHotCountThreshold() {
+uint64_t ProfileSummaryInfo::getOrCompHotCountThreshold() const {
   return HotCountThreshold ? HotCountThreshold.getValue() : UINT64_MAX;
 }
 
-uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() {
+uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() const {
   return ColdCountThreshold ? ColdCountThreshold.getValue() : 0;
 }
 
-bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) {
+bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB,
+                                    BlockFrequencyInfo *BFI) const {
   auto Count = BFI->getBlockProfileCount(BB);
   return Count && isHotCount(*Count);
 }
 
 bool ProfileSummaryInfo::isColdBlock(const BasicBlock *BB,
-                                  BlockFrequencyInfo *BFI) {
+                                     BlockFrequencyInfo *BFI) const {
   auto Count = BFI->getBlockProfileCount(BB);
   return Count && isColdCount(*Count);
 }
 
-template<bool isHot>
-bool ProfileSummaryInfo::isHotOrColdBlockNthPercentile(int PercentileCutoff,
-                                                       const BasicBlock *BB,
-                                                       BlockFrequencyInfo *BFI) {
+template <bool isHot>
+bool ProfileSummaryInfo::isHotOrColdBlockNthPercentile(
+    int PercentileCutoff, const BasicBlock *BB, BlockFrequencyInfo *BFI) const {
   auto Count = BFI->getBlockProfileCount(BB);
   if (isHot)
     return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
@@ -366,26 +368,24 @@ bool ProfileSummaryInfo::isHotOrColdBlockNthPercentile(int PercentileCutoff,
     return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
 }
 
-bool ProfileSummaryInfo::isHotBlockNthPercentile(int PercentileCutoff,
-                                                 const BasicBlock *BB,
-                                                 BlockFrequencyInfo *BFI) {
+bool ProfileSummaryInfo::isHotBlockNthPercentile(
+    int PercentileCutoff, const BasicBlock *BB, BlockFrequencyInfo *BFI) const {
   return isHotOrColdBlockNthPercentile<true>(PercentileCutoff, BB, BFI);
 }
 
-bool ProfileSummaryInfo::isColdBlockNthPercentile(int PercentileCutoff,
-                                                  const BasicBlock *BB,
-                                                  BlockFrequencyInfo *BFI) {
+bool ProfileSummaryInfo::isColdBlockNthPercentile(
+    int PercentileCutoff, const BasicBlock *BB, BlockFrequencyInfo *BFI) const {
   return isHotOrColdBlockNthPercentile<false>(PercentileCutoff, BB, BFI);
 }
 
 bool ProfileSummaryInfo::isHotCallSite(const CallBase &CB,
-                                       BlockFrequencyInfo *BFI) {
+                                       BlockFrequencyInfo *BFI) const {
   auto C = getProfileCount(CB, BFI);
   return C && isHotCount(*C);
 }
 
 bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
-                                        BlockFrequencyInfo *BFI) {
+                                        BlockFrequencyInfo *BFI) const {
   auto C = getProfileCount(CB, BFI);
   if (C)
     return isColdCount(*C);
@@ -395,7 +395,7 @@ bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
   return hasSampleProfile() && CB.getCaller()->hasProfileData();
 }
 
-bool ProfileSummaryInfo::hasPartialSampleProfile() {
+bool ProfileSummaryInfo::hasPartialSampleProfile() const {
   return hasProfileSummary() &&
          Summary->getKind() == ProfileSummary::PSK_Sample &&
          (PartialProfile || Summary->isPartialProfile());
