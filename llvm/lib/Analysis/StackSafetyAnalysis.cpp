@@ -444,14 +444,14 @@ public:
 
   const FunctionMap &run();
 
-  // FIXME: Accept offset.
   ConstantRange getArgumentAccessRange(const GlobalValue *Callee,
-                                       unsigned ParamNo) const;
+                                       unsigned ParamNo,
+                                       const ConstantRange &Offsets) const;
 };
 
-ConstantRange
-StackSafetyDataFlowAnalysis::getArgumentAccessRange(const GlobalValue *Callee,
-                                                    unsigned ParamNo) const {
+ConstantRange StackSafetyDataFlowAnalysis::getArgumentAccessRange(
+    const GlobalValue *Callee, unsigned ParamNo,
+    const ConstantRange &Offsets) const {
   auto IT = Functions.find(Callee);
   // Unknown callee (outside of LTO domain or an indirect call).
   if (IT == Functions.end())
@@ -459,7 +459,15 @@ StackSafetyDataFlowAnalysis::getArgumentAccessRange(const GlobalValue *Callee,
   const FunctionInfo &FS = IT->second;
   if (ParamNo >= FS.Params.size()) // possibly vararg
     return UnknownRange;
-  return FS.Params[ParamNo].Range;
+  auto &Access = FS.Params[ParamNo].Range;
+  if (Access.isEmptySet())
+    return Access;
+  if (Access.isFullSet() || Offsets.isFullSet())
+    return UnknownRange;
+  if (Offsets.signedAddMayOverflow(Access) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return UnknownRange;
+  return Access.add(Offsets);
 }
 
 bool StackSafetyDataFlowAnalysis::updateOneUse(UseInfo &US,
@@ -469,8 +477,8 @@ bool StackSafetyDataFlowAnalysis::updateOneUse(UseInfo &US,
     assert(!CS.Offset.isEmptySet() &&
            "Param range can't be empty-set, invalid offset range");
 
-    ConstantRange CalleeRange = getArgumentAccessRange(CS.Callee, CS.ParamNo);
-    CalleeRange = CalleeRange.add(CS.Offset);
+    ConstantRange CalleeRange =
+        getArgumentAccessRange(CS.Callee, CS.ParamNo, CS.Offset);
     if (!US.Range.contains(CalleeRange)) {
       Changed = true;
       if (UpdateToFullSet)
@@ -623,8 +631,8 @@ GVToSSI createGlobalStackSafetyInfo(
     for (auto &A : FI.Allocas) {
       ResolveAllCalls(A);
       for (auto &C : A.Calls) {
-        ConstantRange R = SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo);
-        A.updateRange(R.add(C.Offset));
+        A.updateRange(
+            SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
       }
       // FIXME: This is needed only to preserve calls in print() results.
       A.Calls = Functions[F.first].Allocas[Pos].Calls;
