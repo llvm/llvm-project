@@ -15,7 +15,7 @@
 namespace mlir {
 
 class Location;
-class LogicalResult;
+struct LogicalResult;
 class ModuleOp;
 class Operation;
 
