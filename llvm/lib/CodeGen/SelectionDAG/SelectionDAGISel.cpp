@@ -337,7 +337,8 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
-  LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  if (OptLevel != CodeGenOpt::None)
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -441,9 +442,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-              &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
-              nullptr;
+  BlockFrequencyInfo *BFI = nullptr;
+  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
+    BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
