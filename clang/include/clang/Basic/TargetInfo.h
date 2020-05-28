@@ -368,8 +368,13 @@ public:
   virtual IntType getLeastIntTypeByWidth(unsigned BitWidth,
                                          bool IsSigned) const;
 
-  /// Return floating point type with specified width.
-  RealType getRealTypeByWidth(unsigned BitWidth) const;
+  /// Return floating point type with specified width. On PPC, there are
+  /// three possible types for 128-bit floating point: "PPC double-double",
+  /// IEEE 754R quad precision, and "long double" (which under the covers
+  /// is represented as one of those two). At this time, there is no support
+  /// for an explicit "PPC double-double" type (i.e. __ibm128) so we only
+  /// need to differentiate between "long double" and IEEE quad precision.
+  RealType getRealTypeByWidth(unsigned BitWidth, bool ExplicitIEEE) const;
 
   /// Return the alignment (in bits) of the specified integer type enum.
   ///
