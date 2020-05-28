@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_LINUX_MTX_INIT_H
-#define LLVM_LIBC_SRC_THREADS_LINUX_MTX_INIT_H
+#ifndef LLVM_LIBC_SRC_THREADS_MTX_INIT_H
+#define LLVM_LIBC_SRC_THREADS_MTX_INIT_H
 
 #include "include/threads.h"
 
@@ -17,4 +17,4 @@ int mtx_init(mtx_t *mutex, int type);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_LINUX_MTX_INIT_H
+#endif // LLVM_LIBC_SRC_THREADS_MTX_INIT_H
