@@ -118,8 +118,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       // to simplify things.
       if (SrcEltTy->isFloatingPointTy()) {
         unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-        Type *SrcIVTy =
-          VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
+        auto *SrcIVTy = FixedVectorType::get(
+            IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
         // Ask IR to do the conversion now that #elts line up.
         C = ConstantExpr::getBitCast(C, SrcIVTy);
       }
@@ -175,8 +175,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   if (DstEltTy->isFloatingPointTy()) {
     // Fold to an vector of integers with same size as our FP type.
     unsigned FPWidth = DstEltTy->getPrimitiveSizeInBits();
-    Type *DestIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumDstElt);
+    auto *DestIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumDstElt);
     // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, DL);
 
@@ -188,8 +188,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
     unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-    Type *SrcIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
+    auto *SrcIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
     // If IR wasn't able to fold it, bail out.
