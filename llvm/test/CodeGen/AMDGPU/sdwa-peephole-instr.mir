@@ -361,7 +361,6 @@ body:             |
 # GFX9: $vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %{{[0-9]+}}, 1, implicit-def $exec, implicit $exec
 
 
-
 name:            vopc_instructions
 tracksRegLiveness: true
 registers:
@@ -445,3 +444,27 @@ body:             |
     FLAT_STORE_DWORD %0, %100, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
+...
+
+# GCN-LABEL: name: preserve_flags
+# GCN: = nnan nofpexcept V_ADD_F32_sdwa 0, %4, 0, %4, 0, 0, 6, 0, 5, 1, implicit $exec
+
+---
+name: preserve_flags
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32 = S_MOV_B32 65535
+    %2:vgpr_32 = V_LSHRREV_B32_e64 16, %0, implicit $exec
+    %3:vgpr_32 = V_AND_B32_e32 %1, %2, implicit $exec
+    %4:vgpr_32 = V_LSHLREV_B32_e64 16, %3, implicit $exec
+    %5:vgpr_32 = V_LSHRREV_B32_e64 16, %4, implicit $exec
+    %6:vgpr_32 = V_BFE_U32 %4, 8, 8, implicit $exec
+    %7:vgpr_32 = nnan nofpexcept V_ADD_F32_e32 %5, %6, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %7
+
+...
