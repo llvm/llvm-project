@@ -107,13 +107,16 @@ public:
     return ranges.isSingleton() ? ranges.begin()->getConcreteValue() : nullptr;
   }
 
+  /// Get a minimal value covered by the ranges in the set
+  const llvm::APSInt &getMinValue() const;
+  /// Get a maximal value covered by the ranges in the set
+  const llvm::APSInt &getMaxValue() const;
+
 private:
   void IntersectInRange(BasicValueFactory &BV, Factory &F,
                         const llvm::APSInt &Lower, const llvm::APSInt &Upper,
                         PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
                         PrimRangeSet::iterator &e) const;
-
-  const llvm::APSInt &getMinValue() const;
 
   bool pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const;
 
@@ -130,7 +133,6 @@ public:
     return ranges == other.ranges;
   }
 };
-
 
 class ConstraintRange {};
 using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
