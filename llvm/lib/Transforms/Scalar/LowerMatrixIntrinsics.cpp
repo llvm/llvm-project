@@ -1294,24 +1294,24 @@ public:
     VectorType *VectorTy = cast<VectorType>(InputVal->getType());
     ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
     MatrixTy InputMatrix = getMatrix(InputVal, ArgShape, Builder);
-    assert(InputMatrix.isColumnMajor() &&
-           "Row-major code-gen not supported yet!");
 
-    for (unsigned Row = 0; Row < ArgShape.NumRows; ++Row) {
-      // Build a single column vector for this row. First initialize it.
-      Value *ResultColumn = UndefValue::get(
-          VectorType::get(VectorTy->getElementType(), ArgShape.NumColumns));
+    const unsigned NewNumVecs =
+        InputMatrix.isColumnMajor() ? ArgShape.NumRows : ArgShape.NumColumns;
+    const unsigned NewNumElts =
+        InputMatrix.isColumnMajor() ? ArgShape.NumColumns : ArgShape.NumRows;
 
-      // Go through the elements of this row and insert it into the resulting
-      // column vector.
-      for (auto C : enumerate(InputMatrix.columns())) {
-        Value *Elt = Builder.CreateExtractElement(C.value(), Row);
-        // We insert at index Column since that is the row index after the
-        // transpose.
-        ResultColumn =
-            Builder.CreateInsertElement(ResultColumn, Elt, C.index());
+    for (unsigned I = 0; I < NewNumVecs; ++I) {
+      // Build a single result vector. First initialize it.
+      Value *ResultVector = UndefValue::get(
+          VectorType::get(VectorTy->getElementType(), NewNumElts));
+      // Go through the old elements and insert it into the resulting vector.
+      for (auto J : enumerate(InputMatrix.vectors())) {
+        Value *Elt = Builder.CreateExtractElement(J.value(), I);
+        // Row and column indices are transposed.
+        ResultVector =
+            Builder.CreateInsertElement(ResultVector, Elt, J.index());
       }
-      Result.addVector(ResultColumn);
+      Result.addVector(ResultVector);
     }
 
     // TODO: Improve estimate of operations needed for transposes. Currently we
