@@ -3,7 +3,4 @@ add_llvm_component_library(LLVMMLPolicies
 
   DEPENDS
   intrinsics_gen
-
-  LINK_LIBS
-  LLVMCore
   )
