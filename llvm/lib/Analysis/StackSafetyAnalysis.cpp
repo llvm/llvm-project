@@ -9,13 +9,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <memory>
 
 using namespace llvm;
