@@ -136,6 +136,31 @@ public:
   }
 };
 
+/// A matcher that specifies a particular \c TraversalKind.
+///
+/// The kind provided to the constructor overrides any kind that may be
+/// specified by the `InnerMatcher`.
+class DynTraversalMatcherImpl : public DynMatcherInterface {
+public:
+  explicit DynTraversalMatcherImpl(
+      clang::TraversalKind TK,
+      IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+      : TK(TK), InnerMatcher(std::move(InnerMatcher)) {}
+
+  bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
+                  BoundNodesTreeBuilder *Builder) const override {
+    return this->InnerMatcher->dynMatches(DynNode, Finder, Builder);
+  }
+
+  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+    return TK;
+  }
+
+private:
+  clang::TraversalKind TK;
+  IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+};
+
 } // namespace
 
 static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
@@ -201,6 +226,14 @@ DynTypedMatcher::constructRestrictedWrapper(const DynTypedMatcher &InnerMatcher,
                                             ASTNodeKind RestrictKind) {
   DynTypedMatcher Copy = InnerMatcher;
   Copy.RestrictKind = RestrictKind;
+  return Copy;
+}
+
+DynTypedMatcher
+DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
+  auto Copy = *this;
+  Copy.Implementation =
+      new DynTraversalMatcherImpl(TK, std::move(Copy.Implementation));
   return Copy;
 }
 

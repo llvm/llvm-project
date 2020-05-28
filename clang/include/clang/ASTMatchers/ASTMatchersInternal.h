@@ -395,6 +395,12 @@ public:
   ///   restricts the node types for \p Kind.
   DynTypedMatcher dynCastTo(const ASTNodeKind Kind) const;
 
+  /// Return a matcher that that points to the same implementation, but sets the
+  ///   traversal kind.
+  ///
+  /// If the traversal kind is already set, then \c TK overrides it.
+  DynTypedMatcher withTraversalKind(TraversalKind TK);
+
   /// Returns true if the matcher matches the given \c DynNode.
   bool matches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
                BoundNodesTreeBuilder *Builder) const;
@@ -457,6 +463,14 @@ public:
   ///
   /// If it is not compatible, then this matcher will never match anything.
   template <typename T> Matcher<T> unconditionalConvertTo() const;
+
+  /// Returns the \c TraversalKind respected by calls to `match()`, if any.
+  ///
+  /// Most matchers will not have a traversal kind set, instead relying on the
+  /// surrounding context. For those, \c llvm::None is returned.
+  llvm::Optional<clang::TraversalKind> getTraversalKind() const {
+    return Implementation->TraversalKind();
+  }
 
 private:
   DynTypedMatcher(ASTNodeKind SupportedKind, ASTNodeKind RestrictKind,

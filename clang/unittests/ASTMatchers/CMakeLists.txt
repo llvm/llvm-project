@@ -30,4 +30,9 @@ clang_target_link_libraries(ASTMatchersTests
   clangTooling
   )
 
+target_link_libraries(ASTMatchersTests
+  PRIVATE
+  LLVMTestingSupport
+)
+
 add_subdirectory(Dynamic)
