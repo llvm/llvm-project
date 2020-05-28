@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class AllocaInst;
+
 /// Interface to access stack safety analysis results for single function.
 class StackSafetyInfo {
 public:
@@ -36,6 +38,22 @@ public:
 
   // TODO: Add useful for client methods.
   void print(raw_ostream &O, const GlobalValue &F) const;
+};
+
+class StackSafetyGlobalInfo {
+public:
+  using GVToSSI = std::map<const GlobalValue *, StackSafetyInfo>;
+
+private:
+  GVToSSI SSGI;
+
+public:
+  StackSafetyGlobalInfo() = default;
+  StackSafetyGlobalInfo(GVToSSI SSGI) : SSGI(std::move(SSGI)) {}
+
+  bool setMetadata(Module &M) const;
+  void print(raw_ostream &O) const;
+  void dump() const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -73,8 +91,6 @@ public:
 
   bool runOnFunction(Function &F) override;
 };
-
-using StackSafetyGlobalInfo = std::map<const GlobalValue *, StackSafetyInfo>;
 
 /// This pass performs the global (interprocedural) stack safety analysis (new
 /// pass manager).

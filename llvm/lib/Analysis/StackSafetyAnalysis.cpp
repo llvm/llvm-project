@@ -33,6 +33,8 @@ static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
 
 namespace {
 
+using GVToSSI = StackSafetyGlobalInfo::GVToSSI;
+
 /// Rewrite an SCEV expression for a memory access address to an expression that
 /// represents offset from the given alloca.
 class AllocaOffsetRewriter : public SCEVRewriteVisitor<AllocaOffsetRewriter> {
@@ -457,7 +459,7 @@ class StackSafetyDataFlowAnalysis {
 public:
   StackSafetyDataFlowAnalysis(
       Module &M, std::function<const FunctionInfo &(Function &)> FI);
-  StackSafetyGlobalInfo run();
+  GVToSSI run();
 };
 
 StackSafetyDataFlowAnalysis::StackSafetyDataFlowAnalysis(
@@ -571,19 +573,18 @@ void StackSafetyDataFlowAnalysis::verifyFixedPoint() {
 }
 #endif
 
-StackSafetyGlobalInfo StackSafetyDataFlowAnalysis::run() {
+GVToSSI StackSafetyDataFlowAnalysis::run() {
   runDataFlow();
   LLVM_DEBUG(verifyFixedPoint());
 
-  StackSafetyGlobalInfo SSI;
+  GVToSSI SSI;
   for (auto &F : Functions)
     SSI.emplace(F.first, makeSSI(F.second));
   return SSI;
 }
 
-bool setStackSafetyMetadata(Module &M, const StackSafetyGlobalInfo &SSGI) {
+bool setStackSafetyMetadata(Module &M, const GVToSSI &SSGI) {
   bool Changed = false;
-  unsigned Width = M.getDataLayout().getPointerSizeInBits();
   for (auto &F : M.functions()) {
     if (F.isDeclaration() || F.hasOptNone())
       continue;
@@ -621,22 +622,27 @@ void StackSafetyInfo::print(raw_ostream &O, const GlobalValue &F) const {
   Info->Info.print(O, F.getName(), dyn_cast<Function>(&F));
 }
 
-static void print(const StackSafetyGlobalInfo &SSI, raw_ostream &O,
-                  const Module &M) {
-  size_t Count = 0;
-  for (auto &F : M.functions())
-    if (!F.isDeclaration()) {
-      SSI.find(&F)->second.print(O, F);
-      O << "\n";
-      ++Count;
-    }
-  for (auto &A : M.aliases()) {
-    SSI.find(&A)->second.print(O, A);
-    O << "\n";
-    ++Count;
-  }
-  assert(Count == SSI.size() && "Unexpected functions in the result");
+bool StackSafetyGlobalInfo::setMetadata(Module &M) const {
+  return setStackSafetyMetadata(M, SSGI);
 }
+
+void StackSafetyGlobalInfo::print(raw_ostream &O) const {
+  if (SSGI.empty())
+    return;
+  const Module &M = *SSGI.begin()->first->getParent();
+  for (auto &F : M.functions()) {
+    if (!F.isDeclaration()) {
+      SSGI.find(&F)->second.print(O, F);
+      O << "\n";
+    }
+  }
+  for (auto &A : M.aliases()) {
+    SSGI.find(&A)->second.print(O, A);
+    O << "\n";
+  }
+}
+
+LLVM_DUMP_METHOD void StackSafetyGlobalInfo::dump() const { print(dbgs()); }
 
 AnalysisKey StackSafetyAnalysis::Key;
 
@@ -693,14 +699,14 @@ StackSafetyGlobalAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
   OS << "'Stack Safety Analysis' for module '" << M.getName() << "'\n";
-  print(AM.getResult<StackSafetyGlobalAnalysis>(M), OS, M);
+  AM.getResult<StackSafetyGlobalAnalysis>(M).print(OS);
   return PreservedAnalyses::all();
 }
 
 PreservedAnalyses
 StackSafetyGlobalAnnotatorPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &SSGI = AM.getResult<StackSafetyGlobalAnalysis>(M);
-  (void)setStackSafetyMetadata(M, SSGI);
+  SSGI.setMetadata(M);
   return PreservedAnalyses::all();
 }
 
@@ -715,7 +721,7 @@ StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass(
 
 void StackSafetyGlobalInfoWrapperPass::print(raw_ostream &O,
                                              const Module *M) const {
-  ::print(SSGI, O, *M);
+  SSGI.print(O);
 }
 
 void StackSafetyGlobalInfoWrapperPass::getAnalysisUsage(
@@ -732,7 +738,7 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
             .Info;
       });
   SSGI = SSDFA.run();
-  return SetMetadata ? setStackSafetyMetadata(M, SSGI) : false;
+  return SetMetadata ? SSGI.setMetadata(M) : false;
 }
 
 ModulePass *llvm::createStackSafetyGlobalInfoWrapperPass(bool SetMetadata) {
