@@ -593,22 +593,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   MergeBlocks.insert(ForeBlocksLast.begin(), ForeBlocksLast.end());
   MergeBlocks.insert(SubLoopBlocksLast.begin(), SubLoopBlocksLast.end());
   MergeBlocks.insert(AftBlocksLast.begin(), AftBlocksLast.end());
-  while (!MergeBlocks.empty()) {
-    BasicBlock *BB = *MergeBlocks.begin();
-    BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
-    if (Term && Term->isUnconditional() && L->contains(Term->getSuccessor(0))) {
-      BasicBlock *Dest = Term->getSuccessor(0);
-      BasicBlock *Fold = Dest->getUniquePredecessor();
-      if (MergeBlockIntoPredecessor(Dest, &DTU, LI)) {
-        // Don't remove BB and add Fold as they are the same BB
-        assert(Fold == BB);
-        (void)Fold;
-        MergeBlocks.erase(Dest);
-      } else
-        MergeBlocks.erase(BB);
-    } else
-      MergeBlocks.erase(BB);
-  }
+
+  MergeBlockSuccessorsIntoGivenBlocks(MergeBlocks, L, &DTU, LI);
+
   // Apply updates to the DomTree.
   DT = &DTU.getDomTree();
 
