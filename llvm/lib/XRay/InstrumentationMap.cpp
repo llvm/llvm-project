@@ -52,9 +52,9 @@ using RelocMap = DenseMap<uint64_t, uint64_t>;
 
 static Error
 loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
-          InstrumentationMap::SledContainer &Sleds,
-          InstrumentationMap::FunctionAddressMap &FunctionAddresses,
-          InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
+        InstrumentationMap::SledContainer &Sleds,
+        InstrumentationMap::FunctionAddressMap &FunctionAddresses,
+        InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   InstrumentationMap Map;
 
   // Find the section named "xray_instr_map".
@@ -63,7 +63,8 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         ObjFile.getBinary()->getArch() == Triple::ppc64le ||
         ObjFile.getBinary()->getArch() == Triple::aarch64))
     return make_error<StringError>(
-        "File format not supported (only does ELF and Mach-O little endian 64-bit).",
+        "File format not supported (only does ELF and Mach-O little endian "
+        "64-bit).",
         std::make_error_code(std::errc::not_supported));
 
   StringRef Contents = "";
@@ -94,11 +95,14 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
       if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj = dyn_cast<object::ELF32BEObjectFile>(ObjFile))
+      else if (const auto *ELFObj =
+                   dyn_cast<object::ELF32BEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj = dyn_cast<object::ELF64LEObjectFile>(ObjFile))
+      else if (const auto *ELFObj =
+                   dyn_cast<object::ELF64LEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
-      else if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(ObjFile))
+      else if (const auto *ELFObj =
+                   dyn_cast<object::ELF64BEObjectFile>(ObjFile))
         return ELFObj->getELFFile()->getRelativeRelocationType();
       else
         return static_cast<uint32_t>(0);
@@ -240,7 +244,8 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
   if (!ObjectFileOrError) {
     auto E = ObjectFileOrError.takeError();
     // We try to load it as YAML if the ELF load didn't work.
-    Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);
+    Expected<sys::fs::file_t> FdOrErr =
+        sys::fs::openNativeFileForRead(Filename);
     if (!FdOrErr) {
       // Report the ELF load error if YAML failed.
       consumeError(FdOrErr.takeError());
@@ -262,7 +267,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
                           Map.FunctionAddresses, Map.FunctionIds))
       return std::move(E);
   } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,
-                                Map.FunctionAddresses, Map.FunctionIds)) {
+                              Map.FunctionAddresses, Map.FunctionIds)) {
     return std::move(E);
   }
   return Map;
