@@ -15,6 +15,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
@@ -97,8 +98,12 @@ protected:
 
     constexpr const char *FileName = "./input.cpp";
     FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
+
     if (!Diags->getClient())
-      Diags->setClient(new IgnoringDiagConsumer);
+      Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
+    Diags->setSeverityForGroup(diag::Flavor::WarningOrError, "unused-value",
+                               diag::Severity::Ignored, SourceLocation());
+
     // Prepare to run a compiler.
     std::vector<const char *> Args = {
         "syntax-test", "-target",       Target.c_str(),
@@ -117,7 +122,11 @@ protected:
 
     syntax::TranslationUnit *Root = nullptr;
     BuildSyntaxTreeAction Recorder(Root, this->Arena);
-    if (!Compiler.ExecuteAction(Recorder)) {
+
+    // Action could not be executed but the frontend didn't identify any errors
+    // in the code ==> problem in setting up the action.
+    if (!Compiler.ExecuteAction(Recorder) &&
+        Diags->getClient()->getNumErrors() == 0) {
       ADD_FAILURE() << "failed to run the frontend";
       std::abort();
     }
@@ -143,6 +152,8 @@ protected:
         continue;
       }
       auto *Root = buildTree(Code, Target);
+      EXPECT_EQ(Diags->getClient()->getNumErrors(), 0u)
+          << "Source file has syntax errors, they were printed to the test log";
       std::string Actual = std::string(StringRef(Root->dump(*Arena)).trim());
       EXPECT_EQ(Expected, Actual)
           << "for target " << Target << " the resulting dump is:\n"
@@ -180,8 +191,10 @@ protected:
   }
 
   // Data fields.
+  llvm::IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+      new DiagnosticOptions();
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions);
+      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts.get());
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       new llvm::vfs::InMemoryFileSystem;
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
@@ -517,11 +530,11 @@ TEST_F(SyntaxTreeTest, UnhandledStatement) {
   // Unhandled statements should end up as 'unknown statement'.
   // This example uses a 'label statement', which does not yet have a syntax
   // counterpart.
-  expectTreeDumpEqual("void main() { foo: return 100; }",
+  expectTreeDumpEqual("int main() { foo: return 100; }",
                       R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
-  |-void
+  |-int
   |-SimpleDeclarator
   | |-main
   | `-ParametersAndQualifiers
@@ -1166,7 +1179,7 @@ TEST_F(SyntaxTreeTest, FreeStandingClasses) {
   // Free-standing classes, must live inside a SimpleDeclaration.
   expectTreeDumpEqual(
       R"cpp(
-sturct X;
+struct X;
 struct X {};
 
 struct Y *y1;
@@ -1177,7 +1190,7 @@ struct {} *a1;
       R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
-| |-sturct
+| |-struct
 | |-X
 | `-;
 |-SimpleDeclaration
@@ -1660,7 +1673,7 @@ TEST_F(SyntaxTreeTest, ArraySubscriptsInDeclarators) {
 int a[10];
 int b[1][2][3];
 int c[] = {1,2,3};
-void f(int xs[static 10]);
+// void f(int xs[static 10]);
     )cpp",
       R"txt(
 *: TranslationUnit
@@ -1694,163 +1707,146 @@ void f(int xs[static 10]);
 | |   | `-3
 | |   `-]
 | `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-c
-| | |-ArraySubscript
-| | | |-[
-| | | `-]
-| | |-=
-| | `-UnknownExpression
-| |   `-UnknownExpression
-| |     |-{
-| |     |-UnknownExpression
-| |     | `-1
-| |     |-,
-| |     |-UnknownExpression
-| |     | `-2
-| |     |-,
-| |     |-UnknownExpression
-| |     | `-3
-| |     `-}
-| `-;
 `-SimpleDeclaration
-  |-void
+  |-int
   |-SimpleDeclarator
-  | |-f
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-xs
-  |   |   `-ArraySubscript
-  |   |     |-[
-  |   |     |-static
-  |   |     |-UnknownExpression
-  |   |     | `-10
-  |   |     `-]
-  |   `-)
-  `-;
-       )txt");
+  | |-c
+  | |-ArraySubscript
+  | | |-[
+  | | `-]
+  | |-=
+  | `-UnknownExpression
+  |   `-UnknownExpression
+  |     |-{
+  |     |-UnknownExpression
+  |     | `-1
+  |     |-,
+  |     |-UnknownExpression
+  |     | `-2
+  |     |-,
+  |     |-UnknownExpression
+  |     | `-3
+  |     `-}
+  `-;       )txt");
 }
 
 TEST_F(SyntaxTreeTest, ParameterListsInDeclarators) {
   expectTreeDumpEqual(
       R"cpp(
-int a() const;
-int b() volatile;
-int c() &;
-int d() &&;
-int foo(int a, int b);
-int foo(
-  const int a,
-  volatile int b,
-  const volatile int c,
-  int* d,
-  int& e,
-  int&& f
-);
-    )cpp",
+struct Test {
+  int a() const;
+  int b() volatile;
+  int c() &;
+  int d() &&;
+  int foo(int a, int b);
+  int foo(const int a, volatile int b, const volatile int c, int* d,
+          int& e, int&& f);
+};
+      )cpp",
       R"txt(
 *: TranslationUnit
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-a
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   `-const
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-b
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   `-volatile
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-c
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   `-&
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-d
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   `-&&
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-foo
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   `-a
-| |   |-,
-| |   |-SimpleDeclaration
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   `-b
-| |   `-)
-| `-;
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-foo
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-volatile
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-b
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-volatile
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-c
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-*
-  |   |   `-d
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-&
-  |   |   `-e
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-&&
-  |   |   `-f
-  |   `-)
+  |-struct
+  |-Test
+  |-{
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-a
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-)
+  | |   `-const
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-b
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-)
+  | |   `-volatile
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-c
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-)
+  | |   `-&
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-d
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-)
+  | |   `-&&
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-foo
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-SimpleDeclaration
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   `-a
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   `-b
+  | |   `-)
+  | `-;
+  |-SimpleDeclaration
+  | |-int
+  | |-SimpleDeclarator
+  | | |-foo
+  | | `-ParametersAndQualifiers
+  | |   |-(
+  | |   |-SimpleDeclaration
+  | |   | |-const
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   `-a
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-volatile
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   `-b
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-const
+  | |   | |-volatile
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   `-c
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   |-*
+  | |   |   `-d
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   |-&
+  | |   |   `-e
+  | |   |-,
+  | |   |-SimpleDeclaration
+  | |   | |-int
+  | |   | `-SimpleDeclarator
+  | |   |   |-&&
+  | |   |   `-f
+  | |   `-)
+  | `-;
+  |-}
   `-;
        )txt");
 }
@@ -1860,7 +1856,7 @@ TEST_F(SyntaxTreeTest, TrailingConst) {
       R"cpp(
 struct X {
   int foo() const;
-}
+};
     )cpp",
       R"txt(
 *: TranslationUnit
@@ -1877,7 +1873,8 @@ struct X {
   | |   |-)
   | |   `-const
   | `-;
-  `-}
+  |-}
+  `-;
     )txt");
 }
 
