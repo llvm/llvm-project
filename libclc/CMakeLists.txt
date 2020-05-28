@@ -262,7 +262,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 		target_compile_definitions( builtins.link.${arch_suffix} PRIVATE
 			"__CLC_INTERNAL" )
 		target_compile_options( builtins.link.${arch_suffix} PRIVATE  -target
-			${t} ${mcpu} -fno-builtin )
+			${t} ${mcpu} -fno-builtin -nostdlib )
 		set_target_properties( builtins.link.${arch_suffix} PROPERTIES
 			LINKER_LANGUAGE CLC )
 
