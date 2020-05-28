@@ -527,8 +527,6 @@ lldb::LanguageType Mangled::GuessLanguage() const {
     const char *mangled_name = mangled.GetCString();
     if (CPlusPlusLanguage::IsCPPMangledName(mangled_name))
       return lldb::eLanguageTypeC_plus_plus;
-    else if (ObjCLanguage::IsPossibleObjCMethodName(mangled_name))
-      return lldb::eLanguageTypeObjC;
 #ifdef LLDB_ENABLE_SWIFT
     else if (SwiftLanguageRuntime::IsSwiftMangledName(mangled.GetStringRef()))
       return lldb::eLanguageTypeSwift;
