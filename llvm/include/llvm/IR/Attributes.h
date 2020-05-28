@@ -397,6 +397,9 @@ public:
   static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<Attribute::AttrKind> Kinds);
   static AttributeList get(LLVMContext &C, unsigned Index,
+                           ArrayRef<Attribute::AttrKind> Kinds,
+                           ArrayRef<uint64_t> Values);
+  static AttributeList get(LLVMContext &C, unsigned Index,
                            ArrayRef<StringRef> Kind);
   static AttributeList get(LLVMContext &C, unsigned Index,
                            const AttrBuilder &B);

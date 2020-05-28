@@ -795,25 +795,29 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       hasSideEffects = true;
     else if (Property->isSubClassOf("NoCapture")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, NoCapture);
+      ArgumentAttributes.emplace_back(ArgNo, NoCapture, 0);
     } else if (Property->isSubClassOf("NoAlias")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, NoAlias);
+      ArgumentAttributes.emplace_back(ArgNo, NoAlias, 0);
     } else if (Property->isSubClassOf("Returned")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, Returned);
+      ArgumentAttributes.emplace_back(ArgNo, Returned, 0);
     } else if (Property->isSubClassOf("ReadOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, ReadOnly);
+      ArgumentAttributes.emplace_back(ArgNo, ReadOnly, 0);
     } else if (Property->isSubClassOf("WriteOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, WriteOnly);
+      ArgumentAttributes.emplace_back(ArgNo, WriteOnly, 0);
     } else if (Property->isSubClassOf("ReadNone")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, ReadNone);
+      ArgumentAttributes.emplace_back(ArgNo, ReadNone, 0);
     } else if (Property->isSubClassOf("ImmArg")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
-      ArgumentAttributes.emplace_back(ArgNo, ImmArg);
+      ArgumentAttributes.emplace_back(ArgNo, ImmArg, 0);
+    } else if (Property->isSubClassOf("Align")) {
+      unsigned ArgNo = Property->getValueAsInt("ArgNo");
+      uint64_t Align = Property->getValueAsInt("Align");
+      ArgumentAttributes.emplace_back(ArgNo, Alignment, Align);
     } else
       llvm_unreachable("Unknown property!");
   }
@@ -834,7 +838,7 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   // Convert argument index to attribute index starting from `FirstArgIndex`.
-  ArgAttribute Val{ParamIdx + 1, ImmArg};
+  ArgAttribute Val{ParamIdx + 1, ImmArg, 0};
   return std::binary_search(ArgumentAttributes.begin(),
                             ArgumentAttributes.end(), Val);
 }
