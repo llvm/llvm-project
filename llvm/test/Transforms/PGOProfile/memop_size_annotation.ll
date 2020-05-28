@@ -1,8 +1,8 @@
 ; RUN: llvm-profdata merge %S/Inputs/memop_size_annotation.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -memop-max-annotations=9 -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION9
-; RUN: opt < %s -passes=pgo-instr-use -memop-max-annotations=9 -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION9
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION4
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION4
+; RUN: opt < %s -pgo-instr-use -memop-max-annotations=9 -pgo-test-profile-file=%t.profdata -pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION9
+; RUN: opt < %s -passes=pgo-instr-use -memop-max-annotations=9 -pgo-test-profile-file=%t.profdata -pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION9
+; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION4
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefixes=MEMOP_ANNOTATION,MEMOP_ANNOTATION4
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
