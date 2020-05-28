@@ -274,13 +274,14 @@ def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
 def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
 }
 
+
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
   let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
