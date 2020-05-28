@@ -370,7 +370,6 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
   auto it = g_sdk_path.find(sdk.GetString());
   if (it != g_sdk_path.end())
     return it->second;
-  std::string path = GetXcodeSDK(sdk);
-  g_sdk_path.insert({sdk.GetString(), path});
-  return path;
+  auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
+  return it_new.first->second;
 }
