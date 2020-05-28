@@ -272,6 +272,20 @@ def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorToSCF
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToSCF : FunctionPass<"convert-vector-to-scf"> {
+  let summary = "Lower the operations from the vector dialect into the SCF "
+                "dialect";
+  let constructor = "mlir::createConvertVectorToSCFPass()";
+  let options = [
+    Option<"fullUnroll", "full-unroll", "bool", /*default=*/"false",
+           "Perform full unrolling when converting vector transfers to SCF">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
