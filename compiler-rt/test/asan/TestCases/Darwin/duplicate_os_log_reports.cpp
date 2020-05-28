@@ -1,4 +1,6 @@
 // UNSUPPORTED: ios
+// Don't re-enable until rdar://problem/62141527 is fixed.
+// REQUIRES: rdar_62141527
 // REQUIRES: shell
 // REQUIRES: darwin_log_cmd
 // RUN: %clangxx_asan -fsanitize-recover=address %s -o %t
