@@ -367,8 +367,9 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
   static std::mutex g_sdk_path_mutex;
 
   std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
-  std::string &path = g_sdk_path[sdk.GetString()];
-  if (path.empty())
-    path = GetXcodeSDK(sdk);
-  return path;
+  auto it = g_sdk_path.find(sdk.GetString());
+  if (it != g_sdk_path.end())
+    return it->second;
+  auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
+  return it_new.first->second;
 }

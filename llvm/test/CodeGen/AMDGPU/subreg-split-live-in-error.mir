@@ -85,10 +85,10 @@ body: |
   bb.6:
     successors: %bb.8(0x40000000), %bb.11(0x40000000)
     %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    dead %6:vgpr_32 = V_MUL_F32_e32 0, undef %7:vgpr_32, implicit $exec
-    dead %8:vgpr_32 = V_MUL_F32_e32 0, %2, implicit $exec
-    undef %9.sub1:vreg_64 = V_MUL_F32_e32 0, %1, implicit $exec
-    undef %10.sub0:vreg_128 = V_MUL_F32_e32 0, %0, implicit $exec
+    dead %6:vgpr_32 = V_MUL_F32_e32 0, undef %7:vgpr_32, implicit $mode, implicit $exec
+    dead %8:vgpr_32 = V_MUL_F32_e32 0, %2, implicit $mode, implicit $exec
+    undef %9.sub1:vreg_64 = V_MUL_F32_e32 0, %1, implicit $mode, implicit $exec
+    undef %10.sub0:vreg_128 = V_MUL_F32_e32 0, %0, implicit $mode, implicit $exec
     undef %11.sub0:sgpr_256 = S_MOV_B32 0
     %11.sub1:sgpr_256 = COPY %11.sub0
     %11.sub2:sgpr_256 = COPY %11.sub0
@@ -161,31 +161,31 @@ body: |
   bb.13:
     successors: %bb.15(0x40000000), %bb.14(0x40000000)
 
-    %18:vgpr_32 = V_MAD_F32 0, %10.sub0, 0, target-flags(amdgpu-gotprel) 1073741824, 0, -1082130432, 0, 0, implicit $exec
-    %19:vgpr_32 = V_MAD_F32 0, %12.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $exec
+    %18:vgpr_32 = V_MAD_F32 0, %10.sub0, 0, target-flags(amdgpu-gotprel) 1073741824, 0, -1082130432, 0, 0, implicit $mode, implicit $exec
+    %19:vgpr_32 = V_MAD_F32 0, %12.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %20:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %21:sgpr_128, 1040, 0, 0 :: (dereferenceable invariant load 16)
-    %22:vgpr_32 = V_ADD_F32_e32 0, %19, implicit $exec
-    %23:vgpr_32 = V_MAD_F32 0, %18, 0, 0, 0, 0, 0, 0, implicit $exec
+    %22:vgpr_32 = V_ADD_F32_e32 0, %19, implicit $mode, implicit $exec
+    %23:vgpr_32 = V_MAD_F32 0, %18, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %24:vgpr_32 = COPY %20.sub3
-    %25:vgpr_32 = V_MUL_F32_e64 0, target-flags(amdgpu-gotprel32-lo) 0, 0, %20.sub1, 0, 0, implicit $exec
+    %25:vgpr_32 = V_MUL_F32_e64 0, target-flags(amdgpu-gotprel32-lo) 0, 0, %20.sub1, 0, 0, implicit $mode, implicit $exec
     %26:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %27:sgpr_128, 1056, 0, 0 :: (dereferenceable invariant load 16)
-    %28:vgpr_32 = V_MAD_F32 0, %18, 0, %26.sub0, 0, 0, 0, 0, implicit $exec
-    %29:vgpr_32 = V_ADD_F32_e32 %28, %19, implicit $exec
-    %30:vgpr_32 = V_RCP_F32_e32 %29, implicit $exec
-    %25:vgpr_32 = V_MAC_F32_e32 0, %18, %25, implicit $exec
-    %31:vgpr_32 = V_MAD_F32 0, target-flags(amdgpu-gotprel) 0, 0, %12.sub0, 0, %24, 0, 0, implicit $exec
-    %32:vgpr_32 = V_ADD_F32_e32 %25, %31, implicit $exec
-    %33:vgpr_32 = V_MUL_F32_e32 %22, %30, implicit $exec
-    %34:vgpr_32 = V_MUL_F32_e32 %23, %30, implicit $exec
-    %35:vgpr_32 = V_MUL_F32_e32 %32, %30, implicit $exec
-    %36:vgpr_32 = V_MUL_F32_e32 0, %34, implicit $exec
-    %36:vgpr_32 = V_MAC_F32_e32 0, %33, %36, implicit $exec
-    %37:vgpr_32 = V_MAD_F32 0, %35, 0, 0, 0, 0, 0, 0, implicit $exec
+    %28:vgpr_32 = V_MAD_F32 0, %18, 0, %26.sub0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %29:vgpr_32 = V_ADD_F32_e32 %28, %19, implicit $mode, implicit $exec
+    %30:vgpr_32 = V_RCP_F32_e32 %29, implicit $mode, implicit $exec
+    %25:vgpr_32 = V_MAC_F32_e32 0, %18, %25, implicit $mode, implicit $exec
+    %31:vgpr_32 = V_MAD_F32 0, target-flags(amdgpu-gotprel) 0, 0, %12.sub0, 0, %24, 0, 0, implicit $mode, implicit $exec
+    %32:vgpr_32 = V_ADD_F32_e32 %25, %31, implicit $mode, implicit $exec
+    %33:vgpr_32 = V_MUL_F32_e32 %22, %30, implicit $mode, implicit $exec
+    %34:vgpr_32 = V_MUL_F32_e32 %23, %30, implicit $mode, implicit $exec
+    %35:vgpr_32 = V_MUL_F32_e32 %32, %30, implicit $mode, implicit $exec
+    %36:vgpr_32 = V_MUL_F32_e32 0, %34, implicit $mode, implicit $exec
+    %36:vgpr_32 = V_MAC_F32_e32 0, %33, %36, implicit $mode, implicit $exec
+    %37:vgpr_32 = V_MAD_F32 0, %35, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %38:sreg_64_xexec = V_CMP_NE_U32_e64 0, %5, implicit $exec
     %39:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %38, implicit $exec
     V_CMP_NE_U32_e32 1, %39, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
-    %40:vgpr_32 = V_ADD_F32_e32 %36, %37, implicit $exec
+    %40:vgpr_32 = V_ADD_F32_e32 %36, %37, implicit $mode, implicit $exec
     S_CBRANCH_VCCZ %bb.15, implicit $vcc
 
   bb.14:
@@ -194,9 +194,9 @@ body: |
 
   bb.15:
     successors: %bb.16(0x40000000), %bb.18(0x40000000)
-    %41:vgpr_32 = V_MAD_F32 0, %40, 0, 0, 0, 0, 0, 0, implicit $exec
-    %42:sreg_64 = V_CMP_LE_F32_e64 0, 0, 0, %41, 0, implicit $exec
-    %43:sreg_64 = V_CMP_GE_F32_e64 0, 1065353216, 0, %41, 0, implicit $exec
+    %41:vgpr_32 = V_MAD_F32 0, %40, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %42:sreg_64 = V_CMP_LE_F32_e64 0, 0, 0, %41, 0, implicit $mode, implicit $exec
+    %43:sreg_64 = V_CMP_GE_F32_e64 0, 1065353216, 0, %41, 0, implicit $mode, implicit $exec
     %44:sreg_64 = S_AND_B64 %43, %43, implicit-def dead $scc
     %45:sreg_64 = S_AND_B64 %42, %42, implicit-def dead $scc
     %46:sreg_64 = S_AND_B64 %45, %44, implicit-def dead $scc
@@ -222,15 +222,15 @@ body: |
   bb.18:
     successors: %bb.20(0x40000000), %bb.19(0x40000000)
     $exec = S_OR_B64 $exec, %47, implicit-def $scc
-    %52:vgpr_32 = V_MAD_F32 0, %3.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 1, %3.sub0, 0, 0, implicit $exec
-    %53:vgpr_32 = V_MUL_F32_e32 -2147483648, %3.sub1, implicit $exec
-    %53:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel32-hi) 1065353216, %3.sub2, %53, implicit $exec
-    %54:vgpr_32 = V_MUL_F32_e32 %53, %53, implicit $exec
-    %54:vgpr_32 = V_MAC_F32_e32 %52, %52, %54, implicit $exec
-    %55:vgpr_32 = V_SQRT_F32_e32 %54, implicit $exec
+    %52:vgpr_32 = V_MAD_F32 0, %3.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 1, %3.sub0, 0, 0, implicit $mode, implicit $exec
+    %53:vgpr_32 = V_MUL_F32_e32 -2147483648, %3.sub1, implicit $mode, implicit $exec
+    %53:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel32-hi) 1065353216, %3.sub2, %53, implicit $mode, implicit $exec
+    %54:vgpr_32 = V_MUL_F32_e32 %53, %53, implicit $mode, implicit $exec
+    %54:vgpr_32 = V_MAC_F32_e32 %52, %52, %54, implicit $mode, implicit $exec
+    %55:vgpr_32 = V_SQRT_F32_e32 %54, implicit $mode, implicit $exec
     %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %56:vgpr_32 = V_MOV_B32_e32 981668463, implicit $exec
-    %57:sreg_64 = V_CMP_NGT_F32_e64 0, %55, 0, %56, 0, implicit $exec
+    %57:sreg_64 = V_CMP_NGT_F32_e64 0, %55, 0, %56, 0, implicit $mode, implicit $exec
     %58:sreg_64 = S_AND_B64 $exec, %57, implicit-def dead $scc
     $vcc = COPY %58
     S_CBRANCH_VCCZ %bb.20, implicit $vcc
@@ -255,8 +255,8 @@ body: |
 
   bb.23:
     successors: %bb.22(0x80000000)
-    undef %60.sub1:vreg_64 = V_CVT_I32_F32_e32 %1, implicit $exec
-    %60.sub0:vreg_64 = V_CVT_I32_F32_e32 %0, implicit $exec
+    undef %60.sub1:vreg_64 = V_CVT_I32_F32_e32 %1, implicit $mode, implicit $exec
+    %60.sub0:vreg_64 = V_CVT_I32_F32_e32 %0, implicit $mode, implicit $exec
     undef %61.sub0:sgpr_256 = S_MOV_B32 0
     %61.sub1:sgpr_256 = COPY %61.sub0
     %61.sub2:sgpr_256 = COPY %61.sub0
@@ -266,20 +266,20 @@ body: |
     %61.sub6:sgpr_256 = COPY %61.sub0
     %61.sub7:sgpr_256 = COPY %61.sub0
     %62:vgpr_32 = V_MOV_B32_e32 1033100696, implicit $exec
-    %63:vgpr_32 = V_MUL_F32_e32 1060575065, %15.sub1, implicit $exec
-    %63:vgpr_32 = V_MAC_F32_e32 1046066128, %15.sub0, %63, implicit $exec
+    %63:vgpr_32 = V_MUL_F32_e32 1060575065, %15.sub1, implicit $mode, implicit $exec
+    %63:vgpr_32 = V_MAC_F32_e32 1046066128, %15.sub0, %63, implicit $mode, implicit $exec
     %64:vgpr_32 = IMAGE_LOAD_V1_V2 %60, %61, 1, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
-    %64:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel) 0, %51.sub0, %64, implicit $exec
-    %65:vgpr_32 = V_MUL_F32_e32 0, %64, implicit $exec
-    %66:vgpr_32 = V_MUL_F32_e32 0, %65, implicit $exec
-    %67:vgpr_32 = V_MAD_F32 0, %66, 0, %62, 0, 0, 0, 0, implicit $exec
-    %63:vgpr_32 = V_MAC_F32_e32 %15.sub2, %62, %63, implicit $exec
-    %4:vgpr_32 = V_ADD_F32_e32 %63, %67, implicit $exec
+    %64:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel) 0, %51.sub0, %64, implicit $mode, implicit $exec
+    %65:vgpr_32 = V_MUL_F32_e32 0, %64, implicit $mode, implicit $exec
+    %66:vgpr_32 = V_MUL_F32_e32 0, %65, implicit $mode, implicit $exec
+    %67:vgpr_32 = V_MAD_F32 0, %66, 0, %62, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %63:vgpr_32 = V_MAC_F32_e32 %15.sub2, %62, %63, implicit $mode, implicit $exec
+    %4:vgpr_32 = V_ADD_F32_e32 %63, %67, implicit $mode, implicit $exec
     S_BRANCH %bb.22
 
   bb.24:
-    %68:vgpr_32 = V_MUL_F32_e32 0, %4, implicit $exec
-    %69:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, undef %70:vgpr_32, 0, %68, 0, 0, implicit $exec
+    %68:vgpr_32 = V_MUL_F32_e32 0, %4, implicit $mode, implicit $exec
+    %69:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, undef %70:vgpr_32, 0, %68, 0, 0, implicit $mode, implicit $exec
     EXP 0, undef %71:vgpr_32, %69, undef %72:vgpr_32, undef %73:vgpr_32, -1, -1, 15, implicit $exec
     S_ENDPGM 0
 ...

@@ -15,7 +15,7 @@ body: |
     ; CHECK-LABEL: name: sin_s32_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_SIN_F32_e64_:%[0-9]+]]:vgpr_32 = V_SIN_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_SIN_F32_e64_:%[0-9]+]]:vgpr_32 = V_SIN_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_SIN_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), %0
@@ -35,7 +35,7 @@ body: |
     ; CHECK-LABEL: name: sin_s32_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_SIN_F32_e64_:%[0-9]+]]:vgpr_32 = V_SIN_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_SIN_F32_e64_:%[0-9]+]]:vgpr_32 = V_SIN_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_SIN_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sin), %0

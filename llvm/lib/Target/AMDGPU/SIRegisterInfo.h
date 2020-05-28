@@ -33,6 +33,13 @@ private:
   bool isWave32;
   BitVector RegPressureIgnoredUnits;
 
+  /// Sub reg indexes for getRegSplitParts.
+  /// First index represents subreg size from 1 to 16 DWORDs.
+  /// The inner vector is sorted by bit offset.
+  /// Provided a register can be fully split with given subregs,
+  /// all elements of the inner vector combined give a full lane mask.
+  static std::array<std::vector<int16_t>, 16> RegSplitParts;
+
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
 public:

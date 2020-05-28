@@ -15,7 +15,7 @@ func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3]
   // CHECK: shape.const_shape [4, 5]
   %c2 = constant 2 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 
@@ -28,7 +28,7 @@ func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3, 4]
   // CHECK: shape.const_shape [5]
   %c-1 = constant -1 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c-1) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
@@ -39,7 +39,7 @@ func @f() -> (!shape.shape, !shape.shape) {
 func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.split_at
   %c5 = constant 5 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c5) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }

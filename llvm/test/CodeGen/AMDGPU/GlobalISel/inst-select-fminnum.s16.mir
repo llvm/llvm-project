@@ -14,7 +14,7 @@ body: |
     ; CHECK-LABEL: name: fminnum_f16_vv
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK: [[V_MIN_F16_e64_:%[0-9]+]]:vgpr_32 = V_MIN_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
+    ; CHECK: [[V_MIN_F16_e64_:%[0-9]+]]:vgpr_32 = V_MIN_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_MIN_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -36,7 +36,7 @@ body: |
     ; CHECK-LABEL: name: fminnum_f16_v_fneg_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK: [[V_MIN_F16_e64_:%[0-9]+]]:vgpr_32 = V_MIN_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $exec
+    ; CHECK: [[V_MIN_F16_e64_:%[0-9]+]]:vgpr_32 = V_MIN_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_MIN_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1

@@ -65,26 +65,24 @@ bool isGCRelocate(const Value *V);
 bool isGCResult(const CallBase *Call);
 bool isGCResult(const Value *V);
 
-/// A wrapper around a GC intrinsic call, this provides most of the actual
-/// functionality for Statepoint and ImmutableStatepoint.  It is
-/// templatized to allow easily specializing of const and non-const
-/// concrete subtypes.
-template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallBaseTy>
-class StatepointBase {
-  CallBaseTy *StatepointCall;
-
-protected:
-  explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = isStatepoint(I) ? cast<CallBaseTy>(I) : nullptr;
-  }
-
-  explicit StatepointBase(CallBaseTy *Call) {
-    StatepointCall = isStatepoint(Call) ? Call : nullptr;
-  }
-
+/// Represents a gc.statepoint intrinsic call.  This extends directly from
+/// CallBase as the IntrinsicInst only supports calls and gc.statepoint is
+/// invokable.
+class GCStatepointInst : public CallBase {
 public:
-  using arg_iterator = typename CallBaseTy::const_op_iterator;
+  GCStatepointInst() = delete;
+  GCStatepointInst(const GCStatepointInst &) = delete;
+  GCStatepointInst &operator=(const GCStatepointInst &) = delete;
+
+  static bool classof(const CallBase *I) {
+    if (const Function *CF = I->getCalledFunction())
+      return CF->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
+  }
 
   enum {
     IDPos = 0,
@@ -93,6 +91,56 @@ public:
     NumCallArgsPos = 3,
     FlagsPos = 4,
     CallArgsBeginPos = 5,
+  };
+
+  /// Return the ID associated with this statepoint.
+  uint64_t getID() const {
+    return cast<ConstantInt>(getArgOperand(IDPos))->getZExtValue();
+  }
+
+  /// Return the number of patchable bytes associated with this statepoint.
+  uint32_t getNumPatchBytes() const {
+    const Value *NumPatchBytesVal = getArgOperand(NumPatchBytesPos);
+    uint64_t NumPatchBytes =
+      cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
+    assert(isInt<32>(NumPatchBytes) && "should fit in 32 bits!");
+    return NumPatchBytes;
+  }
+
+  /// Number of arguments to be passed to the actual callee.
+  int getNumCallArgs() const {
+    return cast<ConstantInt>(getArgOperand(NumCallArgsPos))->getZExtValue();
+  }
+
+  uint64_t getFlags() const {
+    return cast<ConstantInt>(getArgOperand(FlagsPos))->getZExtValue();
+  }
+};
+
+/// A wrapper around a GC intrinsic call, this provides most of the actual
+/// functionality for Statepoint and ImmutableStatepoint.  It is
+/// templatized to allow easily specializing of const and non-const
+/// concrete subtypes.
+template <typename FunTy, typename InstructionTy, typename ValueTy,
+          typename CallTy>
+class StatepointBase {
+  CallTy *StatepointCall;
+
+protected:
+  explicit StatepointBase(InstructionTy *I) {
+    StatepointCall = isStatepoint(I) ? cast<CallTy>(I) : nullptr;
+  }
+
+  explicit StatepointBase(CallTy *Call) {
+    StatepointCall = isStatepoint(Call) ? Call : nullptr;
+  }
+
+public:
+  using arg_iterator = typename CallTy::const_op_iterator;
+
+  enum {
+    CalledFunctionPos = GCStatepointInst::CalledFunctionPos,
+    CallArgsBeginPos = GCStatepointInst::CallArgsBeginPos,
   };
 
   void *operator new(size_t, unsigned) = delete;
@@ -104,30 +152,17 @@ public:
   }
 
   /// Return the underlying call instruction.
-  CallBaseTy *getCall() const {
+  CallTy *getCall() const {
     assert(*this && "check validity first!");
     return StatepointCall;
   }
 
-  uint64_t getFlags() const {
-    return cast<ConstantInt>(getCall()->getArgOperand(FlagsPos))
-        ->getZExtValue();
-  }
+  // Deprecated shims (update all callers to remove)
+  uint64_t getFlags() const { return getCall()->getFlags(); }
+  uint64_t getID() const { return getCall()->getID(); }
+  uint32_t getNumPatchBytes() const { return getCall()->getNumPatchBytes(); }
+  int getNumCallArgs() const { return getCall()->getNumCallArgs(); }
 
-  /// Return the ID associated with this statepoint.
-  uint64_t getID() const {
-    const Value *IDVal = getCall()->getArgOperand(IDPos);
-    return cast<ConstantInt>(IDVal)->getZExtValue();
-  }
-
-  /// Return the number of patchable bytes associated with this statepoint.
-  uint32_t getNumPatchBytes() const {
-    const Value *NumPatchBytesVal = getCall()->getArgOperand(NumPatchBytesPos);
-    uint64_t NumPatchBytes =
-      cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
-    assert(isInt<32>(NumPatchBytes) && "should fit in 32 bits!");
-    return NumPatchBytes;
-  }
 
   /// Return the value actually being called or invoked.
   ValueTy *getCalledValue() const {
@@ -158,12 +193,6 @@ public:
     auto *FTy = cast<FunctionType>(
         cast<PointerType>(getCalledValue()->getType())->getElementType());
     return FTy->getReturnType();
-  }
-
-  /// Number of arguments to be passed to the actual callee.
-  int getNumCallArgs() const {
-    const Value *NumCallArgsVal = getCall()->getArgOperand(NumCallArgsPos);
-    return cast<ConstantInt>(NumCallArgsVal)->getZExtValue();
   }
 
   size_t arg_size() const { return getNumCallArgs(); }
@@ -291,9 +320,9 @@ public:
 /// to a gc.statepoint.
 class ImmutableStatepoint
     : public StatepointBase<const Function, const Instruction, const Value,
-                            const CallBase> {
+                            const GCStatepointInst> {
   using Base = StatepointBase<const Function, const Instruction, const Value,
-                              const CallBase>;
+                              const GCStatepointInst>;
 
 public:
   explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
@@ -303,8 +332,8 @@ public:
 /// A specialization of it's base class for read-write access
 /// to a gc.statepoint.
 class Statepoint
-    : public StatepointBase<Function, Instruction, Value, CallBase> {
-  using Base = StatepointBase<Function, Instruction, Value, CallBase>;
+    : public StatepointBase<Function, Instruction, Value, GCStatepointInst> {
+  using Base = StatepointBase<Function, Instruction, Value, GCStatepointInst>;
 
 public:
   explicit Statepoint(Instruction *I) : Base(I) {}
@@ -402,9 +431,9 @@ public:
 };
 
 template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallBaseTy>
+          typename CallTy>
 std::vector<const GCRelocateInst *>
-StatepointBase<FunTy, InstructionTy, ValueTy, CallBaseTy>::getRelocates()
+StatepointBase<FunTy, InstructionTy, ValueTy, CallTy>::getRelocates()
     const {
   std::vector<const GCRelocateInst *> Result;
 

@@ -15,7 +15,7 @@ body: |
     ; GCN-LABEL: name: frint_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_RNDNE_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FRINT %0
@@ -35,7 +35,7 @@ body: |
     ; GCN-LABEL: name: frint_s32_vs
     ; GCN: liveins: $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_RNDNE_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FRINT %0
@@ -55,7 +55,7 @@ body: |
     ; GCN-LABEL: name: frint_fneg_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 1, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = V_RNDNE_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_RNDNE_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
@@ -76,7 +76,7 @@ body: |
     ; GCN-LABEL: name: frint_s64_vv
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = V_RNDNE_F64_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = V_RNDNE_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0_vgpr1 = COPY [[V_RNDNE_F64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FRINT %0
@@ -96,7 +96,7 @@ body: |
     ; GCN-LABEL: name: frint_s64_fneg_vv
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = V_RNDNE_F64_e64 1, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = V_RNDNE_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0_vgpr1 = COPY [[V_RNDNE_F64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FNEG %0

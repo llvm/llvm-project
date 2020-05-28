@@ -1,8 +1,19 @@
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -target-feature +float128 -DTEST_F128 -triple \
+// RUN:   powerpc64le-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s \
+// RUN:   --check-prefix CHECK-F128
 
 float crealf(_Complex float);
 double creal(_Complex double);
 long double creall(_Complex long double);
+#ifdef TEST_F128
+__float128 crealf128(_Complex __float128);
+__float128 foo_f128(_Complex __float128 x) {
+  return crealf128(x);
+}
+// CHECK-F128: define fp128 @foo_f128(fp128 {{[%A-Za-z0-9.]+}}, fp128 {{[%A-Za-z0-9.]+}})
+#endif
 
 float foo_float(_Complex float x) {
   return crealf(x);

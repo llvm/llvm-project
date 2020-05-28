@@ -1,3 +1,5 @@
+add_subdirectory(ML)
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp

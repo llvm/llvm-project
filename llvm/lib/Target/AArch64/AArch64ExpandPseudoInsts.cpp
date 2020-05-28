@@ -80,6 +80,9 @@ private:
   bool expandSetTagLoop(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MBBI,
                         MachineBasicBlock::iterator &NextMBBI);
+  bool expandSVESpillFill(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI, unsigned Opc,
+                          unsigned N);
 };
 
 } // end anonymous namespace
@@ -595,6 +598,28 @@ bool AArch64ExpandPseudo::expandSetTagLoop(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             unsigned Opc, unsigned N) {
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  MachineInstr &MI = *MBBI;
+  for (unsigned Offset = 0; Offset < N; ++Offset) {
+    int ImmOffset = MI.getOperand(2).getImm() + Offset;
+    bool Kill = (Offset + 1 == N) ? MI.getOperand(1).isKill() : false;
+    assert(ImmOffset >= -256 && ImmOffset < 256 &&
+           "Immediate spill offset out of range");
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
+        .addReg(
+            TRI->getSubReg(MI.getOperand(0).getReg(), AArch64::zsub0 + Offset),
+            Opc == AArch64::LDR_ZXI ? RegState::Define : 0)
+        .addReg(MI.getOperand(1).getReg(), getKillRegState(Kill))
+        .addImm(ImmOffset);
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -970,6 +995,18 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      report_fatal_error(
          "Non-writeback variants of STGloop / STZGloop should not "
          "survive past PrologEpilogInserter.");
+   case AArch64::STR_ZZZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
+   case AArch64::STR_ZZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
+   case AArch64::STR_ZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
+   case AArch64::LDR_ZZZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
+   case AArch64::LDR_ZZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
+   case AArch64::LDR_ZZXI:
+     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
   }
   return false;
 }

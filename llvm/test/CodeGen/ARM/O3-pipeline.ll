@@ -15,6 +15,7 @@
 ; CHECK-NEXT:      Canonicalize natural loops
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Loop Pass Manager
+; CHECK-NEXT:        Canonicalize Freeze Instructions in Loops
 ; CHECK-NEXT:        Induction Variable Users
 ; CHECK-NEXT:        Loop Strength Reduction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)

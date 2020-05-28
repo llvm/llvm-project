@@ -5,6 +5,8 @@
 # SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %1:sgpr(s16) (in function: fract_s16_vs)
 # SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %1:vgpr(s16) (in function: fract_s16_vv)
 
+---
+
 name: fract_s16_vs
 legalized: true
 regBankSelected: true
@@ -17,7 +19,7 @@ body: |
     ; CHECK-LABEL: name: fract_s16_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_FRACT_F16_e64_:%[0-9]+]]:vgpr_32 = V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FRACT_F16_e64_:%[0-9]+]]:vgpr_32 = V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_FRACT_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -38,7 +40,7 @@ body: |
     ; CHECK-LABEL: name: fract_s16_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_FRACT_F16_e64_:%[0-9]+]]:vgpr_32 = V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_FRACT_F16_e64_:%[0-9]+]]:vgpr_32 = V_FRACT_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_FRACT_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0

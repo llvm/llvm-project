@@ -41,3 +41,5 @@ add_llvm_unittest(AnalysisTests
   ValueTrackingTest.cpp
   VectorUtilsTest.cpp
   )
+
+add_subdirectory(ML)

@@ -1,0 +1,10 @@
+static_library("MLPolicies") {
+  output_name = "LLVMMLPolicies"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "InlineFeaturesAnalysis.cpp",
+  ]
+}

@@ -1517,3 +1517,639 @@ entry:
   %ext = extractelement <16 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0>, i32 %sel
   ret double %ext
 }
+
+define amdgpu_ps float @dyn_extract_v6f32_s_v(<6 x float> inreg %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f32_s_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b64 s[6:7], exec
+; GPRIDX-NEXT:  BB33_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v0
+; GPRIDX-NEXT:    s_mov_b32 m0, s8
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v0
+; GPRIDX-NEXT:    s_movrels_b32 s8, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s8
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB33_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[6:7]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f32_s_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b64 s[6:7], exec
+; MOVREL-NEXT:  BB33_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v0
+; MOVREL-NEXT:    s_mov_b32 m0, s8
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v0
+; MOVREL-NEXT:    s_movrels_b32 s8, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s8
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB33_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[6:7]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v1
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define float @dyn_extract_v6f32_v_v(<6 x float> %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f32_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
+; GPRIDX-NEXT:  BB34_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v6
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v6
+; GPRIDX-NEXT:    s_set_gpr_idx_on s6, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB34_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[4:5]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v7
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: dyn_extract_v6f32_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_mov_b64 s[4:5], exec
+; MOVREL-NEXT:  BB34_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v6
+; MOVREL-NEXT:    s_mov_b32 m0, s6
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v6
+; MOVREL-NEXT:    v_movrels_b32_e32 v7, v0
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB34_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v7
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %ext = extractelement <6 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v6f32_v_s(<6 x float> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f32_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f32_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v6f32_s_s(<6 x float> inreg %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f32_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 m0, s8
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_movrels_b32 s0, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f32_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s8
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_movrels_b32 s0, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v7f32_s_v(<7 x float> inreg %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f32_s_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b64 s[8:9], exec
+; GPRIDX-NEXT:  BB37_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v0
+; GPRIDX-NEXT:    s_mov_b32 m0, s7
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s7, v0
+; GPRIDX-NEXT:    s_movrels_b32 s7, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s7
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB37_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[8:9]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f32_s_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b64 s[8:9], exec
+; MOVREL-NEXT:  BB37_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v0
+; MOVREL-NEXT:    s_mov_b32 m0, s7
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s7, v0
+; MOVREL-NEXT:    s_movrels_b32 s7, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s7
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB37_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[8:9]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v1
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define float @dyn_extract_v7f32_v_v(<7 x float> %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f32_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
+; GPRIDX-NEXT:  BB38_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v7
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v7
+; GPRIDX-NEXT:    s_set_gpr_idx_on s6, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB38_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[4:5]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v8
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: dyn_extract_v7f32_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_mov_b64 s[4:5], exec
+; MOVREL-NEXT:  BB38_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v7
+; MOVREL-NEXT:    s_mov_b32 m0, s6
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v7
+; MOVREL-NEXT:    v_movrels_b32_e32 v8, v0
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB38_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v8
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %ext = extractelement <7 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v7f32_v_s(<7 x float> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f32_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f32_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v7f32_s_s(<7 x float> inreg %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f32_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 m0, s9
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_movrels_b32 s0, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f32_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s9
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_movrels_b32 s0, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f64_s_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s16, s2
+; GPRIDX-NEXT:    s_mov_b32 s17, s3
+; GPRIDX-NEXT:    s_mov_b32 s18, s4
+; GPRIDX-NEXT:    s_mov_b32 s19, s5
+; GPRIDX-NEXT:    s_mov_b32 s20, s6
+; GPRIDX-NEXT:    s_mov_b32 s21, s7
+; GPRIDX-NEXT:    s_mov_b32 s22, s8
+; GPRIDX-NEXT:    s_mov_b32 s23, s9
+; GPRIDX-NEXT:    s_mov_b32 s24, s10
+; GPRIDX-NEXT:    s_mov_b32 s25, s11
+; GPRIDX-NEXT:    s_mov_b32 s26, s12
+; GPRIDX-NEXT:    s_mov_b32 s27, s13
+; GPRIDX-NEXT:    s_mov_b64 s[2:3], exec
+; GPRIDX-NEXT:  BB41_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v0
+; GPRIDX-NEXT:    s_lshl_b32 m0, s0, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
+; GPRIDX-NEXT:    s_movrels_b32 s0, s16
+; GPRIDX-NEXT:    s_movrels_b32 s1, s17
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB41_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[2:3]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f64_s_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s16, s2
+; MOVREL-NEXT:    s_mov_b32 s17, s3
+; MOVREL-NEXT:    s_mov_b32 s18, s4
+; MOVREL-NEXT:    s_mov_b32 s19, s5
+; MOVREL-NEXT:    s_mov_b32 s20, s6
+; MOVREL-NEXT:    s_mov_b32 s21, s7
+; MOVREL-NEXT:    s_mov_b32 s22, s8
+; MOVREL-NEXT:    s_mov_b32 s23, s9
+; MOVREL-NEXT:    s_mov_b32 s24, s10
+; MOVREL-NEXT:    s_mov_b32 s25, s11
+; MOVREL-NEXT:    s_mov_b32 s26, s12
+; MOVREL-NEXT:    s_mov_b32 s27, s13
+; MOVREL-NEXT:    s_mov_b64 s[2:3], exec
+; MOVREL-NEXT:  BB41_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
+; MOVREL-NEXT:    s_lshl_b32 m0, s0, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
+; MOVREL-NEXT:    s_movrels_b32 s0, s16
+; MOVREL-NEXT:    s_movrels_b32 s1, s17
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB41_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[2:3]
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define double @dyn_extract_v6f64_v_v(<6 x double> %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f64_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
+; GPRIDX-NEXT:  BB42_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v12
+; GPRIDX-NEXT:    s_lshl_b32 s7, s6, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v12
+; GPRIDX-NEXT:    s_set_gpr_idx_on s7, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB42_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[4:5]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v14
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: dyn_extract_v6f64_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_mov_b64 s[4:5], exec
+; MOVREL-NEXT:  BB42_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v12
+; MOVREL-NEXT:    s_lshl_b32 m0, s6, 1
+; MOVREL-NEXT:    v_movrels_b32_e32 v13, v0
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v12
+; MOVREL-NEXT:    v_movrels_b32_e32 v14, v1
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB42_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v13
+; MOVREL-NEXT:    v_mov_b32_e32 v1, v14
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %ext = extractelement <6 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps double @dyn_extract_v6f64_v_s(<6 x double> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f64_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v12
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f64_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
+; MOVREL-NEXT:    v_movrels_b32_e32 v12, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v12
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps double @dyn_extract_v6f64_s_s(<6 x double> inreg %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v6f64_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 m0, s14
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 s10, s12
+; GPRIDX-NEXT:    s_mov_b32 s11, s13
+; GPRIDX-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v6f64_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 m0, s14
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_mov_b32 s10, s12
+; MOVREL-NEXT:    s_mov_b32 s11, s13
+; MOVREL-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <6 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f64_s_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s16, s2
+; GPRIDX-NEXT:    s_mov_b32 s17, s3
+; GPRIDX-NEXT:    s_mov_b32 s18, s4
+; GPRIDX-NEXT:    s_mov_b32 s19, s5
+; GPRIDX-NEXT:    s_mov_b32 s20, s6
+; GPRIDX-NEXT:    s_mov_b32 s21, s7
+; GPRIDX-NEXT:    s_mov_b32 s22, s8
+; GPRIDX-NEXT:    s_mov_b32 s23, s9
+; GPRIDX-NEXT:    s_mov_b32 s24, s10
+; GPRIDX-NEXT:    s_mov_b32 s25, s11
+; GPRIDX-NEXT:    s_mov_b32 s26, s12
+; GPRIDX-NEXT:    s_mov_b32 s27, s13
+; GPRIDX-NEXT:    s_mov_b32 s28, s14
+; GPRIDX-NEXT:    s_mov_b32 s29, s15
+; GPRIDX-NEXT:    s_mov_b64 s[2:3], exec
+; GPRIDX-NEXT:  BB45_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v0
+; GPRIDX-NEXT:    s_lshl_b32 m0, s0, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
+; GPRIDX-NEXT:    s_movrels_b32 s0, s16
+; GPRIDX-NEXT:    s_movrels_b32 s1, s17
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB45_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[2:3]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f64_s_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s16, s2
+; MOVREL-NEXT:    s_mov_b32 s17, s3
+; MOVREL-NEXT:    s_mov_b32 s18, s4
+; MOVREL-NEXT:    s_mov_b32 s19, s5
+; MOVREL-NEXT:    s_mov_b32 s20, s6
+; MOVREL-NEXT:    s_mov_b32 s21, s7
+; MOVREL-NEXT:    s_mov_b32 s22, s8
+; MOVREL-NEXT:    s_mov_b32 s23, s9
+; MOVREL-NEXT:    s_mov_b32 s24, s10
+; MOVREL-NEXT:    s_mov_b32 s25, s11
+; MOVREL-NEXT:    s_mov_b32 s26, s12
+; MOVREL-NEXT:    s_mov_b32 s27, s13
+; MOVREL-NEXT:    s_mov_b32 s28, s14
+; MOVREL-NEXT:    s_mov_b32 s29, s15
+; MOVREL-NEXT:    s_mov_b64 s[2:3], exec
+; MOVREL-NEXT:  BB45_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
+; MOVREL-NEXT:    s_lshl_b32 m0, s0, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
+; MOVREL-NEXT:    s_movrels_b32 s0, s16
+; MOVREL-NEXT:    s_movrels_b32 s1, s17
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB45_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[2:3]
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f64_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
+; GPRIDX-NEXT:  BB46_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v14
+; GPRIDX-NEXT:    s_lshl_b32 s7, s6, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v14
+; GPRIDX-NEXT:    s_set_gpr_idx_on s7, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB46_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[4:5]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v16
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: dyn_extract_v7f64_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_mov_b64 s[4:5], exec
+; MOVREL-NEXT:  BB46_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v14
+; MOVREL-NEXT:    s_lshl_b32 m0, s6, 1
+; MOVREL-NEXT:    v_movrels_b32_e32 v15, v0
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v14
+; MOVREL-NEXT:    v_movrels_b32_e32 v16, v1
+; MOVREL-NEXT:    s_and_saveexec_b64 vcc, vcc
+; MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
+; MOVREL-NEXT:    s_cbranch_execnz BB46_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v15
+; MOVREL-NEXT:    v_mov_b32_e32 v1, v16
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %ext = extractelement <7 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps double @dyn_extract_v7f64_v_s(<7 x double> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f64_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v14
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f64_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
+; MOVREL-NEXT:    v_movrels_b32_e32 v14, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v14
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps double @dyn_extract_v7f64_s_s(<7 x double> inreg %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v7f64_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 m0, s16
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 s10, s12
+; GPRIDX-NEXT:    s_mov_b32 s11, s13
+; GPRIDX-NEXT:    s_mov_b32 s12, s14
+; GPRIDX-NEXT:    s_mov_b32 s13, s15
+; GPRIDX-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v7f64_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 m0, s16
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_mov_b32 s10, s12
+; MOVREL-NEXT:    s_mov_b32 s11, s13
+; MOVREL-NEXT:    s_mov_b32 s12, s14
+; MOVREL-NEXT:    s_mov_b32 s13, s15
+; MOVREL-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <7 x double> %vec, i32 %sel
+  ret double %ext
+}

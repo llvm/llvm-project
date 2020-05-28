@@ -807,8 +807,10 @@ def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
-  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]
->;
+  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]> {
+  let Defs = [MODE];
+  let Uses = [MODE];
+}
 
 // FIXME: Not on SI?
 //def S_GETREG_REGRD_B32 : SOPK_32 <sopk<0x14, 0x13>, "s_getreg_regrd_b32">;
@@ -819,6 +821,8 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   "$simm16, $imm"> {
   let Size = 8; // Unlike every other SOPK instruction.
   let has_sdst = 0;
+  let Defs = [MODE];
+  let Uses = [MODE];
 }
 
 } // End hasSideEffects = 1
@@ -953,6 +957,10 @@ def S_CMP_LG_U64 : SOPC_CMP_64 <0x13, "s_cmp_lg_u64", COND_NE>;
 } // End SubtargetPredicate = isGFX8Plus
 
 let SubtargetPredicate = HasVGPRIndexMode in {
+// Setting the GPR index mode is really writing the fields in the mode
+// register. We don't want to add mode register uses to every
+// instruction, and it's too complicated to deal with anyway. This is
+// modeled just as a side effect.
 def S_SET_GPR_IDX_ON : SOPC <0x11,
   (outs),
   (ins SSrc_b32:$src0, GPRIdxMode:$src1),
@@ -1209,13 +1217,16 @@ let SubtargetPredicate = isGFX10Plus in {
     }
   def S_WAITCNT_DEPCTR :
     SOPP <0x023, (ins s16imm:$simm16), "s_waitcnt_depctr $simm16">;
-  def S_ROUND_MODE :
-    SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
-  def S_DENORM_MODE :
-    SOPP<0x025, (ins i32imm:$simm16), "s_denorm_mode $simm16",
-    [(SIdenorm_mode (i32 timm:$simm16))]> {
-      let hasSideEffects = 1;
-    }
+
+  let hasSideEffects = 1, Uses = [MODE], Defs = [MODE] in {
+    // FIXME: Should remove hasSideEffects
+    def S_ROUND_MODE :
+      SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
+    def S_DENORM_MODE :
+      SOPP<0x025, (ins i32imm:$simm16), "s_denorm_mode $simm16",
+      [(SIdenorm_mode (i32 timm:$simm16))]>;
+  }
+
   def S_TTRACEDATA_IMM :
     SOPP<0x028, (ins s16imm:$simm16), "s_ttracedata_imm $simm16">;
 } // End SubtargetPredicate = isGFX10Plus

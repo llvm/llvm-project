@@ -16,8 +16,8 @@ body: |
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE64: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; WAVE64: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $exec
-    ; WAVE64: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $exec
+    ; WAVE64: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; WAVE64: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; WAVE32-LABEL: name: sitofp
@@ -25,8 +25,8 @@ body: |
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; WAVE32: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $exec
-    ; WAVE32: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $exec
+    ; WAVE32: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; WAVE32: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
     %0:sgpr(s32) = COPY $sgpr0
@@ -58,15 +58,15 @@ body: |
     ; WAVE64-LABEL: name: sitofp_s32_to_s16_vv
     ; WAVE64: liveins: $vgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE64: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $exec
-    ; WAVE64: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $exec
+    ; WAVE64: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; WAVE64: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec
     ; WAVE64: $vgpr0 = COPY [[V_CVT_F16_F32_e32_]]
     ; WAVE32-LABEL: name: sitofp_s32_to_s16_vv
     ; WAVE32: liveins: $vgpr0
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $exec
-    ; WAVE32: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $exec
+    ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; WAVE32: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec
     ; WAVE32: $vgpr0 = COPY [[V_CVT_F16_F32_e32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_SITOFP %0
@@ -87,15 +87,15 @@ body: |
     ; WAVE64-LABEL: name: sitofp_s32_to_s16_vs
     ; WAVE64: liveins: $sgpr0
     ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE64: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $exec
-    ; WAVE64: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $exec
+    ; WAVE64: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; WAVE64: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec
     ; WAVE64: $vgpr0 = COPY [[V_CVT_F16_F32_e32_]]
     ; WAVE32-LABEL: name: sitofp_s32_to_s16_vs
     ; WAVE32: liveins: $sgpr0
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $exec
-    ; WAVE32: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $exec
+    ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
+    ; WAVE32: [[V_CVT_F16_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec
     ; WAVE32: $vgpr0 = COPY [[V_CVT_F16_F32_e32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s16) = G_SITOFP %0

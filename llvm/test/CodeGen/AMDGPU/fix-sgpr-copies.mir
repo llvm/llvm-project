@@ -11,7 +11,7 @@ body:               |
     %1:sreg_32 = IMPLICIT_DEF
     %2:sreg_32 = IMPLICIT_DEF
     %3:sreg_32 = IMPLICIT_DEF
-    %4:vgpr_32 = V_CVT_U32_F32_e64 0, %0:vgpr_32, 0, 0, implicit $exec
+    %4:vgpr_32 = V_CVT_U32_F32_e64 0, %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
     %5:sreg_32 = COPY %4:vgpr_32
     %6:sreg_32 = S_ADD_I32 %2:sreg_32, %5:sreg_32, implicit-def $scc
     %7:sreg_32 = S_ADDC_U32 %3:sreg_32, %1:sreg_32, implicit-def $scc, implicit $scc

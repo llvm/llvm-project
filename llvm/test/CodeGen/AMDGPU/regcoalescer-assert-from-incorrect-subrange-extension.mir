@@ -88,7 +88,7 @@ body:             |
   
     %70:vreg_128 = COPY killed %90
     %33:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %34:sgpr_128, 16, 0, 0 :: (dereferenceable invariant load 16)
-    %2:vgpr_32 = V_ADD_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %33.sub3, 0, 0, implicit $exec
+    %2:vgpr_32 = V_ADD_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %33.sub3, 0, 0, implicit $exec, implicit $mode
     S_CBRANCH_SCC1 %bb.5, implicit undef $scc
     S_BRANCH %bb.4
   

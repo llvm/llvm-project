@@ -663,14 +663,15 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     unsigned ai = 0, ae = intrinsic.ArgumentAttributes.size();
     if (ae) {
       while (ai != ae) {
-        unsigned argNo = intrinsic.ArgumentAttributes[ai].first;
-        unsigned attrIdx = argNo + 1; // Must match AttributeList::FirstArgIndex
+        unsigned attrIdx = intrinsic.ArgumentAttributes[ai].Index;
 
         OS << "      const Attribute::AttrKind AttrParam" << attrIdx << "[]= {";
         bool addComma = false;
 
+        bool AllValuesAreZero = true;
+        SmallVector<uint64_t, 8> Values;
         do {
-          switch (intrinsic.ArgumentAttributes[ai].second) {
+          switch (intrinsic.ArgumentAttributes[ai].Kind) {
           case CodeGenIntrinsic::NoCapture:
             if (addComma)
               OS << ",";
@@ -713,13 +714,39 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
             OS << "Attribute::ImmArg";
             addComma = true;
             break;
+          case CodeGenIntrinsic::Alignment:
+            if (addComma)
+              OS << ',';
+            OS << "Attribute::Alignment";
+            addComma = true;
+            break;
           }
+          uint64_t V = intrinsic.ArgumentAttributes[ai].Value;
+          Values.push_back(V);
+          AllValuesAreZero &= (V == 0);
 
           ++ai;
-        } while (ai != ae && intrinsic.ArgumentAttributes[ai].first == argNo);
+        } while (ai != ae && intrinsic.ArgumentAttributes[ai].Index == attrIdx);
         OS << "};\n";
+
+        // Generate attribute value array if not all attribute values are zero.
+        if (!AllValuesAreZero) {
+          OS << "      const uint64_t AttrValParam" << attrIdx << "[]= {";
+          addComma = false;
+          for (const auto V : Values) {
+            if (addComma)
+              OS << ',';
+            OS << V;
+            addComma = true;
+          }
+          OS << "};\n";
+        }
+
         OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
-           << attrIdx << ", AttrParam" << attrIdx << ");\n";
+           << attrIdx << ", AttrParam" << attrIdx;
+        if (!AllValuesAreZero)
+          OS << ", AttrValParam" << attrIdx;
+        OS << ");\n";
       }
     }
 

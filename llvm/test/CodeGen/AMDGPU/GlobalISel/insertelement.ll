@@ -3397,3 +3397,1188 @@ entry:
   %insert = insertelement <16 x double> %vec, double %val, i32 %idx
   ret <16 x double> %insert
 }
+
+define amdgpu_ps <7 x i32> @dyn_insertelement_v7i32_s_s_s(<7 x i32> inreg %vec, i32 inreg %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7i32_s_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 m0, s10
+; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_movreld_b32 s0, s9
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7i32_s_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s10
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_movreld_b32 s0, s9
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x i32> %vec, i32 %val, i32 %idx
+  ret <7 x i32> %insert
+}
+
+define amdgpu_ps <7 x i8 addrspace(3)*> @dyn_insertelement_v7p3i8_s_s_s(<7 x i8 addrspace(3)*> inreg %vec, i8 addrspace(3)* inreg %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7p3i8_s_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 m0, s10
+; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_movreld_b32 s0, s9
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7p3i8_s_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s10
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_movreld_b32 s0, s9
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
+  ret <7 x i8 addrspace(3)*> %insert
+}
+
+define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_s_v_s(<7 x float> inreg %vec, float %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f32_s_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s7
+; GPRIDX-NEXT:    s_set_gpr_idx_on s9, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v8
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f32_s_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v8, v0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    s_mov_b32 m0, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v4, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v5, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v6, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s7
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v8
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x float> %vec, float %val, i32 %idx
+  ret <7 x float> %insert
+}
+
+define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_s_v_v(<7 x float> inreg %vec, float %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f32_s_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s0
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB46_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v9
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v9
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, v17
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v8
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB46_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f32_s_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v17, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v16, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s0
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB46_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v1
+; MOVREL-NEXT:    v_mov_b32_e32 v2, v10
+; MOVREL-NEXT:    v_mov_b32_e32 v3, v11
+; MOVREL-NEXT:    v_mov_b32_e32 v4, v12
+; MOVREL-NEXT:    v_mov_b32_e32 v5, v13
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
+; MOVREL-NEXT:    s_mov_b32 m0, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v6, v14
+; MOVREL-NEXT:    v_mov_b32_e32 v7, v15
+; MOVREL-NEXT:    v_mov_b32_e32 v8, v16
+; MOVREL-NEXT:    v_mov_b32_e32 v9, v17
+; MOVREL-NEXT:    v_movreld_b32_e32 v2, v0
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB46_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v1, v3
+; MOVREL-NEXT:    v_mov_b32_e32 v2, v4
+; MOVREL-NEXT:    v_mov_b32_e32 v3, v5
+; MOVREL-NEXT:    v_mov_b32_e32 v4, v6
+; MOVREL-NEXT:    v_mov_b32_e32 v5, v7
+; MOVREL-NEXT:    v_mov_b32_e32 v6, v8
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x float> %vec, float %val, i32 %idx
+  ret <7 x float> %insert
+}
+
+define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_v_v_s(<7 x float> %vec, float %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f32_v_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v7
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f32_v_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v7
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x float> %vec, float %val, i32 %idx
+  ret <7 x float> %insert
+}
+
+define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_v_v_v(<7 x float> %vec, float %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f32_v_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB48_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v8
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v8
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, v2
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, v7
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB48_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, v15
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f32_v_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB48_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v8
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v7
+; MOVREL-NEXT:    v_mov_b32_e32 v9, v0
+; MOVREL-NEXT:    v_mov_b32_e32 v15, v6
+; MOVREL-NEXT:    v_mov_b32_e32 v14, v5
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v8
+; MOVREL-NEXT:    s_mov_b32 m0, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v13, v4
+; MOVREL-NEXT:    v_mov_b32_e32 v12, v3
+; MOVREL-NEXT:    v_mov_b32_e32 v11, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v10, v1
+; MOVREL-NEXT:    v_movreld_b32_e32 v9, v7
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB48_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v9
+; MOVREL-NEXT:    v_mov_b32_e32 v1, v10
+; MOVREL-NEXT:    v_mov_b32_e32 v2, v11
+; MOVREL-NEXT:    v_mov_b32_e32 v3, v12
+; MOVREL-NEXT:    v_mov_b32_e32 v4, v13
+; MOVREL-NEXT:    v_mov_b32_e32 v5, v14
+; MOVREL-NEXT:    v_mov_b32_e32 v6, v15
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x float> %vec, float %val, i32 %idx
+  ret <7 x float> %insert
+}
+
+define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_s_s(<7 x double> inreg %vec, double inreg %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f64_s_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 s10, s12
+; GPRIDX-NEXT:    s_mov_b32 s11, s13
+; GPRIDX-NEXT:    s_mov_b32 s12, s14
+; GPRIDX-NEXT:    s_mov_b32 s13, s15
+; GPRIDX-NEXT:    s_mov_b32 m0, s18
+; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_movreld_b64 s[0:1], s[16:17]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f64_s_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 m0, s18
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_mov_b32 s10, s12
+; MOVREL-NEXT:    s_mov_b32 s11, s13
+; MOVREL-NEXT:    s_mov_b32 s12, s14
+; MOVREL-NEXT:    s_mov_b32 s13, s15
+; MOVREL-NEXT:    s_movreld_b64 s[0:1], s[16:17]
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x double> %vec, double %val, i32 %idx
+  ret <7 x double> %insert
+}
+
+define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_s(<7 x double> inreg %vec, double %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f64_s_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 s10, s12
+; GPRIDX-NEXT:    s_mov_b32 s11, s13
+; GPRIDX-NEXT:    s_mov_b32 s12, s14
+; GPRIDX-NEXT:    s_mov_b32 s13, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s0
+; GPRIDX-NEXT:    s_lshl_b32 s0, s16, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v2
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v9
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v10
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v11
+; GPRIDX-NEXT:    v_readfirstlane_b32 s10, v12
+; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v13
+; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v14
+; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v15
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f64_s_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_mov_b32 s10, s12
+; MOVREL-NEXT:    s_mov_b32 s11, s13
+; MOVREL-NEXT:    s_mov_b32 s12, s14
+; MOVREL-NEXT:    s_mov_b32 s13, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v17, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
+; MOVREL-NEXT:    s_lshl_b32 m0, s16, 1
+; MOVREL-NEXT:    v_mov_b32_e32 v16, s14
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s12
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v9, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v6, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v5, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v4, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
+; MOVREL-NEXT:    v_movreld_b32_e32 v2, v0
+; MOVREL-NEXT:    v_movreld_b32_e32 v3, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v2
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v9
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v10
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v11
+; MOVREL-NEXT:    v_readfirstlane_b32 s10, v12
+; MOVREL-NEXT:    v_readfirstlane_b32 s11, v13
+; MOVREL-NEXT:    v_readfirstlane_b32 s12, v14
+; MOVREL-NEXT:    v_readfirstlane_b32 s13, v15
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x double> %vec, double %val, i32 %idx
+  ret <7 x double> %insert
+}
+
+define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg %vec, double %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f64_s_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 s10, s12
+; GPRIDX-NEXT:    s_mov_b32 s11, s13
+; GPRIDX-NEXT:    s_mov_b32 s12, s14
+; GPRIDX-NEXT:    s_mov_b32 s13, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v34, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v33, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, s0
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB51_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v2
+; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v2
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v19
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v20
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, v21
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, v22
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, v23
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, v24
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, v25
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, v26
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, v27
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, v28
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v29
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v30
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, v31
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v32
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v33
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v34
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB51_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v9
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v10
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v11
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v12
+; GPRIDX-NEXT:    v_readfirstlane_b32 s10, v13
+; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v14
+; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v15
+; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v16
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f64_s_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_mov_b32 s10, s12
+; MOVREL-NEXT:    s_mov_b32 s11, s13
+; MOVREL-NEXT:    s_mov_b32 s12, s14
+; MOVREL-NEXT:    s_mov_b32 s13, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v34, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v33, s14
+; MOVREL-NEXT:    v_mov_b32_e32 v30, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v31, s12
+; MOVREL-NEXT:    v_mov_b32_e32 v32, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v29, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v28, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v27, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v26, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v25, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v24, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v23, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v22, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v21, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v20, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v19, s0
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB51_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, v19
+; MOVREL-NEXT:    v_mov_b32_e32 v4, v20
+; MOVREL-NEXT:    v_mov_b32_e32 v5, v21
+; MOVREL-NEXT:    v_mov_b32_e32 v6, v22
+; MOVREL-NEXT:    s_lshl_b32 m0, s1, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v7, v23
+; MOVREL-NEXT:    v_mov_b32_e32 v8, v24
+; MOVREL-NEXT:    v_mov_b32_e32 v9, v25
+; MOVREL-NEXT:    v_mov_b32_e32 v10, v26
+; MOVREL-NEXT:    v_mov_b32_e32 v11, v27
+; MOVREL-NEXT:    v_mov_b32_e32 v12, v28
+; MOVREL-NEXT:    v_mov_b32_e32 v13, v29
+; MOVREL-NEXT:    v_mov_b32_e32 v14, v30
+; MOVREL-NEXT:    v_mov_b32_e32 v15, v31
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v32
+; MOVREL-NEXT:    v_mov_b32_e32 v17, v33
+; MOVREL-NEXT:    v_mov_b32_e32 v18, v34
+; MOVREL-NEXT:    v_movreld_b32_e32 v3, v0
+; MOVREL-NEXT:    v_movreld_b32_e32 v4, v1
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB51_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v9
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v10
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v11
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v12
+; MOVREL-NEXT:    v_readfirstlane_b32 s10, v13
+; MOVREL-NEXT:    v_readfirstlane_b32 s11, v14
+; MOVREL-NEXT:    v_readfirstlane_b32 s12, v15
+; MOVREL-NEXT:    v_readfirstlane_b32 s13, v16
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x double> %vec, double %val, i32 %idx
+  ret <7 x double> %insert
+}
+
+define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_s(<7 x double> %vec, double %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f64_v_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v15
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v16
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v0
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v2
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v9
+; GPRIDX-NEXT:    v_readfirstlane_b32 s10, v10
+; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v11
+; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v12
+; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v13
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f64_v_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v15
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v14
+; MOVREL-NEXT:    v_movreld_b32_e32 v1, v16
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v2
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v9
+; MOVREL-NEXT:    v_readfirstlane_b32 s10, v10
+; MOVREL-NEXT:    v_readfirstlane_b32 s11, v11
+; MOVREL-NEXT:    v_readfirstlane_b32 s12, v12
+; MOVREL-NEXT:    v_readfirstlane_b32 s13, v13
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x double> %vec, double %val, i32 %idx
+  ret <7 x double> %insert
+}
+
+define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_v(<7 x double> %vec, double %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v7f64_v_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB53_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v16
+; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v16
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, v8
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v2
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v14
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v15
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB53_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v17
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v18
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v19
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v20
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v21
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v22
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v23
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v24
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v25
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v26
+; GPRIDX-NEXT:    v_readfirstlane_b32 s10, v27
+; GPRIDX-NEXT:    v_readfirstlane_b32 s11, v28
+; GPRIDX-NEXT:    v_readfirstlane_b32 s12, v29
+; GPRIDX-NEXT:    v_readfirstlane_b32 s13, v30
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v7f64_v_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB53_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v16
+; MOVREL-NEXT:    v_mov_b32_e32 v32, v15
+; MOVREL-NEXT:    v_mov_b32_e32 v17, v0
+; MOVREL-NEXT:    v_mov_b32_e32 v31, v14
+; MOVREL-NEXT:    v_mov_b32_e32 v30, v13
+; MOVREL-NEXT:    s_lshl_b32 m0, s1, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v16
+; MOVREL-NEXT:    v_mov_b32_e32 v29, v12
+; MOVREL-NEXT:    v_mov_b32_e32 v28, v11
+; MOVREL-NEXT:    v_mov_b32_e32 v27, v10
+; MOVREL-NEXT:    v_mov_b32_e32 v26, v9
+; MOVREL-NEXT:    v_mov_b32_e32 v25, v8
+; MOVREL-NEXT:    v_mov_b32_e32 v24, v7
+; MOVREL-NEXT:    v_mov_b32_e32 v23, v6
+; MOVREL-NEXT:    v_mov_b32_e32 v22, v5
+; MOVREL-NEXT:    v_mov_b32_e32 v21, v4
+; MOVREL-NEXT:    v_mov_b32_e32 v20, v3
+; MOVREL-NEXT:    v_mov_b32_e32 v19, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v18, v1
+; MOVREL-NEXT:    v_movreld_b32_e32 v17, v14
+; MOVREL-NEXT:    v_movreld_b32_e32 v18, v15
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB53_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v17
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v18
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v19
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v20
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v21
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v22
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v23
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v24
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v25
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v26
+; MOVREL-NEXT:    v_readfirstlane_b32 s10, v27
+; MOVREL-NEXT:    v_readfirstlane_b32 s11, v28
+; MOVREL-NEXT:    v_readfirstlane_b32 s12, v29
+; MOVREL-NEXT:    v_readfirstlane_b32 s13, v30
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <7 x double> %vec, double %val, i32 %idx
+  ret <7 x double> %insert
+}
+
+define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_s_s_s(<5 x double> inreg %vec, double inreg %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v5f64_s_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    s_mov_b32 m0, s14
+; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_movreld_b64 s[0:1], s[12:13]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v5f64_s_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 m0, s14
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    s_movreld_b64 s[0:1], s[12:13]
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <5 x double> %vec, double %val, i32 %idx
+  ret <5 x double> %insert
+}
+
+define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_s_v_s(<5 x double> inreg %vec, double %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v5f64_s_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s0
+; GPRIDX-NEXT:    s_lshl_b32 s0, s12, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v2
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v9
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v10
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v11
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v5f64_s_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v17, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
+; MOVREL-NEXT:    s_lshl_b32 m0, s12, 1
+; MOVREL-NEXT:    v_mov_b32_e32 v16, s14
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s12
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v9, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v6, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v5, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v4, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
+; MOVREL-NEXT:    v_movreld_b32_e32 v2, v0
+; MOVREL-NEXT:    v_movreld_b32_e32 v3, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v2
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v9
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v10
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v11
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <5 x double> %vec, double %val, i32 %idx
+  ret <5 x double> %insert
+}
+
+define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_s_v_v(<5 x double> inreg %vec, double %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v5f64_s_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s0, s2
+; GPRIDX-NEXT:    s_mov_b32 s1, s3
+; GPRIDX-NEXT:    s_mov_b32 s2, s4
+; GPRIDX-NEXT:    s_mov_b32 s3, s5
+; GPRIDX-NEXT:    s_mov_b32 s4, s6
+; GPRIDX-NEXT:    s_mov_b32 s5, s7
+; GPRIDX-NEXT:    s_mov_b32 s6, s8
+; GPRIDX-NEXT:    s_mov_b32 s7, s9
+; GPRIDX-NEXT:    s_mov_b32 s8, s10
+; GPRIDX-NEXT:    s_mov_b32 s9, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v34, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v33, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, s0
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB56_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v2
+; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v2
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v19
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v20
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, v21
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, v22
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, v23
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, v24
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, v25
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, v26
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, v27
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, v28
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v29
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v30
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, v31
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v32
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v33
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v34
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB56_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v9
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v10
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v11
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v12
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v5f64_s_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 s8, s10
+; MOVREL-NEXT:    s_mov_b32 s9, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v34, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v33, s14
+; MOVREL-NEXT:    v_mov_b32_e32 v32, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v31, s12
+; MOVREL-NEXT:    v_mov_b32_e32 v30, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v29, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v28, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v27, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v26, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v25, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v24, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v23, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v22, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v21, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v20, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v19, s0
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB56_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, v19
+; MOVREL-NEXT:    v_mov_b32_e32 v4, v20
+; MOVREL-NEXT:    v_mov_b32_e32 v5, v21
+; MOVREL-NEXT:    v_mov_b32_e32 v6, v22
+; MOVREL-NEXT:    s_lshl_b32 m0, s1, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v7, v23
+; MOVREL-NEXT:    v_mov_b32_e32 v8, v24
+; MOVREL-NEXT:    v_mov_b32_e32 v9, v25
+; MOVREL-NEXT:    v_mov_b32_e32 v10, v26
+; MOVREL-NEXT:    v_mov_b32_e32 v11, v27
+; MOVREL-NEXT:    v_mov_b32_e32 v12, v28
+; MOVREL-NEXT:    v_mov_b32_e32 v13, v29
+; MOVREL-NEXT:    v_mov_b32_e32 v14, v30
+; MOVREL-NEXT:    v_mov_b32_e32 v15, v31
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v32
+; MOVREL-NEXT:    v_mov_b32_e32 v17, v33
+; MOVREL-NEXT:    v_mov_b32_e32 v18, v34
+; MOVREL-NEXT:    v_movreld_b32_e32 v3, v0
+; MOVREL-NEXT:    v_movreld_b32_e32 v4, v1
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB56_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v9
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v10
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v11
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v12
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <5 x double> %vec, double %val, i32 %idx
+  ret <5 x double> %insert
+}
+
+define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_s(<5 x double> %vec, double %val, i32 inreg %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v5f64_v_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v11
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v16
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v0
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v2
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v3
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v4
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v5
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v6
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v7
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v8
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v9
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v5f64_v_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v11
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v10
+; MOVREL-NEXT:    v_movreld_b32_e32 v1, v16
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v2
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v3
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v4
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v5
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v6
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v7
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v8
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v9
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <5 x double> %vec, double %val, i32 %idx
+  ret <5 x double> %insert
+}
+
+define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_v(<5 x double> %vec, double %val, i32 %idx) {
+; GPRIDX-LABEL: dyn_insertelement_v5f64_v_v_v:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
+; GPRIDX-NEXT:  BB58_1: ; =>This Inner Loop Header: Depth=1
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v12
+; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v12
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, v8
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, v2
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, v10
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, v11
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
+; GPRIDX-NEXT:    s_cbranch_execnz BB58_1
+; GPRIDX-NEXT:  ; %bb.2:
+; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v13
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v14
+; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v15
+; GPRIDX-NEXT:    v_readfirstlane_b32 s3, v16
+; GPRIDX-NEXT:    v_readfirstlane_b32 s4, v17
+; GPRIDX-NEXT:    v_readfirstlane_b32 s5, v18
+; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v19
+; GPRIDX-NEXT:    v_readfirstlane_b32 s7, v20
+; GPRIDX-NEXT:    v_readfirstlane_b32 s8, v21
+; GPRIDX-NEXT:    v_readfirstlane_b32 s9, v22
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_insertelement_v5f64_v_v_v:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s0, exec_lo
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
+; MOVREL-NEXT:  BB58_1: ; =>This Inner Loop Header: Depth=1
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v12
+; MOVREL-NEXT:    v_mov_b32_e32 v28, v15
+; MOVREL-NEXT:    v_mov_b32_e32 v27, v14
+; MOVREL-NEXT:    v_mov_b32_e32 v26, v13
+; MOVREL-NEXT:    v_mov_b32_e32 v25, v12
+; MOVREL-NEXT:    v_mov_b32_e32 v24, v11
+; MOVREL-NEXT:    v_mov_b32_e32 v23, v10
+; MOVREL-NEXT:    v_mov_b32_e32 v22, v9
+; MOVREL-NEXT:    v_mov_b32_e32 v21, v8
+; MOVREL-NEXT:    v_mov_b32_e32 v20, v7
+; MOVREL-NEXT:    v_mov_b32_e32 v19, v6
+; MOVREL-NEXT:    v_mov_b32_e32 v18, v5
+; MOVREL-NEXT:    v_mov_b32_e32 v17, v4
+; MOVREL-NEXT:    v_mov_b32_e32 v16, v3
+; MOVREL-NEXT:    v_mov_b32_e32 v15, v2
+; MOVREL-NEXT:    v_mov_b32_e32 v14, v1
+; MOVREL-NEXT:    v_mov_b32_e32 v13, v0
+; MOVREL-NEXT:    s_lshl_b32 m0, s1, 1
+; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v12
+; MOVREL-NEXT:    v_movreld_b32_e32 v13, v10
+; MOVREL-NEXT:    v_movreld_b32_e32 v14, v11
+; MOVREL-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
+; MOVREL-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
+; MOVREL-NEXT:    s_cbranch_execnz BB58_1
+; MOVREL-NEXT:  ; %bb.2:
+; MOVREL-NEXT:    s_mov_b32 exec_lo, s0
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v13
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v14
+; MOVREL-NEXT:    v_readfirstlane_b32 s2, v15
+; MOVREL-NEXT:    v_readfirstlane_b32 s3, v16
+; MOVREL-NEXT:    v_readfirstlane_b32 s4, v17
+; MOVREL-NEXT:    v_readfirstlane_b32 s5, v18
+; MOVREL-NEXT:    v_readfirstlane_b32 s6, v19
+; MOVREL-NEXT:    v_readfirstlane_b32 s7, v20
+; MOVREL-NEXT:    v_readfirstlane_b32 s8, v21
+; MOVREL-NEXT:    v_readfirstlane_b32 s9, v22
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %insert = insertelement <5 x double> %vec, double %val, i32 %idx
+  ret <5 x double> %insert
+}

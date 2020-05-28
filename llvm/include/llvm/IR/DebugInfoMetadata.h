@@ -287,12 +287,8 @@ class DISubrange : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  int64_t LowerBound;
-
-  DISubrange(LLVMContext &C, StorageType Storage, Metadata *Node,
-             int64_t LowerBound, ArrayRef<Metadata *> Ops)
-      : DINode(C, DISubrangeKind, Storage, dwarf::DW_TAG_subrange_type, Ops),
-        LowerBound(LowerBound) {}
+  DISubrange(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops)
+      : DINode(C, DISubrangeKind, Storage, dwarf::DW_TAG_subrange_type, Ops) {}
 
   ~DISubrange() = default;
 
@@ -304,8 +300,14 @@ class DISubrange : public DINode {
                              int64_t LowerBound, StorageType Storage,
                              bool ShouldCreate = true);
 
+  static DISubrange *getImpl(LLVMContext &Context, Metadata *CountNode,
+                             Metadata *LowerBound, Metadata *UpperBound,
+                             Metadata *Stride, StorageType Storage,
+                             bool ShouldCreate = true);
+
   TempDISubrange cloneImpl() const {
-    return getTemporary(getContext(), getRawCountNode(), getLowerBound());
+    return getTemporary(getContext(), getRawCountNode(), getRawLowerBound(),
+                        getRawUpperBound(), getRawStride());
   }
 
 public:
@@ -315,25 +317,33 @@ public:
   DEFINE_MDNODE_GET(DISubrange, (Metadata *CountNode, int64_t LowerBound = 0),
                     (CountNode, LowerBound))
 
-  TempDISubrange clone() const { return cloneImpl(); }
+  DEFINE_MDNODE_GET(DISubrange,
+                    (Metadata * CountNode, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride),
+                    (CountNode, LowerBound, UpperBound, Stride))
 
-  int64_t getLowerBound() const { return LowerBound; }
+  TempDISubrange clone() const { return cloneImpl(); }
 
   Metadata *getRawCountNode() const {
     return getOperand(0).get();
   }
 
+  Metadata *getRawLowerBound() const { return getOperand(1).get(); }
+
+  Metadata *getRawUpperBound() const { return getOperand(2).get(); }
+
+  Metadata *getRawStride() const { return getOperand(3).get(); }
+
   typedef PointerUnion<ConstantInt*, DIVariable*> CountType;
+  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
 
-  CountType getCount() const {
-    if (auto *MD = dyn_cast<ConstantAsMetadata>(getRawCountNode()))
-      return CountType(cast<ConstantInt>(MD->getValue()));
+  CountType getCount() const;
 
-    if (auto *DV = dyn_cast<DIVariable>(getRawCountNode()))
-      return CountType(DV);
+  BoundType getLowerBound() const;
 
-    return CountType();
-  }
+  BoundType getUpperBound() const;
+
+  BoundType getStride() const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubrangeKind;

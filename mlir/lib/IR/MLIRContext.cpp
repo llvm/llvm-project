@@ -543,6 +543,13 @@ std::vector<AbstractOperation *> MLIRContext::getRegisteredOperations() {
   return result;
 }
 
+bool MLIRContext::isOperationRegistered(StringRef name) {
+  // Lock access to the context registry.
+  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
+
+  return impl->registeredOperations.count(name);
+}
+
 void Dialect::addOperation(AbstractOperation opInfo) {
   assert((getNamespace().empty() ||
           opInfo.name.split('.').first == getNamespace()) &&
@@ -621,8 +628,9 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 static Dialect &lookupDialectForSymbol(MLIRContext *ctx, TypeID typeID) {
   auto &impl = ctx->getImpl();
   auto it = impl.registeredDialectSymbols.find(typeID);
-  assert(it != impl.registeredDialectSymbols.end() &&
-         "symbol is not registered.");
+  if (it == impl.registeredDialectSymbols.end())
+    llvm::report_fatal_error(
+        "Trying to create a type that was not registered in this MLIRContext.");
   return *it->second;
 }
 
