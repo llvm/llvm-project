@@ -1265,7 +1265,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
       // Register callbacks to schedule sanitizer passes at the appropriate part of
       // the pipeline.
-      // FIXME: either handle asan/the remaining sanitizers or error out
       if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
         PB.registerScalarOptimizerLateEPCallback(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
@@ -1288,48 +1287,38 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
         int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
         bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
-        PB.registerPipelineStartEPCallback(
-            [TrackOrigins, Recover](ModulePassManager &MPM) {
-              MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
-            });
         PB.registerOptimizerLastEPCallback(
             [TrackOrigins, Recover](ModulePassManager &MPM,
                                     PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
               MPM.addPass(createModuleToFunctionPassAdaptor(
                   MemorySanitizerPass({TrackOrigins, Recover, false})));
             });
       }
       if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
-        PB.registerPipelineStartEPCallback(
-            [](ModulePassManager &MPM) { MPM.addPass(ThreadSanitizerPass()); });
         PB.registerOptimizerLastEPCallback(
             [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(ThreadSanitizerPass());
               MPM.addPass(
                   createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
             });
       }
       if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
-        PB.registerPipelineStartEPCallback([&](ModulePassManager &MPM) {
-          MPM.addPass(
-              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
-        });
         bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
         bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
-        PB.registerOptimizerLastEPCallback(
-            [Recover, UseAfterScope](ModulePassManager &MPM,
-                                     PassBuilder::OptimizationLevel Level) {
-              MPM.addPass(
-                  createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-                      /*CompileKernel=*/false, Recover, UseAfterScope)));
-            });
         bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
-        PB.registerPipelineStartEPCallback(
-            [Recover, ModuleUseAfterScope,
-             UseOdrIndicator](ModulePassManager &MPM) {
+        PB.registerOptimizerLastEPCallback(
+            [Recover, UseAfterScope, ModuleUseAfterScope, UseOdrIndicator](
+                ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(
+                  RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
               MPM.addPass(ModuleAddressSanitizerPass(
                   /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
                   UseOdrIndicator));
+              MPM.addPass(
+                  createModuleToFunctionPassAdaptor(AddressSanitizerPass(
+                      /*CompileKernel=*/false, Recover, UseAfterScope)));
             });
       }
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
