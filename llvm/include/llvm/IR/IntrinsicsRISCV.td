@@ -28,11 +28,11 @@ let TargetPrefix = "riscv" in {
   // T @llvm.<name>.T.<p>(any*, T, T, T imm);
   class MaskedAtomicRMWFourArg<LLVMType itype>
       : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
-                  [IntrArgMemOnly, NoCapture<0>, ImmArg<3>]>;
+                  [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
   // T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
   class MaskedAtomicRMWFiveArg<LLVMType itype>
       : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
-                  [IntrArgMemOnly, NoCapture<0>, ImmArg<4>]>;
+                  [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
 
   // We define 32-bit and 64-bit variants of the above, where T stands for i32
   // or i64 respectively:

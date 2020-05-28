@@ -663,14 +663,13 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     unsigned ai = 0, ae = intrinsic.ArgumentAttributes.size();
     if (ae) {
       while (ai != ae) {
-        unsigned argNo = intrinsic.ArgumentAttributes[ai].first;
-        unsigned attrIdx = argNo + 1; // Must match AttributeList::FirstArgIndex
+        unsigned attrIdx = intrinsic.ArgumentAttributes[ai].Index;
 
         OS << "      const Attribute::AttrKind AttrParam" << attrIdx << "[]= {";
         bool addComma = false;
 
         do {
-          switch (intrinsic.ArgumentAttributes[ai].second) {
+          switch (intrinsic.ArgumentAttributes[ai].Kind) {
           case CodeGenIntrinsic::NoCapture:
             if (addComma)
               OS << ",";
@@ -716,7 +715,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
           }
 
           ++ai;
-        } while (ai != ae && intrinsic.ArgumentAttributes[ai].first == argNo);
+        } while (ai != ae && intrinsic.ArgumentAttributes[ai].Index == attrIdx);
         OS << "};\n";
         OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
            << attrIdx << ", AttrParam" << attrIdx << ");\n";
