@@ -73,6 +73,11 @@ def warn_drv_unknown_cuda_version: Warning<
   InGroup<CudaUnknownVersion>;
 def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
 def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
+def err_drv_bad_target_id : Error<"Invalid target ID: %0 (A target ID is a processor name "
+  "followed by an optional list of predefined features post-fixed by a plus or minus sign deliminated "
+  "by colon, e.g. 'gfx908:sram-ecc+:xnack-')">;
+def err_drv_bad_offload_arch_combo : Error<"Invalid offload arch combinations: %0 and %1 (For a specific "
+  "processor, a feature should either exist in all offload archs, or not exist in any offload archs)">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<

@@ -62,6 +62,7 @@ add_clang_library(clangBasic
   SourceLocation.cpp
   SourceManager.cpp
   Stack.cpp
+  TargetID.cpp
   TargetInfo.cpp
   Targets.cpp
   Targets/AArch64.cpp

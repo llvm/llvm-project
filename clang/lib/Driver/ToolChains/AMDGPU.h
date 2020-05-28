@@ -11,6 +11,7 @@
 
 #include "Gnu.h"
 #include "ROCm.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -87,6 +88,14 @@ public:
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
+
+protected:
+  /// Translate -mcpu option containing target ID to cc1 options.
+  /// Returns the GPU name.
+  StringRef translateTargetID(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const;
+
+  StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
