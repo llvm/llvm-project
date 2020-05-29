@@ -372,7 +372,8 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   }
 
   // Intrinsics produce vXi64 and need to be casted to vXi32.
-  Type *I32Ty = VectorType::get(Builder.getInt32Ty(), IntrinsicNumElts / 4);
+  auto *I32Ty =
+      FixedVectorType::get(Builder.getInt32Ty(), IntrinsicNumElts / 4);
 
   assert(NumElts % IntrinsicNumElts == 0 && "Unexpected number of elements!");
   unsigned NumSplits = NumElts / IntrinsicNumElts;
