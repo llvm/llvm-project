@@ -3787,7 +3787,8 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment);
   unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT.SimpleTy));
 
-  if (CM == CodeModel::Large) {
+  // Large code model only applies to 64-bit mode.
+  if (Subtarget->is64Bit() && CM == CodeModel::Large) {
     unsigned AddrReg = createResultReg(&X86::GR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::MOV64ri),
             AddrReg)
