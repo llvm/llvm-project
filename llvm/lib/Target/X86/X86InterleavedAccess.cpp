@@ -201,7 +201,7 @@ void X86InterleavedAccessGroup::decompose(
   // [0,1...,VF/2-1,VF/2+VF,VF/2+VF+1,...,2VF-1]
   unsigned VecLength = DL.getTypeSizeInBits(VecWidth);
   if (VecLength == 768 || VecLength == 1536) {
-    VecBaseTy = VectorType::get(Type::getInt8Ty(LI->getContext()), 16);
+    VecBaseTy = FixedVectorType::get(Type::getInt8Ty(LI->getContext()), 16);
     VecBasePtrTy = VecBaseTy->getPointerTo(LI->getPointerAddressSpace());
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
     NumLoads = NumSubVectors * (VecLength / 384);
@@ -768,7 +768,8 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   // Lower the interleaved stores:
   //   1. Decompose the interleaved wide shuffle into individual shuffle
   //   vectors.
-  decompose(Shuffles[0], Factor, VectorType::get(ShuffleEltTy, NumSubVecElems),
+  decompose(Shuffles[0], Factor,
+            FixedVectorType::get(ShuffleEltTy, NumSubVecElems),
             DecomposedVectors);
 
   //   2. Transpose the interleaved-vectors into vectors of contiguous
