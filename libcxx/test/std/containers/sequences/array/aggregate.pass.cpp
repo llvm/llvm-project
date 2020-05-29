@@ -7,44 +7,41 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure std::array is an aggregate type.
+// We can only check this in C++17 and above, because we don't have the
+// trait before that.
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <array>
 #include <type_traits>
 
 template <typename T>
-void tests()
+void check_aggregate()
 {
-    // Test aggregate initialization
-    {
-        std::array<T, 0> a0 = {}; (void)a0;
-        std::array<T, 1> a1 = {T()}; (void)a1;
-        std::array<T, 2> a2 = {T(), T()}; (void)a2;
-        std::array<T, 3> a3 = {T(), T(), T()}; (void)a3;
-    }
-
-    // Test the is_aggregate trait.
-#if TEST_STD_VER >= 17 // The trait is only available in C++17 and above
     static_assert(std::is_aggregate<std::array<T, 0> >::value, "");
     static_assert(std::is_aggregate<std::array<T, 1> >::value, "");
     static_assert(std::is_aggregate<std::array<T, 2> >::value, "");
     static_assert(std::is_aggregate<std::array<T, 3> >::value, "");
     static_assert(std::is_aggregate<std::array<T, 4> >::value, "");
-#endif
 }
 
 struct Empty { };
-struct NonEmpty { int i; int j; };
+struct Trivial { int i; int j; };
+struct NonTrivial {
+    int i; int j;
+    NonTrivial(NonTrivial const&) { }
+};
 
 int main(int, char**)
 {
-    tests<char>();
-    tests<int>();
-    tests<long>();
-    tests<float>();
-    tests<double>();
-    tests<long double>();
-    tests<NonEmpty>();
-    tests<Empty>();
+    check_aggregate<char>();
+    check_aggregate<int>();
+    check_aggregate<long>();
+    check_aggregate<float>();
+    check_aggregate<double>();
+    check_aggregate<long double>();
+    check_aggregate<Empty>();
+    check_aggregate<Trivial>();
+    check_aggregate<NonTrivial>();
 
     return 0;
 }

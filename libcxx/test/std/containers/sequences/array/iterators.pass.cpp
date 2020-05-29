@@ -52,8 +52,6 @@ TEST_CONSTEXPR_CXX17 bool tests()
         typename C::iterator i = array.begin();
         typename C::const_iterator j = array.cbegin();
         assert(i == j);
-        LIBCPP_ASSERT(i != nullptr);
-        LIBCPP_ASSERT(j != nullptr);
     }
 
     {
@@ -63,8 +61,6 @@ TEST_CONSTEXPR_CXX17 bool tests()
         typename C::const_iterator j = array.cbegin();
         assert(i == array.end());
         assert(j == array.cend());
-        LIBCPP_ASSERT(i != nullptr);
-        LIBCPP_ASSERT(j != nullptr);
     }
     {
         typedef std::array<int, 1> C;
@@ -101,8 +97,6 @@ TEST_CONSTEXPR_CXX17 bool tests()
         typename C::iterator ib = array.begin();
         typename C::iterator ie = array.end();
         assert(ib == ie);
-        LIBCPP_ASSERT(ib != nullptr);
-        LIBCPP_ASSERT(ie != nullptr);
     }
 
 #if TEST_STD_VER >= 14

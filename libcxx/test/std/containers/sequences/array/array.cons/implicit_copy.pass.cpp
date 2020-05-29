@@ -32,62 +32,82 @@ struct NoDefault {
     TEST_CONSTEXPR NoDefault(int) { }
 };
 
+struct NonTrivialCopy {
+    TEST_CONSTEXPR NonTrivialCopy() { }
+    TEST_CONSTEXPR NonTrivialCopy(NonTrivialCopy const&) { }
+    TEST_CONSTEXPR_CXX14 NonTrivialCopy& operator=(NonTrivialCopy const&) { return *this; }
+};
+
 TEST_CONSTEXPR_CXX14 bool tests()
 {
     {
-        typedef double T;
-        typedef std::array<T, 3> C;
-        C c = {1.1, 2.2, 3.3};
-        C c2 = c;
-        c2 = c;
-        static_assert(std::is_copy_constructible<C>::value, "");
-        static_assert(std::is_copy_assignable<C>::value, "");
+        typedef std::array<double, 3> Array;
+        Array array = {1.1, 2.2, 3.3};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        static_assert(std::is_copy_assignable<Array>::value, "");
     }
     {
-        typedef double T;
-        typedef std::array<const T, 3> C;
-        C c = {1.1, 2.2, 3.3};
-        C c2 = c;
-        ((void)c2);
-        static_assert(std::is_copy_constructible<C>::value, "");
-        TEST_NOT_COPY_ASSIGNABLE(C);
+        typedef std::array<double const, 3> Array;
+        Array array = {1.1, 2.2, 3.3};
+        Array copy = array; (void)copy;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(Array);
     }
     {
-        typedef double T;
-        typedef std::array<T, 0> C;
-        C c = {};
-        C c2 = c;
-        c2 = c;
-        static_assert(std::is_copy_constructible<C>::value, "");
-        static_assert(std::is_copy_assignable<C>::value, "");
+        typedef std::array<double, 0> Array;
+        Array array = {};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        static_assert(std::is_copy_assignable<Array>::value, "");
     }
     {
         // const arrays of size 0 should disable the implicit copy assignment operator.
-        typedef double T;
-        typedef std::array<const T, 0> C;
-        C c = {{}};
-        C c2 = c;
-        ((void)c2);
-        static_assert(std::is_copy_constructible<C>::value, "");
-        TEST_NOT_COPY_ASSIGNABLE(C);
+        typedef std::array<double const, 0> Array;
+        Array array = {};
+        Array copy = array; (void)copy;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(Array);
     }
     {
-        typedef NoDefault T;
-        typedef std::array<T, 0> C;
-        C c = {};
-        C c2 = c;
-        c2 = c;
-        static_assert(std::is_copy_constructible<C>::value, "");
-        static_assert(std::is_copy_assignable<C>::value, "");
+        typedef std::array<NoDefault, 0> Array;
+        Array array = {};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        static_assert(std::is_copy_assignable<Array>::value, "");
     }
     {
-        typedef NoDefault T;
-        typedef std::array<const T, 0> C;
-        C c = {{}};
-        C c2 = c;
-        ((void)c2);
-        static_assert(std::is_copy_constructible<C>::value, "");
-        TEST_NOT_COPY_ASSIGNABLE(C);
+        typedef std::array<NoDefault const, 0> Array;
+        Array array = {};
+        Array copy = array; (void)copy;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(Array);
+    }
+
+    // Make sure we can implicitly copy a std::array of a non-trivially copyable type
+    {
+        typedef std::array<NonTrivialCopy, 0> Array;
+        Array array = {};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+    }
+    {
+        typedef std::array<NonTrivialCopy, 1> Array;
+        Array array = {};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
+    }
+    {
+        typedef std::array<NonTrivialCopy, 2> Array;
+        Array array = {};
+        Array copy = array;
+        copy = array;
+        static_assert(std::is_copy_constructible<Array>::value, "");
     }
 
     return true;
