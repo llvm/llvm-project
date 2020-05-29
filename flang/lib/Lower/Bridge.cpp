@@ -683,7 +683,8 @@ private:
   void genFIR(const Fortran::parser::DoConstruct &) {
     auto &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
-    Fortran::lower::pft::Evaluation &doStmtEval = eval.evaluationList->front();
+    Fortran::lower::pft::Evaluation &doStmtEval =
+        eval.getFirstNestedEvaluation();
     auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
     assert(doStmt && "missing DO statement");
     const auto &loopControl =
@@ -728,7 +729,7 @@ private:
       genFIRIncrementLoopBegin(incrementLoopInfo[i]);
 
     // Generate loop body code.
-    for (auto &e : *eval.evaluationList)
+    for (auto &e : eval.getNestedEvaluations())
       genFIR(e, unstructuredContext);
     setCurrentEval(eval);
 
@@ -826,7 +827,7 @@ private:
       // Structured fir.where nest.
       fir::WhereOp underWhere;
       mlir::OpBuilder::InsertPoint insPt;
-      for (auto &e : *eval.evaluationList) {
+      for (auto &e : eval.getNestedEvaluations()) {
         if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
           // fir.where op
           std::tie(insPt, underWhere) = genWhereCondition(s);
@@ -848,7 +849,7 @@ private:
     }
 
     // Unstructured branch sequence.
-    for (auto &e : *eval.evaluationList) {
+    for (auto &e : eval.getNestedEvaluations()) {
       const Fortran::parser::ScalarLogicalExpr *cond = nullptr;
       if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
         maybeStartBlock(e.block);
@@ -872,7 +873,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CaseConstruct &) {
-    for (auto &e : *getEval().evaluationList)
+    for (auto &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
 
@@ -1471,7 +1472,7 @@ private:
       // When transitioning from unstructured to structured code,
       // the structured code could be a target that starts a new block.
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
-                          ? eval.evaluationList->front().block
+                          ? eval.getFirstNestedEvaluation().block
                           : eval.block);
     }
 
@@ -1483,11 +1484,10 @@ private:
       Fortran::lower::pft::Evaluation *successor{};
       if (eval.isActionStmt()) {
         successor = eval.controlSuccessor;
-      } else if (eval.isConstruct()) {
-        assert(!eval.evaluationList->empty() && "empty construct eval list");
-        if (eval.evaluationList->back()
-                .lexicalSuccessor->isIntermediateConstructStmt())
-          successor = eval.constructExit;
+      } else if (eval.isConstruct() &&
+                 eval.getLastNestedEvaluation()
+                     .lexicalSuccessor->isIntermediateConstructStmt()) {
+        successor = eval.constructExit;
       }
       if (successor && successor->block)
         genBranch(successor->block);
@@ -1867,11 +1867,10 @@ private:
         eval.localBlocks[i] = builder->createBlock(&builder->getRegion());
       if (eval.isConstruct() || eval.isDirective()) {
         if (eval.lowerAsUnstructured()) {
-          createEmptyBlocks(*eval.evaluationList);
-        } else {
+          createEmptyBlocks(eval.getNestedEvaluations());
+        } else if (eval.hasNestedEvaluations()) {
           // A structured construct that is a target starts a new block.
-          Fortran::lower::pft::Evaluation &constructStmt =
-              eval.evaluationList->front();
+          auto &constructStmt = eval.getFirstNestedEvaluation();
           if (constructStmt.isNewBlock)
             constructStmt.block = builder->createBlock(&builder->getRegion());
         }
