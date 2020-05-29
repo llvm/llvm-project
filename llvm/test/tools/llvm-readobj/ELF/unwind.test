@@ -1,5 +1,16 @@
-# RUN: yaml2obj --docnum=1 %s -o %t1.exe
-# RUN: llvm-readobj --unwind %t1.exe | FileCheck %s
+## In this test we check how the unwind information is dumped with the use of --unwind.
+
+## First, check that both llvm-readobj and llvm-readelf are able to dump a valid unwind information.
+## Check that the output is the same for these tools.
+## The memory size of the PT_GNU_EH_FRAME equals its file size and they both are equal to 0x3c.
+## 0x3c is the size of the .eh_frame_hdr section.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3c -DFILESIZE=0x3c -o %t1.valid
+# RUN: llvm-readobj --unwind %t1.valid | FileCheck %s
+# RUN: llvm-readelf --sections --unwind %t1.valid | FileCheck %s --check-prefixes=SIZE,CHECK
+
+## Validate the size of the .eh_frame_hdr section.
+# SIZE: [Nr] Name          Type     Address          Off    Size
+# SIZE: [ 2] .eh_frame_hdr PROGBITS 00000000004013c0 0000bc 00003c
 
 # CHECK:      EHFrameHeader {
 # CHECK-NEXT:  Address: 0x4013c0
@@ -202,19 +213,46 @@ Symbols:
     Value:           0x0000000000400000
     Binding:         STB_GLOBAL
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x00400000
-    PAddr: 0x00400000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00400000
+    PAddr:    0x00400000
     Sections:
       - Section: .text
   - Type: PT_GNU_EH_FRAME
     Flags: [ PF_X, PF_R ]
     VAddr: 0x004013C0
     PAddr: 0x004013C0
+    MemSize:  [[MEMSIZE]]
+    FileSize: [[FILESIZE]]
     Sections:
       - Section: .eh_frame_hdr
-...
+
+## Document we report a error when the memory size of the PT_GNU_EH_FRAME does not match its file size.
+## TODO: we want to report a warning and continue dumping instead.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3b -DFILESIZE=0x3c -o %t1.size.mismatch
+# RUN: not llvm-readobj --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+# RUN: not llvm-readelf --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+
+# SIZE-MISMATCH: error: '[[FILE]]': p_memsz does not match p_filesz for GNU_EH_FRAME
+
+## Check we partially dump the unwind information when the PT_GNU_EH_FRAME segment
+## points to truncated data.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x1 -DFILESIZE=0x1 -o %t1.truncated
+# RUN: not llvm-readobj --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+# RUN: not llvm-readelf --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+
+# TRUNCATED:      EHFrameHeader {
+# TRUNCATED-NEXT:   Address: 0x4013c0
+# TRUNCATED-NEXT:   Offset: 0xbc
+# TRUNCATED-NEXT:   Size: 0x1
+# TRUNCATED-NEXT:   Corresponding Section: .eh_frame_hdr
+# TRUNCATED-NEXT:   Header {
+# TRUNCATED-NEXT:     version: 1
+# TRUNCATED-NEXT:     eh_frame_ptr_enc: 0x0
+# TRUNCATED-NEXT: error: '[[FILE]]': unexpected encoding eh_frame_ptr_enc
 
 ## Check we report an error when the tool is unable to parse .eh_frame section.
 # RUN: yaml2obj --docnum=2 %s -o %t2.exe
