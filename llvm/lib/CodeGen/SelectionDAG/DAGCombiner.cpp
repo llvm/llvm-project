@@ -17137,6 +17137,10 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
   EVT SubVecVT = SubVec.getValueType();
   EVT VT = DestVec.getValueType();
   unsigned NumSrcElts = SubVecVT.getVectorNumElements();
+  // If the source only has a single vector element, the cost of creating adding
+  // it to a vector is likely to exceed the cost of a insert_vector_elt.
+  if (NumSrcElts == 1)
+    return SDValue();
   unsigned ExtendRatio = VT.getSizeInBits() / SubVecVT.getSizeInBits();
   unsigned NumMaskVals = ExtendRatio * NumSrcElts;
 
