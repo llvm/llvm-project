@@ -394,7 +394,7 @@ public:
   /// type `T`.
   template <typename T>
   OwningRewritePatternList(T &&t) {
-    patterns.emplace_back(std::make_unique<T>(t));
+    patterns.emplace_back(std::make_unique<T>(std::forward<T>(t)));
   }
 
   PatternListT::iterator begin() { return patterns.begin(); }
