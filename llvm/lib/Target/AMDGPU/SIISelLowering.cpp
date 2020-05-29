@@ -11,11 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-// Provide M_PI.
-#define _USE_MATH_DEFINES
-#endif
-
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
@@ -8230,7 +8225,7 @@ SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
 
   // TODO: Should this propagate fast-math-flags?
 
-  SDValue OneOver2Pi = DAG.getConstantFP(0.5 / M_PI, DL, VT);
+  SDValue OneOver2Pi = DAG.getConstantFP(0.5 / numbers::pi, DL, VT);
 
   if (Subtarget->hasTrigReducedRange()) {
     SDValue MulVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi);
