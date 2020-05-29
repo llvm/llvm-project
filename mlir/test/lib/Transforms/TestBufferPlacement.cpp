@@ -23,7 +23,7 @@ using namespace mlir;
 namespace {
 /// This pass tests the computeAllocPosition helper method and two provided
 /// operation converters, FunctionAndBlockSignatureConverter and
-/// NoBufferOperandsReturnOpConverter. Furthermore, this pass converts linalg
+/// BufferAssignmentReturnOpConverter. Furthermore, this pass converts linalg
 /// operations on tensors to linalg operations on buffers to prepare them for
 /// the BufferPlacement pass that can be applied afterwards.
 struct TestBufferPlacementPreparationPass
@@ -41,16 +41,18 @@ struct TestBufferPlacementPreparationPass
     LogicalResult
     matchAndRewrite(linalg::GenericOp op, ArrayRef<Value> operands,
                     ConversionPatternRewriter &rewriter) const final {
-      auto loc = op.getLoc();
-      SmallVector<Value, 4> args(operands.begin(), operands.end());
+      Location loc = op.getLoc();
+      ResultRange results = op.getOperation()->getResults();
+      SmallVector<Value, 2> newArgs, newResults;
+      newArgs.reserve(operands.size() + results.size());
+      newArgs.append(operands.begin(), operands.end());
+      newResults.reserve(results.size());
 
       // Update all types to memref types.
-      auto results = op.getOperation()->getResults();
       for (auto result : results) {
-        auto type = result.getType().cast<ShapedType>();
-        if (!type)
-          op.emitOpError()
-              << "tensor to buffer conversion expects ranked results";
+        ShapedType type = result.getType().cast<ShapedType>();
+        assert(type && "Generic operations with non-shaped typed results are "
+                       "not currently supported.");
         if (!type.hasStaticShape())
           return rewriter.notifyMatchFailure(
               op, "dynamic shapes not currently supported");
@@ -62,27 +64,39 @@ struct TestBufferPlacementPreparationPass
         rewriter.restoreInsertionPoint(
             bufferAssignment->computeAllocPosition(result));
         auto alloc = rewriter.create<AllocOp>(loc, memrefType);
-        result.replaceAllUsesWith(alloc);
-        args.push_back(alloc);
+        newArgs.push_back(alloc);
+        newResults.push_back(alloc);
       }
 
       // Generate a new linalg operation that works on buffers.
       auto linalgOp = rewriter.create<linalg::GenericOp>(
-          loc, llvm::None, args, rewriter.getI64IntegerAttr(operands.size()),
+          loc, llvm::None, newArgs, rewriter.getI64IntegerAttr(operands.size()),
           rewriter.getI64IntegerAttr(results.size()), op.indexing_maps(),
           op.iterator_types(), op.docAttr(), op.library_callAttr());
 
-      // Move regions from the old operation to the new one.
-      auto &region = linalgOp.region();
-      rewriter.inlineRegionBefore(op.region(), region, region.end());
+      // Create a new block in the region of the new Generic Op.
+      Block &oldBlock = op.getRegion().front();
+      Region &newRegion = linalgOp.region();
+      Block *newBlock = rewriter.createBlock(&newRegion, newRegion.begin(),
+                                             oldBlock.getArgumentTypes());
 
-      // TODO: verify the internal memref-based linalg functionality.
-      auto &entryBlock = region.front();
-      for (auto result : results) {
-        auto type = result.getType().cast<ShapedType>();
-        entryBlock.addArgument(type.getElementType());
-      }
-      rewriter.eraseOp(op);
+      // Map the old block arguments to the new ones.
+      BlockAndValueMapping mapping;
+      mapping.map(oldBlock.getArguments(), newBlock->getArguments());
+
+      // Add the result arguments to the new block.
+      for (auto result : newResults)
+        newBlock->addArgument(
+            result.getType().cast<ShapedType>().getElementType());
+
+      // Clone the body of the old block to the new block.
+      rewriter.setInsertionPointToEnd(newBlock);
+      for (auto &op : oldBlock.getOperations())
+        rewriter.clone(op, mapping);
+
+      // Replace the results of the old Generic Op with the results of the new
+      // one.
+      rewriter.replaceOp(op, newResults);
       return success();
     }
   };
@@ -94,34 +108,33 @@ struct TestBufferPlacementPreparationPass
     patterns->insert<
                    FunctionAndBlockSignatureConverter,
                    GenericOpConverter,
-                   NoBufferOperandsReturnOpConverter<
+                   BufferAssignmentReturnOpConverter<
                       ReturnOp, ReturnOp, linalg::CopyOp>
     >(context, placer, converter);
     // clang-format on
   }
 
   void runOnOperation() override {
-    auto &context = getContext();
+    MLIRContext &context = getContext();
     ConversionTarget target(context);
     BufferAssignmentTypeConverter converter;
+
+    // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect>();
 
-    // Make all linalg operations illegal as long as they work on tensors.
+    // Mark all Linalg operations illegal as long as they work on tensors.
+    auto isIllegalType = [&](Type type) { return !converter.isLegal(type); };
+    auto isLegalOperation = [&](Operation *op) {
+      return llvm::none_of(op->getOperandTypes(), isIllegalType) &&
+             llvm::none_of(op->getResultTypes(), isIllegalType);
+    };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
-            [&](Operation *op) {
-              auto isIllegalType = [&](Type type) {
-                return !converter.isLegal(type);
-              };
-              return llvm::none_of(op->getOperandTypes(), isIllegalType) &&
-                     llvm::none_of(op->getResultTypes(), isIllegalType);
-            }));
+            isLegalOperation));
 
-    // Mark std.ReturnOp illegal as long as an operand is tensor or buffer.
+    // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
-      return llvm::none_of(returnOp.getOperandTypes(), [&](Type type) {
-        return type.isa<MemRefType>() || !converter.isLegal(type);
-      });
+      return llvm::none_of(returnOp.getOperandTypes(), isIllegalType);
     });
 
     // Mark the function whose arguments are in tensor-type illegal.
@@ -130,16 +143,14 @@ struct TestBufferPlacementPreparationPass
     });
 
     // Walk over all the functions to apply buffer assignment.
-    getOperation().walk([&](FuncOp function) {
+    getOperation().walk([&](FuncOp function) -> WalkResult {
       OwningRewritePatternList patterns;
       BufferAssignmentPlacer placer(function);
       populateTensorLinalgToBufferLinalgConversionPattern(
           &context, &placer, &converter, &patterns);
 
       // Applying full conversion
-      return failed(applyFullConversion(function, target, patterns, &converter))
-                 ? WalkResult::interrupt()
-                 : WalkResult::advance();
+      return applyFullConversion(function, target, patterns, &converter);
     });
   };
 };
