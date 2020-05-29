@@ -65,6 +65,7 @@ void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
 void SectionBase::replaceSectionReferences(
     const DenseMap<SectionBase *, SectionBase *> &) {}
+void SectionBase::onRemove() {}
 
 template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   uint8_t *B = Buf.getBufferStart() + Sec.HeaderOffset;
@@ -988,6 +989,13 @@ void GroupSection::replaceSectionReferences(
       Sec = To;
 }
 
+void GroupSection::onRemove() {
+  // As the header section of the group is removed, drop the Group flag in its
+  // former members.
+  for (SectionBase *Sec : GroupMembers)
+    Sec->Flags &= ~SHF_GROUP;
+}
+
 void Section::initialize(SectionTableRef SecTable) {
   if (Link == ELF::SHN_UNDEF)
     return;
@@ -1838,6 +1846,7 @@ Error Object::removeSections(bool AllowBrokenLinks,
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
 
