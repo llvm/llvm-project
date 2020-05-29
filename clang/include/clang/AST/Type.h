@@ -2050,7 +2050,8 @@ public:
   bool isComplexIntegerType() const;            // GCC _Complex integer type.
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
-  bool isConstantMatrixType() const;            // Matrix type.
+  bool isMatrixType() const;                    // Matrix type.
+  bool isConstantMatrixType() const;            // Constant matrix type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -6742,6 +6743,10 @@ inline bool Type::isVectorType() const {
 
 inline bool Type::isExtVectorType() const {
   return isa<ExtVectorType>(CanonicalType);
+}
+
+inline bool Type::isMatrixType() const {
+  return isa<MatrixType>(CanonicalType);
 }
 
 inline bool Type::isConstantMatrixType() const {
