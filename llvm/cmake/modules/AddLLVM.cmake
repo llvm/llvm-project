@@ -2094,40 +2094,27 @@ function(find_first_existing_vc_file path out_var)
   if(NOT EXISTS "${path}")
     return()
   endif()
-  if(EXISTS "${path}/.svn")
-    set(svn_files
-      "${path}/.svn/wc.db"   # SVN 1.7
-      "${path}/.svn/entries" # SVN 1.6
-    )
-    foreach(file IN LISTS svn_files)
-      if(EXISTS "${file}")
-        set(${out_var} "${file}" PARENT_SCOPE)
-        return()
-      endif()
-    endforeach()
-  else()
-    find_package(Git)
-    if(GIT_FOUND)
-      execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
-        WORKING_DIRECTORY ${path}
-        RESULT_VARIABLE git_result
-        OUTPUT_VARIABLE git_output
-        ERROR_QUIET)
-      if(git_result EQUAL 0)
-        string(STRIP "${git_output}" git_output)
-        get_filename_component(git_dir ${git_output} ABSOLUTE BASE_DIR ${path})
-        # Some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
-        if (NOT EXISTS "${git_dir}/logs/HEAD")
-          execute_process(COMMAND ${CMAKE_COMMAND} -E touch HEAD
-            WORKING_DIRECTORY "${git_dir}/logs"
-            RESULT_VARIABLE touch_head_result
-            ERROR_QUIET)
-          if (NOT touch_head_result EQUAL 0)
-            return()
-          endif()
+  find_package(Git)
+  if(GIT_FOUND)
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
+      WORKING_DIRECTORY ${path}
+      RESULT_VARIABLE git_result
+      OUTPUT_VARIABLE git_output
+      ERROR_QUIET)
+    if(git_result EQUAL 0)
+      string(STRIP "${git_output}" git_output)
+      get_filename_component(git_dir ${git_output} ABSOLUTE BASE_DIR ${path})
+      # Some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+      if (NOT EXISTS "${git_dir}/logs/HEAD")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E touch HEAD
+          WORKING_DIRECTORY "${git_dir}/logs"
+          RESULT_VARIABLE touch_head_result
+          ERROR_QUIET)
+        if (NOT touch_head_result EQUAL 0)
+          return()
         endif()
-        set(${out_var} "${git_dir}/logs/HEAD" PARENT_SCOPE)
       endif()
+      set(${out_var} "${git_dir}/logs/HEAD" PARENT_SCOPE)
     endif()
   endif()
 endfunction()
