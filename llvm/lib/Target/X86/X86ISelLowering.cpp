@@ -47736,6 +47736,27 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, Cvt);
 }
 
+static SDValue combineMOVDQ2Q(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+
+  // Turn MOVDQ2Q+simple_load into an mmx load.
+  if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
+    LoadSDNode *LN = cast<LoadSDNode>(Src.getNode());
+
+    if (LN->isSimple()) {
+      SDValue NewLd = DAG.getLoad(MVT::x86mmx, SDLoc(N), LN->getChain(),
+                                  LN->getBasePtr(),
+                                  LN->getPointerInfo(),
+                                  LN->getOriginalAlign(),
+                                  LN->getMemOperand()->getFlags());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), NewLd.getValue(1));
+      return NewLd;
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -47898,6 +47919,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
   case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
   case X86ISD::VBROADCAST_LOAD: return combineVBROADCAST_LOAD(N, DAG, DCI);
+  case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   }
 
   return SDValue();
