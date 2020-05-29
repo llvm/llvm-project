@@ -8,6 +8,11 @@ def StdC : StandardSpec<"stdc"> {
   RestrictedPtrType CharRestrictedPtr = RestrictedPtrType<CharType>;
   ConstType ConstCharRestrictedPtr = ConstType<CharRestrictedPtr>;
 
+  NamedType OnceFlagType = NamedType<"once_flag">;
+  PtrType OnceFlagTypePtr = PtrType<OnceFlagType>;
+  // TODO(sivachandra): Remove this non-standard type when a formal
+  // way to describe callable types is available.
+  NamedType CallOnceFuncType = NamedType<"__call_once_func_t">;
   NamedType MtxTType = NamedType<"mtx_t">;
   PtrType MtxTTypePtr = PtrType<MtxTType>;
   NamedType ThrdStartTType = NamedType<"thrd_start_t">;
@@ -267,8 +272,12 @@ def StdC : StandardSpec<"stdc"> {
 
   HeaderSpec Threads = HeaderSpec<
       "threads.h",
-      [], // Macros
       [
+          Macro<"ONCE_FLAG_INIT">,
+      ],
+      [
+          OnceFlagType,
+          CallOnceFuncType,
           MtxTType,
           ThrdStartTType,
           ThrdTType,
@@ -284,6 +293,14 @@ def StdC : StandardSpec<"stdc"> {
           EnumeratedNameValue<"thrd_nomem">,
       ],
       [
+          FunctionSpec<
+              "call_once",
+              RetValSpec<VoidType>,
+              [
+                  ArgSpec<OnceFlagTypePtr>,
+                  ArgSpec<CallOnceFuncType>,
+              ]
+          >,
           FunctionSpec<
               "mtx_init",
               RetValSpec<IntType>,

@@ -301,6 +301,12 @@ def SignalAPI : PublicAPI<"signal.h"> {
   ];
 }
 
+def OnceFlag : TypeDecl<"once_flag"> {
+  let Decl = [{
+    typedef unsigned int once_flag;
+  }];
+}
+
 def MtxT : TypeDecl<"mtx_t"> {
   let Decl = [{
     typedef struct {
@@ -314,8 +320,20 @@ def ThreadStartT : TypeDecl<"thrd_start_t"> {
   let Decl = "typedef int (*thrd_start_t)(void *);";
 }
 
+def CallOnceFuncT : TypeDecl<"__call_once_func_t"> {
+  let Decl = [{
+    typedef void(*__call_once_func_t)(void);
+  }];
+}
+
 def ThreadsAPI : PublicAPI<"threads.h"> {
+  let Macros = [
+    SimpleMacroDef<"ONCE_FLAG_INIT", "0">,
+  ];
+
   let TypeDeclarations = [
+    OnceFlag,
+    CallOnceFuncT,
     MtxT,
     ThreadStartT,
   ];
@@ -332,6 +350,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
   ];
 
   let Functions = [
+    "call_once",
     "mtx_init",
     "mtx_lock",
     "mtx_unlock",
