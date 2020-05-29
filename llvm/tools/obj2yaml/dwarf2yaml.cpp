@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 
 #include <algorithm>
@@ -135,17 +136,32 @@ void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
 
 void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   const DWARFObject &D = DCtx.getDWARFObj();
-  Y.PubNames.IsGNUStyle = false;
-  dumpPubSection(DCtx, Y.PubNames, D.getPubnamesSection());
 
-  Y.PubTypes.IsGNUStyle = false;
-  dumpPubSection(DCtx, Y.PubTypes, D.getPubtypesSection());
+  const DWARFSection PubNames = D.getPubnamesSection();
+  if (!PubNames.Data.empty()) {
+    Y.PubNames.emplace(/*IsGNUStyle=*/false);
+    dumpPubSection(DCtx, *Y.PubNames, PubNames);
+  }
 
-  Y.GNUPubNames.IsGNUStyle = true;
-  dumpPubSection(DCtx, Y.GNUPubNames, D.getGnuPubnamesSection());
+  const DWARFSection PubTypes = D.getPubtypesSection();
+  if (!PubTypes.Data.empty()) {
+    Y.PubTypes.emplace(/*IsGNUStyle=*/false);
+    dumpPubSection(DCtx, *Y.PubTypes, PubTypes);
+  }
 
-  Y.GNUPubTypes.IsGNUStyle = true;
-  dumpPubSection(DCtx, Y.GNUPubTypes, D.getGnuPubtypesSection());
+  const DWARFSection GNUPubNames = D.getGnuPubnamesSection();
+  if (!GNUPubNames.Data.empty()) {
+    // TODO: Test dumping .debug_gnu_pubnames section.
+    Y.GNUPubNames.emplace(/*IsGNUStyle=*/true);
+    dumpPubSection(DCtx, *Y.GNUPubNames, GNUPubNames);
+  }
+
+  const DWARFSection GNUPubTypes = D.getGnuPubtypesSection();
+  if (!GNUPubTypes.Data.empty()) {
+    // TODO: Test dumping .debug_gnu_pubtypes section.
+    Y.GNUPubTypes.emplace(/*IsGNUStyle=*/true);
+    dumpPubSection(DCtx, *Y.GNUPubTypes, GNUPubTypes);
+  }
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
