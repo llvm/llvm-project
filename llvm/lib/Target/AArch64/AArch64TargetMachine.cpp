@@ -486,8 +486,8 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createLICMPass());
   }
 
-  addPass(createAArch64StackTaggingPass(/* MergeInit = */ TM->getOptLevel() !=
-                                        CodeGenOpt::None));
+  addPass(createAArch64StackTaggingPass(
+      /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
