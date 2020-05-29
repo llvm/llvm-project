@@ -1384,7 +1384,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
-    return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
+    return legalizeFlog(MI, B, numbers::ln2f);
   case TargetOpcode::G_FLOG10:
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   case TargetOpcode::G_FEXP:
@@ -1870,7 +1870,7 @@ bool AMDGPULegalizerInfo::legalizeSinCos(
   unsigned Flags = MI.getFlags();
 
   Register TrigVal;
-  auto OneOver2Pi = B.buildFConstant(Ty, 0.5 / numbers::pi);
+  auto OneOver2Pi = B.buildFConstant(Ty, 0.5 * numbers::inv_pi);
   if (ST.hasTrigReducedRange()) {
     auto MulVal = B.buildFMul(Ty, SrcReg, OneOver2Pi, Flags);
     TrigVal = B.buildIntrinsic(Intrinsic::amdgcn_fract, {Ty}, false)

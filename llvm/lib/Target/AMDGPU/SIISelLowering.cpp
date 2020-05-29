@@ -8225,7 +8225,7 @@ SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
 
   // TODO: Should this propagate fast-math-flags?
 
-  SDValue OneOver2Pi = DAG.getConstantFP(0.5 / numbers::pi, DL, VT);
+  SDValue OneOver2Pi = DAG.getConstantFP(0.5 * numbers::inv_pi, DL, VT);
 
   if (Subtarget->hasTrigReducedRange()) {
     SDValue MulVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi);
