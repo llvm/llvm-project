@@ -823,7 +823,7 @@ parser::Message *AttachDeclaration(
   if (const auto *use{symbol.detailsIf<semantics::UseDetails>()}) {
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
-        unhosted->name(), use->module().name());
+        unhosted->name(), GetUsedModule(*use).name());
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
@@ -872,3 +872,156 @@ std::optional<std::string> FindImpureCall(
 }
 
 } // namespace Fortran::evaluate
+
+namespace Fortran::semantics {
+
+// When a construct association maps to a variable, and that variable
+// is not an array with a vector-valued subscript, return the base
+// Symbol of that variable, else nullptr.  Descends into other construct
+// associations when one associations maps to another.
+static const Symbol *GetAssociatedVariable(
+    const semantics::AssocEntityDetails &details) {
+  if (const auto &expr{details.expr()}) {
+    if (IsVariable(*expr) && !HasVectorSubscript(*expr)) {
+      if (const Symbol * varSymbol{GetFirstSymbol(*expr)}) {
+        return GetAssociationRoot(*varSymbol);
+      }
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *GetAssociationRoot(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  const auto *details{ultimate.detailsIf<semantics::AssocEntityDetails>()};
+  return details ? GetAssociatedVariable(*details) : &ultimate;
+}
+
+bool IsVariableName(const Symbol &symbol) {
+  const Symbol *root{GetAssociationRoot(symbol)};
+  return root && root->has<ObjectEntityDetails>() && !IsNamedConstant(*root);
+}
+
+bool IsPureProcedure(const Symbol &symbol) {
+  if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (const Symbol * procInterface{procDetails->interface().symbol()}) {
+      // procedure component with a pure interface
+      return IsPureProcedure(*procInterface);
+    }
+  } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
+    return IsPureProcedure(details->symbol());
+  } else if (!IsProcedure(symbol)) {
+    return false;
+  }
+  if (IsStmtFunction(symbol)) {
+    // Section 15.7(1) states that a statement function is PURE if it does not
+    // reference an IMPURE procedure or a VOLATILE variable
+    if (const auto &expr{symbol.get<SubprogramDetails>().stmtFunction()}) {
+      for (const SymbolRef &ref : evaluate::CollectSymbols(*expr)) {
+        if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
+          return false;
+        }
+        const Symbol *root{GetAssociationRoot(*ref)};
+        if (root && root->attrs().test(Attr::VOLATILE)) {
+          return false;
+        }
+      }
+    }
+    return true; // statement function was not found to be impure
+  }
+  return symbol.attrs().test(Attr::PURE) ||
+      (symbol.attrs().test(Attr::ELEMENTAL) &&
+          !symbol.attrs().test(Attr::IMPURE));
+}
+
+bool IsPureProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsPureProcedure(*symbol);
+}
+
+bool IsFunction(const Symbol &symbol) {
+  return std::visit(
+      common::visitors{
+          [](const SubprogramDetails &x) { return x.isFunction(); },
+          [&](const SubprogramNameDetails &) {
+            return symbol.test(Symbol::Flag::Function);
+          },
+          [](const ProcEntityDetails &x) {
+            const auto &ifc{x.interface()};
+            return ifc.type() || (ifc.symbol() && IsFunction(*ifc.symbol()));
+          },
+          [](const ProcBindingDetails &x) { return IsFunction(x.symbol()); },
+          [](const UseDetails &x) { return IsFunction(x.symbol()); },
+          [](const auto &) { return false; },
+      },
+      symbol.details());
+}
+
+bool IsProcedure(const Symbol &symbol) {
+  return std::visit(
+      common::visitors{
+          [](const SubprogramDetails &) { return true; },
+          [](const SubprogramNameDetails &) { return true; },
+          [](const ProcEntityDetails &) { return true; },
+          [](const GenericDetails &) { return true; },
+          [](const ProcBindingDetails &) { return true; },
+          [](const UseDetails &x) { return IsProcedure(x.symbol()); },
+          // TODO: FinalProcDetails?
+          [](const auto &) { return false; },
+      },
+      symbol.details());
+}
+
+const Symbol *FindCommonBlockContaining(const Symbol &object) {
+  const auto *details{object.detailsIf<ObjectEntityDetails>()};
+  return details ? details->commonBlock() : nullptr;
+}
+
+bool IsProcedurePointer(const Symbol &symbol) {
+  return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
+}
+
+bool IsSaved(const Symbol &symbol) {
+  auto scopeKind{symbol.owner().kind()};
+  if (scopeKind == Scope::Kind::Module || scopeKind == Scope::Kind::BlockData) {
+    return true;
+  } else if (scopeKind == Scope::Kind::DerivedType) {
+    return false; // this is a component
+  } else if (IsNamedConstant(symbol)) {
+    return false;
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+             object && object->init()) {
+    return true;
+  } else if (IsProcedurePointer(symbol) &&
+      symbol.get<ProcEntityDetails>().init()) {
+    return true;
+  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
+             block && block->attrs().test(Attr::SAVE)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool IsDummy(const Symbol &symbol) {
+  return std::visit(
+      common::visitors{[](const EntityDetails &x) { return x.isDummy(); },
+          [](const ObjectEntityDetails &x) { return x.isDummy(); },
+          [](const ProcEntityDetails &x) { return x.isDummy(); },
+          [](const HostAssocDetails &x) { return IsDummy(x.symbol()); },
+          [](const auto &) { return false; }},
+      symbol.details());
+}
+
+int CountLenParameters(const DerivedTypeSpec &type) {
+  return std::count_if(type.parameters().begin(), type.parameters().end(),
+      [](const auto &pair) { return pair.second.isLen(); });
+}
+
+const Symbol &GetUsedModule(const UseDetails &details) {
+  return DEREF(details.symbol().owner().symbol());
+}
+
+} // namespace Fortran::semantics

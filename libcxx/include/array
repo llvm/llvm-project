@@ -242,31 +242,16 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     typedef std::reverse_iterator<iterator>       reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-#ifndef _LIBCPP_CXX03_LANG
-    union __wrapper {
-        _LIBCPP_CONSTEXPR __wrapper() : __b() { }
-        ~__wrapper() = default;
-
-        bool __b;
-        _Tp __t;
-    } __w;
-
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    value_type* data() _NOEXCEPT {return &__w.__t;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    const value_type* data() const _NOEXCEPT {return &__w.__t;}
-#else // C++03
     typedef typename conditional<is_const<_Tp>::value, const char,
                                 char>::type _CharType;
 
     struct  _ArrayInStructT { _Tp __data_[1]; };
     _ALIGNAS_TYPE(_ArrayInStructT) _CharType __elems_[sizeof(_ArrayInStructT)];
 
-    _LIBCPP_INLINE_VISIBILITY
-    value_type* data() _NOEXCEPT {return reinterpret_cast<value_type*>(__elems_);}
-    _LIBCPP_INLINE_VISIBILITY
-    const value_type* data() const _NOEXCEPT {return reinterpret_cast<const value_type*>(__elems_);}
-#endif
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    value_type* data() _NOEXCEPT {return nullptr;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    const value_type* data() const _NOEXCEPT {return nullptr;}
 
     // No explicit construct/copy/destroy for aggregate type
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17

@@ -483,7 +483,7 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC) {
   // bitcast it to a vector type that we can extract from.
   unsigned NumVecElts = VecWidth / DestWidth;
   if (VecType->getElementType() != DestType) {
-    VecType = VectorType::get(DestType, NumVecElts);
+    VecType = FixedVectorType::get(DestType, NumVecElts);
     VecInput = IC.Builder.CreateBitCast(VecInput, VecType, "bc");
   }
 
@@ -870,7 +870,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
       assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
              "overflow 32-bits");
 
-      Type *BitCastTo = VectorType::get(DestTy, BitCastNumElts);
+      auto *BitCastTo = FixedVectorType::get(DestTy, BitCastNumElts);
       Value *BitCast = Builder.CreateBitCast(VecOp, BitCastTo);
       return ExtractElementInst::Create(BitCast, Builder.getInt32(NewIdx));
     }
@@ -1536,7 +1536,7 @@ static Type *shrinkFPConstantVector(Value *V) {
   }
 
   // Make a vector type from the minimal type.
-  return VectorType::get(MinType, NumElts);
+  return FixedVectorType::get(MinType, NumElts);
 }
 
 /// Find the minimum FP type we can safely truncate to.
@@ -1921,8 +1921,11 @@ Instruction *InstCombiner::visitPtrToInt(PtrToIntInst &CI) {
     return commonPointerCastTransforms(CI);
 
   Type *PtrTy = DL.getIntPtrType(CI.getContext(), AS);
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) // Handle vectors of pointers.
-    PtrTy = VectorType::get(PtrTy, VTy->getNumElements());
+  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+    // Handle vectors of pointers.
+    // FIXME: what should happen for scalable vectors?
+    PtrTy = FixedVectorType::get(PtrTy, VTy->getNumElements());
+  }
 
   Value *P = Builder.CreatePtrToInt(CI.getOperand(0), PtrTy);
   return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
@@ -1961,7 +1964,8 @@ static Instruction *optimizeVectorResizeWithIntegerBitCasts(Value *InVal,
         DestTy->getElementType()->getPrimitiveSizeInBits())
       return nullptr;
 
-    SrcTy = VectorType::get(DestTy->getElementType(), SrcTy->getNumElements());
+    SrcTy =
+        FixedVectorType::get(DestTy->getElementType(), SrcTy->getNumElements());
     InVal = IC.Builder.CreateBitCast(InVal, SrcTy);
   }
 
@@ -2187,7 +2191,7 @@ static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
     return nullptr;
 
   unsigned NumElts = ExtElt->getVectorOperandType()->getNumElements();
-  auto *NewVecType = VectorType::get(DestType, NumElts);
+  auto *NewVecType = FixedVectorType::get(DestType, NumElts);
   auto *NewBC = IC.Builder.CreateBitCast(ExtElt->getVectorOperand(),
                                          NewVecType, "bc");
   return ExtractElementInst::Create(NewBC, ExtElt->getIndexOperand());
@@ -2658,7 +2662,8 @@ Instruction *InstCombiner::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
     Type *MidTy = PointerType::get(DestElemTy, SrcTy->getAddressSpace());
     if (VectorType *VT = dyn_cast<VectorType>(CI.getType())) {
       // Handle vectors of pointers.
-      MidTy = VectorType::get(MidTy, VT->getNumElements());
+      // FIXME: what should happen for scalable vectors?
+      MidTy = FixedVectorType::get(MidTy, VT->getNumElements());
     }
 
     Value *NewBitCast = Builder.CreateBitCast(Src, MidTy);

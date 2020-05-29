@@ -3164,8 +3164,8 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   if (LT.first != 1 && MTy.isVector() &&
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
     // Type needs to be split. We need LT.first - 1 arithmetic ops.
-    VectorType *SingleOpTy =
-        VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
+    auto *SingleOpTy = FixedVectorType::get(ValVTy->getElementType(),
+                                            MTy.getVectorNumElements());
     ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
     ArithmeticCost *= LT.first - 1;
   }
@@ -3234,8 +3234,8 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValVTy->getNumElements()) {
       // Type needs to be split. We need LT.first - 1 arithmetic ops.
-      Type *SingleOpTy =
-          VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
+      auto *SingleOpTy = FixedVectorType::get(ValVTy->getElementType(),
+                                              MTy.getVectorNumElements());
       ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
       ArithmeticCost *= LT.first - 1;
     }
@@ -3310,7 +3310,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
           getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
-      auto *ShiftTy = VectorType::get(
+      auto *ShiftTy = FixedVectorType::get(
           Type::getIntNTy(ValVTy->getContext(), Size), 128 / Size);
       ReductionCost += getArithmeticInstrCost(
           Instruction::LShr, ShiftTy, CostKind,
@@ -3617,8 +3617,8 @@ int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     }
 
     // Add the arithmetic op for this level.
-    auto *SubCondTy = VectorType::get(CondTy->getElementType(),
-                                      Ty->getNumElements());
+    auto *SubCondTy =
+        FixedVectorType::get(CondTy->getElementType(), Ty->getNumElements());
     MinMaxCost += getMinMaxCost(Ty, SubCondTy, IsUnsigned);
   }
 
@@ -3866,14 +3866,15 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
                            ? getIndexSizeInBits(Ptr, DL)
                            : DL.getPointerSizeInBits();
 
-  Type *IndexVTy = VectorType::get(IntegerType::get(SrcVTy->getContext(),
-                                                    IndexSize), VF);
+  auto *IndexVTy = FixedVectorType::get(
+      IntegerType::get(SrcVTy->getContext(), IndexSize), VF);
   std::pair<int, MVT> IdxsLT = TLI->getTypeLegalizationCost(DL, IndexVTy);
   std::pair<int, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, SrcVTy);
   int SplitFactor = std::max(IdxsLT.first, SrcLT.first);
   if (SplitFactor > 1) {
     // Handle splitting of vector of pointers
-    Type *SplitSrcTy = VectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
+    auto *SplitSrcTy =
+        FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
     return SplitFactor * getGSVectorCost(Opcode, SplitSrcTy, Ptr, Alignment,
                                          AddressSpace);
   }
@@ -4265,14 +4266,14 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
 
   // Get the cost of one memory operation.
-  Type *SingleMemOpTy =
-      VectorType::get(cast<VectorType>(VecTy)->getElementType(),
-                      LegalVT.getVectorNumElements());
+  auto *SingleMemOpTy =
+      FixedVectorType::get(cast<VectorType>(VecTy)->getElementType(),
+                           LegalVT.getVectorNumElements());
   unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,
                                        MaybeAlign(Alignment), AddressSpace,
                                        CostKind);
 
-  VectorType *VT = VectorType::get(ScalarTy, VF);
+  auto *VT = FixedVectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
@@ -4408,9 +4409,9 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
 
     unsigned NumOfLoadsInInterleaveGrp =
         Indices.size() ? Indices.size() : Factor;
-    Type *ResultTy =
-        VectorType::get(cast<VectorType>(VecTy)->getElementType(),
-                        cast<VectorType>(VecTy)->getNumElements() / Factor);
+    auto *ResultTy = FixedVectorType::get(
+        cast<VectorType>(VecTy)->getElementType(),
+        cast<VectorType>(VecTy)->getNumElements() / Factor);
     unsigned NumOfResults =
         getTLI()->getTypeLegalizationCost(DL, ResultTy).first *
         NumOfLoadsInInterleaveGrp;

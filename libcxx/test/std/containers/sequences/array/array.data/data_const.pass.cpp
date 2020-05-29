@@ -49,14 +49,14 @@ TEST_CONSTEXPR_CXX17 bool tests()
         typedef std::array<T, 0> C;
         const C c = {};
         const T* p = c.data();
-        LIBCPP_ASSERT(p != nullptr);
+        (void)p;
     }
     {
         typedef NoDefault T;
         typedef std::array<T, 0> C;
         const C c = {};
         const T* p = c.data();
-        LIBCPP_ASSERT(p != nullptr);
+        (void)p;
     }
     {
         std::array<int, 5> const c = {0, 1, 2, 3, 4};
@@ -84,7 +84,6 @@ int main(int, char**)
         typedef std::array<T, 0> C;
         const C c = {};
         const T* p = c.data();
-        LIBCPP_ASSERT(p != nullptr);
         std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
         assert(pint % TEST_ALIGNOF(T) == 0);
     }
