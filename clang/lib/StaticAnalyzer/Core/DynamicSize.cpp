@@ -44,5 +44,28 @@ DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
   return DivisionV.castAs<DefinedOrUnknownSVal>();
 }
 
+SVal getDynamicSizeWithOffset(ProgramStateRef State, const SVal &BufV) {
+  SValBuilder &SvalBuilder = State->getStateManager().getSValBuilder();
+  const MemRegion *MRegion = BufV.getAsRegion();
+  if (!MRegion)
+    return UnknownVal();
+  RegionOffset Offset = MRegion->getAsOffset();
+  if (Offset.hasSymbolicOffset())
+    return UnknownVal();
+  const MemRegion *BaseRegion = MRegion->getBaseRegion();
+  if (!BaseRegion)
+    return UnknownVal();
+
+  NonLoc OffsetInBytes = SvalBuilder.makeArrayIndex(
+      Offset.getOffset() /
+      MRegion->getMemRegionManager().getContext().getCharWidth());
+  DefinedOrUnknownSVal ExtentInBytes =
+      getDynamicSize(State, BaseRegion, SvalBuilder);
+
+  return SvalBuilder.evalBinOp(State, BinaryOperator::Opcode::BO_Sub,
+                               ExtentInBytes, OffsetInBytes,
+                               SvalBuilder.getArrayIndexType());
+}
+
 } // namespace ento
 } // namespace clang
