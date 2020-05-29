@@ -6,6 +6,15 @@ func @omp_barrier() -> () {
   return
 }
 
+func @omp_master() -> () {
+  // CHECK: omp.master
+  "omp.master" ()({
+    // CHECK: omp.terminator
+    omp.terminator
+  }):()->()
+  return
+}
+
 func @omp_taskwait() -> () {
   // CHECK: omp.taskwait
   omp.taskwait
@@ -42,7 +51,7 @@ func @omp_terminator() -> () {
 }
 
 func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : si32) -> () {
-  // CHECK: omp_parallel
+  // CHECK: omp.parallel
   "omp.parallel" (%if_cond, %num_threads, %data_var, %data_var, %data_var, %data_var) ({
 
   // test without if condition
