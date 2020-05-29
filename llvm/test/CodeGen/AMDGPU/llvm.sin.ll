@@ -80,34 +80,6 @@ define amdgpu_kernel void @unsafe_sin_2x_f32(float addrspace(1)* %out, float %x)
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_safe_2sin_f32:
-; GCN: v_add_f32
-; GCN: v_mul_f32
-; SICIVI: v_fract_f32
-; GFX9-NOT: v_fract_f32
-; GCN: v_sin_f32
-; GCN-NOT: v_sin_f32
-define amdgpu_kernel void @test_safe_2sin_f32(float addrspace(1)* %out, float %x) #1 {
-   %y = fmul float 2.0, %x
-   %sin = call float @llvm.sin.f32(float %y)
-   store float %sin, float addrspace(1)* %out
-   ret void
-}
-
-; FUNC-LABEL: {{^}}test_unsafe_2sin_f32:
-; GCN: 0x3ea2f983
-; GCN: v_mul_f32
-; SICIVI: v_fract_f32
-; GFX9-NOT: v_fract_f32
-; GCN: v_sin_f32
-; GCN-NOT: v_sin_f32
-define amdgpu_kernel void @test_unsafe_2sin_f32(float addrspace(1)* %out, float %x) #2 {
-   %y = fmul float 2.0, %x
-   %sin = call float @llvm.sin.f32(float %y)
-   store float %sin, float addrspace(1)* %out
-   ret void
-}
-
 ; FUNC-LABEL: {{^}}sin_v4f32:
 ; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
 ; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}

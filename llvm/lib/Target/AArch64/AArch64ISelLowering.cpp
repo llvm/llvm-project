@@ -7734,8 +7734,8 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
          Op.getOperand(1).getValueType().isScalableVector() &&
          "Only scalable vectors are supported");
 
-  auto PredTy = VT.getVectorVT(*DAG.getContext(), MVT::i1,
-                               VT.getVectorNumElements(), true);
+  auto PredTy =
+      VT.getVectorVT(*DAG.getContext(), MVT::i1, VT.getVectorElementCount());
   SDValue Mask = getPTrue(DAG, DL, PredTy, AArch64SVEPredPattern::all);
 
   SmallVector<SDValue, 4> Operands = {Mask};

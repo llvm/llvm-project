@@ -17,5 +17,6 @@ add_llvm_unittest(MCTests
   MCInstPrinter.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
+  MCDisassemblerTest.cpp
   )
 

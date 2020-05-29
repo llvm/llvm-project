@@ -21,8 +21,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "Language.h"
 #include "gtest/gtest.h"
 
 namespace clang {

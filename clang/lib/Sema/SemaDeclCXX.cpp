@@ -14915,6 +14915,9 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
   MarkFunctionReferenced(ConstructLoc, Constructor);
   if (getLangOpts().CUDA && !CheckCUDACall(ConstructLoc, Constructor))
     return ExprError();
+  if (getLangOpts().SYCLIsDevice &&
+      !checkSYCLDeviceFunction(ConstructLoc, Constructor))
+    return ExprError();
 
   return CheckForImmediateInvocation(
       CXXConstructExpr::Create(

@@ -293,6 +293,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
     if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
       return true;
+
+    if (getLangOpts().SYCLIsDevice && !checkSYCLDeviceFunction(Loc, FD))
+      return true;
   }
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
@@ -351,6 +354,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   DiagnoseUnusedOfDecl(*this, D, Loc);
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
+
+  if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice))
+    if (const auto *VD = dyn_cast<ValueDecl>(D))
+      checkDeviceDecl(VD, Loc);
 
   if (isa<ParmVarDecl>(D) && isa<RequiresExprBodyDecl>(D->getDeclContext()) &&
       !isUnevaluatedContext()) {
@@ -13511,14 +13518,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     }
   }
 
-  // Diagnose operations on the unsupported types for OpenMP device compilation.
-  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice) {
-    if (Opc != BO_Assign && Opc != BO_Comma) {
-      checkOpenMPDeviceExpr(LHSExpr);
-      checkOpenMPDeviceExpr(RHSExpr);
-    }
-  }
-
   switch (Opc) {
   case BO_Assign:
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType());
@@ -14130,12 +14129,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                        << InputExpr->getType()
                        << Input.get()->getSourceRange());
     }
-  }
-  // Diagnose operations on the unsupported types for OpenMP device compilation.
-  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice) {
-    if (UnaryOperator::isIncrementDecrementOp(Opc) ||
-        UnaryOperator::isArithmeticOp(Opc))
-      checkOpenMPDeviceExpr(InputExpr);
   }
 
   switch (Opc) {
@@ -16394,6 +16387,9 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
   if (getLangOpts().CUDA)
     CheckCUDACall(Loc, Func);
+
+  if (getLangOpts().SYCLIsDevice)
+    checkSYCLDeviceFunction(Loc, Func);
 
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
