@@ -94,6 +94,12 @@ extern "C" void LLVMInitializeVETargetMC() {
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createVEMCSubtargetInfo);
 
+    // Register the MC Code Emitter.
+    TargetRegistry::RegisterMCCodeEmitter(*T, createVEMCCodeEmitter);
+
+    // Register the asm backend.
+    TargetRegistry::RegisterMCAsmBackend(*T, createVEAsmBackend);
+
     // Register the object target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,
                                                  createObjectTargetStreamer);
