@@ -420,7 +420,7 @@ void ClangUserExpression::CreateSourceCode(
     m_transformed_text = m_expr_text;
   } else {
     m_source_code.reset(ClangExpressionSourceCode::CreateWrapped(
-        m_filename, prefix.c_str(), m_expr_text.c_str()));
+        m_filename, prefix, m_expr_text));
 
     if (!m_source_code->GetText(m_transformed_text, m_expr_lang,
                                 m_in_static_method, exe_ctx, !m_ctx_obj,
