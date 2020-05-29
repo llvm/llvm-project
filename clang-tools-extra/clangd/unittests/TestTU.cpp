@@ -66,14 +66,24 @@ ParseInputs TestTU::inputs() const {
   return Inputs;
 }
 
+std::shared_ptr<const PreambleData> TestTU::preamble() const {
+  auto Inputs = inputs();
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  assert(CI && "Failed to build compilation invocation.");
+  return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
+                                      /*StoreInMemory=*/true,
+                                      /*PreambleCallback=*/nullptr);
+}
+
 ParsedAST TestTU::build() const {
   auto Inputs = inputs();
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
-  auto Preamble =
-      buildPreamble(testPath(Filename), *CI, Inputs,
-                    /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
+  auto Preamble = clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
+                                               /*StoreInMemory=*/true,
+                                               /*PreambleCallback=*/nullptr);
   auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
                               Diags.take(), Preamble);
   if (!AST.hasValue()) {

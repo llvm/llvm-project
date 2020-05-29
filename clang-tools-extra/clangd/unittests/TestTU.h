@@ -68,6 +68,7 @@ struct TestTU {
   // By default, build() will report Error diagnostics as GTest errors.
   // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
+  std::shared_ptr<const PreambleData> preamble() const;
   ParseInputs inputs() const;
   SymbolSlab headerSymbols() const;
   RefSlab headerRefs() const;

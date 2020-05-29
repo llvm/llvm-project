@@ -36,37 +36,19 @@ MATCHER_P2(Distance, File, D, "") {
   return arg.first() == File && arg.second == D;
 }
 
-std::shared_ptr<const PreambleData>
-createPreamble(llvm::StringRef Contents = "") {
-  auto TU = TestTU::withCode(Contents);
-  // ms-compatibility changes meaning of #import, make sure it is turned off.
-  TU.ExtraArgs = {"-fno-ms-compatibility"};
-  TU.Filename = "preamble.cpp";
-  auto PI = TU.inputs();
-  IgnoreDiagnostics Diags;
-  auto CI = buildCompilerInvocation(PI, Diags);
-  if (!CI) {
-    ADD_FAILURE() << "failed to build compiler invocation";
-    return nullptr;
-  }
-  if (auto Preamble = buildPreamble(TU.Filename, *CI, PI, true, nullptr))
-    return Preamble;
-  ADD_FAILURE() << "failed to build preamble";
-  return nullptr;
-}
-
 // Builds a preamble for BaselineContents, patches it for ModifiedContents and
 // returns the includes in the patch.
 IncludeStructure
 collectPatchedIncludes(llvm::StringRef ModifiedContents,
                        llvm::StringRef BaselineContents,
                        llvm::StringRef MainFileName = "main.cpp") {
-  auto BaselinePreamble = createPreamble(BaselineContents);
-  // Create the patch.
-  auto TU = TestTU::withCode(ModifiedContents);
+  auto TU = TestTU::withCode(BaselineContents);
   TU.Filename = MainFileName.str();
   // ms-compatibility changes meaning of #import, make sure it is turned off.
   TU.ExtraArgs = {"-fno-ms-compatibility"};
+  auto BaselinePreamble = TU.preamble();
+  // Create the patch.
+  TU = TestTU::withCode(ModifiedContents);
   auto PI = TU.inputs();
   auto PP = PreamblePatch::create(testPath(TU.Filename), PI, *BaselinePreamble);
   // Collect patch contents.
