@@ -14439,7 +14439,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (LangOpts.OpenMP || LangOpts.CUDA) {
+  if (LangOpts.OpenMP || LangOpts.CUDA || LangOpts.SYCLIsDevice) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
         ES == Sema::FunctionEmissionStatus::Unknown)
@@ -18119,6 +18119,11 @@ Decl *Sema::getObjCDeclContext() const {
 
 Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD,
                                                      bool Final) {
+  // SYCL functions can be template, so we check if they have appropriate
+  // attribute prior to checking if it is a template.
+  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
+    return FunctionEmissionStatus::Emitted;
+
   // Templates are emitted when they're instantiated.
   if (FD->isDependentContext())
     return FunctionEmissionStatus::TemplateDiscarded;

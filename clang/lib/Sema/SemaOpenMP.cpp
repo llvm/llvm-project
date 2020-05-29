@@ -1832,23 +1832,28 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
                                                      unsigned DiagID) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
-  FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
+
+  FunctionDecl *FD = getCurFunctionDecl();
   DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
-  switch (FES) {
-  case FunctionEmissionStatus::Emitted:
-    Kind = DeviceDiagBuilder::K_Immediate;
-    break;
-  case FunctionEmissionStatus::Unknown:
-    Kind = isOpenMPDeviceDelayedContext(*this) ? DeviceDiagBuilder::K_Deferred
-                                               : DeviceDiagBuilder::K_Immediate;
-    break;
-  case FunctionEmissionStatus::TemplateDiscarded:
-  case FunctionEmissionStatus::OMPDiscarded:
-    Kind = DeviceDiagBuilder::K_Nop;
-    break;
-  case FunctionEmissionStatus::CUDADiscarded:
-    llvm_unreachable("CUDADiscarded unexpected in OpenMP device compilation");
-    break;
+  if (FD) {
+    FunctionEmissionStatus FES = getEmissionStatus(FD);
+    switch (FES) {
+    case FunctionEmissionStatus::Emitted:
+      Kind = DeviceDiagBuilder::K_Immediate;
+      break;
+    case FunctionEmissionStatus::Unknown:
+      Kind = isOpenMPDeviceDelayedContext(*this)
+                 ? DeviceDiagBuilder::K_Deferred
+                 : DeviceDiagBuilder::K_Immediate;
+      break;
+    case FunctionEmissionStatus::TemplateDiscarded:
+    case FunctionEmissionStatus::OMPDiscarded:
+      Kind = DeviceDiagBuilder::K_Nop;
+      break;
+    case FunctionEmissionStatus::CUDADiscarded:
+      llvm_unreachable("CUDADiscarded unexpected in OpenMP device compilation");
+      break;
+    }
   }
 
   return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
@@ -1875,21 +1880,6 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
   }
 
   return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
-}
-
-void Sema::checkOpenMPDeviceExpr(const Expr *E) {
-  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
-         "OpenMP device compilation mode is expected.");
-  QualType Ty = E->getType();
-  if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
-      ((Ty->isFloat128Type() ||
-        (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128)) &&
-       !Context.getTargetInfo().hasFloat128Type()) ||
-      (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
-       !Context.getTargetInfo().hasInt128Type()))
-    targetDiag(E->getExprLoc(), diag::err_omp_unsupported_type)
-        << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
-        << Context.getTargetInfo().getTriple().str() << E->getSourceRange();
 }
 
 static OpenMPDefaultmapClauseKind

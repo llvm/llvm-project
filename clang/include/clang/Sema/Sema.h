@@ -9868,10 +9868,6 @@ private:
   /// Pop OpenMP function region for non-capturing function.
   void popOpenMPFunctionRegion(const sema::FunctionScopeInfo *OldFSI);
 
-  /// Check if the expression is allowed to be used in expressions for the
-  /// OpenMP devices.
-  void checkOpenMPDeviceExpr(const Expr *E);
-
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
   /// \param D type or declaration to be checked.
@@ -11654,6 +11650,10 @@ public:
 
   DeviceDiagBuilder targetDiag(SourceLocation Loc, unsigned DiagID);
 
+  /// Check if the expression is allowed to be used in expressions for the
+  /// offloading devices.
+  void checkDeviceDecl(const ValueDecl *D, SourceLocation Loc);
+
   enum CUDAFunctionTarget {
     CFT_Device,
     CFT_Global,
@@ -12396,6 +12396,40 @@ public:
     ConstructorDestructor,
     BuiltinFunction
   };
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current
+  /// context is "used as device code".
+  ///
+  /// - If CurLexicalContext is a kernel function or it is known that the
+  ///   function will be emitted for the device, emits the diagnostics
+  ///   immediately.
+  /// - If CurLexicalContext is a function and we are compiling
+  ///   for the device, but we don't know that this function will be codegen'ed
+  ///   for devive yet, creates a diagnostic which is emitted if and when we
+  ///   realize that the function will be codegen'ed.
+  ///
+  /// Example usage:
+  ///
+  /// Diagnose __float128 type usage only from SYCL device code if the current
+  /// target doesn't support it
+  /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
+  ///     S.getLangOpts().SYCLIsDevice)
+  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
+  DeviceDiagBuilder SYCLDiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Check whether we're allowed to call Callee from the current context.
+  ///
+  /// - If the call is never allowed in a semantically-correct program
+  ///   emits an error and returns false.
+  ///
+  /// - If the call is allowed in semantically-correct programs, but only if
+  ///   it's never codegen'ed, creates a deferred diagnostic to be emitted if
+  ///   and when the caller is codegen'ed, and returns true.
+  ///
+  /// - Otherwise, returns true without emitting any diagnostics.
+  ///
+  /// Adds Callee to DeviceCallGraph if we don't know if its caller will be
+  /// codegen'ed yet.
+  bool checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
 };
 
 /// RAII object that enters a new expression evaluation context.

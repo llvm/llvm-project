@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-double math(float f, double d, long double ld) {
+double math(float f, double d) {
   double r = 0;
 // SLOW:  call float @__nv_sinf(float
 // FAST:  call fast float @__nv_fast_sinf(float
@@ -20,8 +20,8 @@ double math(float f, double d, long double ld) {
 
 long double foo(float f, double d, long double ld) {
   double r = ld;
-  r += math(f, d, ld);
+  r += math(f, d);
 #pragma omp target map(r)
-  { r += math(f, d, ld); }
+  { r += math(f, d); }
   return r;
 }
