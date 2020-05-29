@@ -884,8 +884,10 @@ class Base(unittest2.TestCase):
         del self.subprocesses[:]
         # Ensure any forked processes are cleaned up
         for pid in self.forkedProcessPids:
-            if os.path.exists("/proc/" + str(pid)):
+            try:
                 os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
