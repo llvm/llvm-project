@@ -11,43 +11,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "Language.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
-namespace ast_matchers {
 
-ArgVector getBasicRunOptionsForLanguage(Language Lang) {
-  ArgVector BasicArgs;
+std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
+  std::vector<std::string> Args;
   // Test with basic arguments.
   switch (Lang) {
   case Lang_C:
-    BasicArgs = {"-x", "c", "-std=c99"};
+    Args = {"-x", "c", "-std=c99"};
     break;
   case Lang_C89:
-    BasicArgs = {"-x", "c", "-std=c89"};
+    Args = {"-x", "c", "-std=c89"};
     break;
   case Lang_CXX:
-    BasicArgs = {"-std=c++98", "-frtti"};
+    Args = {"-std=c++98", "-frtti"};
     break;
   case Lang_CXX11:
-    BasicArgs = {"-std=c++11", "-frtti"};
+    Args = {"-std=c++11", "-frtti"};
     break;
   case Lang_CXX14:
-    BasicArgs = {"-std=c++14", "-frtti"};
+    Args = {"-std=c++14", "-frtti"};
     break;
   case Lang_CXX17:
-    BasicArgs = {"-std=c++17", "-frtti"};
+    Args = {"-std=c++17", "-frtti"};
     break;
   case Lang_CXX2a:
-    BasicArgs = {"-std=c++2a", "-frtti"};
+    Args = {"-std=c++2a", "-frtti"};
     break;
   case Lang_OBJCXX:
-    BasicArgs = {"-x", "objective-c++", "-frtti"};
+    Args = {"-x", "objective-c++", "-frtti"};
     break;
   case Lang_OpenCL:
     llvm_unreachable("Not implemented yet!");
   }
-  return BasicArgs;
+  return Args;
 }
 
-} // end namespace ast_matchers
 } // end namespace clang
