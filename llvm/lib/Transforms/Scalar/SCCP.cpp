@@ -72,6 +72,15 @@ STATISTIC(IPNumInstRemoved, "Number of instructions removed by IPSCCP");
 STATISTIC(IPNumArgsElimed ,"Number of arguments constant propagated by IPSCCP");
 STATISTIC(IPNumGlobalConst, "Number of globals found to be constant by IPSCCP");
 
+// The maximum number of range extensions allowed for operations requiring
+// widening.
+static const unsigned MaxNumRangeExtensions = 10;
+
+/// Returns MergeOptions with MaxWidenSteps set to MaxNumRangeExtensions.
+static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
+  return ValueLatticeElement::MergeOptions().setMaxWidenSteps(
+      MaxNumRangeExtensions);
+}
 namespace {
 
 // Helper to check if \p LV is either a constant or a constant
@@ -401,7 +410,7 @@ private:
   bool mergeInValue(ValueLatticeElement &IV, Value *V,
                     ValueLatticeElement MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/true}) {
+                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
     if (IV.mergeIn(MergeWithV, Opts)) {
       pushToWorkList(IV, V);
       LLVM_DEBUG(dbgs() << "Merged " << MergeWithV << " into " << *V << " : "
@@ -413,7 +422,7 @@ private:
 
   bool mergeInValue(Value *V, ValueLatticeElement MergeWithV,
                     ValueLatticeElement::MergeOptions Opts = {
-                        /*MayIncludeUndef=*/false, /*CheckWiden=*/true}) {
+                        /*MayIncludeUndef=*/false, /*CheckWiden=*/false}) {
     assert(!V->getType()->isStructTy() &&
            "non-structs should use markConstant");
     return mergeInValue(ValueState[V], V, MergeWithV, Opts);
@@ -725,24 +734,36 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   if (PN.getNumIncomingValues() > 64)
     return (void)markOverdefined(&PN);
 
+  unsigned NumActiveIncoming = 0;
+
   // Look at all of the executable operands of the PHI node.  If any of them
   // are overdefined, the PHI becomes overdefined as well.  If they are all
   // constant, and they agree with each other, the PHI becomes the identical
-  // constant.  If they are constant and don't agree, the PHI is overdefined.
-  // If there are no executable operands, the PHI remains unknown.
-  bool Changed = false;
+  // constant.  If they are constant and don't agree, the PHI is a constant
+  // range. If there are no executable operands, the PHI remains unknown.
+  ValueLatticeElement PhiState = getValueState(&PN);
   for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-    ValueLatticeElement IV = getValueState(PN.getIncomingValue(i));
     if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
       continue;
 
-    ValueLatticeElement &Res = getValueState(&PN);
-    Changed |= Res.mergeIn(IV);
-    if (Res.isOverdefined())
+    ValueLatticeElement IV = getValueState(PN.getIncomingValue(i));
+    PhiState.mergeIn(IV);
+    NumActiveIncoming++;
+    if (PhiState.isOverdefined())
       break;
   }
-  if (Changed)
-    pushToWorkListMsg(ValueState[&PN], &PN);
+
+  // We allow up to 1 range extension per active incoming value and one
+  // additional extension. Note that we manually adjust the number of range
+  // extensions to match the number of active incoming values. This helps to
+  // limit multiple extensions caused by the same incoming value, if other
+  // incoming values are equal.
+  mergeInValue(&PN, PhiState,
+               ValueLatticeElement::MergeOptions().setMaxWidenSteps(
+                   NumActiveIncoming + 1));
+  ValueLatticeElement &PhiStateRef = getValueState(&PN);
+  PhiStateRef.setNumRangeExtensions(
+      std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
 }
 
 void SCCPSolver::visitReturnInst(ReturnInst &I) {
@@ -1112,8 +1133,7 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
       // If we are tracking this global, merge in the known value for it.
       auto It = TrackedGlobals.find(GV);
       if (It != TrackedGlobals.end()) {
-        mergeInValue(IV, &I, It->second,
-                     ValueLatticeElement::MergeOptions().setCheckWiden(false));
+        mergeInValue(IV, &I, It->second, getMaxWidenStepsOpts());
         return;
       }
     }
@@ -1201,11 +1221,11 @@ void SCCPSolver::handleCallArguments(CallBase &CB) {
       if (auto *STy = dyn_cast<StructType>(AI->getType())) {
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           ValueLatticeElement CallArg = getStructValueState(*CAI, i);
-          mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg);
+          mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg,
+                       getMaxWidenStepsOpts());
         }
       } else
-        mergeInValue(&*AI, getValueState(*CAI),
-                     ValueLatticeElement::MergeOptions().setCheckWiden(false));
+        mergeInValue(&*AI, getValueState(*CAI), getMaxWidenStepsOpts());
     }
   }
 }
@@ -1316,14 +1336,15 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
     // into this call site.
     for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
       mergeInValue(getStructValueState(&CB, i), &CB,
-                   TrackedMultipleRetVals[std::make_pair(F, i)]);
+                   TrackedMultipleRetVals[std::make_pair(F, i)],
+                   getMaxWidenStepsOpts());
   } else {
     auto TFRVI = TrackedRetVals.find(F);
     if (TFRVI == TrackedRetVals.end())
       return handleCallOverdefined(CB); // Not tracking this callee.
 
     // If so, propagate the return value of the callee into this call result.
-    mergeInValue(&CB, TFRVI->second);
+    mergeInValue(&CB, TFRVI->second, getMaxWidenStepsOpts());
   }
 }
 
