@@ -76,9 +76,10 @@ bool CFGSCC::runOnFunction(Function &F) {
   for (scc_iterator<Function*> SCCI = scc_begin(&F); !SCCI.isAtEnd(); ++SCCI) {
     const std::vector<BasicBlock *> &nextSCC = *SCCI;
     errs() << "\nSCC #" << ++sccNum << " : ";
-    for (std::vector<BasicBlock*>::const_iterator I = nextSCC.begin(),
-           E = nextSCC.end(); I != E; ++I)
-      errs() << (*I)->getName() << ", ";
+    for (BasicBlock *BB : nextSCC) {
+      BB->printAsOperand(errs(), false);
+      errs() << ", ";
+    }
     if (nextSCC.size() == 1 && SCCI.hasCycle())
       errs() << " (Has self-loop).";
   }
