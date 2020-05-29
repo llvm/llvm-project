@@ -10,17 +10,11 @@
 #define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
-namespace vector {
-
-class TransferReadOp;
-class TransferWriteOp;
-
-} // namespace vector
-
 namespace linalg {
 
 struct LinalgTilingOptions;
