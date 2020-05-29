@@ -8,6 +8,7 @@
 #include "SourceCode.h"
 
 #include "FuzzyMatch.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "refactor/Tweak.h"
 #include "support/Context.h"
@@ -961,7 +962,9 @@ llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
     Loc = Loc.getLocWithOffset(-1);
   MacroDefinition MacroDef = PP.getMacroDefinitionAtLoc(IdentifierInfo, Loc);
   if (auto *MI = MacroDef.getMacroInfo())
-    return DefinedMacro{IdentifierInfo->getName(), MI};
+    return DefinedMacro{
+        IdentifierInfo->getName(), MI,
+        translatePreamblePatchLocation(MI->getDefinitionLoc(), SM)};
   return None;
 }
 

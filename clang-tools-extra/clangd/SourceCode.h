@@ -292,6 +292,10 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
 struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
+  /// Location of the identifier that names the macro.
+  /// Unlike Info->Location, this translates preamble-patch locations to
+  /// main-file locations.
+  SourceLocation NameLoc;
 };
 /// Gets the macro referenced by \p SpelledTok. It must be a spelled token
 /// aligned to the beginning of an identifier.

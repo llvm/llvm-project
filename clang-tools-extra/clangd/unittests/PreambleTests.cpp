@@ -9,14 +9,19 @@
 #include "Annotations.h"
 #include "Compiler.h"
 #include "Headers.h"
+#include "Hover.h"
 #include "Preamble.h"
+#include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "XRefs.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
@@ -28,6 +33,7 @@
 
 using testing::Contains;
 using testing::Field;
+using testing::Matcher;
 using testing::MatchesRegex;
 
 namespace clang {
@@ -199,7 +205,7 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
     ADD_FAILURE() << "Failed to build compiler invocation";
     return llvm::None;
   }
-  return ParsedAST::build(testPath("main.cpp"), TU.inputs(), std::move(CI), {},
+  return ParsedAST::build(testPath(TU.Filename), TU.inputs(), std::move(CI), {},
                           BaselinePreamble);
 }
 
@@ -228,7 +234,8 @@ TEST(PreamblePatchTest, Define) {
         #define BAR
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
-#define BAR
+#line 2
+#define         BAR
 )cpp",
       },
       // multiline macro
@@ -238,7 +245,8 @@ TEST(PreamblePatchTest, Define) {
 
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
-#define BAR
+#line 2
+#define         BAR
 )cpp",
       },
       // multiline macro
@@ -248,7 +256,8 @@ TEST(PreamblePatchTest, Define) {
                 BAR
         [[BAR]])cpp",
           R"cpp(#line 0 ".*main.cpp"
-#define BAR
+#line 3
+#define         BAR
 )cpp",
       },
   };
@@ -275,8 +284,10 @@ TEST(PreamblePatchTest, OrderingPreserved) {
   )cpp");
 
   llvm::StringLiteral ExpectedPatch(R"cpp(#line 0 ".*main.cpp"
-#define BAR\(X, Y\) X Y
-#define BAR\(X\) X
+#line 2
+#define     BAR\(X, Y\) X Y
+#line 3
+#define     BAR\(X\) X
 )cpp");
   EXPECT_THAT(getPreamblePatch(Baseline, Modified.code()),
               MatchesRegex(ExpectedPatch.str()));
@@ -285,6 +296,193 @@ TEST(PreamblePatchTest, OrderingPreserved) {
   ASSERT_TRUE(AST);
   EXPECT_THAT(AST->getDiagnostics(),
               Not(Contains(Field(&Diag::Range, Modified.range()))));
+}
+
+TEST(PreamblePatchTest, LocateMacroAtWorks) {
+  struct {
+    llvm::StringLiteral Baseline;
+    llvm::StringLiteral Modified;
+  } Cases[] = {
+      // Addition of new directive
+      {
+          "",
+          R"cpp(
+            #define $def^FOO
+            $use^FOO)cpp",
+      },
+      // Available inside preamble section
+      {
+          "",
+          R"cpp(
+            #define $def^FOO
+            #undef $use^FOO)cpp",
+      },
+      // Available after undef, as we don't patch those
+      {
+          "",
+          R"cpp(
+            #define $def^FOO
+            #undef FOO
+            $use^FOO)cpp",
+      },
+      // Identifier on a different line
+      {
+          "",
+          R"cpp(
+            #define \
+              $def^FOO
+            $use^FOO)cpp",
+      },
+      // In presence of comment tokens
+      {
+          "",
+          R"cpp(
+            #\
+              define /* FOO */\
+              /* FOO */ $def^FOO
+            $use^FOO)cpp",
+      },
+      // Moved around
+      {
+          "#define FOO",
+          R"cpp(
+            #define BAR
+            #define $def^FOO
+            $use^FOO)cpp",
+      },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Modified);
+    llvm::Annotations Modified(Case.Modified);
+    auto AST = createPatchedAST(Case.Baseline, Modified.code());
+    ASSERT_TRUE(AST);
+
+    const auto &SM = AST->getSourceManager();
+    auto *MacroTok = AST->getTokens().spelledTokenAt(
+        SM.getComposedLoc(SM.getMainFileID(), Modified.point("use")));
+    ASSERT_TRUE(MacroTok);
+
+    auto FoundMacro = locateMacroAt(*MacroTok, AST->getPreprocessor());
+    ASSERT_TRUE(FoundMacro);
+    EXPECT_THAT(FoundMacro->Name, "FOO");
+
+    auto MacroLoc = FoundMacro->NameLoc;
+    EXPECT_EQ(SM.getFileID(MacroLoc), SM.getMainFileID());
+    EXPECT_EQ(SM.getFileOffset(MacroLoc), Modified.point("def"));
+  }
+}
+
+TEST(PreamblePatchTest, LocateMacroAtDeletion) {
+  {
+    // We don't patch deleted define directives, make sure we don't crash.
+    llvm::StringLiteral Baseline = "#define FOO";
+    llvm::Annotations Modified("^FOO");
+
+    auto AST = createPatchedAST(Baseline, Modified.code());
+    ASSERT_TRUE(AST);
+
+    const auto &SM = AST->getSourceManager();
+    auto *MacroTok = AST->getTokens().spelledTokenAt(
+        SM.getComposedLoc(SM.getMainFileID(), Modified.point()));
+    ASSERT_TRUE(MacroTok);
+
+    auto FoundMacro = locateMacroAt(*MacroTok, AST->getPreprocessor());
+    ASSERT_TRUE(FoundMacro);
+    EXPECT_THAT(FoundMacro->Name, "FOO");
+    auto HI =
+        getHover(*AST, offsetToPosition(Modified.code(), Modified.point()),
+                 format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(HI);
+    EXPECT_THAT(HI->Definition, testing::IsEmpty());
+  }
+
+  {
+    // Offset is valid, but underlying text is different.
+    llvm::StringLiteral Baseline = "#define FOO";
+    Annotations Modified(R"cpp(#define BAR
+    ^FOO")cpp");
+
+    auto AST = createPatchedAST(Baseline, Modified.code());
+    ASSERT_TRUE(AST);
+
+    auto HI = getHover(*AST, Modified.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(HI);
+    EXPECT_THAT(HI->Definition, "#define BAR");
+  }
+}
+
+TEST(PreamblePatchTest, RefsToMacros) {
+  struct {
+    llvm::StringLiteral Baseline;
+    llvm::StringLiteral Modified;
+  } Cases[] = {
+      // Newly added
+      {
+          "",
+          R"cpp(
+            #define ^FOO
+            ^[[FOO]])cpp",
+      },
+      // Moved around
+      {
+          "#define FOO",
+          R"cpp(
+            #define BAR
+            #define ^FOO
+            ^[[FOO]])cpp",
+      },
+      // Ref in preamble section
+      {
+          "",
+          R"cpp(
+            #define ^FOO
+            #undef ^FOO)cpp",
+      },
+  };
+
+  for (const auto &Case : Cases) {
+    Annotations Modified(Case.Modified);
+    auto AST = createPatchedAST("", Modified.code());
+    ASSERT_TRUE(AST);
+
+    const auto &SM = AST->getSourceManager();
+    std::vector<Matcher<Location>> ExpectedLocations;
+    for (const auto &R : Modified.ranges())
+      ExpectedLocations.push_back(Field(&Location::range, R));
+
+    for (const auto &P : Modified.points()) {
+      auto *MacroTok = AST->getTokens().spelledTokenAt(SM.getComposedLoc(
+          SM.getMainFileID(),
+          llvm::cantFail(positionToOffset(Modified.code(), P))));
+      ASSERT_TRUE(MacroTok);
+      EXPECT_THAT(findReferences(*AST, P, 0).References,
+                  testing::ElementsAreArray(ExpectedLocations));
+    }
+  }
+}
+
+TEST(TranslatePreamblePatchLocation, Simple) {
+  auto TU = TestTU::withHeaderCode(R"cpp(
+    #line 3 "main.cpp"
+    int foo();)cpp");
+  // Presumed line/col needs to be valid in the main file.
+  TU.Code = R"cpp(// line 1
+    // line 2
+    // line 3
+    // line 4)cpp";
+  TU.Filename = "main.cpp";
+  TU.HeaderFilename = "__preamble_patch__.h";
+  TU.ImplicitHeaderGuard = false;
+
+  auto AST = TU.build();
+  auto &SM = AST.getSourceManager();
+  auto &ND = findDecl(AST, "foo");
+  EXPECT_NE(SM.getFileID(ND.getLocation()), SM.getMainFileID());
+
+  auto TranslatedLoc = translatePreamblePatchLocation(ND.getLocation(), SM);
+  auto DecompLoc = SM.getDecomposedLoc(TranslatedLoc);
+  EXPECT_EQ(DecompLoc.first, SM.getMainFileID());
+  EXPECT_EQ(SM.getLineNumber(DecompLoc.first, DecompLoc.second), 3U);
 }
 } // namespace
 } // namespace clangd
