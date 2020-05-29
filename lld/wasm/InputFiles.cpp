@@ -122,10 +122,13 @@ uint32_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 uint32_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
-  case R_WASM_TABLE_INDEX_SLEB:
-  case R_WASM_TABLE_INDEX_REL_SLEB: {
+  case R_WASM_TABLE_INDEX_SLEB: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return tableEntries[sym.Info.ElementIndex];
+  }
+  case R_WASM_TABLE_INDEX_REL_SLEB: {
+    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
+    return tableEntriesRel[sym.Info.ElementIndex];
   }
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_I32:
@@ -266,6 +269,7 @@ void ObjFile::parse(bool ignoreComdats) {
   // verifying the existing table index relocations
   uint32_t totalFunctions =
       wasmObj->getNumImportedFunctions() + wasmObj->functions().size();
+  tableEntriesRel.resize(totalFunctions);
   tableEntries.resize(totalFunctions);
   for (const WasmElemSegment &seg : wasmObj->elements()) {
     if (seg.Offset.Opcode != WASM_OPCODE_I32_CONST)
@@ -274,6 +278,7 @@ void ObjFile::parse(bool ignoreComdats) {
     for (uint32_t index = 0; index < seg.Functions.size(); index++) {
 
       uint32_t functionIndex = seg.Functions[index];
+      tableEntriesRel[functionIndex] = index;
       tableEntries[functionIndex] = offset + index;
     }
   }
