@@ -4693,11 +4693,12 @@ void GNUStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
       printHashHistogram(*HashTable);
 
   // Print histogram for the .gnu.hash section.
-  if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable())
+  if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable()) {
     if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHashTable))
       this->reportUniqueWarning(std::move(E));
     else
       printGnuHashHistogram(*GnuHashTable);
+  }
 }
 
 template <class ELFT>
