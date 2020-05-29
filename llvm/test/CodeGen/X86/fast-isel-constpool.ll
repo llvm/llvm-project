@@ -6,9 +6,10 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=small -mattr=avx512f < %s | FileCheck %s --check-prefix=AVX
 ; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=large -mattr=avx512f < %s | FileCheck %s --check-prefix=LARGE_AVX
 
-; This large code mode shouldn't mean anything on x86 but it currently
-; generates 64-bit only instructions and will assert in the encoder.
-; RUN: llc -mtriple=i686-apple-darwin -fast-isel -code-model=large -mattr=sse2 < %s | FileCheck %s --check-prefix=X86-LARGE
+; This large code mode shouldn't mean anything on x86 but it used to
+; generate 64-bit only instructions and asserted in the encoder.
+; -show-mc-encoding here to assert if this breaks again.
+; RUN: llc -mtriple=i686-apple-darwin -fast-isel -code-model=large -mattr=sse2 -show-mc-encoding < %s | FileCheck %s --check-prefix=X86-LARGE
 
 ; Make sure fast isel uses rip-relative addressing for the small code model.
 define float @constpool_float(float %x) {
@@ -38,14 +39,16 @@ define float @constpool_float(float %x) {
 ;
 ; X86-LARGE-LABEL: constpool_float:
 ; X86-LARGE:       ## %bb.0:
-; X86-LARGE-NEXT:    pushl %eax
+; X86-LARGE-NEXT:    pushl %eax ## encoding: [0x50]
 ; X86-LARGE-NEXT:    .cfi_def_cfa_offset 8
-; X86-LARGE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-LARGE-NEXT:    addss LCPI0_0, %xmm0
-; X86-LARGE-NEXT:    movss %xmm0, (%esp)
-; X86-LARGE-NEXT:    flds (%esp)
-; X86-LARGE-NEXT:    popl %eax
-; X86-LARGE-NEXT:    retl
+; X86-LARGE-NEXT:    movss {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xf3,0x0f,0x10,0x44,0x24,0x08]
+; X86-LARGE-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; X86-LARGE-NEXT:    addss LCPI0_0, %xmm0 ## encoding: [0xf3,0x0f,0x58,0x05,A,A,A,A]
+; X86-LARGE-NEXT:    ## fixup A - offset: 4, value: LCPI0_0, kind: FK_Data_4
+; X86-LARGE-NEXT:    movss %xmm0, (%esp) ## encoding: [0xf3,0x0f,0x11,0x04,0x24]
+; X86-LARGE-NEXT:    flds (%esp) ## encoding: [0xd9,0x04,0x24]
+; X86-LARGE-NEXT:    popl %eax ## encoding: [0x58]
+; X86-LARGE-NEXT:    retl ## encoding: [0xc3]
 
   %1 = fadd float %x, 16.50e+01
   ret float %1
@@ -78,13 +81,15 @@ define double @constpool_double(double %x) nounwind {
 ;
 ; X86-LARGE-LABEL: constpool_double:
 ; X86-LARGE:       ## %bb.0:
-; X86-LARGE-NEXT:    subl $12, %esp
-; X86-LARGE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-LARGE-NEXT:    addsd LCPI1_0, %xmm0
-; X86-LARGE-NEXT:    movsd %xmm0, (%esp)
-; X86-LARGE-NEXT:    fldl (%esp)
-; X86-LARGE-NEXT:    addl $12, %esp
-; X86-LARGE-NEXT:    retl
+; X86-LARGE-NEXT:    subl $12, %esp ## encoding: [0x83,0xec,0x0c]
+; X86-LARGE-NEXT:    movsd {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xf2,0x0f,0x10,0x44,0x24,0x10]
+; X86-LARGE-NEXT:    ## xmm0 = mem[0],zero
+; X86-LARGE-NEXT:    addsd LCPI1_0, %xmm0 ## encoding: [0xf2,0x0f,0x58,0x05,A,A,A,A]
+; X86-LARGE-NEXT:    ## fixup A - offset: 4, value: LCPI1_0, kind: FK_Data_4
+; X86-LARGE-NEXT:    movsd %xmm0, (%esp) ## encoding: [0xf2,0x0f,0x11,0x04,0x24]
+; X86-LARGE-NEXT:    fldl (%esp) ## encoding: [0xdd,0x04,0x24]
+; X86-LARGE-NEXT:    addl $12, %esp ## encoding: [0x83,0xc4,0x0c]
+; X86-LARGE-NEXT:    retl ## encoding: [0xc3]
 
   %1 = fadd double %x, 8.500000e-01
   ret double %1
@@ -123,12 +128,13 @@ define void @constpool_float_no_fp_args(float* %x) nounwind {
 ;
 ; X86-LARGE-LABEL: constpool_float_no_fp_args:
 ; X86-LARGE:       ## %bb.0:
-; X86-LARGE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-LARGE-NEXT:    movabsq $LCPI2_0, %rcx
-; X86-LARGE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-LARGE-NEXT:    addss (%eax), %xmm0
-; X86-LARGE-NEXT:    movss %xmm0, (%eax)
-; X86-LARGE-NEXT:    retl
+; X86-LARGE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-LARGE-NEXT:    movss LCPI2_0, %xmm0 ## encoding: [0xf3,0x0f,0x10,0x05,A,A,A,A]
+; X86-LARGE-NEXT:    ## fixup A - offset: 4, value: LCPI2_0, kind: FK_Data_4
+; X86-LARGE-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; X86-LARGE-NEXT:    addss (%eax), %xmm0 ## encoding: [0xf3,0x0f,0x58,0x00]
+; X86-LARGE-NEXT:    movss %xmm0, (%eax) ## encoding: [0xf3,0x0f,0x11,0x00]
+; X86-LARGE-NEXT:    retl ## encoding: [0xc3]
   %a = load float, float* %x
   %b = fadd float %a, 16.50e+01
   store float %b, float* %x
@@ -168,12 +174,13 @@ define void @constpool_double_no_fp_args(double* %x) nounwind {
 ;
 ; X86-LARGE-LABEL: constpool_double_no_fp_args:
 ; X86-LARGE:       ## %bb.0:
-; X86-LARGE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-LARGE-NEXT:    movabsq $LCPI3_0, %rcx
-; X86-LARGE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-LARGE-NEXT:    addsd (%eax), %xmm0
-; X86-LARGE-NEXT:    movsd %xmm0, (%eax)
-; X86-LARGE-NEXT:    retl
+; X86-LARGE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-LARGE-NEXT:    movsd LCPI3_0, %xmm0 ## encoding: [0xf2,0x0f,0x10,0x05,A,A,A,A]
+; X86-LARGE-NEXT:    ## fixup A - offset: 4, value: LCPI3_0, kind: FK_Data_4
+; X86-LARGE-NEXT:    ## xmm0 = mem[0],zero
+; X86-LARGE-NEXT:    addsd (%eax), %xmm0 ## encoding: [0xf2,0x0f,0x58,0x00]
+; X86-LARGE-NEXT:    movsd %xmm0, (%eax) ## encoding: [0xf2,0x0f,0x11,0x00]
+; X86-LARGE-NEXT:    retl ## encoding: [0xc3]
   %a = load double, double* %x
   %b = fadd double %a, 8.500000e-01
   store double %b, double* %x

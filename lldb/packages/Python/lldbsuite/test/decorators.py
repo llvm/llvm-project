@@ -719,6 +719,9 @@ def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
     def is_compiler_clang_with_thread_sanitizer(self):
+        if is_running_under_asan():
+            return "Thread sanitizer tests are disabled when runing under ASAN"
+
         compiler_path = self.getCompiler()
         compiler = os.path.basename(compiler_path)
         if not compiler.startswith("clang"):
@@ -742,6 +745,9 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
     """Decorate the item to skip test unless -fsanitize=undefined is supported."""
 
     def is_compiler_clang_with_ubsan(self):
+        if is_running_under_asan():
+            return "Undefined behavior sanitizer tests are disabled when runing under ASAN"
+
         # Write out a temp file which exhibits UB.
         inputf = tempfile.NamedTemporaryFile(suffix='.c', mode='w')
         inputf.write('int main() { int x = 0; return x / x; }\n')

@@ -725,6 +725,26 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   return findFunctionSummary(FD, C);
 }
 
+llvm::Optional<QualType> lookupType(StringRef Name, const ASTContext &ACtx) {
+  IdentifierInfo &II = ACtx.Idents.get(Name);
+  auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
+  if (LookupRes.size() == 0)
+    return None;
+
+  // Prioritze typedef declarations.
+  // This is needed in case of C struct typedefs. E.g.:
+  //   typedef struct FILE FILE;
+  // In this case, we have a RecordDecl 'struct FILE' with the name 'FILE' and
+  // we have a TypedefDecl with the name 'FILE'.
+  for (Decl *D : LookupRes) {
+    if (auto *TD = dyn_cast<TypedefNameDecl>(D))
+      return ACtx.getTypeDeclType(TD).getCanonicalType();
+  }
+  assert(LookupRes.size() == 1 && "Type identifier should be unique");
+  auto *D = cast<TypeDecl>(LookupRes.front());
+  return ACtx.getTypeDeclType(D).getCanonicalType();
+}
+
 void StdLibraryFunctionsChecker::initFunctionSummaries(
     CheckerContext &C) const {
   if (!FunctionSummaryMap.empty())
@@ -747,13 +767,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType SizeTy = ACtx.getSizeType();
   const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *
   const QualType VoidPtrRestrictTy =
-      ACtx.getRestrictType(VoidPtrTy); // void *restrict
+      ACtx.getLangOpts().C99 ? ACtx.getRestrictType(VoidPtrTy) // void *restrict
+                             : VoidPtrTy;
   const QualType ConstVoidPtrTy =
       ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *
   const QualType ConstCharPtrTy =
       ACtx.getPointerType(ACtx.CharTy.withConst()); // const char *
   const QualType ConstVoidPtrRestrictTy =
-      ACtx.getRestrictType(ConstVoidPtrTy); // const void *restrict
+      ACtx.getLangOpts().C99
+          ? ACtx.getRestrictType(ConstVoidPtrTy) // const void *restrict
+          : ConstVoidPtrTy;
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
@@ -871,10 +894,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     return std::make_shared<NotNullConstraint>(ArgN);
   };
 
+  Optional<QualType> FileTy = lookupType("FILE", ACtx);
+  Optional<QualType> FilePtrTy, FilePtrRestrictTy;
+  if (FileTy) {
+    // FILE *
+    FilePtrTy = ACtx.getPointerType(*FileTy);
+    // FILE *restrict
+    FilePtrRestrictTy =
+        ACtx.getLangOpts().C99 ? ACtx.getRestrictType(*FilePtrTy) : *FilePtrTy;
+  }
+
   using RetType = QualType;
   // Templates for summaries that are reused by many functions.
   auto Getc = [&]() {
-    return Summary(ArgTypes{Irrelevant}, RetType{IntTy}, NoEvalCall)
+    return Summary(ArgTypes{*FilePtrTy}, RetType{IntTy}, NoEvalCall)
         .Case({ReturnValueCondition(WithinRange,
                                     {{EOFv, EOFv}, {0, UCharRangeMax}})});
   };
@@ -885,17 +918,18 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                ReturnValueCondition(WithinRange, Range(-1, Max))});
   };
   auto Fread = [&]() {
-    return Summary(ArgTypes{VoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
-                   RetType{SizeTy}, NoEvalCall)
+    return Summary(
+               ArgTypes{VoidPtrRestrictTy, SizeTy, SizeTy, *FilePtrRestrictTy},
+               RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
         })
         .ArgConstraint(NotNull(ArgNo(0)));
   };
   auto Fwrite = [&]() {
-    return Summary(
-               ArgTypes{ConstVoidPtrRestrictTy, Irrelevant, SizeTy, Irrelevant},
-               RetType{SizeTy}, NoEvalCall)
+    return Summary(ArgTypes{ConstVoidPtrRestrictTy, SizeTy, SizeTy,
+                            *FilePtrRestrictTy},
+                   RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
         })
@@ -1042,23 +1076,33 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                  ReturnValueCondition(WithinRange, SingleValue(0))}));
 
   // The getc() family of functions that returns either a char or an EOF.
-  addToFunctionSummaryMap("getc", Getc());
-  addToFunctionSummaryMap("fgetc", Getc());
+  if (FilePtrTy) {
+    addToFunctionSummaryMap("getc", Getc());
+    addToFunctionSummaryMap("fgetc", Getc());
+  }
   addToFunctionSummaryMap(
       "getchar", Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
                      .Case({ReturnValueCondition(
                          WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})}));
 
   // read()-like functions that never return more than buffer size.
+  if (FilePtrRestrictTy) {
+    addToFunctionSummaryMap("fread", Fread());
+    addToFunctionSummaryMap("fwrite", Fwrite());
+  }
+
   // We are not sure how ssize_t is defined on every platform, so we
   // provide three variants that should cover common cases.
+  // FIXME these are actually defined by POSIX and not by the C standard, we
+  // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("read", {Read(IntTy, IntMax), Read(LongTy, LongMax),
                                    Read(LongLongTy, LongLongMax)});
   addToFunctionSummaryMap("write", {Read(IntTy, IntMax), Read(LongTy, LongMax),
                                     Read(LongLongTy, LongLongMax)});
-  addToFunctionSummaryMap("fread", Fread());
-  addToFunctionSummaryMap("fwrite", Fwrite());
+
   // getline()-like functions either fail or read at least the delimiter.
+  // FIXME these are actually defined by POSIX and not by the C standard, we
+  // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("getline",
                           {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                            Getline(LongLongTy, LongLongMax)});

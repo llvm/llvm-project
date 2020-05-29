@@ -438,8 +438,13 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
       return;
     }
     LLVM_FALLTHROUGH;
-  case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
+    if (MAI->hasDotExternDirective()) {
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Extern);
+      return;
+    }
+    LLVM_FALLTHROUGH;
+  case GlobalValue::AppendingLinkage:
     llvm_unreachable("Should never emit this");
   }
   llvm_unreachable("Unknown linkage type!");

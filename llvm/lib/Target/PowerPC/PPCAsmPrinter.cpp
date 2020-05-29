@@ -1728,7 +1728,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
 
   auto setCsectAlignment = [this](const GlobalObject *GO) {
     // Declarations have 0 alignment which is set by default.
-    if (GO->isDeclaration())
+    if (GO->isDeclarationForLinker())
       return;
 
     SectionKind GOKind = getObjFileLowering().getKindForGlobal(GO, TM);
