@@ -1336,10 +1336,10 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
   Type *EltTy = V->getType()->getScalarType();
   Type *I32Ty = IntegerType::getInt32Ty(V->getContext());
   if (isa<UndefValue>(V))
-    return UndefValue::get(VectorType::get(EltTy, Mask.size()));
+    return UndefValue::get(FixedVectorType::get(EltTy, Mask.size()));
 
   if (isa<ConstantAggregateZero>(V))
-    return ConstantAggregateZero::get(VectorType::get(EltTy, Mask.size()));
+    return ConstantAggregateZero::get(FixedVectorType::get(EltTy, Mask.size()));
 
   if (Constant *C = dyn_cast<Constant>(V))
     return ConstantExpr::getShuffleVector(C, UndefValue::get(C->getType()),
@@ -2131,7 +2131,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
         continue;
       if (!VectorType::isValidElementType(TgtTy))
         continue;
-      VectorType *CastSrcTy = VectorType::get(TgtTy, TgtNumElems);
+      auto *CastSrcTy = FixedVectorType::get(TgtTy, TgtNumElems);
       if (!BegIsAligned) {
         // Shuffle the input so [0,NumElements) contains the output, and
         // [NumElems,SrcNumElems) is undef.
