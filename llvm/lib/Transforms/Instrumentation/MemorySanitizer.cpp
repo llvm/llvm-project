@@ -1374,8 +1374,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getParent()->getDataLayout();
     if (VectorType *VT = dyn_cast<VectorType>(OrigTy)) {
       uint32_t EltSize = DL.getTypeSizeInBits(VT->getElementType());
-      return VectorType::get(IntegerType::get(*MS.C, EltSize),
-                             VT->getNumElements());
+      return FixedVectorType::get(IntegerType::get(*MS.C, EltSize),
+                                  VT->getNumElements());
     }
     if (ArrayType *AT = dyn_cast<ArrayType>(OrigTy)) {
       return ArrayType::get(getShadowTy(AT->getElementType()),
@@ -2756,8 +2756,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const unsigned X86_MMXSizeInBits = 64;
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
            "Illegal MMX vector element size");
-    return VectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
-                           X86_MMXSizeInBits / EltSizeInBits);
+    return FixedVectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
+                                X86_MMXSizeInBits / EltSizeInBits);
   }
 
   // Returns a signed counterpart for an (un)signed-saturate-and-pack
