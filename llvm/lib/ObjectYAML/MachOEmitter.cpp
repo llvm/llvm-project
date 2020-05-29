@@ -295,11 +295,13 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16)) {
             DWARFYAML::EmitDebugRanges(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
-            DWARFYAML::EmitPubSection(OS, Obj.DWARF.PubNames,
-                                      Obj.IsLittleEndian);
+            if (Obj.DWARF.PubNames)
+              DWARFYAML::EmitPubSection(OS, *Obj.DWARF.PubNames,
+                                        Obj.IsLittleEndian);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubtypes", 16)) {
-            DWARFYAML::EmitPubSection(OS, Obj.DWARF.PubTypes,
-                                      Obj.IsLittleEndian);
+            if (Obj.DWARF.PubTypes)
+              DWARFYAML::EmitPubSection(OS, *Obj.DWARF.PubTypes,
+                                        Obj.IsLittleEndian);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16)) {
             DWARFYAML::EmitDebugInfo(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16)) {
