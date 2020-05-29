@@ -623,7 +623,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         // Otherwise this is another use or second copy use.
         CopyUseMI = nullptr; break;
       }
-      if (CopyUseMI) {
+      if (CopyUseMI &&
+          TRI.getRegSizeInBits(LDI->second, MRI) ==
+              TRI.getRegSizeInBits(CopyUseMI->getOperand(0).getReg(), MRI)) {
         // Use MI's debug location, which describes where Variable was
         // declared, rather than whatever is attached to CopyUseMI.
         MachineInstr *NewMI =
