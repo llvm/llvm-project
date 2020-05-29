@@ -3006,5 +3006,126 @@ void x() {
   EXPECT_TRUE(matchesWithOpenMP(Source6, Matcher));
 }
 
+TEST(HasAnyBase, DirectBase) {
+  EXPECT_TRUE(matches(
+      "struct Base {};"
+      "struct ExpectedMatch : Base {};",
+      cxxRecordDecl(hasName("ExpectedMatch"),
+                    hasAnyBase(hasType(cxxRecordDecl(hasName("Base")))))));
+}
+
+TEST(HasAnyBase, IndirectBase) {
+  EXPECT_TRUE(matches(
+      "struct Base {};"
+      "struct Intermediate : Base {};"
+      "struct ExpectedMatch : Intermediate {};",
+      cxxRecordDecl(hasName("ExpectedMatch"),
+                    hasAnyBase(hasType(cxxRecordDecl(hasName("Base")))))));
+}
+
+TEST(HasAnyBase, NoBase) {
+  EXPECT_TRUE(notMatches("struct Foo {};"
+                         "struct Bar {};",
+                         cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl())))));
+}
+
+TEST(IsPublicBase, Public) {
+  EXPECT_TRUE(matches("class Base {};"
+                      "class Derived : public Base {};",
+                      cxxRecordDecl(hasAnyBase(isPublic()))));
+}
+
+TEST(IsPublicBase, DefaultAccessSpecifierPublic) {
+  EXPECT_TRUE(matches("class Base {};"
+                      "struct Derived : Base {};",
+                      cxxRecordDecl(hasAnyBase(isPublic()))));
+}
+
+TEST(IsPublicBase, Private) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : private Base {};",
+                         cxxRecordDecl(hasAnyBase(isPublic()))));
+}
+
+TEST(IsPublicBase, DefaultAccessSpecifierPrivate) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : Base {};",
+                         cxxRecordDecl(hasAnyBase(isPublic()))));
+}
+
+TEST(IsPublicBase, Protected) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : protected Base {};",
+                         cxxRecordDecl(hasAnyBase(isPublic()))));
+}
+
+TEST(IsPrivateBase, Private) {
+  EXPECT_TRUE(matches("class Base {};"
+                      "class Derived : private Base {};",
+                      cxxRecordDecl(hasAnyBase(isPrivate()))));
+}
+
+TEST(IsPrivateBase, DefaultAccessSpecifierPrivate) {
+  EXPECT_TRUE(matches("struct Base {};"
+                      "class Derived : Base {};",
+                      cxxRecordDecl(hasAnyBase(isPrivate()))));
+}
+
+TEST(IsPrivateBase, Public) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : public Base {};",
+                         cxxRecordDecl(hasAnyBase(isPrivate()))));
+}
+
+TEST(IsPrivateBase, DefaultAccessSpecifierPublic) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "struct Derived : Base {};",
+                         cxxRecordDecl(hasAnyBase(isPrivate()))));
+}
+
+TEST(IsPrivateBase, Protected) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : protected Base {};",
+                         cxxRecordDecl(hasAnyBase(isPrivate()))));
+}
+
+TEST(IsProtectedBase, Protected) {
+  EXPECT_TRUE(matches("class Base {};"
+                      "class Derived : protected Base {};",
+                      cxxRecordDecl(hasAnyBase(isProtected()))));
+}
+
+TEST(IsProtectedBase, Public) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : public Base {};",
+                         cxxRecordDecl(hasAnyBase(isProtected()))));
+}
+
+TEST(IsProtectedBase, Private) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : private Base {};",
+                         cxxRecordDecl(hasAnyBase(isProtected()))));
+}
+
+TEST(IsVirtual, Directly) {
+  EXPECT_TRUE(matches("class Base {};"
+                      "class Derived : virtual Base {};",
+                      cxxRecordDecl(hasAnyBase(isVirtual()))));
+}
+
+TEST(IsVirtual, Indirectly) {
+  EXPECT_TRUE(
+      matches("class Base {};"
+              "class Intermediate : virtual Base {};"
+              "class Derived : Intermediate {};",
+              cxxRecordDecl(hasName("Derived"), hasAnyBase(isVirtual()))));
+}
+
+TEST(IsVirtual, NoVirtualBase) {
+  EXPECT_TRUE(notMatches("class Base {};"
+                         "class Derived : Base {};",
+                         cxxRecordDecl(hasAnyBase(isVirtual()))));
+}
+
 } // namespace ast_matchers
 } // namespace clang
