@@ -66,7 +66,6 @@ private:
 protected:
   bool Has16BitInsts;
   bool HasMadMixInsts;
-  bool FPExceptions;
   bool HasSDWA;
   bool HasVOP3PInsts;
   bool HasMulI24;
@@ -146,10 +145,6 @@ public:
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
-  }
-
-  bool hasFPExceptions() const {
-    return FPExceptions;
   }
 
   bool hasSDWA() const {
