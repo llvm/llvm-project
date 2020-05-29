@@ -1653,6 +1653,7 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Sections", Object.Chunks);
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
+  IO.mapOptional("DWARF", Object.DWARF);
   IO.setContext(nullptr);
 }
 
