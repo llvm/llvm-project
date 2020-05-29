@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
@@ -48,6 +49,11 @@ struct TestLinalgTransforms
   Option<bool> testPromotionOptions{*this, "test-linalg-promotion-options",
                                     llvm::cl::desc("Test promotion options"),
                                     llvm::cl::init(false)};
+  Option<bool> testVectorTransferForwardingPatterns{
+      *this, "test-vector-transfer-forwarding-patterns",
+      llvm::cl::desc(
+          "Test a fused pass that forwards linalg.copy to vector.transfer"),
+      llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -167,19 +173,6 @@ static void applyPatterns(FuncOp funcOp) {
   });
 }
 
-static OwningRewritePatternList
-getMatmulToVectorCanonicalizationPatterns(MLIRContext *context) {
-  OwningRewritePatternList patterns;
-  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  AffineMinOp::getCanonicalizationPatterns(patterns, context);
-  AffineMaxOp::getCanonicalizationPatterns(patterns, context);
-  AllocOp::getCanonicalizationPatterns(patterns, context);
-  SubViewOp::getCanonicalizationPatterns(patterns, context);
-  ViewOp::getCanonicalizationPatterns(patterns, context);
-  MatmulOp::getCanonicalizationPatterns(patterns, context);
-  return patterns;
-}
-
 static void fillL1TilingAndMatmulToVectorPatterns(
     FuncOp funcOp, StringRef startMarker,
     SmallVectorImpl<OwningRewritePatternList> &patternsVector) {
@@ -261,40 +254,58 @@ void fillPromotionCallBackPatterns(MLIRContext *context,
       LinalgMarker({"PROMOTE"}));
 }
 
+static void
+applyMatmulToVectorPatterns(FuncOp funcOp,
+                            bool testMatmulToVectorPatterns1dTiling,
+                            bool testMatmulToVectorPatterns2dTiling) {
+  MLIRContext *ctx = funcOp.getContext();
+  SmallVector<OwningRewritePatternList, 4> stage1Patterns;
+  if (testMatmulToVectorPatterns1dTiling) {
+    fillL1TilingAndMatmulToVectorPatterns(funcOp, "START", stage1Patterns);
+  } else if (testMatmulToVectorPatterns2dTiling) {
+    stage1Patterns.emplace_back(
+        LinalgTilingPattern<MatmulOp>(ctx,
+                                      LinalgTilingOptions()
+                                          .setTileSizes({768, 264, 768})
+                                          .setInterchange({1, 2, 0}),
+                                      LinalgMarker({"START"}, "L2")));
+    fillL1TilingAndMatmulToVectorPatterns(funcOp, "L2", stage1Patterns);
+  }
+  OwningRewritePatternList stage2Patterns =
+      getLinalgTilingCanonicalizationPatterns(ctx);
+  applyStagedPatterns(funcOp, stage1Patterns, stage2Patterns);
+}
+
+static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
+  OwningRewritePatternList forwardPattern;
+  forwardPattern.insert<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
+  forwardPattern.insert<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
+  applyPatternsAndFoldGreedily(funcOp, forwardPattern);
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
-  if (testPatterns) {
-    applyPatterns(getFunction());
-    return;
-  }
+  auto lambda = [&](void *) {
+    getFunction().walk([](LinalgOp op) {
+      op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
+    });
+  };
+  std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};
+
   if (testPromotionOptions) {
     OwningRewritePatternList patterns;
     fillPromotionCallBackPatterns(&getContext(), patterns);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
-  } else {
-    SmallVector<OwningRewritePatternList, 4> stage1Patterns;
-    if (testMatmulToVectorPatterns1dTiling) {
-      fillL1TilingAndMatmulToVectorPatterns(getFunction(), "START",
-                                            stage1Patterns);
-    } else if (testMatmulToVectorPatterns2dTiling) {
-      stage1Patterns.emplace_back(
-          LinalgTilingPattern<MatmulOp>(&getContext(),
-                                        LinalgTilingOptions()
-                                            .setTileSizes({768, 264, 768})
-                                            .setInterchange({1, 2, 0}),
-                                        LinalgMarker({"START"}, "L2")));
-      fillL1TilingAndMatmulToVectorPatterns(getFunction(), "L2",
-                                            stage1Patterns);
-    }
-    OwningRewritePatternList stage2Patterns =
-        getMatmulToVectorCanonicalizationPatterns(&getContext());
-    applyStagedPatterns(getFunction(), stage1Patterns, stage2Patterns);
+    return;
   }
-
-  // Drop the marker.
-  getFunction().walk([](LinalgOp op) {
-    op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
-  });
+  if (testPatterns)
+    return applyPatterns(getFunction());
+  if (testMatmulToVectorPatterns1dTiling || testMatmulToVectorPatterns2dTiling)
+    return applyMatmulToVectorPatterns(getFunction(),
+                                       testMatmulToVectorPatterns1dTiling,
+                                       testMatmulToVectorPatterns2dTiling);
+  if (testVectorTransferForwardingPatterns)
+    return applyVectorTransferForwardingPatterns(getFunction());
 }
 
 namespace mlir {
