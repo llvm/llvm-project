@@ -212,7 +212,7 @@ define <4 x i64> @strict_vector_fptosi_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vcvttpd2qq %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i64> %ret
 }
 
@@ -595,7 +595,7 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vcvttpd2uqq %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i64> %ret
 }
 
@@ -774,7 +774,7 @@ define <4 x i64> @strict_vector_fptosi_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vcvttps2qq %xmm0, %ymm0
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(<4 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i64> %ret
 }
 
@@ -1157,7 +1157,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vcvttps2uqq %xmm0, %ymm0
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(<4 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i64> %ret
 }
 
@@ -1168,7 +1168,7 @@ define <4 x i32> @strict_vector_fptosi_v4f64_to_v4i32(<4 x double> %a) #0 {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i32> %ret
 }
 
@@ -1218,7 +1218,7 @@ define <4 x i32> @strict_vector_fptoui_v4f64_to_v4i32(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i32> %ret
 }
 
@@ -1230,7 +1230,7 @@ define <4 x i16> @strict_vector_fptosi_v4f64_to_v4i16(<4 x double> %a) #0 {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i16> @llvm.experimental.constrained.fptosi.v4i16.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i16> %ret
 }
 
@@ -1242,7 +1242,7 @@ define <4 x i16> @strict_vector_fptoui_v4f64_to_v4i16(<4 x double> %a) #0 {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i16> @llvm.experimental.constrained.fptoui.v4i16.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i16> %ret
 }
 
@@ -1285,7 +1285,7 @@ define <4 x i8> @strict_vector_fptosi_v4f64_to_v4i8(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i8> @llvm.experimental.constrained.fptosi.v4i8.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i8> %ret
 }
 
@@ -1328,7 +1328,7 @@ define <4 x i8> @strict_vector_fptoui_v4f64_to_v4i8(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i8> @llvm.experimental.constrained.fptoui.v4i8.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i8> %ret
 }
 
@@ -1374,7 +1374,7 @@ define <4 x i1> @strict_vector_fptosi_v4f64_to_v4i1(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i1> @llvm.experimental.constrained.fptosi.v4i1.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i1> %ret
 }
 
@@ -1424,7 +1424,7 @@ define <4 x i1> @strict_vector_fptoui_v4f64_to_v4i1(<4 x double> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <4 x i1> @llvm.experimental.constrained.fptoui.v4i1.v4f64(<4 x double> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <4 x i1> %ret
 }
 
@@ -1434,7 +1434,7 @@ define <8 x i32> @strict_vector_fptosi_v8f32_to_v8i32(<8 x float> %a) #0 {
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i32> @llvm.experimental.constrained.fptosi.v8i32.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i32> %ret
 }
 
@@ -1476,7 +1476,7 @@ define <8 x i32> @strict_vector_fptoui_v8f32_to_v8i32(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vcvttps2udq %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i32> @llvm.experimental.constrained.fptoui.v8i32.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i32> %ret
 }
 
@@ -1519,7 +1519,7 @@ define <8 x i16> @strict_vector_fptosi_v8f32_to_v8i16(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i16> @llvm.experimental.constrained.fptosi.v8i16.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i16> %ret
 }
 
@@ -1562,7 +1562,7 @@ define <8 x i16> @strict_vector_fptoui_v8f32_to_v8i16(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i16> @llvm.experimental.constrained.fptoui.v8i16.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i16> %ret
 }
 
@@ -1604,7 +1604,7 @@ define <8 x i8> @strict_vector_fptosi_v8f32_to_v8i8(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptosi.v8i8.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i8> %ret
 }
 
@@ -1646,7 +1646,7 @@ define <8 x i8> @strict_vector_fptoui_v8f32_to_v8i8(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptoui.v8i8.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i8> %ret
 }
 
@@ -1698,7 +1698,7 @@ define <8 x i1> @strict_vector_fptosi_v8f32_to_v8i1(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i1> @llvm.experimental.constrained.fptosi.v8i1.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i1> %ret
 }
 
@@ -1754,7 +1754,7 @@ define <8 x i1> @strict_vector_fptoui_v8f32_to_v8i1(<8 x float> %a) #0 {
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i1> @llvm.experimental.constrained.fptoui.v8i1.v8f32(<8 x float> %a,
-                                              metadata !"fpexcept.strict")
+                                              metadata !"fpexcept.strict") #0
   ret <8 x i1> %ret
 }
 
