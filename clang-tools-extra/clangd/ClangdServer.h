@@ -97,6 +97,9 @@ public:
 
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
+    /// Reuse even stale preambles, and rebuild them in the background.
+    /// This improves latency at the cost of accuracy.
+    bool AsyncPreambleBuilds = false;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.

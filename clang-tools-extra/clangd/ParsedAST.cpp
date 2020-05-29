@@ -551,5 +551,10 @@ ParsedAST::ParsedAST(llvm::StringRef Version,
   assert(this->Action);
 }
 
+llvm::Optional<llvm::StringRef> ParsedAST::preambleVersion() const {
+  if (!Preamble)
+    return llvm::None;
+  return llvm::StringRef(Preamble->Version);
+}
 } // namespace clangd
 } // namespace clang
