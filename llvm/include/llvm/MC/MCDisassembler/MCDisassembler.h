@@ -26,6 +26,8 @@ struct XCOFFSymbolInfo {
   XCOFFSymbolInfo(Optional<XCOFF::StorageMappingClass> Smc,
                   Optional<uint32_t> Idx, bool Label)
       : StorageMappingClass(Smc), Index(Idx), IsLabel(Label) {}
+
+  bool operator<(const XCOFFSymbolInfo &SymInfo) const;
 };
 
 struct SymbolInfoTy {
@@ -53,9 +55,10 @@ private:
     assert(P1.IsXCOFF == P2.IsXCOFF &&
            "P1.IsXCOFF should be equal to P2.IsXCOFF.");
     if (P1.IsXCOFF)
-      return std::tie(P1.Addr, P1.Name) < std::tie(P2.Addr, P2.Name);
-    else
-      return std::tie(P1.Addr, P1.Name, P1.Type) <
+      return std::tie(P1.Addr, P1.XCOFFSymInfo, P1.Name) <
+             std::tie(P2.Addr, P2.XCOFFSymInfo, P2.Name);
+
+    return std::tie(P1.Addr, P1.Name, P1.Type) <
              std::tie(P2.Addr, P2.Name, P2.Type);
   }
 };
