@@ -3,17 +3,53 @@
 
 define i32 @foo(i32* nocapture readonly %diff) #0 {
 ; CHECK-LABEL: @foo(
-; CHECK: load <4 x i32>
-; CHECK: load <4 x i32>
-; CHECK: [[S1:%.+]] = add nsw <4 x i32>
-; CHECK: store <4 x i32> [[S1]],
-; CHECK:         [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[S1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[S1]], [[RDX_SHUF]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M2:%.*]] = alloca [8 x [8 x i32]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [8 x [8 x i32]]* [[M2]] to i8*
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DIFF:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP2]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 1
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], 5
+; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP1]], 2
+; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP1]], 6
+; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP1]], 3
+; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, <4 x i32>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP1]], 7
+; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, <4 x i32>* [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[ARRAYIDX6]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* [[TMP14]], align 16
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP13]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
-; CHECK:         [[ADD52:%.*]] = add nsw i32 [[TMP15]],
-; CHECK:          ret i32 [[ADD52]]
+; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP15]], [[A_088]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 0
+; CHECK-NEXT:    call void @ff([8 x i32]* [[ARRAYDECAY]])
+; CHECK-NEXT:    ret i32 [[OP_EXTRA]]
 ;
 entry:
   %m2 = alloca [8 x [8 x i32]], align 16
