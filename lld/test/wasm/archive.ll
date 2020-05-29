@@ -2,7 +2,7 @@
 ; RUN: llc -filetype=obj %S/Inputs/archive1.ll -o %t.a1.o
 ; RUN: llc -filetype=obj %S/Inputs/archive2.ll -o %t.a2.o
 ; RUN: llc -filetype=obj %S/Inputs/archive3.ll -o %t.a3.o
-; RUN: llc -filetype=obj %S/Inputs/hello.ll -o %t.hello.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
 ; RUN: rm -f %t.a
 ; RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o %t.a3.o %t.hello.o
 ; RUN: rm -f %t.imports
