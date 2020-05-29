@@ -927,12 +927,41 @@ LLJIT::PlatformSupport::~PlatformSupport() {}
 
 Error LLJITBuilderState::prepareForConstruction() {
 
+  LLVM_DEBUG(dbgs() << "Preparing to create LLIT instance...\n");
+
   if (!JTMB) {
+    LLVM_DEBUG({
+      dbgs() << "  No explicitly set JITTargetMachineBuilder. "
+                "Detecting host...\n";
+    });
     if (auto JTMBOrErr = JITTargetMachineBuilder::detectHost())
       JTMB = std::move(*JTMBOrErr);
     else
       return JTMBOrErr.takeError();
   }
+
+  LLVM_DEBUG({
+    dbgs() << "  JITTargetMachineBuilder is " << JTMB << "\n"
+           << "  Pre-constructed ExecutionSession: " << (ES ? "Yes" : "No")
+           << "\n"
+           << "  DataLayout: ";
+    if (DL)
+      dbgs() << DL->getStringRepresentation() << "\n";
+    else
+      dbgs() << "None (will be created by JITTargetMachineBuilder)\n";
+
+    dbgs() << "  Custom object-linking-layer creator: "
+           << (CreateObjectLinkingLayer ? "Yes" : "No") << "\n"
+           << "  Custom compile-function creator: "
+           << (CreateCompileFunction ? "Yes" : "No") << "\n"
+           << "  Custom platform-setup function: "
+           << (SetUpPlatform ? "Yes" : "No") << "\n"
+           << "  Number of compile threads: " << NumCompileThreads;
+    if (!NumCompileThreads)
+      dbgs() << " (code will be compiled on the execution thread)\n";
+    else
+      dbgs() << "\n";
+  });
 
   // If the client didn't configure any linker options then auto-configure the
   // JIT linker.
