@@ -10,6 +10,7 @@ add_flang_library(FIRTransforms
 
   DEPENDS
   FIROpsIncGen
+  FIROptTransformsPassIncGen
   ${dialect_libs}
 
   LINK_LIBS
