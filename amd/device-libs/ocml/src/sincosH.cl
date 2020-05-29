@@ -22,7 +22,8 @@ MATH_MANGLE2(sincos)(half2 x, __private half2 *cp)
 REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(sincos)(half x, __private half *cp)
 {
-    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F16(x));
+    half ax = BUILTIN_ABS_F16(x);
+    struct redret r = MATH_PRIVATE(trigred)(ax);
     struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
 
     short flip = r.i > (short)1 ? (short)0x8000 : (short)0;
@@ -34,9 +35,9 @@ MATH_MANGLE(sincos)(half x, __private half *cp)
     c ^= flip;
 
     if (!FINITE_ONLY_OPT()) {
-        bool nori = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
-        c = nori ? (short)QNANBITPATT_HP16 : c;
-        s = nori ? (short)QNANBITPATT_HP16 : s;
+        bool finite = BUILTIN_ISFINITE_F16(ax);
+        c = finite ? c : (short)QNANBITPATT_HP16;
+        s = finite ? s : (short)QNANBITPATT_HP16;
     }
 
     *cp = AS_HALF(c);
