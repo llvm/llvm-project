@@ -28,8 +28,9 @@ using internal::BindableMatcher;
 using llvm::StringMap;
 
 // Base class for those tests which use the family of `testImport` functions.
-class TestImportBase : public CompilerOptionSpecificTest,
-                       public ::testing::WithParamInterface<ArgVector> {
+class TestImportBase
+    : public CompilerOptionSpecificTest,
+      public ::testing::WithParamInterface<std::vector<std::string>> {
 
   template <typename NodeType>
   llvm::Expected<NodeType> importNode(ASTUnit *From, ASTUnit *To,
@@ -62,8 +63,9 @@ class TestImportBase : public CompilerOptionSpecificTest,
 
   template <typename NodeType>
   testing::AssertionResult
-  testImport(const std::string &FromCode, const ArgVector &FromArgs,
-             const std::string &ToCode, const ArgVector &ToArgs,
+  testImport(const std::string &FromCode,
+             const std::vector<std::string> &FromArgs,
+             const std::string &ToCode, const std::vector<std::string> &ToArgs,
              MatchVerifier<NodeType> &Verifier,
              const BindableMatcher<NodeType> &SearchMatcher,
              const BindableMatcher<NodeType> &VerificationMatcher) {
@@ -110,8 +112,9 @@ class TestImportBase : public CompilerOptionSpecificTest,
 
   template <typename NodeType>
   testing::AssertionResult
-  testImport(const std::string &FromCode, const ArgVector &FromArgs,
-             const std::string &ToCode, const ArgVector &ToArgs,
+  testImport(const std::string &FromCode,
+             const std::vector<std::string> &FromArgs,
+             const std::string &ToCode, const std::vector<std::string> &ToArgs,
              MatchVerifier<NodeType> &Verifier,
              const BindableMatcher<NodeType> &VerificationMatcher) {
     return testImport(
@@ -122,7 +125,7 @@ class TestImportBase : public CompilerOptionSpecificTest,
   }
 
 protected:
-  ArgVector getExtraArgs() const override { return GetParam(); }
+  std::vector<std::string> getExtraArgs() const override { return GetParam(); }
 
 public:
 
@@ -130,12 +133,12 @@ public:
   /// of "FromCode" virtual file is imported to "ToCode" virtual file.
   /// The verification is done by running AMatcher over the imported node.
   template <typename NodeType, typename MatcherType>
-  void testImport(const std::string &FromCode, Language FromLang,
-                  const std::string &ToCode, Language ToLang,
+  void testImport(const std::string &FromCode, TestLanguage FromLang,
+                  const std::string &ToCode, TestLanguage ToLang,
                   MatchVerifier<NodeType> &Verifier,
                   const MatcherType &AMatcher) {
-    ArgVector FromArgs = getArgVectorForLanguage(FromLang),
-              ToArgs = getArgVectorForLanguage(ToLang);
+    std::vector<std::string> FromArgs = getCommandLineArgsForLanguage(FromLang);
+    std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
     EXPECT_TRUE(
         testImport(FromCode, FromArgs, ToCode, ToArgs, Verifier, AMatcher));
   }
@@ -162,14 +165,14 @@ public:
 
   struct CodeEntry {
     std::string CodeSample;
-    Language Lang;
+    TestLanguage Lang;
   };
 
   using CodeFiles = StringMap<CodeEntry>;
 
   /// Builds an ASTUnit for one potential compile options set.
   SingleASTUnit createASTUnit(StringRef FileName, const CodeEntry &CE) const {
-    ArgVector Args = getArgVectorForLanguage(CE.Lang);
+    std::vector<std::string> Args = getCommandLineArgsForLanguage(CE.Lang);
     auto AST = tooling::buildASTFromCodeWithArgs(CE.CodeSample, Args, FileName);
     EXPECT_TRUE(AST.get());
     return AST;
@@ -5523,14 +5526,14 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, SVEBuiltins,
-                        ::testing::Values(ArgVector{"-target",
-                                                    "aarch64-linux-gnu"}), );
+                        ::testing::Values(std::vector<std::string>{
+                            "-target", "aarch64-linux-gnu"}), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
-                        ::testing::Values(ArgVector()), );
+                        ::testing::Values(std::vector<std::string>()), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, CanonicalRedeclChain,
-                        ::testing::Values(ArgVector()), );
+                        ::testing::Values(std::vector<std::string>()), );
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdasAreDifferentiated) {
   Decl *FromTU = getTuDecl(
@@ -5982,9 +5985,9 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
 }
 
 template <typename T>
-auto ExtendWithOptions(const T &Values, const ArgVector &Args) {
+auto ExtendWithOptions(const T &Values, const std::vector<std::string> &Args) {
   auto Copy = Values;
-  for (ArgVector &ArgV : Copy) {
+  for (std::vector<std::string> &ArgV : Copy) {
     for (const std::string &Arg : Args) {
       ArgV.push_back(Arg);
     }
@@ -6056,14 +6059,15 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportPath,
-                        ::testing::Values(ArgVector()), );
+                        ::testing::Values(std::vector<std::string>()), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportExpr,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFixedPointExpr,
                         ExtendWithOptions(DefaultTestArrayForRunOptions,
-                                          ArgVector{"-ffixed-point"}), );
+                                          std::vector<std::string>{
+                                              "-ffixed-point"}), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportType,
                         DefaultTestValuesForRunOptions, );

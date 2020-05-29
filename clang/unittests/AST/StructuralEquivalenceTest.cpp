@@ -23,12 +23,13 @@ struct StructuralEquivalenceTest : ::testing::Test {
   // snippets. To determine the returned node, a separate matcher is specified
   // for both snippets. The first matching node is returned.
   template <typename NodeType, typename MatcherType>
-  std::tuple<NodeType *, NodeType *> makeDecls(
-      const std::string &SrcCode0, const std::string &SrcCode1, Language Lang,
-      const MatcherType &Matcher0, const MatcherType &Matcher1) {
+  std::tuple<NodeType *, NodeType *>
+  makeDecls(const std::string &SrcCode0, const std::string &SrcCode1,
+            TestLanguage Lang, const MatcherType &Matcher0,
+            const MatcherType &Matcher1) {
     this->Code0 = SrcCode0;
     this->Code1 = SrcCode1;
-    ArgVector Args = getBasicRunOptionsForLanguage(Lang);
+    std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
 
     const char *const InputFileName = "input.cc";
 
@@ -43,11 +44,12 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return std::make_tuple(D0, D1);
   }
 
-  std::tuple<TranslationUnitDecl *, TranslationUnitDecl *> makeTuDecls(
-      const std::string &SrcCode0, const std::string &SrcCode1, Language Lang) {
+  std::tuple<TranslationUnitDecl *, TranslationUnitDecl *>
+  makeTuDecls(const std::string &SrcCode0, const std::string &SrcCode1,
+              TestLanguage Lang) {
     this->Code0 = SrcCode0;
     this->Code1 = SrcCode1;
-    ArgVector Args = getBasicRunOptionsForLanguage(Lang);
+    std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
 
     const char *const InputFileName = "input.cc";
 
@@ -61,9 +63,9 @@ struct StructuralEquivalenceTest : ::testing::Test {
   // Get a pair of node pointers into the synthesized AST from the given code
   // snippets. The same matcher is used for both snippets.
   template <typename NodeType, typename MatcherType>
-  std::tuple<NodeType *, NodeType *> makeDecls(
-      const std::string &SrcCode0, const std::string &SrcCode1, Language Lang,
-      const MatcherType &AMatcher) {
+  std::tuple<NodeType *, NodeType *>
+  makeDecls(const std::string &SrcCode0, const std::string &SrcCode1,
+            TestLanguage Lang, const MatcherType &AMatcher) {
     return makeDecls<NodeType, MatcherType>(
           SrcCode0, SrcCode1, Lang, AMatcher, AMatcher);
   }
@@ -71,9 +73,9 @@ struct StructuralEquivalenceTest : ::testing::Test {
   // Get a pair of Decl pointers to the synthesized declarations from the given
   // code snippets. We search for the first NamedDecl with given name in both
   // snippets.
-  std::tuple<NamedDecl *, NamedDecl *> makeNamedDecls(
-      const std::string &SrcCode0, const std::string &SrcCode1,
-      Language Lang, const char *const Identifier = "foo") {
+  std::tuple<NamedDecl *, NamedDecl *>
+  makeNamedDecls(const std::string &SrcCode0, const std::string &SrcCode1,
+                 TestLanguage Lang, const char *const Identifier = "foo") {
     auto Matcher = namedDecl(hasName(Identifier));
     return makeDecls<NamedDecl>(SrcCode0, SrcCode1, Lang, Matcher);
   }
