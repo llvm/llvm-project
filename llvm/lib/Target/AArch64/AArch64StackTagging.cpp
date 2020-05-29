@@ -256,8 +256,8 @@ public:
       Type *EltTy = VecTy->getElementType();
       if (EltTy->isPointerTy()) {
         uint32_t EltSize = DL->getTypeSizeInBits(EltTy);
-        Type *NewTy = VectorType::get(IntegerType::get(Ctx, EltSize),
-                                      VecTy->getNumElements());
+        auto *NewTy = FixedVectorType::get(IntegerType::get(Ctx, EltSize),
+                                           VecTy->getNumElements());
         V = IRB.CreatePointerCast(V, NewTy);
       }
     }
