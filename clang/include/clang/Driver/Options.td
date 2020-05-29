@@ -2343,6 +2343,11 @@ foreach i = {8-15,18} in
   def fcall_saved_x#i : Flag<["-"], "fcall-saved-x"#i>, Group<m_aarch64_Features_Group>,
     HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
 
+def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">,
+  Group<m_aarch64_Features_Group>, Flags<[DriverOption,CC1Option]>,
+  HelpText<"Set the size of fixed-length SVE vectors in bits.">,
+  Values<"128,256,512,1024,2048">;
+
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
