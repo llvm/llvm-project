@@ -94,7 +94,7 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
-  let summary = "terminator for OpenMP regions.";
+  let summary = "terminator for OpenMP regions";
   let description = [{
     A terminator operation for regions that appear in the body of OpenMP
     operation.  These regions are not expected to return any value so the
@@ -102,8 +102,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
     enclosing op.
   }];
 
-  let parser = [{ return success(); }];
-  let printer = [{ p << getOperationName(); }];
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -135,6 +134,19 @@ def FlushOp : OpenMP_Op<"flush"> {
   let arguments = (ins Variadic<AnyType>:$varList);
 
   let assemblyFormat = "attr-dict ($varList^ `:` type($varList))?";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.16 master Construct
+//===----------------------------------------------------------------------===//
+def MasterOp : OpenMP_Op<"master"> {
+  let summary = "master construct";
+  let description = [{
+    The master construct specifies a structured block that is executed by
+    the master thread of the team.
+  }];
+
+  let regions = (region AnyRegion:$region);
 }
 
 //===----------------------------------------------------------------------===//
