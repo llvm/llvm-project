@@ -19,3 +19,18 @@ define void @fuzz22357(i128 %a0) {
   store i8 0, i8* %3, align 1
   ret void
 }
+
+; OSS Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22723
+define void @fuzz22723(i128 %a0) {
+; X86-LABEL: fuzz22723:
+; X86:       # %bb.0:
+; X86-NEXT:    retl
+;
+; X64-LABEL: fuzz22723:
+; X64:       # %bb.0:
+; X64-NEXT:    retq
+  %1 = add i128 %a0, 170141183460469231731687303715884105727
+  %2 = getelementptr i128*, i128** undef, i128 %1
+  store i128* undef, i128** %2, align 8
+  ret void
+}
