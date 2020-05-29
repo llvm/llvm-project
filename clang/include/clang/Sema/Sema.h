@@ -11273,6 +11273,11 @@ public:
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc);
 
+  /// Type checking for matrix binary operators.
+  QualType CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          bool IsCompAssign);
+
   bool areLaxCompatibleVectorTypes(QualType srcType, QualType destType);
   bool isLaxVectorConversion(QualType srcType, QualType destType);
 

@@ -127,6 +127,16 @@ public:
   /// Add matrixes \p LHS and \p RHS. Support both integer and floating point
   /// matrixes.
   Value *CreateAdd(Value *LHS, Value *RHS) {
+    assert(LHS->getType()->isVectorTy() || RHS->getType()->isVectorTy());
+    if (LHS->getType()->isVectorTy() && !RHS->getType()->isVectorTy())
+      RHS = B.CreateVectorSplat(
+          cast<VectorType>(LHS->getType())->getNumElements(), RHS,
+          "scalar.splat");
+    else if (!LHS->getType()->isVectorTy() && RHS->getType()->isVectorTy())
+      LHS = B.CreateVectorSplat(
+          cast<VectorType>(RHS->getType())->getNumElements(), LHS,
+          "scalar.splat");
+
     return cast<VectorType>(LHS->getType())
                    ->getElementType()
                    ->isFloatingPointTy()
@@ -137,6 +147,16 @@ public:
   /// Subtract matrixes \p LHS and \p RHS. Support both integer and floating
   /// point matrixes.
   Value *CreateSub(Value *LHS, Value *RHS) {
+    assert(LHS->getType()->isVectorTy() || RHS->getType()->isVectorTy());
+    if (LHS->getType()->isVectorTy() && !RHS->getType()->isVectorTy())
+      RHS = B.CreateVectorSplat(
+          cast<VectorType>(LHS->getType())->getNumElements(), RHS,
+          "scalar.splat");
+    else if (!LHS->getType()->isVectorTy() && RHS->getType()->isVectorTy())
+      LHS = B.CreateVectorSplat(
+          cast<VectorType>(RHS->getType())->getNumElements(), LHS,
+          "scalar.splat");
+
     return cast<VectorType>(LHS->getType())
                    ->getElementType()
                    ->isFloatingPointTy()

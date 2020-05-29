@@ -7682,6 +7682,10 @@ class BuiltinCandidateTypeSet  {
   /// candidates.
   TypeSet VectorTypes;
 
+  /// The set of matrix types that will be used in the built-in
+  /// candidates.
+  TypeSet MatrixTypes;
+
   /// A flag indicating non-record types are viable candidates
   bool HasNonRecordTypes;
 
@@ -7742,6 +7746,11 @@ public:
   iterator vector_begin() { return VectorTypes.begin(); }
   iterator vector_end() { return VectorTypes.end(); }
 
+  llvm::iterator_range<iterator> matrix_types() { return MatrixTypes; }
+  iterator matrix_begin() { return MatrixTypes.begin(); }
+  iterator matrix_end() { return MatrixTypes.end(); }
+
+  bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
   bool hasArithmeticOrEnumeralTypes() { return HasArithmeticOrEnumeralTypes; }
   bool hasNullPtrType() const { return HasNullPtrType; }
@@ -7916,6 +7925,11 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     // extension.
     HasArithmeticOrEnumeralTypes = true;
     VectorTypes.insert(Ty);
+  } else if (Ty->isMatrixType()) {
+    // Similar to vector types, we treat vector types as arithmetic types in
+    // many contexts as an extension.
+    HasArithmeticOrEnumeralTypes = true;
+    MatrixTypes.insert(Ty);
   } else if (Ty->isNullPtrType()) {
     HasNullPtrType = true;
   } else if (AllowUserConversions && TyRec) {
@@ -8142,6 +8156,13 @@ class BuiltinOperatorOverloadBuilder {
       }
     }
 
+  }
+
+  /// Helper to add an overload candidate for a binary builtin with types \p L
+  /// and \p R.
+  void AddCandidate(QualType L, QualType R) {
+    QualType LandR[2] = {L, R};
+    S.AddBuiltinCandidate(LandR, Args, CandidateSet);
   }
 
 public:
@@ -8559,6 +8580,27 @@ public:
         QualType LandR[2] = { *Vec1, *Vec2 };
         S.AddBuiltinCandidate(LandR, Args, CandidateSet);
       }
+    }
+  }
+
+  /// Add binary operator overloads for each candidate matrix type M1, M2:
+  ///  * (M1, M1) -> M1
+  ///  * (M1, M1.getElementType()) -> M1
+  ///  * (M2.getElementType(), M2) -> M2
+  ///  * (M2, M2) -> M2 // Only if M2 is not part of CandidateTypes[0].
+  void addMatrixBinaryArithmeticOverloads() {
+    if (!HasArithmeticOrEnumeralCandidateType)
+      return;
+
+    for (QualType M1 : CandidateTypes[0].matrix_types()) {
+      AddCandidate(M1, cast<MatrixType>(M1)->getElementType());
+      AddCandidate(M1, M1);
+    }
+
+    for (QualType M2 : CandidateTypes[1].matrix_types()) {
+      AddCandidate(cast<MatrixType>(M2)->getElementType(), M2);
+      if (!CandidateTypes[0].containsMatrixType(M2))
+        AddCandidate(M2, M2);
     }
   }
 
@@ -9135,6 +9177,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
     } else {
       OpBuilder.addBinaryPlusOrMinusPointerOverloads(Op);
       OpBuilder.addGenericBinaryArithmeticOverloads();
+      OpBuilder.addMatrixBinaryArithmeticOverloads();
     }
     break;
 
