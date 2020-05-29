@@ -14,7 +14,6 @@
 #define LLVM_TEXTAPI_TEXT_STUB_COMMON_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/TextAPI/MachO/Architecture.h"
 #include "llvm/TextAPI/MachO/ArchitectureSet.h"
