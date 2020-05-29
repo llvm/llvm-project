@@ -30,6 +30,7 @@ class MachineInstr;
 class MachineOperand;
 class GISelKnownBits;
 class MachineDominatorTree;
+class LegalizerInfo;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -56,11 +57,13 @@ protected:
   GISelChangeObserver &Observer;
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  const LegalizerInfo *LI;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
                  GISelKnownBits *KB = nullptr,
-                 MachineDominatorTree *MDT = nullptr);
+                 MachineDominatorTree *MDT = nullptr,
+                 const LegalizerInfo *LI = nullptr);
 
   GISelKnownBits *getKnownBits() const {
     return KB;
