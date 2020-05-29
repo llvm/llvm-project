@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -47,7 +48,7 @@ public:
 /// Promote fir.loop and fir.where to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
-    : public mlir::PassWrapper<AffineDialectPromotion, mlir::FunctionPass> {
+  : public AffineDialectPromotionBase<AffineDialectPromotion> {
 public:
   void runOnFunction() override {
     if (disableAffinePromo)

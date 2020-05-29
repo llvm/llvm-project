@@ -38,6 +38,7 @@
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -132,7 +133,8 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
 static void convertFortranSourceToMLIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
-    Fortran::semantics::SemanticsContext &semanticsContext) {
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    const mlir::PassPipelineCLParser &passPipeline) {
   if (!(fixedForm || freeForm)) {
     auto dot = path.rfind(".");
     if (dot != std::string::npos) {
@@ -225,13 +227,17 @@ static void convertFortranSourceToMLIR(
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule.getContext());
   mlir::applyPassManagerCLOptions(pm);
-  pm.addPass(fir::createPromoteToAffinePass());
-  pm.addPass(fir::createLowerToScfPass());
-  pm.addPass(fir::createControlFlowLoweringPass());
-  pm.addPass(mlir::createLowerToCFGPass());
-  // pm.addPass(fir::createMemToRegPass());
-  pm.addPass(fir::createCSEPass());
-  pm.addPass(mlir::createCanonicalizerPass());
+  if (passPipeline.hasAnyOccurrences()) {
+    passPipeline.addToPipeline(pm);
+  } else {
+    pm.addPass(fir::createPromoteToAffinePass());
+    pm.addPass(fir::createLowerToScfPass());
+    pm.addPass(fir::createControlFlowLoweringPass());
+    pm.addPass(mlir::createLowerToCFGPass());
+    // pm.addPass(fir::createMemToRegPass());
+    pm.addPass(fir::createCSEPass());
+    pm.addPass(mlir::createCanonicalizerPass());
+  }
 
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
@@ -265,6 +271,7 @@ static void convertFortranSourceToMLIR(
 int main(int argc, char **argv) {
   fir::registerFIR();
   fir::registerFIRPasses();
+  fir::registerOptTransformPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
 
   mlir::registerPassManagerCLOptions();
@@ -301,6 +308,6 @@ int main(int argc, char **argv) {
       .set_warningsAreErrors(warnIsError);
 
   convertFortranSourceToMLIR(inputFilename, options, programPrefix,
-                             semanticsContext);
+                             semanticsContext, passPipe);
   return exitStatus;
 }
