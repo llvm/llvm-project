@@ -35,6 +35,7 @@ add_entrypoint_library(
     libc.src.sys.mman.munmap
 
     # threads.h entrypoints
+    libc.src.threads.call_once
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
