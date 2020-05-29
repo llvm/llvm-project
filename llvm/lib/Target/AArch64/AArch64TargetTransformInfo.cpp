@@ -211,8 +211,8 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // A helper that returns a vector type from the given type. The number of
   // elements in type Ty determine the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
-    return VectorType::get(ArgTy->getScalarType(),
-                           cast<VectorType>(DstTy)->getNumElements());
+    return FixedVectorType::get(ArgTy->getScalarType(),
+                                cast<VectorType>(DstTy)->getNumElements());
   };
 
   // Exit early if DstTy is not a vector type whose elements are at least
@@ -254,7 +254,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  Type *SrcTy = toVectorTy(Extend->getSrcTy());
+  auto *SrcTy = toVectorTy(Extend->getSrcTy());
   auto SrcTyL = TLI->getTypeLegalizationCost(DL, SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())

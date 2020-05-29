@@ -9571,7 +9571,8 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // load integer vectors first and then convert to pointer vectors.
   Type *EltTy = VecTy->getElementType();
   if (EltTy->isPointerTy())
-    VecTy = VectorType::get(DL.getIntPtrType(EltTy), VecTy->getNumElements());
+    VecTy =
+        FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy->getNumElements());
 
   IRBuilder<> Builder(LI);
 
@@ -9581,8 +9582,8 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   if (NumLoads > 1) {
     // If we're going to generate more than one load, reset the sub-vector type
     // to something legal.
-    VecTy = VectorType::get(VecTy->getElementType(),
-                            VecTy->getNumElements() / NumLoads);
+    VecTy = FixedVectorType::get(VecTy->getElementType(),
+                                 VecTy->getNumElements() / NumLoads);
 
     // We will compute the pointer operand of each load from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
@@ -9626,8 +9627,8 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
       // Convert the integer vector to pointer vector if the element is pointer.
       if (EltTy->isPointerTy())
         SubVec = Builder.CreateIntToPtr(
-            SubVec, VectorType::get(SVI->getType()->getElementType(),
-                                    VecTy->getNumElements()));
+            SubVec, FixedVectorType::get(SVI->getType()->getElementType(),
+                                         VecTy->getNumElements()));
       SubVecs[SVI].push_back(SubVec);
     }
   }
@@ -9683,7 +9684,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   unsigned LaneLen = VecTy->getNumElements() / Factor;
   Type *EltTy = VecTy->getElementType();
-  VectorType *SubVecTy = VectorType::get(EltTy, LaneLen);
+  auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
 
@@ -9706,11 +9707,11 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
     unsigned NumOpElts = cast<VectorType>(Op0->getType())->getNumElements();
 
     // Convert to the corresponding integer vector.
-    Type *IntVecTy = VectorType::get(IntTy, NumOpElts);
+    auto *IntVecTy = FixedVectorType::get(IntTy, NumOpElts);
     Op0 = Builder.CreatePtrToInt(Op0, IntVecTy);
     Op1 = Builder.CreatePtrToInt(Op1, IntVecTy);
 
-    SubVecTy = VectorType::get(IntTy, LaneLen);
+    SubVecTy = FixedVectorType::get(IntTy, LaneLen);
   }
 
   // The base address of the store.
@@ -9720,7 +9721,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
     // If we're going to generate more than one store, reset the lane length
     // and sub-vector type to something legal.
     LaneLen /= NumStores;
-    SubVecTy = VectorType::get(SubVecTy->getElementType(), LaneLen);
+    SubVecTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
 
     // We will compute the pointer operand of each store from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
