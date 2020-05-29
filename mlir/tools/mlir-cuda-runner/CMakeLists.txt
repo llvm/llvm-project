@@ -51,6 +51,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     MLIRParser
     MLIRSupport
     MLIRTargetLLVMIR
+    MLIRTargetNVVMIR
     MLIRTransforms
     MLIRTranslation
     ${CUDA_RUNTIME_LIBRARY}
