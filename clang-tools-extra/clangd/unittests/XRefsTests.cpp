@@ -245,7 +245,9 @@ TEST(HighlightsTest, ControlFlow) {
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = TestTU::withCode(T.code()).build();
+    auto TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-fexceptions"); // FIXME: stop testing on PS4.
+    auto AST = TU.build();
     EXPECT_THAT(findDocumentHighlights(AST, T.point()), HighlightsFrom(T))
         << Test;
   }

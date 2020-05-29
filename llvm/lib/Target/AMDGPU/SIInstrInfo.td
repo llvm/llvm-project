@@ -264,7 +264,7 @@ def SIload_d16_hi_i8 : SDNode<"AMDGPUISD::LOAD_D16_HI_I8",
 
 def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   SDTypeProfile<0 ,1, [SDTCisInt<0>]>,
-  [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]
+  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
 //===----------------------------------------------------------------------===//
@@ -1131,7 +1131,7 @@ def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
 def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
 def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
 
-def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
+def hwreg : NamedOperandU32<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
 def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 

@@ -6060,7 +6060,8 @@ static void checkDirectCallValidity(Sema &S, const Expr *Fn,
   if (Callee->getMinRequiredArguments() > ArgExprs.size())
     return;
 
-  if (const EnableIfAttr *Attr = S.CheckEnableIf(Callee, ArgExprs, true)) {
+  if (const EnableIfAttr *Attr =
+          S.CheckEnableIf(Callee, Fn->getBeginLoc(), ArgExprs, true)) {
     S.Diag(Fn->getBeginLoc(),
            isa<CXXMethodDecl>(Callee)
                ? diag::err_ovl_no_viable_member_function_in_call

@@ -158,13 +158,6 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
   };
 }
 
-static LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT Type) {
-  return [=](const LegalityQuery &Query) {
-    const LLT QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && QueryTy.getElementType() == Type;
-  };
-}
-
 static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
@@ -180,20 +173,6 @@ static LegalityPredicate isWideScalarTruncStore(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
            Query.MMODescrs[0].SizeInBits < Ty.getSizeInBits();
-  };
-}
-
-static LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx0].getSizeInBits() <
-           Query.Types[TypeIdx1].getSizeInBits();
-  };
-}
-
-static LegalityPredicate greaterThan(unsigned TypeIdx0, unsigned TypeIdx1) {
-  return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx0].getSizeInBits() >
-           Query.Types[TypeIdx1].getSizeInBits();
   };
 }
 
@@ -680,7 +659,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // TODO: Should have same legality without v_perm_b32
     getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({S32})
-      .lowerIf(narrowerThan(0, 32))
+      .lowerIf(scalarNarrowerThan(0, 32))
       // FIXME: Fixing non-power-of-2 before clamp is workaround for
       // narrowScalar limitation.
       .widenScalarToNextPow2(0)
@@ -707,7 +686,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       [](const LegalityQuery &Query) {
         return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
       })
-    .narrowScalarIf(greaterThan(1, 0),
+    .narrowScalarIf(largerThan(1, 0),
       [](const LegalityQuery &Query) {
         return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
       });
@@ -724,7 +703,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
       })
     .narrowScalarIf(
-      greaterThan(0, 1),
+      largerThan(0, 1),
       [](const LegalityQuery &Query) {
         return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
       });
@@ -1238,7 +1217,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         })
       // Try to widen to s16 first for small types.
       // TODO: Only do this on targets with legal s16 shifts
-      .minScalarOrEltIf(narrowerThan(LitTyIdx, 16), LitTyIdx, S16)
+      .minScalarOrEltIf(scalarNarrowerThan(LitTyIdx, 16), LitTyIdx, S16)
       .widenScalarToNextPow2(LitTyIdx, /*Min*/ 16)
       .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
       .fewerElementsIf(all(typeIs(0, S16), vectorWiderThan(1, 32),

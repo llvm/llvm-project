@@ -32,8 +32,8 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   set(COMPILER_RESOURCE_DIR
     "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
   )
-  message(STATUS "Set COMPILER_RESOURCE_DIR to
-                  ${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+  message(STATUS "Set COMPILER_RESOURCE_DIR to "
+                 "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
   set(COMPILER_RESOURCE_DIR OFF)
   message(STATUS "COMPILER_RESOURCE_DIR not set

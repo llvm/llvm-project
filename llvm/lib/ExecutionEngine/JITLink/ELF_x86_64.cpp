@@ -344,6 +344,9 @@ void jitLink_ELF_x86_64(std::unique_ptr<JITLinkContext> Ctx) {
   else
     Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
+  if (auto Err = Ctx->modifyPassConfig(TT, Config))
+    return Ctx->notifyFailed(std::move(Err));
+
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(Config));
 }
 

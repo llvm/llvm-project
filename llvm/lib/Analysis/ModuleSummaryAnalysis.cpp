@@ -390,6 +390,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
     }
+  Index.addBlockCount(F.size());
 
   std::vector<ValueInfo> Refs;
   if (IsThinLTO) {

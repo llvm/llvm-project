@@ -1641,6 +1641,86 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// TensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
+                                             OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 4> elementsOperands;
+  Type resultType;
+  if (parser.parseLParen() || parser.parseOperandList(elementsOperands) ||
+      parser.parseRParen() || parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColon() || parser.parseType(resultType))
+    return failure();
+
+  if (parser.resolveOperands(elementsOperands,
+                             resultType.cast<ShapedType>().getElementType(),
+                             result.operands))
+    return failure();
+
+  result.addTypes(resultType);
+  return success();
+}
+
+static void print(OpAsmPrinter &p, TensorFromElementsOp op) {
+  p << "tensor_from_elements(" << op.elements() << ')';
+  p.printOptionalAttrDict(op.getAttrs());
+  p << " : " << op.result().getType();
+}
+
+static LogicalResult verify(TensorFromElementsOp op) {
+  auto resultTensorType = op.result().getType().dyn_cast<RankedTensorType>();
+  if (!resultTensorType)
+    return op.emitOpError("expected result type to be a ranked tensor");
+
+  int64_t elementsCount = static_cast<int64_t>(op.elements().size());
+  if (resultTensorType.getRank() != 1 ||
+      resultTensorType.getShape().front() != elementsCount)
+    return op.emitOpError()
+           << "expected result type to be a 1D tensor with " << elementsCount
+           << (elementsCount == 1 ? " element" : " elements");
+  return success();
+}
+
+namespace {
+
+// Canonicalizes the pattern of the form
+//
+// %tensor = "tensor_from_elements(%element) : (i32) -> tensor<1xi32>
+// %extracted_element = extract_element %tensor[%c0] : tensor<1xi32>
+//
+// to just %element.
+struct ExtractElementFromTensorFromElements
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
+                                PatternRewriter &rewriter) const final {
+    if (extract.indices().size() != 1)
+      return failure();
+
+    auto tensor_from_elements =
+        dyn_cast<TensorFromElementsOp>(extract.aggregate().getDefiningOp());
+    if (tensor_from_elements == nullptr)
+      return failure();
+
+    APInt index;
+    if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
+      return failure();
+    rewriter.replaceOp(extract,
+                       tensor_from_elements.getOperand(index.getZExtValue()));
+    return success();
+  }
+};
+
+} // namespace
+
+void TensorFromElementsOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ExtractElementFromTensorFromElements>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // FPExtOp
 //===----------------------------------------------------------------------===//
 

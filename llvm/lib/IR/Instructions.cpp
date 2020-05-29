@@ -81,7 +81,7 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
     VectorType *ET = dyn_cast<VectorType>(Op1->getType());
     if (!ET)
       return "selected values for vector select must be vectors";
-    if (ET->getNumElements() != VT->getNumElements())
+    if (ET->getElementCount() != VT->getElementCount())
       return "vector select requires selected vectors to have "
                    "the same vector length as select condition";
   } else if (Op0->getType() != Type::getInt1Ty(Op0->getContext())) {

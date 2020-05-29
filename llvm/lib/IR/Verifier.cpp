@@ -4733,7 +4733,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     // Verify rest of the relocate arguments.
     const CallBase &StatepointCall =
-        *cast<CallBase>(cast<GCRelocateInst>(Call).getStatepoint());
+      *cast<GCRelocateInst>(Call).getStatepoint();
 
     // Both the base and derived must be piped through the safepoint.
     Value *Base = Call.getArgOperand(1);

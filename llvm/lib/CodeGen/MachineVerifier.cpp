@@ -1488,6 +1488,13 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   if (MI->isInlineAsm())
     verifyInlineAsm(MI);
 
+  // A fully-formed DBG_VALUE must have a location. Ignore partially formed
+  // DBG_VALUEs: these are convenient to use in tests, but should never get
+  // generated.
+  if (MI->isDebugValue() && MI->getNumOperands() == 4)
+    if (!MI->getDebugLoc())
+      report("Missing DebugLoc for debug instruction", MI);
+
   // Check the MachineMemOperands for basic consistency.
   for (MachineMemOperand *Op : MI->memoperands()) {
     if (Op->isLoad() && !MI->mayLoad())

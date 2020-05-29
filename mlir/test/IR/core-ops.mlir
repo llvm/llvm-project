@@ -644,6 +644,24 @@ func @extract_element(%arg0: tensor<*xi32>, %arg1 : tensor<4x4xf32>) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: func @tensor_from_elements() {
+func @tensor_from_elements() {
+  %c0 = "std.constant"() {value = 0: index} : () -> index
+  // CHECK: %0 = tensor_from_elements(%c0) : tensor<1xindex>
+  %0 = tensor_from_elements(%c0) : tensor<1xindex>
+
+  %c1 = "std.constant"() {value = 1: index} : () -> index
+  // CHECK: %1 = tensor_from_elements(%c0, %c1) : tensor<2xindex>
+  %1 = tensor_from_elements(%c0, %c1) : tensor<2xindex>
+
+  %c0_f32 = "std.constant"() {value = 0.0: f32} : () -> f32
+  // CHECK: [[C0_F32:%.*]] = constant
+  // CHECK: %2 = tensor_from_elements([[C0_F32]]) : tensor<1xf32>
+  %2 = tensor_from_elements(%c0_f32) : tensor<1xf32>
+
+  return
+}
+
 // CHECK-LABEL: func @tensor_cast(%arg0
 func @tensor_cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?x?xf32>) {
   // CHECK: %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>

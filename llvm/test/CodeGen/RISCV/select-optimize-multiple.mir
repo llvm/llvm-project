@@ -13,7 +13,6 @@
   define void @cmov_interleaved_debug_value() {
     ret void
   }
-  !1 = !DIExpression()
 ...
 ---
 # Here we have a sequence of select instructions with a non-select instruction
@@ -139,14 +138,14 @@ body:             |
     ; RV32I: [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY3]], 1
     ; RV32I: [[COPY4:%[0-9]+]]:gpr = COPY $x0
     ; RV32I: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY3]], 1
-    ; RV32I: DBG_VALUE [[ADDI]], $noreg, !DIExpression(), !DIExpression()
+    ; RV32I: DBG_VALUE [[ADDI]], $noreg
     ; RV32I: BNE [[ANDI]], [[COPY4]], %bb.2
     ; RV32I: .1:
     ; RV32I: .2:
     ; RV32I: [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.0, [[COPY1]], %bb.1
     ; RV32I: [[PHI1:%[0-9]+]]:gpr = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
-    ; RV32I: DBG_VALUE [[PHI]], $noreg, !DIExpression(), !DIExpression()
-    ; RV32I: DBG_VALUE [[PHI1]], $noreg, !DIExpression(), !DIExpression()
+    ; RV32I: DBG_VALUE [[PHI]], $noreg
+    ; RV32I: DBG_VALUE [[PHI1]], $noreg
     ; RV32I: [[ADD:%[0-9]+]]:gpr = ADD [[PHI]], killed [[PHI1]]
     ; RV32I: $x10 = COPY [[ADD]]
     ; RV32I: PseudoRET implicit $x10
@@ -160,14 +159,14 @@ body:             |
     ; RV64I: [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY3]], 1
     ; RV64I: [[COPY4:%[0-9]+]]:gpr = COPY $x0
     ; RV64I: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY3]], 1
-    ; RV64I: DBG_VALUE [[ADDI]], $noreg, !DIExpression(), !DIExpression()
+    ; RV64I: DBG_VALUE [[ADDI]], $noreg
     ; RV64I: BNE [[ANDI]], [[COPY4]], %bb.2
     ; RV64I: .1:
     ; RV64I: .2:
     ; RV64I: [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.0, [[COPY1]], %bb.1
     ; RV64I: [[PHI1:%[0-9]+]]:gpr = PHI [[COPY]], %bb.0, [[COPY1]], %bb.1
-    ; RV64I: DBG_VALUE [[PHI]], $noreg, !DIExpression(), !DIExpression()
-    ; RV64I: DBG_VALUE [[PHI1]], $noreg, !DIExpression(), !DIExpression()
+    ; RV64I: DBG_VALUE [[PHI]], $noreg
+    ; RV64I: DBG_VALUE [[PHI1]], $noreg
     ; RV64I: [[ADD:%[0-9]+]]:gpr = ADD [[PHI]], killed [[PHI1]]
     ; RV64I: $x10 = COPY [[ADD]]
     ; RV64I: PseudoRET implicit $x10
@@ -178,11 +177,11 @@ body:             |
     %5:gpr = ANDI %0, 1
     %6:gpr = COPY $x0
     %7:gpr = Select_GPR_Using_CC_GPR %5, %6, 22, %1, %2
-    DBG_VALUE %7, $noreg, !1, !1
+    DBG_VALUE %7, $noreg
     %8:gpr = ADDI %0, 1
-    DBG_VALUE %8, $noreg, !1, !1
+    DBG_VALUE %8, $noreg
     %9:gpr = Select_GPR_Using_CC_GPR %5, %6, 22, %3, %2
-    DBG_VALUE %9, $noreg, !1, !1
+    DBG_VALUE %9, $noreg
     %10:gpr = ADD %7, killed %9
     $x10 = COPY %10
     PseudoRET implicit $x10

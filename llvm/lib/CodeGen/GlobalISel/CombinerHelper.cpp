@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -36,9 +37,10 @@ static cl::opt<bool>
 
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B, GISelKnownBits *KB,
-                               MachineDominatorTree *MDT)
+                               MachineDominatorTree *MDT,
+                               const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
-      KB(KB), MDT(MDT) {
+      KB(KB), MDT(MDT), LI(LI) {
   (void)this->KB;
 }
 
@@ -405,7 +407,20 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
   for (auto &UseMI : MRI.use_nodbg_instructions(LoadValue.getReg())) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
-        UseMI.getOpcode() == TargetOpcode::G_ANYEXT) {
+        (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
+      // Check for legality.
+      if (LI) {
+        LegalityQuery::MemDesc MMDesc;
+        const auto &MMO = **MI.memoperands_begin();
+        MMDesc.SizeInBits = MMO.getSizeInBits();
+        MMDesc.AlignInBits = MMO.getAlign().value() * 8;
+        MMDesc.Ordering = MMO.getOrdering();
+        LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
+        LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+        if (LI->getAction({MI.getOpcode(), {UseTy, SrcTy}, {MMDesc}}).Action !=
+            LegalizeActions::Legal)
+          continue;
+      }
       Preferred = ChoosePreferredUse(Preferred,
                                      MRI.getType(UseMI.getOperand(0).getReg()),
                                      UseMI.getOpcode(), &UseMI);

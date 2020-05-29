@@ -49,14 +49,14 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // CHECK: class AOpOperandAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values
-// CHECK:   ArrayRef<Value> getODSOperands(unsigned index);
+// CHECK:   AOpOperandAdaptor(ValueRange values
+// CHECK:   ValueRange getODSOperands(unsigned index);
 // CHECK:   Value a();
-// CHECK:   ArrayRef<Value> b();
+// CHECK:   ValueRange b();
 // CHECK:   IntegerAttr attr1();
 // CHECL:   FloatAttr attr2();
 // CHECK: private:
-// CHECK:   ArrayRef<Value> odsOperands;
+// CHECK:   ValueRange odsOperands;
 // CHECK: };
 
 // CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
@@ -106,12 +106,12 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 }
 
 // CHECK-LABEL: AttrSizedOperandOpOperandAdaptor(
-// CHECK-SAME:    ArrayRef<Value> values
+// CHECK-SAME:    ValueRange values
 // CHECK-SAME:    DictionaryAttr attrs
-// CHECK:  ArrayRef<Value> a();
-// CHECK:  ArrayRef<Value> b();
+// CHECK:  ValueRange a();
+// CHECK:  ValueRange b();
 // CHECK:  Value c();
-// CHECK:  ArrayRef<Value> d();
+// CHECK:  ValueRange d();
 // CHECK:  DenseIntElementsAttr operand_segment_sizes();
 
 // Check op trait for different number of operands

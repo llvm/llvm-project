@@ -203,6 +203,20 @@ template<typename Predicate, typename... Args>
 Predicate all(Predicate P0, Predicate P1, Args... args) {
   return all(all(P0, P1), args...);
 }
+
+/// True iff P0 or P1 are true.
+template<typename Predicate>
+Predicate any(Predicate P0, Predicate P1) {
+  return [=](const LegalityQuery &Query) {
+    return P0(Query) || P1(Query);
+  };
+}
+/// True iff any given predicates are true.
+template<typename Predicate, typename... Args>
+Predicate any(Predicate P0, Predicate P1, Args... args) {
+  return any(any(P0, P1), args...);
+}
+
 /// True iff the given type index is the specified types.
 LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
@@ -228,13 +242,16 @@ LegalityPredicate isPointer(unsigned TypeIdx);
 /// space.
 LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
 
+/// True if the type index is a vector with element type \p EltTy
+LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
+
 /// True iff the specified type index is a scalar that's narrower than the given
 /// size.
-LegalityPredicate narrowerThan(unsigned TypeIdx, unsigned Size);
+LegalityPredicate scalarNarrowerThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar that's wider than the given
 /// size.
-LegalityPredicate widerThan(unsigned TypeIdx, unsigned Size);
+LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or vector with an element type
 /// that's narrower than the given size.
@@ -257,6 +274,15 @@ LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type indices are both the same bit size.
 LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
+
+/// True iff the first type index has a larger total bit size than second type
+/// index.
+LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+
+/// True iff the first type index has a smaller total bit size than second type
+/// index.
+LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+
 /// True iff the specified MMO index has a size that is not a power of 2
 LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
 /// True iff the specified type index is a vector whose element count is not a
@@ -774,7 +800,7 @@ public:
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
-                    narrowerThan(TypeIdx, Ty.getSizeInBits()),
+                    scalarNarrowerThan(TypeIdx, Ty.getSizeInBits()),
                     changeTo(typeIdx(TypeIdx), Ty));
   }
 
@@ -792,7 +818,7 @@ public:
     using namespace LegalityPredicates;
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
-                    widerThan(TypeIdx, Ty.getSizeInBits()),
+                    scalarWiderThan(TypeIdx, Ty.getSizeInBits()),
                     changeTo(typeIdx(TypeIdx), Ty));
   }
 
@@ -806,7 +832,7 @@ public:
     return actionIf(
         LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
-          return widerThan(TypeIdx, Ty.getSizeInBits()) && Predicate(Query);
+          return scalarWiderThan(TypeIdx, Ty.getSizeInBits()) && Predicate(Query);
         },
         changeElementTo(typeIdx(TypeIdx), Ty));
   }

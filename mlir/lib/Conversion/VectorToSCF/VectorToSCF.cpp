@@ -13,6 +13,8 @@
 #include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+
+#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
@@ -29,6 +31,8 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::edsc;
@@ -349,7 +353,7 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
 }
 
 } // namespace
-  
+
 /// Analyzes the `transfer` to find an access dimension along the fastest remote
 /// MemRef dimension. If such a dimension with coalescing properties is found,
 /// `pivs` and `vectorBoundsCapture` are swapped so that the invocation of
@@ -435,7 +439,7 @@ clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
 }
 
 namespace mlir {
-  
+
 template <typename TransferOpTy>
 VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
@@ -631,3 +635,28 @@ void populateVectorToSCFConversionPatterns(
 
 } // namespace mlir
 
+namespace {
+
+struct ConvertVectorToSCFPass
+    : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
+  ConvertVectorToSCFPass() = default;
+  ConvertVectorToSCFPass(const ConvertVectorToSCFPass &pass) {}
+  ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
+    this->fullUnroll = options.unroll;
+  }
+
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    auto *context = getFunction().getContext();
+    populateVectorToSCFConversionPatterns(
+        patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
+} // namespace
+
+std::unique_ptr<Pass>
+mlir::createConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
+  return std::make_unique<ConvertVectorToSCFPass>(options);
+}

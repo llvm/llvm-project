@@ -389,7 +389,7 @@ class ProjectTester:
         start_time = time.time()
 
         project_dir = self.get_project_dir()
-        if VERBOSE == 1:
+        if VERBOSE >= 1:
             stdout(f"  Build directory: {project_dir}.\n")
 
         # Set the build results directory.
@@ -431,7 +431,7 @@ class ProjectTester:
 
         # Clean up scan build results.
         if os.path.exists(output_dir):
-            if VERBOSE == 1:
+            if VERBOSE >= 1:
                 stdout(f"  Removing old results: {output_dir}\n")
 
             shutil.rmtree(output_dir)
@@ -517,7 +517,7 @@ class ProjectTester:
 
                 command_to_run = command_prefix + command
 
-                if VERBOSE == 1:
+                if VERBOSE >= 1:
                     stdout(f"  Executing: {command_to_run}\n")
 
                 check_call(command_to_run, cwd=cwd,
@@ -575,7 +575,7 @@ class ProjectTester:
             log_path = os.path.join(fail_path, file_name + ".stderr.txt")
             with open(log_path, "w+") as log_file:
                 try:
-                    if VERBOSE == 1:
+                    if VERBOSE >= 1:
                         stdout(f"  Executing: {command}\n")
 
                     check_call(command, cwd=directory, stderr=log_file,
@@ -744,7 +744,7 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
     for ref_dir, new_dir in zip(ref_list, new_list):
         assert(ref_dir != new_dir)
 
-        if VERBOSE == 1:
+        if VERBOSE >= 1:
             stdout(f"  Comparing Results: {ref_dir} {new_dir}\n")
 
         patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
@@ -818,7 +818,7 @@ def remove_log_file(output_dir: str):
 
     # Clean up the log file.
     if os.path.exists(build_log_path):
-        if VERBOSE == 1:
+        if VERBOSE >= 1:
             stdout(f"  Removing log file: {build_log_path}\n")
 
         os.remove(build_log_path)
@@ -887,29 +887,31 @@ def validate_project_file(map_file: IO):
 
 if __name__ == "__main__":
     # Parse command line arguments.
-    Parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Test the Clang Static Analyzer.")
 
-    Parser.add_argument("--strictness", dest="strictness", type=int, default=0,
+    parser.add_argument("--strictness", dest="strictness", type=int, default=0,
                         help="0 to fail on runtime errors, 1 to fail when the "
                         "number of found bugs are different from the "
                         "reference, 2 to fail on any difference from the "
                         "reference. Default is 0.")
-    Parser.add_argument("-r", dest="regenerate", action="store_true",
+    parser.add_argument("-r", dest="regenerate", action="store_true",
                         default=False, help="Regenerate reference output.")
-    Parser.add_argument("--override-compiler", action="store_true",
+    parser.add_argument("--override-compiler", action="store_true",
                         default=False, help="Call scan-build with "
                         "--override-compiler option.")
-    Parser.add_argument("-j", "--jobs", dest="jobs", type=int,
+    parser.add_argument("-j", "--jobs", dest="jobs", type=int,
                         default=0,
                         help="Number of projects to test concurrently")
-    Parser.add_argument("--extra-analyzer-config",
+    parser.add_argument("--extra-analyzer-config",
                         dest="extra_analyzer_config", type=str,
                         default="",
                         help="Arguments passed to to -analyzer-config")
+    parser.add_argument("-v", "--verbose", action="count", default=0)
 
-    args = Parser.parse_args()
+    args = parser.parse_args()
 
+    VERBOSE = args.verbose
     tester = RegressionTester(args.jobs, args.override_compiler,
                               args.extra_analyzer_config, args.regenerate,
                               args.strictness)

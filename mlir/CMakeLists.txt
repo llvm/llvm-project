@@ -31,6 +31,15 @@ endif()
 # TODO: we should use a config.h file like LLVM does
 add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_CUDA_CONVERSIONS_ENABLED})
 
+# Build the ROCm conversions and run according tests if the AMDGPU backend
+# is available
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ROCM_CONVERSIONS_ENABLED 1)
+else()
+  set(MLIR_ROCM_CONVERSIONS_ENABLED 0)
+endif()
+add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ROCM_CONVERSIONS_ENABLED})
+
 set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_VULKAN_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir Vulkan runner")
 

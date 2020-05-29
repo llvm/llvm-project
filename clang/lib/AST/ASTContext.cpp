@@ -10644,8 +10644,10 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
 /// getRealTypeForBitwidth -
 /// sets floating point QualTy according to specified bitwidth.
 /// Returns empty type if there is no appropriate target types.
-QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth) const {
-  TargetInfo::RealType Ty = getTargetInfo().getRealTypeByWidth(DestWidth);
+QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
+                                            bool ExplicitIEEE) const {
+  TargetInfo::RealType Ty =
+      getTargetInfo().getRealTypeByWidth(DestWidth, ExplicitIEEE);
   switch (Ty) {
   case TargetInfo::Float:
     return FloatTy;

@@ -61,7 +61,9 @@ public:
 bool AArch64PostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                                MachineInstr &MI,
                                                MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+  const auto *LI =
+      MI.getParent()->getParent()->getSubtarget().getLegalizerInfo();
+  CombinerHelper Helper(Observer, B, KB, MDT, LI);
   return Generated.tryCombineAll(Observer, MI, B, Helper);
 }
 

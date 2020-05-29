@@ -8,7 +8,7 @@ This setup assumes that you have built LLVM and MLIR in `$BUILD_DIR` and install
 ```sh
 mkdir build && cd build
 cmake -G Ninja .. -DMLIR_DIR=$PREFIX/lib/cmake/mlir -DLLVM_EXTERNAL_LIT=$BUILD_DIR/bin/llvm-lit
-cmake --build . --target check-standalone-opt
+cmake --build . --target check-standalone
 ```
 To build the documentation from the TableGen description of the dialect operations, run
 ```sh

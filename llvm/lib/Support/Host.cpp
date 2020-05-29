@@ -204,6 +204,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Case("0xd09", "cortex-a73")
             .Case("0xd0a", "cortex-a75")
             .Case("0xd0b", "cortex-a76")
+            .Case("0xd0c", "neoverse-n1")
             .Default("generic");
   }
 
@@ -1494,6 +1495,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
   Features["enqcmd"]          = HasLeaf7 && ((ECX >> 29) & 1);
 
+  Features["avx512vp2intersect"] =
+      HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save;
   Features["serialize"]       = HasLeaf7 && ((EDX >> 14) & 1);
   Features["tsxldtrk"]        = HasLeaf7 && ((EDX >> 16) & 1);
   // There are two CPUID leafs which information associated with the pconfig

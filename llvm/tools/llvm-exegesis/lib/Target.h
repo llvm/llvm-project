@@ -20,6 +20,7 @@
 #include "BenchmarkRunner.h"
 #include "Error.h"
 #include "LlvmState.h"
+#include "PerfHelper.h"
 #include "SnippetGenerator.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace exegesis {
@@ -64,6 +66,10 @@ class ExegesisTarget {
 public:
   explicit ExegesisTarget(ArrayRef<CpuAndPfmCounters> CpuPfmCounters)
       : CpuPfmCounters(CpuPfmCounters) {}
+
+  // Targets can use this to create target-specific perf counters.
+  virtual Expected<std::unique_ptr<pfm::Counter>>
+  createCounter(const char *CounterName, const LLVMState &State) const;
 
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}

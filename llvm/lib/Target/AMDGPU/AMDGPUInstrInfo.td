@@ -202,13 +202,6 @@ def AMDGPUSetCCOp : SDTypeProfile<1, 3, [        // setcc
 
 def AMDGPUsetcc : SDNode<"AMDGPUISD::SETCC", AMDGPUSetCCOp>;
 
-def AMDGPUSetRegOp :  SDTypeProfile<0, 2, [
-  SDTCisInt<0>, SDTCisInt<1>
-]>;
-
-def AMDGPUsetreg : SDNode<"AMDGPUISD::SETREG", AMDGPUSetRegOp, [
-  SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
-
 def AMDGPUfma : SDNode<"AMDGPUISD::FMA_W_CHAIN", SDTFPTernaryOp, [
    SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 

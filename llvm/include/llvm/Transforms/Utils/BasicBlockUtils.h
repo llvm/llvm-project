@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/InstrTypes.h"
@@ -95,6 +96,17 @@ bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
                                MemorySSAUpdater *MSSAU = nullptr,
                                MemoryDependenceResults *MemDep = nullptr,
                                bool PredecessorWithTwoSuccessors = false);
+
+/// Merge block(s) sucessors, if possible. Return true if at least two
+/// of the blocks were merged together.
+/// In order to merge, each block must be terminated by an unconditional
+/// branch. If L is provided, then the blocks merged into their predecessors
+/// must be in L. In addition, This utility calls on another utility:
+/// MergeBlockIntoPredecessor. Blocks are successfully merged when the call to
+/// MergeBlockIntoPredecessor returns true.
+bool MergeBlockSuccessorsIntoGivenBlocks(
+    SmallPtrSetImpl<BasicBlock *> &MergeBlocks, Loop *L = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 /// Try to remove redundant dbg.value instructions from given basic block.
 /// Returns true if at least one instruction was removed.

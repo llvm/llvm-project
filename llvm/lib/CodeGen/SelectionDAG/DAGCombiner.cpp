@@ -17429,16 +17429,21 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // extract_vector_elt of out-of-bounds element -> UNDEF
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-  unsigned NumElts = VecVT.getVectorNumElements();
-  unsigned VecEltBitWidth = VecVT.getScalarSizeInBits();
-  if (IndexC && IndexC->getAPIntValue().uge(NumElts))
+  if (IndexC && VecVT.isFixedLengthVector() &&
+      IndexC->getAPIntValue().uge(VecVT.getVectorNumElements()))
     return DAG.getUNDEF(ScalarVT);
 
   // extract_vector_elt (build_vector x, y), 1 -> y
-  if (IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR &&
+  if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
+       VecOp.getOpcode() == ISD::SPLAT_VECTOR) &&
       TLI.isTypeLegal(VecVT) &&
       (VecOp.hasOneUse() || TLI.aggressivelyPreferBuildVectorSources(VecVT))) {
-    SDValue Elt = VecOp.getOperand(IndexC->getZExtValue());
+    assert((VecOp.getOpcode() != ISD::BUILD_VECTOR ||
+            VecVT.isFixedLengthVector()) &&
+           "BUILD_VECTOR used for scalable vectors");
+    unsigned IndexVal =
+        VecOp.getOpcode() == ISD::BUILD_VECTOR ? IndexC->getZExtValue() : 0;
+    SDValue Elt = VecOp.getOperand(IndexVal);
     EVT InEltVT = Elt.getValueType();
 
     // Sometimes build_vector's scalar input types do not match result type.
@@ -17448,6 +17453,15 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // TODO: It may be useful to truncate if free if the build_vector implicitly
     // converts.
   }
+
+  if (VecVT.isScalableVector())
+    return SDValue();
+
+  // All the code from this point onwards assumes fixed width vectors, but it's
+  // possible that some of the combinations could be made to work for scalable
+  // vectors too.
+  unsigned NumElts = VecVT.getVectorNumElements();
+  unsigned VecEltBitWidth = VecVT.getScalarSizeInBits();
 
   // TODO: These transforms should not require the 'hasOneUse' restriction, but
   // there are regressions on multiple targets without it. We can end up with a

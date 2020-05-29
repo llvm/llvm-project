@@ -605,7 +605,24 @@ func @extract_element_tensor_too_many_indices(%t : tensor<2x3xf32>, %i : index) 
 
 func @extract_element_tensor_too_few_indices(%t : tensor<2x3xf32>, %i : index) {
   // expected-error@+1 {{incorrect number of indices for extract_element}}
-  %0 = "std.extract_element"(%t, %i) : (tensor<2x3xf32>, index) -> f32
+  %0 = "std.extract_element"(%t, %i) : (tensor<2x3xf32>, index) -> f32 return
+}
+
+// -----
+
+func @tensor_from_elements_wrong_result_type() {
+  // expected-error@+2 {{expected result type to be a ranked tensor}}
+  %c0 = constant 0 : i32
+  %0 = tensor_from_elements(%c0) : tensor<*xi32>
+  return
+}
+
+// -----
+
+func @tensor_from_elements_wrong_elements_count() {
+  // expected-error@+2 {{expected result type to be a 1D tensor with 1 element}}
+  %c0 = constant 0 : index
+  %0 = tensor_from_elements(%c0) : tensor<2xindex>
   return
 }
 

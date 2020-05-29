@@ -854,8 +854,9 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   }
 }
 
-bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
-  IntrinsicInst *II, Value *OldV, Value *NewV) const {
+Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                                    Value *OldV,
+                                                    Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
@@ -865,7 +866,7 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
   case Intrinsic::amdgcn_ds_fmax: {
     const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
     if (!IsVolatile->isZero())
-      return false;
+      return nullptr;
     Module *M = II->getParent()->getParent()->getParent();
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
@@ -873,7 +874,7 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
         Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
-    return true;
+    return II;
   }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
@@ -883,12 +884,42 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
     LLVMContext &Ctx = NewV->getType()->getContext();
     ConstantInt *NewVal = (TrueAS == NewAS) ?
       ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
-    II->replaceAllUsesWith(NewVal);
-    II->eraseFromParent();
-    return true;
+    return NewVal;
+  }
+  case Intrinsic::ptrmask: {
+    unsigned OldAS = OldV->getType()->getPointerAddressSpace();
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    Value *MaskOp = II->getArgOperand(1);
+    Type *MaskTy = MaskOp->getType();
+
+    bool DoTruncate = false;
+    if (!getTLI()->isNoopAddrSpaceCast(OldAS, NewAS)) {
+      // All valid 64-bit to 32-bit casts work by chopping off the high
+      // bits. Any masking only clearing the low bits will also apply in the new
+      // address space.
+      if (DL.getPointerSizeInBits(OldAS) != 64 ||
+          DL.getPointerSizeInBits(NewAS) != 32)
+        return nullptr;
+
+      // TODO: Do we need to thread more context in here?
+      KnownBits Known = computeKnownBits(MaskOp, DL, 0, nullptr, II);
+      if (Known.countMinLeadingOnes() < 32)
+        return nullptr;
+
+      DoTruncate = true;
+    }
+
+    IRBuilder<> B(II);
+    if (DoTruncate) {
+      MaskTy = B.getInt32Ty();
+      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
+    }
+
+    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
+                             {NewV, MaskOp});
   }
   default:
-    return false;
+    return nullptr;
   }
 }
 

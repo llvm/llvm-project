@@ -34,12 +34,6 @@ void test() {
   static_assert(sizeof(ArrayT) == sizeof(CArrayT), "");
   static_assert(sizeof(ArrayT) == sizeof(MyArrayT), "");
   static_assert(TEST_ALIGNOF(ArrayT) == TEST_ALIGNOF(MyArrayT), "");
-#if defined(_LIBCPP_VERSION)
-  ArrayT a;
-  ((void)a);
-  static_assert(sizeof(ArrayT) == sizeof(a.__elems_), "");
-  static_assert(TEST_ALIGNOF(ArrayT) == __alignof__(a.__elems_), "");
-#endif
 }
 
 template <class T>
@@ -66,8 +60,6 @@ struct TEST_ALIGNAS(TEST_ALIGNOF(std::max_align_t) * 2) TestType2 {
   char data[1000];
 };
 #endif
-
-//static_assert(sizeof(void*) == 4, "");
 
 int main(int, char**) {
   test_type<char>();

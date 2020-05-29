@@ -801,13 +801,13 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
-let hasSideEffects = 1 in {
+let hasSideEffects = 1, mayLoad = 0, mayStore =0 in {
 
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
-  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]> {
+  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
   let Defs = [MODE];
   let Uses = [MODE];
 }
@@ -1218,8 +1218,7 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_WAITCNT_DEPCTR :
     SOPP <0x023, (ins s16imm:$simm16), "s_waitcnt_depctr $simm16">;
 
-  let hasSideEffects = 1, Uses = [MODE], Defs = [MODE] in {
-    // FIXME: Should remove hasSideEffects
+  let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
       SOPP<0x024, (ins s16imm:$simm16), "s_round_mode $simm16">;
     def S_DENORM_MODE :

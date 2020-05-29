@@ -120,6 +120,27 @@ void tblgen::OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
 }
 
 //===----------------------------------------------------------------------===//
+// OpConstructor definitions
+//===----------------------------------------------------------------------===//
+
+void mlir::tblgen::OpConstructor::addMemberInitializer(StringRef name,
+                                                       StringRef value) {
+  memberInitializers.append(std::string(llvm::formatv(
+      "{0}{1}({2})", memberInitializers.empty() ? " : " : ", ", name, value)));
+}
+
+void mlir::tblgen::OpConstructor::writeDefTo(raw_ostream &os,
+                                             StringRef namePrefix) const {
+  if (isDeclOnly)
+    return;
+
+  methodSignature.writeDefTo(os, namePrefix);
+  os << " " << memberInitializers << " {\n";
+  methodBody.writeTo(os);
+  os << "}";
+}
+
+//===----------------------------------------------------------------------===//
 // Class definitions
 //===----------------------------------------------------------------------===//
 
@@ -133,10 +154,11 @@ tblgen::OpMethod &tblgen::Class::newMethod(StringRef retType, StringRef name,
   return methods.back();
 }
 
-tblgen::OpMethod &tblgen::Class::newConstructor(StringRef params,
-                                                bool declOnly) {
-  return newMethod("", getClassName(), params, OpMethod::MP_Constructor,
-                   declOnly);
+tblgen::OpConstructor &tblgen::Class::newConstructor(StringRef params,
+                                                     bool declOnly) {
+  constructors.emplace_back("", getClassName(), params,
+                            OpMethod::MP_Constructor, declOnly);
+  return constructors.back();
 }
 
 void tblgen::Class::newField(StringRef type, StringRef name,
@@ -152,7 +174,8 @@ void tblgen::Class::writeDeclTo(raw_ostream &os) const {
   bool hasPrivateMethod = false;
   os << "class " << className << " {\n";
   os << "public:\n";
-  for (const auto &method : methods) {
+  for (const auto &method :
+       llvm::concat<const OpMethod>(constructors, methods)) {
     if (!method.isPrivate()) {
       method.writeDeclTo(os);
       os << '\n';
@@ -163,7 +186,8 @@ void tblgen::Class::writeDeclTo(raw_ostream &os) const {
   os << '\n';
   os << "private:\n";
   if (hasPrivateMethod) {
-    for (const auto &method : methods) {
+    for (const auto &method :
+         llvm::concat<const OpMethod>(constructors, methods)) {
       if (method.isPrivate()) {
         method.writeDeclTo(os);
         os << '\n';
@@ -177,7 +201,8 @@ void tblgen::Class::writeDeclTo(raw_ostream &os) const {
 }
 
 void tblgen::Class::writeDefTo(raw_ostream &os) const {
-  for (const auto &method : methods) {
+  for (const auto &method :
+       llvm::concat<const OpMethod>(constructors, methods)) {
     method.writeDefTo(os, className);
     os << "\n\n";
   }

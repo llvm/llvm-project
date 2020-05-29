@@ -853,6 +853,9 @@ bool LLParser::ParseSummaryEntry() {
   case lltok::kw_flags:
     result = ParseSummaryIndexFlags();
     break;
+  case lltok::kw_blockcount:
+    result = ParseBlockCount();
+    break;
   default:
     result = Error(Lex.getLoc(), "unexpected summary kind");
     break;
@@ -8108,6 +8111,21 @@ bool LLParser::ParseSummaryIndexFlags() {
   if (ParseUInt64(Flags))
     return true;
   Index->setFlags(Flags);
+  return false;
+}
+
+/// ParseBlockCount
+///   ::= 'blockcount' ':' UInt64
+bool LLParser::ParseBlockCount() {
+  assert(Lex.getKind() == lltok::kw_blockcount);
+  Lex.Lex();
+
+  if (ParseToken(lltok::colon, "expected ':' here"))
+    return true;
+  uint64_t BlockCount;
+  if (ParseUInt64(BlockCount))
+    return true;
+  Index->setBlockCount(BlockCount);
   return false;
 }
 

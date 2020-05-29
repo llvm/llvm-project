@@ -211,8 +211,8 @@ public:
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const;
-  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
-                                        Value *OldV, Value *NewV) const;
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const;
 
   unsigned getVectorSplitCost() { return 0; }
 

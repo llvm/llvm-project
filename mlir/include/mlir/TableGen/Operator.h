@@ -58,6 +58,9 @@ public:
   // Returns this op's C++ class name prefixed with namespaces.
   std::string getQualCppClassName() const;
 
+  // Returns the name of op's adaptor C++ class.
+  std::string getAdaptorName() const;
+
   /// A class used to represent the decorators of an operator variable, i.e.
   /// argument or result.
   struct VariableDecorator {

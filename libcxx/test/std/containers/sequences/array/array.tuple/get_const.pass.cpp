@@ -19,26 +19,36 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX14 bool tests()
 {
     {
-        typedef double T;
-        typedef std::array<T, 3> C;
-        const C c = {1, 2, 3.5};
-        assert(std::get<0>(c) == 1);
-        assert(std::get<1>(c) == 2);
-        assert(std::get<2>(c) == 3.5);
+        std::array<double, 1> const array = {3.3};
+        assert(std::get<0>(array) == 3.3);
     }
-#if TEST_STD_VER > 11
     {
-        typedef double T;
-        typedef std::array<T, 3> C;
-        constexpr const C c = {1, 2, 3.5};
-        static_assert(std::get<0>(c) == 1, "");
-        static_assert(std::get<1>(c) == 2, "");
-        static_assert(std::get<2>(c) == 3.5, "");
+        std::array<double, 2> const array = {3.3, 4.4};
+        assert(std::get<0>(array) == 3.3);
+        assert(std::get<1>(array) == 4.4);
     }
-#endif
+    {
+        std::array<double, 3> const array = {3.3, 4.4, 5.5};
+        assert(std::get<0>(array) == 3.3);
+        assert(std::get<1>(array) == 4.4);
+        assert(std::get<2>(array) == 5.5);
+    }
+    {
+        std::array<double, 1> const array = {3.3};
+        static_assert(std::is_same<double const&, decltype(std::get<0>(array))>::value, "");
+    }
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER >= 14
+    static_assert(tests(), "");
+#endif
+    return 0;
 }

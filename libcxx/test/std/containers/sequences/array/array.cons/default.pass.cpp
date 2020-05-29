@@ -19,32 +19,43 @@
 #include "disable_missing_braces_warning.h"
 
 struct NoDefault {
-  NoDefault(int) {}
+    TEST_CONSTEXPR NoDefault(int) { }
 };
+
+struct Default {
+    TEST_CONSTEXPR Default() { }
+};
+
+TEST_CONSTEXPR_CXX14 bool tests()
+{
+    {
+        std::array<Default, 3> array;
+        assert(array.size() == 3);
+    }
+
+    {
+        std::array<Default, 0> array;
+        assert(array.size() == 0);
+    }
+
+    {
+        typedef std::array<NoDefault, 0> C;
+        C c;
+        assert(c.size() == 0);
+        C c1 = {};
+        assert(c1.size() == 0);
+        C c2 = {{}};
+        assert(c2.size() == 0);
+    }
+
+    return true;
+}
 
 int main(int, char**)
 {
-    {
-        typedef double T;
-        typedef std::array<T, 3> C;
-        C c;
-        assert(c.size() == 3);
-    }
-    {
-        typedef double T;
-        typedef std::array<T, 0> C;
-        C c;
-        assert(c.size() == 0);
-    }
-    {
-      typedef std::array<NoDefault, 0> C;
-      C c;
-      assert(c.size() == 0);
-      C c1 = {};
-      assert(c1.size() == 0);
-      C c2 = {{}};
-      assert(c2.size() == 0);
-    }
-
-  return 0;
+    tests();
+#if TEST_STD_VER >= 14
+    static_assert(tests(), "");
+#endif
+    return 0;
 }

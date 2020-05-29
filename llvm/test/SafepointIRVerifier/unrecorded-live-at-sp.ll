@@ -2,7 +2,7 @@
 
 ; CHECK:      Illegal use of unrelocated value found!
 ; CHECK-NEXT: Def:   %base_phi4 = phi %jObject addrspace(1)* addrspace(1)* [ %addr98.relocated, %not_zero146 ], [ %cast6, %bci_37-aload ], !is_base_value !0
-; CHECK-NEXT: Use:   %safepoint_token = tail call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, %jObject addrspace(1)* %base_phi1, %jObject addrspace(1)* addrspace(1)* %base_phi4, %jObject addrspace(1)* addrspace(1)* %relocated4, %jObject addrspace(1)* %relocated7)
+; CHECK-NEXT: Use:   %safepoint_token = tail call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* undef, i32 0, i32 0, i32 0, i32 0, %jObject addrspace(1)* %base_phi1, %jObject addrspace(1)* addrspace(1)* %base_phi4, %jObject addrspace(1)* addrspace(1)* %relocated4, %jObject addrspace(1)* %relocated7)
 
 
 %jObject = type { [8 x i8] }
@@ -42,12 +42,12 @@ not_zero179:                                      ; preds = %not_zero146, %bci_3
   %relocated7 = phi %jObject addrspace(1)* [ %obj609.relocated, %not_zero146 ], [ %relocated8, %bci_37-aload ]
   %base_phi4 = phi %jObject addrspace(1)* addrspace(1)* [ %addr98.relocated, %not_zero146 ], [ %cast6, %bci_37-aload ], !is_base_value !0
   %relocated4 = phi %jObject addrspace(1)* addrspace(1)* [ %addr98.relocated, %not_zero146 ], [ %addr98, %bci_37-aload ]
-  %safepoint_token = tail call  token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* undef, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, %jObject addrspace(1)* %base_phi1, %jObject addrspace(1)* addrspace(1)* %base_phi4, %jObject addrspace(1)* addrspace(1)* %relocated4, %jObject addrspace(1)* %relocated7)
+  %safepoint_token = tail call  token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* undef, i32 0, i32 0, i32 0, i32 0, %jObject addrspace(1)* %base_phi1, %jObject addrspace(1)* addrspace(1)* %base_phi4, %jObject addrspace(1)* addrspace(1)* %relocated4, %jObject addrspace(1)* %relocated7)
   %tmp4 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
-  %base_phi1.relocated = call coldcc %jObject addrspace(1)* @llvm.experimental.gc.relocate.p1jObject(token %safepoint_token, i32 12, i32 12)
-  %base_phi4.relocated = call coldcc %jObject addrspace(1)* addrspace(1)* @llvm.experimental.gc.relocate.p1p1jObject(token %safepoint_token, i32 13, i32 13)
-  %relocated4.relocated = call coldcc %jObject addrspace(1)* addrspace(1)* @llvm.experimental.gc.relocate.p1p1jObject(token %safepoint_token, i32 13, i32 14)
-  %relocated7.relocated = call coldcc %jObject addrspace(1)* @llvm.experimental.gc.relocate.p1jObject(token %safepoint_token, i32 12, i32 15)
+  %base_phi1.relocated = call coldcc %jObject addrspace(1)* @llvm.experimental.gc.relocate.p1jObject(token %safepoint_token, i32 7, i32 7)
+  %base_phi4.relocated = call coldcc %jObject addrspace(1)* addrspace(1)* @llvm.experimental.gc.relocate.p1p1jObject(token %safepoint_token, i32 8, i32 8)
+  %relocated4.relocated = call coldcc %jObject addrspace(1)* addrspace(1)* @llvm.experimental.gc.relocate.p1p1jObject(token %safepoint_token, i32 8, i32 9)
+  %relocated7.relocated = call coldcc %jObject addrspace(1)* @llvm.experimental.gc.relocate.p1jObject(token %safepoint_token, i32 7, i32 10)
   %addr636 = bitcast %jObject addrspace(1)* addrspace(1)* %relocated4.relocated to %jObject addrspace(1)* addrspace(1)*
   br label %bci_37-aload
 }

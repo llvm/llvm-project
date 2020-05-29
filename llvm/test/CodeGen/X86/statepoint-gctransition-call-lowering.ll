@@ -97,28 +97,13 @@ define i32 @test_transition_args() gc "statepoint-example" {
 ; CHECK: retq
 entry:
   %val = alloca i32
-  %safepoint_token = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 1, i32 2, i32* %val, i64 42, i32 0)
+  %safepoint_token = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 0, i32 0, i32 ()* @return_i32, i32 0, i32 1, i32 0, i32 0) ["gc-transition" (i32* %val, i64 42)]
   %call1 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
   ret i32 %call1
 }
 
 define i32 @test_transition_args_2() gc "statepoint-example" {
 ; CHECK-LABEL: test_transition_args_2
-; CHECK: pushq %rax
-; CHECK: callq return_i32
-; CHECK: popq %rcx
-; CHECK: retq
-entry:
-  %val = alloca i32
-  %arg = alloca i8
-  %safepoint_token = call token (i64, i32, i32 (i32, i8*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p0i8f(i64 0, i32 0, i32 (i32, i8*)* @return_i32_with_args, i32 2, i32 1, i32 0, i8* %arg, i32 2, i32* %val, i64 42, i32 0)
-  %call1 = call i32 @llvm.experimental.gc.result.i32(token %safepoint_token)
-  ret i32 %call1
-}
-
-; Same as test_transition_args_2 except using bundle format
-define i32 @test_bundle() gc "statepoint-example" {
-; CHECK-LABEL: test_bundle
 ; CHECK: pushq %rax
 ; CHECK: callq return_i32
 ; CHECK: popq %rcx

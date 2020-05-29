@@ -1525,6 +1525,39 @@ def ExtractElementOp : Std_Op<"extract_element",
 }
 
 //===----------------------------------------------------------------------===//
+// TensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+def TensorFromElementsOp : Std_Op<"tensor_from_elements",
+    [NoSideEffect, SameOperandsAndResultElementType]> {
+  string summary = "tensor from elements operation.";
+  string description = [{
+    Create a 1D tensor from a range of same-type arguments.
+
+    Example:
+
+    ```mlir
+    tensor_from_elements(i_1, ..., i_N) :  tensor<Nxindex>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyTensor:$result);
+
+  let skipDefaultBuilders = 1;
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, ValueRange elements", [{
+      assert(!elements.empty() && "expected at least one element");
+      result.addOperands(elements);
+      result.addTypes(
+          RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                *elements.getTypes().begin()));
+    }]>];
+
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FPExtOp
 //===----------------------------------------------------------------------===//
 

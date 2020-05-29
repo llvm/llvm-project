@@ -88,7 +88,9 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
       // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
       case CodeModel::Medium:
-        if (isa<Function>(GV))
+        // Constant pool and jump table handling pass a nullptr to this
+        // function so we need to use isa_and_nonnull.
+        if (isa_and_nonnull<Function>(GV))
           return X86II::MO_NO_FLAG; // All code is RIP-relative
         return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
       }

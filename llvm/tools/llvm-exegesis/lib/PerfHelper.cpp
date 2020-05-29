@@ -8,13 +8,19 @@
 
 #include "PerfHelper.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #ifdef HAVE_LIBPFM
 #include "perfmon/perf_event.h"
 #include "perfmon/pfmlib.h"
 #include "perfmon/pfmlib_perf_event.h"
 #endif
+
 #include <cassert>
+#include <cstddef>
+#include <errno.h>  // for erno
+#include <string.h> // for strerror()
 
 namespace llvm {
 namespace exegesis {
@@ -97,7 +103,8 @@ Counter::Counter(PerfEvent &&E) : Event(std::move(E)){
   perf_event_attr AttrCopy = *Event.attribute();
   FileDescriptor = perf_event_open(&AttrCopy, Pid, Cpu, GroupFd, Flags);
   if (FileDescriptor == -1) {
-    errs() << "Unable to open event, make sure your kernel allows user "
+    errs() << "Unable to open event. ERRNO: " << strerror(errno)
+           << ". Make sure your kernel allows user "
               "space perf monitoring.\nYou may want to try:\n$ sudo sh "
               "-c 'echo -1 > /proc/sys/kernel/perf_event_paranoid'\n";
   }
@@ -111,12 +118,21 @@ void Counter::start() { ioctl(FileDescriptor, PERF_EVENT_IOC_RESET, 0); }
 void Counter::stop() { ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0); }
 
 int64_t Counter::read() const {
+  auto ValueOrError = readOrError();
+  if (ValueOrError)
+    return ValueOrError.get();
+
+  errs() << ValueOrError.takeError() << "\n";
+  return -1;
+}
+
+llvm::Expected<int64_t> Counter::readOrError() const {
   int64_t Count = 0;
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
-  if (ReadSize != sizeof(Count)) {
-    Count = -1;
-    errs() << "Failed to read event counter\n";
-  }
+  if (ReadSize != sizeof(Count))
+    return llvm::make_error<llvm::StringError>("Failed to read event counter",
+                                               llvm::errc::io_error);
+
   return Count;
 }
 
@@ -131,6 +147,11 @@ void Counter::start() {}
 void Counter::stop() {}
 
 int64_t Counter::read() const { return 42; }
+
+llvm::Expected<int64_t> Counter::readOrError() const {
+  return llvm::make_error<llvm::StringError>("Not implemented",
+                                             llvm::errc::io_error);
+}
 
 #endif
 

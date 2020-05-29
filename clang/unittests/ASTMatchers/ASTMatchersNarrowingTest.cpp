@@ -2643,6 +2643,45 @@ TEST(HasDefaultArgument, Basic) {
                       parmVarDecl(hasDefaultArgument())));
 }
 
+TEST(IsAtPosition, Basic) {
+  EXPECT_TRUE(matches("void x(int a, int b) {}", parmVarDecl(isAtPosition(1))));
+  EXPECT_TRUE(matches("void x(int a, int b) {}", parmVarDecl(isAtPosition(0))));
+  EXPECT_TRUE(matches("void x(int a, int b) {}", parmVarDecl(isAtPosition(1))));
+  EXPECT_TRUE(notMatches("void x(int val) {}", parmVarDecl(isAtPosition(1))));
+}
+
+TEST(IsAtPosition, FunctionDecl) {
+  EXPECT_TRUE(matches("void x(int a);", parmVarDecl(isAtPosition(0))));
+  EXPECT_TRUE(matches("void x(int a, int b);", parmVarDecl(isAtPosition(0))));
+  EXPECT_TRUE(matches("void x(int a, int b);", parmVarDecl(isAtPosition(1))));
+  EXPECT_TRUE(notMatches("void x(int val);", parmVarDecl(isAtPosition(1))));
+}
+
+TEST(IsAtPosition, Lambda) {
+  EXPECT_TRUE(
+      matches("void x() { [](int a) {};  }", parmVarDecl(isAtPosition(0))));
+  EXPECT_TRUE(matches("void x() { [](int a, int b) {}; }",
+                      parmVarDecl(isAtPosition(0))));
+  EXPECT_TRUE(matches("void x() { [](int a, int b) {}; }",
+                      parmVarDecl(isAtPosition(1))));
+  EXPECT_TRUE(
+      notMatches("void x() { [](int val) {}; }", parmVarDecl(isAtPosition(1))));
+}
+
+TEST(IsAtPosition, BlockDecl) {
+  EXPECT_TRUE(matchesObjC(
+      "void func()  { void (^my_block)(int arg) = ^void(int arg) {}; } ",
+      parmVarDecl(isAtPosition(0))));
+
+  EXPECT_TRUE(matchesObjC("void func()  { void (^my_block)(int x, int y) = "
+                          "^void(int x, int y) {}; } ",
+                          parmVarDecl(isAtPosition(1))));
+
+  EXPECT_TRUE(notMatchesObjC(
+      "void func()  { void (^my_block)(int arg) = ^void(int arg) {}; } ",
+      parmVarDecl(isAtPosition(1))));
+}
+
 TEST(IsArray, Basic) {
   EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
                       cxxNewExpr(isArray())));

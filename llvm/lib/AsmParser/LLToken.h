@@ -374,6 +374,7 @@ enum Kind {
   kw_name,
   kw_summaries,
   kw_flags,
+  kw_blockcount,
   kw_linkage,
   kw_notEligibleToImport,
   kw_live,
