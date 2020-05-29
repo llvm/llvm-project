@@ -31,7 +31,7 @@ extern "C" {
 #include <dpu.h>
 #include <dpu_custom.h>
 #include <dpu_debug.h>
-#include <dpu_log.h>
+#include <dpu_log_internals.h>
 #include <dpu_management.h>
 #include <dpu_memory.h>
 #include <dpu_program.h>
@@ -332,8 +332,9 @@ bool Dpu::PrepareStepOverPrintfBkp(
       }
 
       if (stdout_file != NULL) {
-        if (dpulog_read_and_display_contents_of(mram_buffer, mram_buffer_size,
-                                                stdout_file) != DPU_OK) {
+        if (dpulog_read_and_display_contents_of(
+                mram_buffer, mram_buffer_size, dpulog_c_print_fct,
+                (void *)stdout_file) != DPU_OK) {
           goto PrepareStepOverPrintfBkp_err;
         }
 
