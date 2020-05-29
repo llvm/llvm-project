@@ -801,6 +801,9 @@ public:
   void accept(SectionVisitor &) const override;
   void accept(MutableSectionVisitor &Visitor) override;
   void finalize() override;
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
   void replaceSectionReferences(
