@@ -21,7 +21,7 @@
 
 using namespace mlir;
 using ReturnOpConverter =
-    NoBufferOperandsReturnOpConverter<mlir::ReturnOp, mlir::ReturnOp,
+    BufferAssignmentReturnOpConverter<mlir::ReturnOp, mlir::ReturnOp,
                                       linalg::CopyOp>;
 
 namespace {

@@ -1393,7 +1393,14 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
   return canTailPredicateLoop(L, LI, SE, DL, LAI);
 }
 
-
+bool ARMTTIImpl::emitGetActiveLaneMask(Loop *L, LoopInfo *LI,
+    ScalarEvolution &SE, bool TailFolded) const {
+  // TODO: if this loop is tail-folded, we want to emit the
+  // llvm.get.active.lane.mask intrinsic so that this can be picked up in the
+  // MVETailPredication pass that needs to know the number of elements
+  // processed by this vector loop.
+  return false;
+}
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   // Only currently enable these preferences for M-Class cores.

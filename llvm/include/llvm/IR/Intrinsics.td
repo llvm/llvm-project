@@ -1294,6 +1294,10 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
 
 }
 
+def int_get_active_lane_mask:
+  Intrinsic<[llvm_anyvector_ty],
+            [llvm_anyint_ty, LLVMMatchType<1>],
+            [IntrNoMem, IntrNoSync, IntrWillReturn]>;
 
 //===-------------------------- Masked Intrinsics -------------------------===//
 //

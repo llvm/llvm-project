@@ -266,3 +266,55 @@ ProgramHeaders:
       - Section: .hash
       - Section: .gnu.hash
       - Section: .dynamic
+
+## Check we report a proper warning when the GNU hash table goes past the end of the file.
+
+## Case A: the 'nbuckets' field is set so that the GNU hash table goes past the end of the file.
+##         The value of 1 for the NBUCKETS is no-op.
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=4294967295 -D NBUCKETS=1 %s -o %t7
+# RUN: llvm-readelf --elf-hash-histogram %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=ERR5 --implicit-check-not="Histogram"
+
+# ERR5: warning: '[[FILE]]': unable to dump the SHT_GNU_HASH section at 0x78: it goes past the end of the file
+
+## Case B: the 'maskwords' field is set so that the GNU hash table goes past the end of the file.
+##         The value of 1 for the MASKWORDS is no-op.
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=1 -D NBUCKETS=4294967295 %s -o %t8
+# RUN: llvm-readelf --elf-hash-histogram %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=ERR5 --implicit-check-not="Histogram"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+## The number of words in the Bloom filter.
+      MaskWords: [[MASKWORDS]]
+## The number of hash buckets.
+      NBuckets:  [[NBUCKETS]]
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic

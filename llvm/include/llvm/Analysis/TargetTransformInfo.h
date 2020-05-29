@@ -524,6 +524,11 @@ public:
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) const;
 
+  /// Query the target whether lowering of the llvm.get.active.lane.mask
+  /// intrinsic is supported and if emitting it is desired for this loop.
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFolded) const;
+
   /// @}
 
   /// \name Scalar Target Information
@@ -1251,6 +1256,8 @@ public:
   preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                               AssumptionCache &AC, TargetLibraryInfo *TLI,
                               DominatorTree *DT, const LoopAccessInfo *LAI) = 0;
+  virtual bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                                     bool TailFolded) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1529,6 +1536,10 @@ public:
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) override {
     return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+  }
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFolded) override {
+    return Impl.emitGetActiveLaneMask(L, LI, SE, TailFolded);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);

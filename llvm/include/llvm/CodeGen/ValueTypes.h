@@ -292,6 +292,11 @@ namespace llvm {
       return {getExtendedVectorNumElements(), isExtendedScalableVector()};
     }
 
+    /// Given a vector type, return the minimum number of elements it contains.
+    unsigned getVectorMinNumElements() const {
+      return getVectorElementCount().Min;
+    }
+
     /// Return the size of the specified value type in bits.
     ///
     /// If the value type is a scalable vector type, the scalable property will

@@ -1031,7 +1031,7 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   const PreambleData &Preamble;
-  const PreamblePatch &Patch;
+  llvm::Optional<const PreamblePatch> Patch;
   llvm::StringRef Contents;
   size_t Offset;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
@@ -1105,7 +1105,8 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   PreambleBounds PreambleRegion =
       ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
   bool CompletingInPreamble = PreambleRegion.Size > Input.Offset;
-  Input.Patch.apply(*CI);
+  if (Input.Patch)
+    Input.Patch->apply(*CI);
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   auto Clang = prepareCompilerInstance(
@@ -1767,7 +1768,8 @@ codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              : std::move(Flow).run({FileName, Command, *Preamble,
                                     // We want to serve code completions with
                                     // low latency, so don't bother patching.
-                                    PreamblePatch(), Contents, *Offset, VFS});
+                                    /*PreamblePatch=*/llvm::None, Contents,
+                                    *Offset, VFS});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1792,10 +1794,11 @@ SignatureHelp signatureHelp(PathRef FileName,
   PI.CompileCommand = Command;
   PI.Contents = Contents.str();
   PI.FS = std::move(VFS);
-  auto PP = PreamblePatch::create(FileName, PI, Preamble);
   semaCodeComplete(
       std::make_unique<SignatureHelpCollector>(Options, Index, Result), Options,
-      {FileName, Command, Preamble, PP, Contents, *Offset, std::move(PI.FS)});
+      {FileName, Command, Preamble,
+       PreamblePatch::create(FileName, PI, Preamble), Contents, *Offset,
+       std::move(PI.FS)});
   return Result;
 }
 

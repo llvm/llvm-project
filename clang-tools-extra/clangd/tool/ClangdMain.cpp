@@ -417,6 +417,15 @@ opt<bool> PrettyPrint{
     init(false),
 };
 
+opt<bool> AsyncPreamble{
+    "async-preamble",
+    cat(Misc),
+    desc("Reuse even stale preambles, and rebuild them in the background. This "
+         "improves latency at the cost of accuracy."),
+    init(ClangdServer::Options().AsyncPreambleBuilds),
+    Hidden,
+};
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
