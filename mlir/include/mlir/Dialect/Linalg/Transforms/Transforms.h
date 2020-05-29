@@ -521,7 +521,7 @@ struct LinalgCopyVTWForwardingPattern
 LogicalResult applyStagedPatterns(
     Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
     const OwningRewritePatternList &stage2Patterns,
-    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
+    function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 } // namespace linalg
 } // namespace mlir
 
