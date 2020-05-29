@@ -366,6 +366,28 @@ enum Width : unsigned {
   WIDTH_DEFAULT_ = WIDTH_M1_DEFAULT_ + 1,
 };
 
+enum ModeRegisterMasks : uint32_t {
+  FP_ROUND_MASK = 0xf << 0,  // Bits 0..3
+  FP_DENORM_MASK = 0xf << 4, // Bits 4..7
+  DX10_CLAMP_MASK = 1 << 8,
+  IEEE_MODE_MASK = 1 << 9,
+  LOD_CLAMP_MASK = 1 << 10,
+  DEBUG_MASK = 1 << 11,
+
+  // EXCP_EN fields.
+  EXCP_EN_INVALID_MASK = 1 << 12,
+  EXCP_EN_INPUT_DENORMAL_MASK = 1 << 13,
+  EXCP_EN_FLOAT_DIV0_MASK = 1 << 14,
+  EXCP_EN_OVERFLOW_MASK = 1 << 15,
+  EXCP_EN_UNDERFLOW_MASK = 1 << 16,
+  EXCP_EN_INEXACT_MASK = 1 << 17,
+  EXCP_EN_INT_DIV0_MASK = 1 << 18,
+
+  GPR_IDX_EN_MASK = 1 << 27,
+  VSKIP_MASK = 1 << 28,
+  CSP_MASK = 0x7u << 29 // Bits 29..31
+};
+
 } // namespace Hwreg
 
 namespace Swizzle { // Encoding of swizzle macro used in ds_swizzle_b32.
