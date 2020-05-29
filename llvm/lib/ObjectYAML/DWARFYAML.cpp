@@ -23,6 +23,13 @@ bool DWARFYAML::Data::isEmpty() const {
          DebugLines.empty();
 }
 
+SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
+  SetVector<StringRef> SecNames;
+  if (!DebugStrings.empty())
+    SecNames.insert("debug_str");
+  return SecNames;
+}
+
 namespace yaml {
 
 void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
