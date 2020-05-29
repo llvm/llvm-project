@@ -10,6 +10,7 @@
 #include "../../runtime/iostat.h"
 #include "SymbolMap.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -1315,7 +1316,8 @@ private:
                 // Generating value for lhs to get fir.boxchar.
                 auto lhs = genExprValue(assign.lhs);
                 auto rhs = genExprValue(assign.rhs);
-                builder->createAssign(lhs, rhs);
+                Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
+                    lhs, rhs);
                 return;
               }
               if (lhsType->category() ==
@@ -1593,11 +1595,12 @@ private:
   /// depends will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var) {
     const auto &sym = var.getSymbol();
-    const auto loc = toLocation();
+    const auto loc = genLocation(sym.name());
     builder->setLocation(loc);
     auto idxTy = builder->getIndexType();
     const auto isDummy = Fortran::semantics::IsDummy(sym);
     const auto isResult = Fortran::semantics::IsFunctionResult(sym);
+    Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
     SymbolBoxAnalyzer sia(sym);
     sia.analyze();
 
@@ -1630,16 +1633,16 @@ private:
     if (sia.isChar) {
       // if element type is a CHARACTER, determine the LEN value
       if (isDummy || isResult) {
-        auto unboxchar = builder->createUnboxChar(addr);
+        auto unboxchar = charHelp.createUnboxChar(addr);
         auto boxAddr = unboxchar.first;
         if (auto c = sia.getCharLenConst()) {
           // Set/override LEN with a constant
-          len = builder->createIntegerConstant(idxTy, *c);
-          addr = builder->createEmboxChar(boxAddr, len);
+          len = builder->createIntegerConstant(loc, idxTy, *c);
+          addr = charHelp.createEmboxChar(boxAddr, len);
         } else if (auto e = sia.getCharLenExpr()) {
           // Set/override LEN with an expression
           len = genExprValue(*e);
-          addr = builder->createEmboxChar(boxAddr, len);
+          addr = charHelp.createEmboxChar(boxAddr, len);
         } else {
           // LEN is from the boxchar
           len = unboxchar.second;
@@ -1778,8 +1781,8 @@ private:
       assert(!mustBeDummy);
       auto charTy = genType(var);
       auto c = sia.getCharLenConst();
-      mlir::Value local = c ? builder->createCharacterTemp(charTy, *c)
-                            : builder->createCharacterTemp(charTy, len);
+      mlir::Value local = c ? charHelp.createCharacterTemp(charTy, *c)
+                            : charHelp.createCharacterTemp(charTy, len);
       addCharSymbol(sym, local, len);
       return;
     }
@@ -1803,7 +1806,9 @@ private:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) -> void {
       if (arg.passBy == PassBy::AddressAndLength) {
-        auto box = builder->createEmboxChar(arg.firArgument, arg.firLength);
+        auto loc = toLocation();
+        Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
+        auto box = charHelp.createEmboxChar(arg.firArgument, arg.firLength);
         addSymbol(arg.entity.get(), box);
       } else {
         addSymbol(arg.entity.get(), arg.firArgument);

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RTBuilder.h"
+#include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -567,7 +568,6 @@ mlir::Value
 IntrinsicLibrary::outlineInWrapper(Generator generator, llvm::StringRef name,
                                    mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
-  auto module = builder.getModule();
   auto funcType = getFunctionType(resultType, args, builder);
   std::string wrapperName = getIntrinsicWrapperName(name, funcType);
   auto function = builder.getNamedFunction(wrapperName);
@@ -740,9 +740,10 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
   assert(args.size() >= 1);
 
   auto arg = args[0];
-  auto dataAndLen = builder.createUnboxChar(arg);
+  Fortran::lower::CharacterExprHelper helper{builder, loc};
+  auto dataAndLen = helper.createUnboxChar(arg);
   auto charType = fir::CharacterType::get(
-      builder.getContext(), builder.getCharacterKind(arg.getType()));
+      builder.getContext(), helper.getCharacterKind(arg.getType()));
   auto refType = builder.getRefType(charType);
   auto charAddr = builder.createHere<fir::ConvertOp>(refType, dataAndLen.first);
   auto charVal = builder.createHere<fir::LoadOp>(charType, charAddr);
@@ -754,7 +755,8 @@ mlir::Value IntrinsicLibrary::genLenTrim(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
   // Optional KIND argument reflected in result type.
   assert(args.size() >= 1);
-  auto len = builder.createLenTrim(args[0]);
+  Fortran::lower::CharacterExprHelper helper{builder, loc};
+  auto len = helper.createLenTrim(args[0]);
   return builder.createHere<fir::ConvertOp>(resultType, len);
 }
 
