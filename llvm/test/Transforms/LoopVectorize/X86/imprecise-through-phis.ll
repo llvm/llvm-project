@@ -17,7 +17,7 @@ define double @sumIfScalar(double* nocapture readonly %arr) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
 ; CHECK-NEXT:    [[TOT:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TOT_NEXT:%.*]], [[NEXT_ITER]] ]
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr double, double* [[ARR:%.*]], i32 [[I]]
-; CHECK-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]]
+; CHECK-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]], align 8
 ; CHECK-NEXT:    [[TST:%.*]] = fcmp une double [[NEXTVAL]], 4.200000e+01
 ; CHECK-NEXT:    br i1 [[TST]], label [[DO_ADD:%.*]], label [[NO_ADD:%.*]]
 ; CHECK:       do.add:
@@ -72,7 +72,7 @@ define double @sumIfVector(double* nocapture readonly %arr) {
 ; SSE-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
 ; SSE-NEXT:    [[TOT:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[TOT_NEXT:%.*]], [[NEXT_ITER]] ]
 ; SSE-NEXT:    [[ADDR:%.*]] = getelementptr double, double* [[ARR:%.*]], i32 [[I]]
-; SSE-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]]
+; SSE-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]], align 8
 ; SSE-NEXT:    [[TST:%.*]] = fcmp fast une double [[NEXTVAL]], 4.200000e+01
 ; SSE-NEXT:    br i1 [[TST]], label [[DO_ADD:%.*]], label [[NO_ADD:%.*]]
 ; SSE:       do.add:
@@ -125,7 +125,7 @@ define double @sumIfVector(double* nocapture readonly %arr) {
 ; AVX-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
 ; AVX-NEXT:    [[TOT:%.*]] = phi double [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TOT_NEXT:%.*]], [[NEXT_ITER]] ]
 ; AVX-NEXT:    [[ADDR:%.*]] = getelementptr double, double* [[ARR]], i32 [[I]]
-; AVX-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]]
+; AVX-NEXT:    [[NEXTVAL:%.*]] = load double, double* [[ADDR]], align 8
 ; AVX-NEXT:    [[TST:%.*]] = fcmp fast une double [[NEXTVAL]], 4.200000e+01
 ; AVX-NEXT:    br i1 [[TST]], label [[DO_ADD:%.*]], label [[NO_ADD:%.*]]
 ; AVX:       do.add:
