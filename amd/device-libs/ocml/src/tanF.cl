@@ -11,8 +11,7 @@
 float
 MATH_MANGLE(tan)(float x)
 {
-    int ix = AS_INT(x);
-    int ax = ix & 0x7fffffff;
+    float ax = BUILTIN_ABS_F32(x);
 
     struct redret r = MATH_PRIVATE(trigred)(AS_FLOAT(ax));
 
@@ -22,10 +21,10 @@ MATH_MANGLE(tan)(float x)
     float t = MATH_PRIVATE(tanred)(r.hi, r.i & 1);
 #endif
 
-    t = AS_FLOAT(AS_INT(t) ^ (ix ^ ax));
+    t = AS_FLOAT(AS_INT(t) ^ (AS_INT(x) ^ AS_INT(ax)));
 
     if (!FINITE_ONLY_OPT()) {
-        t = ax >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : t;
+        t = AS_INT(ax) >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : t;
     }
 
     return t;
