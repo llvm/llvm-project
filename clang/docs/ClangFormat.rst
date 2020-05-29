@@ -240,3 +240,8 @@ In an SVN client, you can do:
 
 The option `-U0` will create a diff without context lines (the script would format
 those as well).
+
+Current State of Clang Format for LLVM
+======================================
+
+The following table :doc:`ClangFormattedStatus` shows the current status of clang-formatting for the entire LLVM source tree.
