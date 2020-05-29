@@ -7590,3 +7590,5 @@ let AddedComplexity = 10 in {
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
+
+include "AArch64InstrGISel.td"

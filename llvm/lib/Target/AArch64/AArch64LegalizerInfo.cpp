@@ -30,7 +30,8 @@ using namespace LegalizeActions;
 using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 
-AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
+AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
+    : ST(&ST) {
   using namespace TargetOpcode;
   const LLT p0 = LLT::pointer(0, 64);
   const LLT s1 = LLT::scalar(1);
@@ -51,6 +52,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT v2p0 = LLT::vector(2, p0);
+
+  const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
   // FIXME: support subtargets which have neon/fp-armv8 disabled.
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
@@ -413,7 +416,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   // Pointer-handling
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
+
+  if (TM.getCodeModel() == CodeModel::Small)
+    getActionDefinitionsBuilder(G_GLOBAL_VALUE).custom();
+  else
+    getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
@@ -634,9 +641,44 @@ bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
     return legalizeShlAshrLshr(MI, MRI, MIRBuilder, Observer);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(MachineInstr &MI,
+                                                      MachineRegisterInfo &MRI,
+                                                      MachineIRBuilder &MIRBuilder,
+                                                      GISelChangeObserver &Observer) const {
+  assert(MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  // We do this custom legalization to convert G_GLOBAL_VALUE into target ADRP +
+  // G_ADD_LOW instructions.
+  // By splitting this here, we can optimize accesses in the small code model by
+  // folding in the G_ADD_LOW into the load/store offset.
+  auto GV = MI.getOperand(1).getGlobal();
+  if (GV->isThreadLocal())
+    return true; // Don't want to modify TLS vars.
+
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  auto &TM = ST->getTargetLowering()->getTargetMachine();
+  unsigned OpFlags = ST->ClassifyGlobalReference(GV, TM);
+
+  if (OpFlags & AArch64II::MO_GOT)
+    return true;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  auto ADRP = MIRBuilder.buildInstr(AArch64::ADRP, {LLT::pointer(0, 64)}, {})
+                  .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
+  // Set the regclass on the dest reg too.
+  MRI.setRegClass(ADRP.getReg(0), &AArch64::GPR64RegClass);
+
+  MIRBuilder.buildInstr(AArch64::G_ADD_LOW, {DstReg}, {ADRP})
+      .addGlobalAddress(GV, 0,
+                        OpFlags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(
