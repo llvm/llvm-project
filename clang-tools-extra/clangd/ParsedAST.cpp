@@ -14,6 +14,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "IncludeFixer.h"
+#include "Preamble.h"
 #include "SourceCode.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 // Force the linker to link in Clang-tidy modules.
 // clangd doesn't support the static analyzer.
@@ -268,6 +270,11 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
   StoreDiags ASTDiags;
 
+  llvm::Optional<PreamblePatch> Patch;
+  if (Preamble) {
+    Patch = PreamblePatch::create(Filename, Inputs, *Preamble);
+    Patch->apply(*CI);
+  }
   auto Clang = prepareCompilerInstance(
       std::move(CI), PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
@@ -369,12 +376,14 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
   }
 
-  // Copy over the includes from the preamble, then combine with the
-  // non-preamble includes below.
-  auto Includes = Preamble ? Preamble->Includes : IncludeStructure{};
-  // Replay the preamble includes so that clang-tidy checks can see them.
-  if (Preamble)
+  IncludeStructure Includes;
+  // If we are using a preamble, copy existing includes.
+  if (Preamble) {
+    Includes = Preamble->Includes;
+    Includes.MainFileIncludes = Patch->preambleIncludes();
+    // Replay the preamble includes so that clang-tidy checks can see them.
     ReplayPreamble::attach(Includes, *Clang, Preamble->Preamble.getBounds());
+  }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).

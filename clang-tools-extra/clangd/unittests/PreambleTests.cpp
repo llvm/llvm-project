@@ -8,6 +8,7 @@
 
 #include "Annotations.h"
 #include "Compiler.h"
+#include "Headers.h"
 #include "Preamble.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -21,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <clang/Frontend/FrontendActions.h>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -30,51 +32,58 @@ namespace clang {
 namespace clangd {
 namespace {
 
+MATCHER_P2(Distance, File, D, "") {
+  return arg.first() == File && arg.second == D;
+}
+
+std::shared_ptr<const PreambleData>
+createPreamble(llvm::StringRef Contents = "") {
+  auto TU = TestTU::withCode(Contents);
+  // ms-compatibility changes meaning of #import, make sure it is turned off.
+  TU.ExtraArgs = {"-fno-ms-compatibility"};
+  TU.Filename = "preamble.cpp";
+  auto PI = TU.inputs();
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(PI, Diags);
+  if (!CI) {
+    ADD_FAILURE() << "failed to build compiler invocation";
+    return nullptr;
+  }
+  if (auto Preamble = buildPreamble(TU.Filename, *CI, PI, true, nullptr))
+    return Preamble;
+  ADD_FAILURE() << "failed to build preamble";
+  return nullptr;
+}
+
 // Builds a preamble for BaselineContents, patches it for ModifiedContents and
 // returns the includes in the patch.
 IncludeStructure
 collectPatchedIncludes(llvm::StringRef ModifiedContents,
                        llvm::StringRef BaselineContents,
                        llvm::StringRef MainFileName = "main.cpp") {
-  std::string MainFile = testPath(MainFileName);
-  ParseInputs PI;
-  PI.FS = new llvm::vfs::InMemoryFileSystem;
-  MockCompilationDatabase CDB;
+  auto BaselinePreamble = createPreamble(BaselineContents);
+  // Create the patch.
+  auto TU = TestTU::withCode(ModifiedContents);
+  TU.Filename = MainFileName.str();
   // ms-compatibility changes meaning of #import, make sure it is turned off.
-  CDB.ExtraClangFlags.push_back("-fno-ms-compatibility");
-  PI.CompileCommand = CDB.getCompileCommand(MainFile).getValue();
-  // Create invocation
+  TU.ExtraArgs = {"-fno-ms-compatibility"};
+  auto PI = TU.inputs();
+  auto PP = PreamblePatch::create(testPath(TU.Filename), PI, *BaselinePreamble);
+  // Collect patch contents.
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(PI, Diags);
-  assert(CI && "failed to create compiler invocation");
-  // Build baseline preamble.
-  PI.Contents = BaselineContents.str();
-  PI.Version = "baseline preamble";
-  auto BaselinePreamble = buildPreamble(MainFile, *CI, PI, true, nullptr);
-  assert(BaselinePreamble && "failed to build baseline preamble");
-  // Create the patch.
-  PI.Contents = ModifiedContents.str();
-  PI.Version = "modified contents";
-  auto PP = PreamblePatch::create(MainFile, PI, *BaselinePreamble);
-  // Collect patch contents.
   PP.apply(*CI);
-  llvm::StringRef PatchContents;
-  for (const auto &Rempaped : CI->getPreprocessorOpts().RemappedFileBuffers) {
-    if (Rempaped.first == testPath("__preamble_patch__.h")) {
-      PatchContents = Rempaped.second->getBuffer();
-      break;
-    }
-  }
-  // Run preprocessor over the modified contents with patched Invocation to and
-  // BaselinePreamble to collect includes in the patch. We trim the input to
-  // only preamble section to not collect includes in the mainfile.
+  // Run preprocessor over the modified contents with patched Invocation. We
+  // provide a preamble and trim contents to ensure only the implicit header
+  // introduced by the patch is parsed and nothing else.
+  // We don't run PP directly over the patch cotents to test production
+  // behaviour.
   auto Bounds = Lexer::ComputePreamble(ModifiedContents, *CI->getLangOpts());
   auto Clang =
       prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
                               llvm::MemoryBuffer::getMemBufferCopy(
                                   ModifiedContents.slice(0, Bounds.Size).str()),
                               PI.FS, Diags);
-  Clang->getPreprocessorOpts().ImplicitPCHInclude.clear();
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     ADD_FAILURE() << "failed begin source file";
@@ -162,6 +171,33 @@ TEST(PreamblePatchTest, MainFileIsEscaped) {
                       .MainFileIncludes;
   EXPECT_THAT(Includes, ElementsAre(AllOf(Field(&Inclusion::Written, "<a.h>"),
                                           Field(&Inclusion::HashLine, 0))));
+}
+
+TEST(PreamblePatchTest, PatchesPreambleIncludes) {
+  IgnoreDiagnostics Diags;
+  auto TU = TestTU::withCode(R"cpp(
+    #include "a.h"
+    #include "c.h"
+  )cpp");
+  TU.AdditionalFiles["a.h"] = "#include \"b.h\"";
+  TU.AdditionalFiles["b.h"] = "";
+  TU.AdditionalFiles["c.h"] = "";
+  auto PI = TU.inputs();
+  auto BaselinePreamble = buildPreamble(
+      TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true, nullptr);
+  // We drop c.h from modified and add a new header. Since the latter is patched
+  // we should only get a.h in preamble includes.
+  TU.Code = R"cpp(
+    #include "a.h"
+    #include "b.h"
+  )cpp";
+  auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(),
+                                  *BaselinePreamble);
+  // Only a.h should exists in the preamble, as c.h has been dropped and b.h was
+  // newly introduced.
+  EXPECT_THAT(PP.preambleIncludes(),
+              ElementsAre(AllOf(Field(&Inclusion::Written, "\"a.h\""),
+                                Field(&Inclusion::Resolved, testPath("a.h")))));
 }
 } // namespace
 } // namespace clangd
