@@ -10,6 +10,7 @@
 #include "../../runtime/character.h"
 #include "RTBuilder.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
@@ -123,8 +124,9 @@ Fortran::lower::genBoxCharCompare(Fortran::lower::AbstractConverter &converter,
                                   mlir::Value lhs, mlir::Value rhs) {
   auto &builder = converter.getFirOpBuilder();
   builder.setLocation(loc);
-  auto lhsPair = builder.materializeCharacter(lhs);
-  auto rhsPair = builder.materializeCharacter(rhs);
+  Fortran::lower::CharacterExprHelper helper{builder, loc};
+  auto lhsPair = helper.materializeCharacter(lhs);
+  auto rhsPair = helper.materializeCharacter(rhs);
   return genRawCharCompare(converter, loc, cmp, lhsPair.first, lhsPair.second,
                            rhsPair.first, rhsPair.second);
 }
