@@ -72,6 +72,7 @@ class DWARFContext : public DIContext {
   DWARFUnitVector DWOUnits;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugMacro> MacinfoDWO;
+  std::unique_ptr<DWARFDebugMacro> MacroDWO;
 
   /// The maximum DWARF version of all units.
   unsigned MaxVersion = 0;
@@ -110,8 +111,8 @@ class DWARFContext : public DIContext {
   enum MacroSecType {
     MacinfoSection,
     MacinfoDwoSection,
-    MacroSection
-    // FIXME: Add support for.debug_macro.dwo section.
+    MacroSection,
+    MacroDwoSection
   };
 
 public:
@@ -291,6 +292,9 @@ public:
   /// Get a pointer to the parsed DebugMacro information object.
   const DWARFDebugMacro *getDebugMacro();
 
+  /// Get a pointer to the parsed DebugMacroDWO information object.
+  const DWARFDebugMacro *getDebugMacroDWO();
+
   /// Get a reference to the parsed accelerator table object.
   const DWARFDebugNames &getDebugNames();
 
@@ -318,6 +322,9 @@ public:
 
   DataExtractor getStringExtractor() const {
     return DataExtractor(DObj->getStrSection(), false, 0);
+  }
+  DataExtractor getStringDWOExtractor() const {
+    return DataExtractor(DObj->getStrDWOSection(), false, 0);
   }
   DataExtractor getLineStringExtractor() const {
     return DataExtractor(DObj->getLineStrSection(), false, 0);
