@@ -278,6 +278,7 @@ class SelectionDAG {
   struct CallSiteDbgInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
+    bool NoMerge = false;
   };
 
   DenseMap<const SDNode *, CallSiteDbgInfo> SDCallSiteDbgInfo;
@@ -1914,6 +1915,18 @@ public:
     if (It == SDCallSiteDbgInfo.end())
       return nullptr;
     return It->second.HeapAllocSite;
+  }
+
+  void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {
+    if (NoMerge)
+      SDCallSiteDbgInfo[Node].NoMerge = NoMerge;
+  }
+
+  bool getNoMergeSiteInfo(const SDNode *Node) {
+    auto I = SDCallSiteDbgInfo.find(Node);
+    if (I == SDCallSiteDbgInfo.end())
+      return false;
+    return I->second.NoMerge;
   }
 
   /// Return the current function's default denormal handling kind for the given

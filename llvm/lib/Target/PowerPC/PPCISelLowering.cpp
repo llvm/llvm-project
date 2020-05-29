@@ -5586,6 +5586,7 @@ SDValue PPCTargetLowering::FinishCall(
 
   std::array<EVT, 2> ReturnTypes = {{MVT::Other, MVT::Glue}};
   Chain = DAG.getNode(CallOpc, dl, ReturnTypes, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CFlags.NoMerge);
   Glue = Chain.getValue(1);
 
   // When performing tail call optimization the callee pops its arguments off
@@ -5667,7 +5668,8 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isIndirectCall(Callee, DAG, Subtarget, isPatchPoint),
       // hasNest
       Subtarget.is64BitELFABI() &&
-          any_of(Outs, [](ISD::OutputArg Arg) { return Arg.Flags.isNest(); }));
+          any_of(Outs, [](ISD::OutputArg Arg) { return Arg.Flags.isNest(); }),
+      CLI.NoMerge);
 
   if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
     return LowerCall_64SVR4(Chain, Callee, CFlags, Outs, OutVals, Ins, dl, DAG,
