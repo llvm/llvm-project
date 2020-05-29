@@ -719,6 +719,9 @@ def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
     def is_compiler_clang_with_thread_sanitizer(self):
+        if is_running_under_asan():
+            return "Thread sanitizer tests are disabled when runing under ASAN"
+
         compiler_path = self.getCompiler()
         compiler = os.path.basename(compiler_path)
         if not compiler.startswith("clang"):
