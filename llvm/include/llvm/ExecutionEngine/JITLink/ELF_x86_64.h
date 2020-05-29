@@ -19,36 +19,33 @@ namespace llvm {
 namespace jitlink {
 
 namespace ELF_x86_64_Edges {
-
 enum ELFX86RelocationKind : Edge::Kind {
-  R_AMD64_NONE = Edge::FirstRelocation,
-  R_AMD64_64,
-  R_AMD64_PC32,
-  R_AMD64_GOT32,
-  R_AMD64_PLT32,
-  R_AMD64_COPY,
-  R_AMD64_GLOB_DAT,
-  R_AMD64_JUMP_SLOT,
-  R_AMD64_RELATIVE,
-  R_AMD64_GOTPCREL,
-  R_AMD64_32,
-  R_AMD64_32S,
-  R_AMD64_16,
-  R_AMD64_PC16,
-  R_AMD64_8,
-  R_AMD64_PC8,
-  R_AMD64_PC64,
-  R_AMD64_GOTOFF64,
-  R_AMD64_GOTPC32,
-  R_AMD64_SIZE32,
-  R_AMD64_SIZE64
+  Branch32 = Edge::FirstRelocation,
+  Branch32ToStub,
+  Pointer32,
+  Pointer64,
+  Pointer64Anon,
+  PCRel32,
+  PCRel32Minus1,
+  PCRel32Minus2,
+  PCRel32Minus4,
+  PCRel32Anon,
+  PCRel32Minus1Anon,
+  PCRel32Minus2Anon,
+  PCRel32Minus4Anon,
+  PCRel32GOTLoad,
+  PCRel32GOT,
+  PCRel32TLV,
+  Delta32,
+  Delta64,
+  NegDelta32,
+  NegDelta64,
 };
 
 } // end namespace ELF_x86_64_Edges
 
 /// jit-link the given object buffer, which must be a ELF x86-64 object file.
 void jitLink_ELF_x86_64(std::unique_ptr<JITLinkContext> Ctx);
-StringRef getELFX86RelocationKindName(Edge::Kind R);
 } // end namespace jitlink
 } // end namespace llvm
 
