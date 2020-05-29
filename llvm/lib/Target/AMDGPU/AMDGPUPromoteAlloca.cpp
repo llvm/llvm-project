@@ -339,7 +339,9 @@ static Value *stripBitcasts(Value *V) {
 static Value *
 calculateVectorIndex(Value *Ptr,
                      const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
-  GetElementPtrInst *GEP = cast<GetElementPtrInst>(stripBitcasts(Ptr));
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(stripBitcasts(Ptr));
+  if (!GEP)
+    return nullptr;
 
   auto I = GEPIdx.find(GEP);
   return I == GEPIdx.end() ? nullptr : I->second;
@@ -496,10 +498,12 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
       if (Inst->getType() == AllocaTy || Inst->getType()->isVectorTy())
         break;
 
-      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *Ptr = cast<LoadInst>(Inst)->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
+      if (!Index)
+        break;
 
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
@@ -515,9 +519,12 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
           SI->getValueOperand()->getType()->isVectorTy())
         break;
 
-      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
+      if (!Index)
+        break;
+
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *Elt = SI->getValueOperand();
