@@ -37,7 +37,7 @@ struct Function {
   BindableMatcher<Decl> getPattern() {
     return functionDecl(hasName("X"), unless(isImplicit()));
   }
-  Language getLang() { return Lang_C; }
+  TestLanguage getLang() { return Lang_C; }
 };
 
 struct Typedef {
@@ -45,7 +45,7 @@ struct Typedef {
   static constexpr auto *Definition = "typedef int X;";
   static constexpr auto *ConflictingDefinition = "typedef double X;";
   BindableMatcher<Decl> getPattern() { return typedefNameDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct TypedefAlias {
@@ -53,7 +53,7 @@ struct TypedefAlias {
   static constexpr auto *Definition = "using X = int;";
   static constexpr auto *ConflictingDefinition = "using X = double;";
   BindableMatcher<Decl> getPattern() { return typedefNameDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX11; }
+  TestLanguage getLang() { return Lang_CXX11; }
 };
 
 struct Enum {
@@ -61,7 +61,7 @@ struct Enum {
   static constexpr auto *Definition = "enum X { a, b };";
   static constexpr auto *ConflictingDefinition = "enum X { a, b, c };";
   BindableMatcher<Decl> getPattern() { return enumDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct EnumClass {
@@ -69,7 +69,7 @@ struct EnumClass {
   static constexpr auto *Definition = "enum class X { a, b };";
   static constexpr auto *ConflictingDefinition = "enum class X { a, b, c };";
   BindableMatcher<Decl> getPattern() { return enumDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX11; }
+  TestLanguage getLang() { return Lang_CXX11; }
 };
 
 struct EnumConstant {
@@ -77,7 +77,7 @@ struct EnumConstant {
   static constexpr auto *Definition = "enum E { X = 0 };";
   static constexpr auto *ConflictingDefinition = "enum E { X = 1 };";
   BindableMatcher<Decl> getPattern() { return enumConstantDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct Class {
@@ -88,7 +88,7 @@ struct Class {
   BindableMatcher<Decl> getPattern() {
     return cxxRecordDecl(hasName("X"), unless(isImplicit()));
   }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct Variable {
@@ -98,7 +98,7 @@ struct Variable {
   static constexpr auto *Definition = "int X;";
   static constexpr auto *ConflictingDefinition = "float X;";
   BindableMatcher<Decl> getPattern() { return varDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct ClassTemplate {
@@ -112,7 +112,7 @@ struct ClassTemplate {
   BindableMatcher<Decl> getPattern() {
     return classTemplateDecl(hasName("X"), unless(isImplicit()));
   }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 struct FunctionTemplate {
@@ -133,7 +133,7 @@ struct FunctionTemplate {
   }
   static std::string getDef0() { return Definition0; }
   static std::string getDef1() { return Definition1; }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 static const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
@@ -152,7 +152,7 @@ struct VarTemplate {
       constexpr int X = 0;
       )";
   BindableMatcher<Decl> getPattern() { return varTemplateDecl(hasName("X")); }
-  Language getLang() { return Lang_CXX14; }
+  TestLanguage getLang() { return Lang_CXX14; }
 };
 
 struct ClassTemplateSpec {
@@ -175,7 +175,7 @@ struct ClassTemplateSpec {
   BindableMatcher<Decl> getPattern() {
     return classTemplateSpecializationDecl(hasName("X"), unless(isImplicit()));
   }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 // Function template specializations are all "full" specializations.
@@ -208,7 +208,7 @@ struct FunctionTemplateSpec {
   }
   static std::string getDef0() { return Definition0; }
   static std::string getDef1() { return Definition1; }
-  Language getLang() { return Lang_CXX; }
+  TestLanguage getLang() { return Lang_CXX; }
 };
 
 static const internal::VariadicDynCastAllOfMatcher<
@@ -230,7 +230,7 @@ struct VarTemplateSpec {
   BindableMatcher<Decl> getPattern() {
     return varTemplateSpecializationDecl(hasName("X"), unless(isImplicit()));
   }
-  Language getLang() { return Lang_CXX14; }
+  TestLanguage getLang() { return Lang_CXX14; }
 };
 
 template <typename TypeParam, ASTImporter::ODRHandlingType ODRHandlingParam>
@@ -252,7 +252,7 @@ struct ODRViolation : ASTImporterOptionSpecificTestBase {
     return TypeParam::ConflictingProtoDef;
   }
   static BindableMatcher<Decl> getPattern() { return TypeParam().getPattern(); }
-  static Language getLang() { return TypeParam().getLang(); }
+  static TestLanguage getLang() { return TypeParam().getLang(); }
 
   template <std::string (*ToTUContent)(), std::string (*FromTUContent)(),
             void (*ResultChecker)(llvm::Expected<Decl *> &, Decl *, Decl *)>
