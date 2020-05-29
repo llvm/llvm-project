@@ -39,6 +39,8 @@ def SPV_CooperativeMatrixLengthNVOp : SPV_Op<"CooperativeMatrixLengthNV",
     ```
   }];
 
+  let assemblyFormat = "attr-dict `:` $type";
+
   let availability = [
     MinVersion<SPV_V_1_0>,
     MaxVersion<SPV_V_1_5>,
@@ -139,7 +141,7 @@ def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
 // -----
 
 def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
-  [NoSideEffect]> {
+  [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -186,6 +188,10 @@ def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
     %0 = spv.CooperativeMatrixMulAddNV %arg0, %arg1, %arg2,  :
       !spv.coopmatrix<Subgroup, i32, 8, 16>
     ```
+  }];
+
+  let assemblyFormat = [{
+    operands attr-dict`:` type($a) `,` type($b) `->` type($c)
   }];
 
   let availability = [
