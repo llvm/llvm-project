@@ -143,7 +143,7 @@ void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
 /// may be overridden by the target implementation.
 SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
                                                        const TargetMachine &TM){
-  assert(!GO->isDeclaration() && !GO->hasAvailableExternallyLinkage() &&
+  assert(!GO->isDeclarationForLinker() &&
          "Can only be used for global definitions");
 
   // Functions are classified as text sections.
