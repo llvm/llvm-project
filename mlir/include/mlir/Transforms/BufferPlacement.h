@@ -76,11 +76,23 @@ protected:
   TypeConverter *converter;
 };
 
-/// Converts the signature of the function using the type converter.
-/// It adds an extra argument for each illegally-typed function
-/// result to the function arguments. `BufferAssignmentTypeConverter`
-/// is a helper `TypeConverter` for this purpose. All the non-shaped types
-/// of the input function will be converted to memref.
+/// A helper type converter class for using inside Buffer Assignment operation
+/// conversion patterns. The default constructor keeps all the types intact
+/// except for the ranked-tensor types which is converted to memref types.
+class BufferAssignmentTypeConverter : public TypeConverter {
+public:
+  BufferAssignmentTypeConverter();
+
+  /// A helper function to check if `type` has been converted from non-memref
+  /// type to memref.
+  static bool isConvertedMemref(Type type, Type before);
+};
+
+/// Converts the signature of the function using the type converter. It adds an
+/// extra argument for each function result type which is going to be a memref
+/// type after type conversion. The other function result types remain
+/// unchanged. `BufferAssignmentTypeConverter` is a helper `TypeConverter` for
+/// this purpose.
 class FunctionAndBlockSignatureConverter
     : public BufferAssignmentOpConversionPattern<FuncOp> {
 public:
@@ -93,12 +105,14 @@ public:
                   ConversionPatternRewriter &rewriter) const final;
 };
 
-/// Converts the source `ReturnOp` to target `ReturnOp`, removes all
-/// the buffer operands from the operands list, and inserts `CopyOp`s
-/// for all buffer operands instead.
+/// Rewrites the `ReturnOp` to conform with the changed function signature.
+/// Operands that correspond to return values that have been rewritten from
+/// tensor results to memref arguments are dropped. In their place, a
+/// corresponding copy operation from the operand to the new function argument
+/// is inserted.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-class NoBufferOperandsReturnOpConverter
+class BufferAssignmentReturnOpConverter
     : public BufferAssignmentOpConversionPattern<ReturnOpSourceTy> {
 public:
   using BufferAssignmentOpConversionPattern<
@@ -108,50 +122,41 @@ public:
   LogicalResult
   matchAndRewrite(ReturnOpSourceTy returnOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    // Split the operands by their kinds whether they are converted memref or
+    // not.
+    SmallVector<Value, 2> needCopyOperands, newOperands;
+    unsigned operandsSize = operands.size();
+    needCopyOperands.reserve(operandsSize);
+    newOperands.reserve(operandsSize);
+    for (auto operand : llvm::enumerate(operands))
+      if (BufferAssignmentTypeConverter::isConvertedMemref(
+              operand.value().getType(),
+              returnOp.getOperand(operand.index()).getType()))
+        needCopyOperands.push_back(operand.value());
+      else
+        newOperands.push_back(operand.value());
+
     Block &entryBlock = returnOp.getParentRegion()->front();
     unsigned numFuncArgs = entryBlock.getNumArguments();
-    Location loc = returnOp.getLoc();
-
-    // The target `ReturnOp` should not contain any memref operands.
-    SmallVector<Value, 2> newOperands(operands.begin(), operands.end());
-    llvm::erase_if(newOperands, [](Value operand) {
-      return operand.getType().isa<MemRefType>();
-    });
 
     // Find the index of the first destination buffer.
-    unsigned numBufferOperands = operands.size() - newOperands.size();
-    unsigned destArgNum = numFuncArgs - numBufferOperands;
-
+    assert(needCopyOperands.size() <= numFuncArgs &&
+           "The number of operands of return operation is more than the "
+           "number of function arguments.");
+    unsigned destArgNum = numFuncArgs - needCopyOperands.size();
     rewriter.setInsertionPoint(returnOp);
-    // Find the corresponding destination buffer for each memref operand.
-    for (Value operand : operands)
-      if (operand.getType().isa<MemRefType>()) {
-        assert(destArgNum < numFuncArgs &&
-               "The number of operands of return operation is more than the "
-               "number of function argument.");
-
-        // For each memref type operand of the source `ReturnOp`, a new `CopyOp`
-        // is inserted that copies the buffer content from the operand to the
-        // target.
-        rewriter.create<CopyOpTy>(loc, operand,
-                                  entryBlock.getArgument(destArgNum));
-        ++destArgNum;
-      }
+    for (Value operand : needCopyOperands) {
+      // Insert a `CopyOp` for each converted memref-type operand.
+      rewriter.create<CopyOpTy>(returnOp.getLoc(), operand,
+                                entryBlock.getArgument(destArgNum));
+      ++destArgNum;
+    }
 
     // Insert the new target Return operation.
     rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp, newOperands);
     return success();
   }
 };
-
-/// A helper type converter class for using inside Buffer Assignment operation
-/// conversion patterns. The default constructor keeps all the types intact
-/// except for the ranked-tensor types which is converted to memref types.
-class BufferAssignmentTypeConverter : public TypeConverter {
-public:
-  BufferAssignmentTypeConverter();
-};
-
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_BUFFERPLACEMENT_H

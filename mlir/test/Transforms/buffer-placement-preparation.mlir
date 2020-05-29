@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file %s | FileCheck %s -dump-input-on-failure
 
 // CHECK-LABEL: func @func_signature_conversion
 func @func_signature_conversion(%arg0: tensor<4x8xf32>) {
@@ -8,12 +8,28 @@ func @func_signature_conversion(%arg0: tensor<4x8xf32>) {
 
 // -----
 
-// expected-error @below {{BufferAssignmentPlacer doesn't currently support functions which return memref typed values}}
-// expected-error @below {{failed to legalize operation 'func'}}
-func @memref_in_function_results(%arg0: tensor<4x8xf32>) -> (tensor<4x8xf32>, memref<5xf32>) {
-  %0 = alloc() : memref<5xf32>
-  return %arg0, %0 : tensor<4x8xf32>, memref<5xf32>
+// Only tensor typed function result should be converted to memref and move to the
+// function arguments list. The other memref function results remain as function
+// results.
+
+#map0 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: func @memref_in_function_results
+func @memref_in_function_results(%arg0: tensor<5xf32>, %arg1: memref<10xf32>) -> (tensor<5xf32>, memref<10xf32>, memref<15xf32>) {
+  %0 = alloc() : memref<15xf32>
+  %1 = linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg0 {
+    ^bb0(%gen1_arg0: f32):
+      %tmp1 = exp %gen1_arg0 : f32
+      linalg.yield %tmp1 : f32
+    }: tensor<5xf32> -> tensor<5xf32>
+  return %1, %arg1, %0 : tensor<5xf32>, memref<10xf32>, memref<15xf32>
 }
+//      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[RESULT:.*]]: memref<5xf32>)
+// CHECK-SAME: (memref<10xf32>, memref<15xf32>)
+//      CHECK: %[[FIRST_ALLOC:.*]] = alloc()
+//      CHECK: %[[LINALG_ALLOC:.*]] = alloc()
+//      CHECK: linalg.copy(%[[LINALG_ALLOC]], %[[RESULT]])
+//      CHECK: return %[[ARG1]], %[[FIRST_ALLOC]]
 
 // -----
 
