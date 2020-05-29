@@ -119,6 +119,9 @@ public:
   /// using the presumed-location mechanism.
   std::vector<Inclusion> preambleIncludes() const;
 
+  /// Returns textual patch contents.
+  llvm::StringRef text() const { return PatchContents; }
+
 private:
   PreamblePatch() = default;
   std::string PatchContents;

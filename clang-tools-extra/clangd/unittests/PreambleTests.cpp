@@ -26,7 +26,9 @@
 #include <string>
 #include <vector>
 
+using testing::Contains;
 using testing::Field;
+using testing::MatchesRegex;
 
 namespace clang {
 namespace clangd {
@@ -180,6 +182,109 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   EXPECT_THAT(PP.preambleIncludes(),
               ElementsAre(AllOf(Field(&Inclusion::Written, "\"a.h\""),
                                 Field(&Inclusion::Resolved, testPath("a.h")))));
+}
+
+llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
+                                           llvm::StringRef Modified) {
+  auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
+  if (!BaselinePreamble) {
+    ADD_FAILURE() << "Failed to build baseline preamble";
+    return llvm::None;
+  }
+
+  IgnoreDiagnostics Diags;
+  auto TU = TestTU::withCode(Modified);
+  auto CI = buildCompilerInvocation(TU.inputs(), Diags);
+  if (!CI) {
+    ADD_FAILURE() << "Failed to build compiler invocation";
+    return llvm::None;
+  }
+  return ParsedAST::build(testPath("main.cpp"), TU.inputs(), std::move(CI), {},
+                          BaselinePreamble);
+}
+
+std::string getPreamblePatch(llvm::StringRef Baseline,
+                             llvm::StringRef Modified) {
+  auto BaselinePreamble = TestTU::withCode(Baseline).preamble();
+  if (!BaselinePreamble) {
+    ADD_FAILURE() << "Failed to build baseline preamble";
+    return "";
+  }
+  auto TU = TestTU::withCode(Modified);
+  return PreamblePatch::create(testPath("main.cpp"), TU.inputs(),
+                               *BaselinePreamble)
+      .text()
+      .str();
+}
+
+TEST(PreamblePatchTest, Define) {
+  // BAR should be defined while parsing the AST.
+  struct {
+    llvm::StringLiteral Contents;
+    llvm::StringLiteral ExpectedPatch;
+  } Cases[] = {
+      {
+          R"cpp(
+        #define BAR
+        [[BAR]])cpp",
+          R"cpp(#line 0 ".*main.cpp"
+#define BAR
+)cpp",
+      },
+      // multiline macro
+      {
+          R"cpp(
+        #define BAR \
+
+        [[BAR]])cpp",
+          R"cpp(#line 0 ".*main.cpp"
+#define BAR
+)cpp",
+      },
+      // multiline macro
+      {
+          R"cpp(
+        #define \
+                BAR
+        [[BAR]])cpp",
+          R"cpp(#line 0 ".*main.cpp"
+#define BAR
+)cpp",
+      },
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Contents);
+    Annotations Modified(Case.Contents);
+    EXPECT_THAT(getPreamblePatch("", Modified.code()),
+                MatchesRegex(Case.ExpectedPatch.str()));
+
+    auto AST = createPatchedAST("", Modified.code());
+    ASSERT_TRUE(AST);
+    EXPECT_THAT(AST->getDiagnostics(),
+                Not(Contains(Field(&Diag::Range, Modified.range()))));
+  }
+}
+
+TEST(PreamblePatchTest, OrderingPreserved) {
+  llvm::StringLiteral Baseline = "#define BAR(X) X";
+  Annotations Modified(R"cpp(
+    #define BAR(X, Y) X Y
+    #define BAR(X) X
+    [[BAR]](int y);
+  )cpp");
+
+  llvm::StringLiteral ExpectedPatch(R"cpp(#line 0 ".*main.cpp"
+#define BAR\(X, Y\) X Y
+#define BAR\(X\) X
+)cpp");
+  EXPECT_THAT(getPreamblePatch(Baseline, Modified.code()),
+              MatchesRegex(ExpectedPatch.str()));
+
+  auto AST = createPatchedAST(Baseline, Modified.code());
+  ASSERT_TRUE(AST);
+  EXPECT_THAT(AST->getDiagnostics(),
+              Not(Contains(Field(&Diag::Range, Modified.range()))));
 }
 } // namespace
 } // namespace clangd
