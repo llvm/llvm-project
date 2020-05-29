@@ -112,7 +112,9 @@ void ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(GnuDebugLinkSection &Sec) {}
 
-template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {}
+template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {
+  Sec.Size = sizeof(Elf_Word) + Sec.GroupMembers.size() * sizeof(Elf_Word);
+}
 
 template <class ELFT>
 void ELFSectionSizer<ELFT>::visit(SectionIndexSection &Sec) {}
@@ -966,6 +968,12 @@ Error Section::removeSectionReferences(
 void GroupSection::finalize() {
   this->Info = Sym->Index;
   this->Link = SymTab->Index;
+}
+
+Error GroupSection::removeSectionReferences(
+    bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
+  llvm::erase_if(GroupMembers, ToRemove);
+  return Error::success();
 }
 
 Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
