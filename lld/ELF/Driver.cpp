@@ -422,11 +422,11 @@ static bool isKnownZFlag(StringRef s) {
          s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
          s == "nognustack" || s == "nokeep-text-section-prefix" ||
          s == "norelro" || s == "noseparate-code" || s == "notext" ||
-         s == "now" || s == "origin" || s == "pac-plt" || s == "relro" ||
-         s == "retpolineplt" || s == "rodynamic" || s == "shstk" ||
-         s == "text" || s == "undefs" || s == "wxneeded" ||
-         s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
-         s.startswith("stack-size=");
+         s == "now" || s == "origin" || s == "pac-plt" || s == "rel" ||
+         s == "rela" || s == "relro" || s == "retpolineplt" ||
+         s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
+         s == "wxneeded" || s.startswith("common-page-size=") ||
+         s.startswith("max-page-size=") || s.startswith("stack-size=");
 }
 
 // Report an error for an unknown -z option.
@@ -842,6 +842,22 @@ static std::vector<StringRef> getSymbolOrderingFile(MemoryBufferRef mb) {
   return names.takeVector();
 }
 
+static bool getIsRela(opt::InputArgList &args) {
+  // If -z rel or -z rela is specified, use the last option.
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    StringRef s(arg->getValue());
+    if (s == "rel")
+      return false;
+    if (s == "rela")
+      return true;
+  }
+
+  // Otherwise use the psABI defined relocation entry format.
+  uint16_t m = config->emachine;
+  return m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON || m == EM_PPC ||
+         m == EM_PPC64 || m == EM_RISCV || m == EM_X86_64;
+}
+
 static void parseClangOption(StringRef opt, const Twine &msg) {
   std::string err;
   raw_string_ostream os(err);
@@ -1204,20 +1220,19 @@ static void setConfigs(opt::InputArgList &args) {
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
-  //  Rel:  Addends are stored to the location where relocations are applied.
+  //  Rel: Addends are stored to the location where relocations are applied. It
+  //  cannot pack the full range of addend values for all relocation types, but
+  //  this only affects relocation types that we don't support emitting as
+  //  dynamic relocations (see getDynRel).
   //  Rela: Addends are stored as part of relocation entry.
   //
   // In other words, Rela makes it easy to read addends at the price of extra
-  // 4 or 8 byte for each relocation entry. We don't know why ELF defined two
-  // different mechanisms in the first place, but this is how the spec is
-  // defined.
+  // 4 or 8 byte for each relocation entry.
   //
-  // You cannot choose which one, Rel or Rela, you want to use. Instead each
-  // ABI defines which one you need to use. The following expression expresses
-  // that.
-  config->isRela = m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON ||
-                   m == EM_PPC || m == EM_PPC64 || m == EM_RISCV ||
-                   m == EM_X86_64;
+  // We pick the format for dynamic relocations according to the psABI for each
+  // processor, but a contrary choice can be made if the dynamic loader
+  // supports.
+  config->isRela = getIsRela(args);
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
