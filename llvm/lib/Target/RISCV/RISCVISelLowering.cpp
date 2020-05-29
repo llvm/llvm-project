@@ -2353,6 +2353,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
