@@ -30,11 +30,14 @@ namespace DwarfCFIEH {
 
 template <typename ELFT>
 class PrinterContext {
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Phdr = typename ELFT::Phdr;
+
   ScopedPrinter &W;
   const object::ELFObjectFile<ELFT> *ObjF;
 
-  void printEHFrameHdr(const typename ELFT::Phdr *EHFramePHdr) const;
-  void printEHFrame(const typename ELFT::Shdr *EHFrameShdr) const;
+  void printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const;
+  void printEHFrame(const Elf_Shdr *EHFrameShdr) const;
 
 public:
   PrinterContext(ScopedPrinter &W, const object::ELFObjectFile<ELFT> *ObjF)
@@ -44,13 +47,14 @@ public:
 };
 
 template <class ELFT>
-static const typename object::ELFObjectFile<ELFT>::Elf_Shdr *
+static const typename ELFT::Shdr *
 findSectionByAddress(const object::ELFObjectFile<ELFT> *ObjF, uint64_t Addr) {
-  auto Sections = ObjF->getELFFile()->sections();
-  if (Error E = Sections.takeError())
-    reportError(std::move(E), ObjF->getFileName());
+  Expected<typename ELFT::ShdrRange> SectionsOrErr =
+      ObjF->getELFFile()->sections();
+  if (!SectionsOrErr)
+    reportError(SectionsOrErr.takeError(), ObjF->getFileName());
 
-  for (const auto &Shdr : *Sections)
+  for (const typename ELFT::Shdr &Shdr : *SectionsOrErr)
     if (Shdr.sh_addr == Addr)
       return &Shdr;
   return nullptr;
@@ -60,37 +64,38 @@ template <typename ELFT>
 void PrinterContext<ELFT>::printUnwindInformation() const {
   const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
 
-  auto PHs = Obj->program_headers();
-  if (Error E = PHs.takeError())
-    reportError(std::move(E), ObjF->getFileName());
+  Expected<typename ELFT::PhdrRange> PhdrsOrErr = Obj->program_headers();
+  if (!PhdrsOrErr)
+    reportError(PhdrsOrErr.takeError(), ObjF->getFileName());
 
-  for (const auto &Phdr : *PHs) {
-    if (Phdr.p_type == ELF::PT_GNU_EH_FRAME) {
-      if (Phdr.p_memsz != Phdr.p_filesz)
-        reportError(object::createError(
-                        "p_memsz does not match p_filesz for GNU_EH_FRAME"),
-                    ObjF->getFileName());
-      printEHFrameHdr(&Phdr);
-      break;
-    }
+  for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
+    if (Phdr.p_type != ELF::PT_GNU_EH_FRAME)
+      continue;
+
+    if (Phdr.p_memsz != Phdr.p_filesz)
+      reportError(object::createError(
+                      "p_memsz does not match p_filesz for GNU_EH_FRAME"),
+                  ObjF->getFileName());
+    printEHFrameHdr(&Phdr);
+    break;
   }
 
-  auto Sections = Obj->sections();
-  if (Error E = Sections.takeError())
-    reportError(std::move(E), ObjF->getFileName());
+  Expected<typename ELFT::ShdrRange> SectionsOrErr =
+      ObjF->getELFFile()->sections();
+  if (!SectionsOrErr)
+    reportError(SectionsOrErr.takeError(), ObjF->getFileName());
 
-  for (const auto &Shdr : *Sections) {
-    auto SectionName = Obj->getSectionName(&Shdr);
-    if (Error E = SectionName.takeError())
-      reportError(std::move(E), ObjF->getFileName());
-
-    if (*SectionName == ".eh_frame")
+  for (const Elf_Shdr &Shdr : *SectionsOrErr) {
+    Expected<StringRef> NameOrErr = Obj->getSectionName(&Shdr);
+    if (!NameOrErr)
+      reportError(NameOrErr.takeError(), ObjF->getFileName());
+    if (*NameOrErr == ".eh_frame")
       printEHFrame(&Shdr);
   }
 }
 
 template <typename ELFT>
-void PrinterContext<ELFT>::printEHFrameHdr(const typename ELFT::Phdr *EHFramePHdr) const {
+void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   DictScope L(W, "EHFrameHeader");
   uint64_t EHFrameHdrAddress = EHFramePHdr->p_vaddr;
   W.startLine() << format("Address: 0x%" PRIx64 "\n", EHFrameHdrAddress);
@@ -98,14 +103,12 @@ void PrinterContext<ELFT>::printEHFrameHdr(const typename ELFT::Phdr *EHFramePHd
   W.startLine() << format("Size: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_memsz);
 
   const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const typename ELFT::Shdr *EHFrameHdrShdr =
-      findSectionByAddress(ObjF, EHFramePHdr->p_vaddr);
-  if (EHFrameHdrShdr) {
-    auto SectionName = Obj->getSectionName(EHFrameHdrShdr);
-    if (Error E = SectionName.takeError())
-      reportError(std::move(E), ObjF->getFileName());
-
-    W.printString("Corresponding Section", *SectionName);
+  if (const Elf_Shdr *EHFrameHdr =
+          findSectionByAddress(ObjF, EHFramePHdr->p_vaddr)) {
+    Expected<StringRef> NameOrErr = Obj->getSectionName(EHFrameHdr);
+    if (!NameOrErr)
+      reportError(NameOrErr.takeError(), ObjF->getFileName());
+    W.printString("Corresponding Section", *NameOrErr);
   }
 
   Expected<ArrayRef<uint8_t>> Content = Obj->getSegmentContents(EHFramePHdr);
@@ -170,8 +173,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const typename ELFT::Phdr *EHFramePHd
 }
 
 template <typename ELFT>
-void PrinterContext<ELFT>::printEHFrame(
-    const typename ELFT::Shdr *EHFrameShdr) const {
+void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
   uint64_t Address = EHFrameShdr->sh_addr;
   uint64_t ShOffset = EHFrameShdr->sh_offset;
   W.startLine() << format(".eh_frame section at offset 0x%" PRIx64
@@ -179,12 +181,12 @@ void PrinterContext<ELFT>::printEHFrame(
                           ShOffset, Address);
   W.indent();
 
-  const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  auto Result = Obj->getSectionContents(EHFrameShdr);
-  if (Error E = Result.takeError())
-    reportError(std::move(E), ObjF->getFileName());
+  Expected<ArrayRef<uint8_t>> DataOrErr =
+      ObjF->getELFFile()->getSectionContents(EHFrameShdr);
+  if (!DataOrErr)
+    reportError(DataOrErr.takeError(), ObjF->getFileName());
 
-  DWARFDataExtractor DE(*Result,
+  DWARFDataExtractor DE(*DataOrErr,
                         ELFT::TargetEndianness == support::endianness::little,
                         ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF->getArch()), /*IsEH=*/true,
@@ -192,11 +194,10 @@ void PrinterContext<ELFT>::printEHFrame(
   if (Error E = EHFrame.parse(DE))
     reportError(std::move(E), ObjF->getFileName());
 
-  for (const auto &Entry : EHFrame) {
-    if (const auto *CIE = dyn_cast<dwarf::CIE>(&Entry)) {
+  for (const dwarf::FrameEntry &Entry : EHFrame) {
+    if (const dwarf::CIE *CIE = dyn_cast<dwarf::CIE>(&Entry)) {
       W.startLine() << format("[0x%" PRIx64 "] CIE length=%" PRIu64 "\n",
-                              Address + CIE->getOffset(),
-                              CIE->getLength());
+                              Address + CIE->getOffset(), CIE->getLength());
       W.indent();
 
       W.printNumber("version", CIE->getVersion());
@@ -204,47 +205,33 @@ void PrinterContext<ELFT>::printEHFrame(
       W.printNumber("code_alignment_factor", CIE->getCodeAlignmentFactor());
       W.printNumber("data_alignment_factor", CIE->getDataAlignmentFactor());
       W.printNumber("return_address_register", CIE->getReturnAddressRegister());
-
-      W.getOStream() << "\n";
-      W.startLine() << "Program:\n";
-      W.indent();
-      CIE->cfis().dump(W.getOStream(), nullptr, W.getIndentLevel());
-      W.unindent();
-
-      W.unindent();
-      W.getOStream() << "\n";
-
-    } else if (const auto *FDE = dyn_cast<dwarf::FDE>(&Entry)) {
+    } else {
+      const dwarf::FDE *FDE = cast<dwarf::FDE>(&Entry);
       W.startLine() << format("[0x%" PRIx64 "] FDE length=%" PRIu64
                               " cie=[0x%" PRIx64 "]\n",
-                              Address + FDE->getOffset(),
-                              FDE->getLength(),
+                              Address + FDE->getOffset(), FDE->getLength(),
                               Address + FDE->getLinkedCIE()->getOffset());
       W.indent();
 
       W.startLine() << format("initial_location: 0x%" PRIx64 "\n",
                               FDE->getInitialLocation());
-      W.startLine()
-        << format("address_range: 0x%" PRIx64 " (end : 0x%" PRIx64 ")\n",
-                  FDE->getAddressRange(),
-                  FDE->getInitialLocation() + FDE->getAddressRange());
-
-      W.getOStream() << "\n";
-      W.startLine() << "Program:\n";
-      W.indent();
-      FDE->cfis().dump(W.getOStream(), nullptr, W.getIndentLevel());
-      W.unindent();
-
-      W.unindent();
-      W.getOStream() << "\n";
-    } else {
-      llvm_unreachable("unexpected DWARF frame kind");
+      W.startLine() << format(
+          "address_range: 0x%" PRIx64 " (end : 0x%" PRIx64 ")\n",
+          FDE->getAddressRange(),
+          FDE->getInitialLocation() + FDE->getAddressRange());
     }
+
+    W.getOStream() << "\n";
+    W.startLine() << "Program:\n";
+    W.indent();
+    Entry.cfis().dump(W.getOStream(), nullptr, W.getIndentLevel());
+    W.unindent();
+    W.unindent();
+    W.getOStream() << "\n";
   }
 
   W.unindent();
 }
-
 }
 }
 
