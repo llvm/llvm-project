@@ -1175,7 +1175,7 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
          "getZeroExtendInReg type should be vector iff the operand "
          "type is vector!");
   assert((!VT.isVector() ||
-          VT.getVectorNumElements() == OpVT.getVectorNumElements()) &&
+          VT.getVectorElementCount() == OpVT.getVectorElementCount()) &&
          "Vector element counts must match in getZeroExtendInReg");
   assert(VT.bitsLE(OpVT) && "Not extending!");
   if (OpVT == VT)
