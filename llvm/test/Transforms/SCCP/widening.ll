@@ -17,10 +17,8 @@ define void @test_2_incoming_constants(i32 %x) {
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
 ; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; SCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; SCCP-NEXT:    call void @use(i1 [[T_1]])
-; SCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; SCCP-NEXT:    call void @use(i1 [[F_1]])
+; SCCP-NEXT:    call void @use(i1 true)
+; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
 ;
 ; IPSCCP-LABEL: @test_2_incoming_constants(
@@ -32,10 +30,8 @@ define void @test_2_incoming_constants(i32 %x) {
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
 ; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; IPSCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; IPSCCP-NEXT:    call void @use(i1 [[T_1]])
-; IPSCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; IPSCCP-NEXT:    call void @use(i1 [[F_1]])
+; IPSCCP-NEXT:    call void @use(i1 true)
+; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
 ;
 entry:
@@ -68,10 +64,8 @@ define void @test_3_incoming_constants(i32 %x) {
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
 ; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; SCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; SCCP-NEXT:    call void @use(i1 [[T_1]])
-; SCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; SCCP-NEXT:    call void @use(i1 [[F_1]])
+; SCCP-NEXT:    call void @use(i1 true)
+; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
 ;
 ; IPSCCP-LABEL: @test_3_incoming_constants(
@@ -86,10 +80,8 @@ define void @test_3_incoming_constants(i32 %x) {
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
 ; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; IPSCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; IPSCCP-NEXT:    call void @use(i1 [[T_1]])
-; IPSCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; IPSCCP-NEXT:    call void @use(i1 [[F_1]])
+; IPSCCP-NEXT:    call void @use(i1 true)
+; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
 ;
 entry:
@@ -132,10 +124,8 @@ define void @test_5_incoming_constants(i32 %x) {
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
 ; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; SCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; SCCP-NEXT:    call void @use(i1 [[T_1]])
-; SCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; SCCP-NEXT:    call void @use(i1 [[F_1]])
+; SCCP-NEXT:    call void @use(i1 true)
+; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
 ;
 ; IPSCCP-LABEL: @test_5_incoming_constants(
@@ -156,10 +146,8 @@ define void @test_5_incoming_constants(i32 %x) {
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
 ; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
-; IPSCCP-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 20
-; IPSCCP-NEXT:    call void @use(i1 [[T_1]])
-; IPSCCP-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 10
-; IPSCCP-NEXT:    call void @use(i1 [[F_1]])
+; IPSCCP-NEXT:    call void @use(i1 true)
+; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
 ;
 entry:
@@ -369,8 +357,7 @@ define void @loop_with_header_1(i32 %x) {
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[IV]], 2
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; IPSCCP:       loop.body:
-; IPSCCP-NEXT:    [[T_1:%.*]] = icmp slt i32 [[IV]], 2
-; IPSCCP-NEXT:    call void @use(i1 [[T_1]])
+; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; IPSCCP-NEXT:    br label [[LOOP_HEADER]]
 ; IPSCCP:       exit:
@@ -418,8 +405,7 @@ define void @loop_with_header_2(i32 %x) {
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[IV]], 200
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; IPSCCP:       loop.body:
-; IPSCCP-NEXT:    [[T_1:%.*]] = icmp slt i32 [[IV]], 200
-; IPSCCP-NEXT:    call void @use(i1 [[T_1]])
+; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; IPSCCP-NEXT:    br label [[LOOP_HEADER]]
 ; IPSCCP:       exit:
@@ -876,4 +862,92 @@ bb60:                                             ; preds = %bb58, %bb56, %bb39
 bb66:                                             ; preds = %bb60, %bb35
   %tmp67 = phi i8* [ %tmp36, %bb35 ], [ null, %bb60 ]
   ret i8* %tmp67
+}
+
+
+define i32 @loop_with_multiple_euqal_incomings(i32 %N) {
+; SCCP-LABEL: @loop_with_multiple_euqal_incomings(
+; SCCP-NEXT:  entry:
+; SCCP-NEXT:    br label [[LOOP:%.*]]
+; SCCP:       loop:
+; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[P_NEXT:%.*]], [[BB3:%.*]] ], [ 0, [[BB4:%.*]] ], [ 0, [[BB5:%.*]] ], [ 0, [[BB6:%.*]] ]
+; SCCP-NEXT:    [[C_1:%.*]] = call i1 @cond()
+; SCCP-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; SCCP:       bb1:
+; SCCP-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; SCCP-NEXT:    br i1 [[C_2]], label [[BB3]], label [[BB4]]
+; SCCP:       bb2:
+; SCCP-NEXT:    [[C_4:%.*]] = call i1 @cond()
+; SCCP-NEXT:    br i1 [[C_4]], label [[BB5]], label [[BB6]]
+; SCCP:       bb3:
+; SCCP-NEXT:    [[P_NEXT]] = add i32 [[P]], 1
+; SCCP-NEXT:    br label [[LOOP]]
+; SCCP:       bb4:
+; SCCP-NEXT:    [[C_3:%.*]] = call i1 @cond()
+; SCCP-NEXT:    br i1 [[C_3]], label [[LOOP]], label [[END:%.*]]
+; SCCP:       bb5:
+; SCCP-NEXT:    br label [[LOOP]]
+; SCCP:       bb6:
+; SCCP-NEXT:    br label [[LOOP]]
+; SCCP:       end:
+; SCCP-NEXT:    ret i32 [[P]]
+;
+; IPSCCP-LABEL: @loop_with_multiple_euqal_incomings(
+; IPSCCP-NEXT:  entry:
+; IPSCCP-NEXT:    br label [[LOOP:%.*]]
+; IPSCCP:       loop:
+; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[P_NEXT:%.*]], [[BB3:%.*]] ], [ 0, [[BB4:%.*]] ], [ 0, [[BB5:%.*]] ], [ 0, [[BB6:%.*]] ]
+; IPSCCP-NEXT:    [[C_1:%.*]] = call i1 @cond()
+; IPSCCP-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; IPSCCP:       bb1:
+; IPSCCP-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; IPSCCP-NEXT:    br i1 [[C_2]], label [[BB3]], label [[BB4]]
+; IPSCCP:       bb2:
+; IPSCCP-NEXT:    [[C_4:%.*]] = call i1 @cond()
+; IPSCCP-NEXT:    br i1 [[C_4]], label [[BB5]], label [[BB6]]
+; IPSCCP:       bb3:
+; IPSCCP-NEXT:    [[P_NEXT]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    br label [[LOOP]]
+; IPSCCP:       bb4:
+; IPSCCP-NEXT:    [[C_3:%.*]] = call i1 @cond()
+; IPSCCP-NEXT:    br i1 [[C_3]], label [[LOOP]], label [[END:%.*]]
+; IPSCCP:       bb5:
+; IPSCCP-NEXT:    br label [[LOOP]]
+; IPSCCP:       bb6:
+; IPSCCP-NEXT:    br label [[LOOP]]
+; IPSCCP:       end:
+; IPSCCP-NEXT:    ret i32 [[P]]
+;
+entry:
+  br label %loop
+
+loop:
+  %p = phi i32 [ 0, %entry ], [ %p.next, %bb3 ], [ 0, %bb4 ], [ 0, %bb5], [ 0, %bb6 ]
+  %c.1 = call i1 @cond()
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  %c.2 = call i1 @cond()
+  br i1 %c.2, label %bb3, label %bb4
+
+bb2:
+  %c.4 = call i1 @cond()
+  br i1 %c.4, label %bb5, label %bb6
+
+bb3:
+  %p.next = add i32 %p, 1
+  br label %loop
+
+bb4:
+  %c.3 = call i1 @cond()
+  br i1 %c.3, label %loop, label %end
+
+bb5:
+  br label %loop
+
+bb6:
+  br label %loop
+
+end:
+  ret i32 %p
 }
