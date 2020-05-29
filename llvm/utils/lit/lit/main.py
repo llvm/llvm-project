@@ -4,6 +4,7 @@ lit - LLVM Integrated Tester.
 See lit.pod for more information.
 """
 
+import itertools
 import os
 import platform
 import sys
@@ -45,6 +46,11 @@ def main(builtin_params={}):
 
     if opts.show_suites or opts.show_tests:
         print_discovered(discovered_tests, opts.show_suites, opts.show_tests)
+        sys.exit(0)
+
+    if opts.show_used_features:
+        features = set(itertools.chain.from_iterable(t.getUsedFeatures() for t in discovered_tests))
+        print(' '.join(sorted(features)))
         sys.exit(0)
 
     # Command line overrides configuration for maxIndividualTestTime.
@@ -127,7 +133,6 @@ def print_discovered(tests, show_suites, show_tests):
     tests.sort(key=lit.reports.by_suite_and_test_path)
 
     if show_suites:
-        import itertools
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
         print('-- Test Suites --')
         for suite, test_iter in tests_by_suite:
