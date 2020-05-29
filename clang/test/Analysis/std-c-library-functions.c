@@ -53,10 +53,10 @@
 // CHECK-NEXT: Loaded summary for: int getc(FILE *)
 // CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 // CHECK-NEXT: Loaded summary for: int getchar()
+// CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
+// CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t read(int, void *, size_t)
 // CHECK-NEXT: Loaded summary for: ssize_t write(int, const void *, size_t)
-// CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *)
-// CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t getline(char **, size_t *, FILE *)
 
 void clang_analyzer_eval(int);
@@ -104,7 +104,7 @@ void test_read_write(int fd, char *buf) {
   }
 }
 
-size_t fread(void *restrict, size_t, size_t, FILE *);
+size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
 void test_fread_fwrite(FILE *fp, int *buf) {
 
