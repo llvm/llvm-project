@@ -439,6 +439,49 @@ define dso_local i32 @load_thread_data() #0 {
   ret i32 %1
 }
 
+define dso_local float @load_constant_pool(float %x) #0 {
+; SMALL-STATIC-LABEL: load_constant_pool:
+; SMALL-STATIC:       # %bb.0:
+; SMALL-STATIC-NEXT:    addss {{\.LCPI.*}}(%rip), %xmm0
+; SMALL-STATIC-NEXT:    retq
+;
+; MEDIUM-STATIC-LABEL: load_constant_pool:
+; MEDIUM-STATIC:       # %bb.0:
+; MEDIUM-STATIC-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; MEDIUM-STATIC-NEXT:    addss (%rax), %xmm0
+; MEDIUM-STATIC-NEXT:    retq
+;
+; LARGE-STATIC-LABEL: load_constant_pool:
+; LARGE-STATIC:       # %bb.0:
+; LARGE-STATIC-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; LARGE-STATIC-NEXT:    addss (%rax), %xmm0
+; LARGE-STATIC-NEXT:    retq
+;
+; SMALL-PIC-LABEL: load_constant_pool:
+; SMALL-PIC:       # %bb.0:
+; SMALL-PIC-NEXT:    addss {{\.LCPI.*}}(%rip), %xmm0
+; SMALL-PIC-NEXT:    retq
+;
+; MEDIUM-PIC-LABEL: load_constant_pool:
+; MEDIUM-PIC:       # %bb.0:
+; MEDIUM-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
+; MEDIUM-PIC-NEXT:    movabsq ${{\.LCPI.*}}@GOTOFF, %rcx
+; MEDIUM-PIC-NEXT:    addss (%rax,%rcx), %xmm0
+; MEDIUM-PIC-NEXT:    retq
+;
+; LARGE-PIC-LABEL: load_constant_pool:
+; LARGE-PIC:       # %bb.0:
+; LARGE-PIC-NEXT:  .L11$pb:
+; LARGE-PIC-NEXT:    leaq .L11$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L11$pb, %rcx
+; LARGE-PIC-NEXT:    addq %rax, %rcx
+; LARGE-PIC-NEXT:    movabsq ${{\.LCPI.*}}@GOTOFF, %rax
+; LARGE-PIC-NEXT:    addss (%rcx,%rax), %xmm0
+; LARGE-PIC-NEXT:    retq
+  %a = fadd float %x, 1.0
+  ret float %a
+}
+
 attributes #0 = { noinline nounwind uwtable }
 
 !llvm.module.flags = !{!0, !1, !2}
