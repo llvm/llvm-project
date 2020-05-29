@@ -26,7 +26,7 @@ MATH_MANGLE(cos)(float x)
     c = AS_FLOAT(AS_INT(c) ^ (r.i > 1 ? 0x80000000 : 0));
 
     if (!FINITE_ONLY_OPT()) {
-        c = AS_INT(ax) >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : c;
+        c = BUILTIN_ISFINITE_F32(ax) ? c : AS_FLOAT(QNANBITPATT_SP32);
     }
 
     return c;

@@ -24,7 +24,7 @@ MATH_MANGLE(tan)(float x)
     t = AS_FLOAT(AS_INT(t) ^ (AS_INT(x) ^ AS_INT(ax)));
 
     if (!FINITE_ONLY_OPT()) {
-        t = AS_INT(ax) >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : t;
+        t = BUILTIN_ISFINITE_F32(ax) ? t : AS_FLOAT(QNANBITPATT_SP32);
     }
 
     return t;

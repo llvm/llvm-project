@@ -11,7 +11,8 @@
 double
 MATH_MANGLE(cos)(double x)
 {
-    struct redret r = MATH_PRIVATE(trigred)(BUILTIN_ABS_F64(x));
+    double ax = BUILTIN_ABS_F64(x);
+    struct redret r = MATH_PRIVATE(trigred)(ax);
     struct scret sc = MATH_PRIVATE(sincosred2)(r.hi, r.lo);
     sc.s = -sc.s;
 
@@ -19,7 +20,7 @@ MATH_MANGLE(cos)(double x)
     c.hi ^= r.i > 1 ? (int)0x80000000 : 0;
 
     if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : c;
+        c = BUILTIN_ISFINITE_F64(ax) ? c : AS_INT2(QNANBITPATT_DP64);
     }
 
     return AS_DOUBLE(c);

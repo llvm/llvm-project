@@ -26,7 +26,7 @@ MATH_MANGLE(sin)(float x)
                  (AS_INT(x) ^ AS_INT(ax)));
 
     if (!FINITE_ONLY_OPT()) {
-        s = AS_INT(ax) >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : s;
+        s = BUILTIN_ISFINITE_F32(ax) ? s : AS_FLOAT(QNANBITPATT_SP32);
     }
 
     return s;
