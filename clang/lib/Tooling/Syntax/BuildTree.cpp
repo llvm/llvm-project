@@ -640,6 +640,24 @@ public:
     return true;
   }
 
+  bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
+    if (S->isInfixBinaryOp()) {
+      Builder.markExprChild(
+          S->getArg(0),
+          syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::BinaryOperatorExpression_operatorToken);
+      Builder.markExprChild(
+          S->getArg(1),
+          syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::BinaryOperatorExpression, S);
+      return true;
+    }
+    return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
+  }
+
   bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {
     auto Tokens = Builder.getDeclarationRange(S);
     if (Tokens.front().kind() == tok::coloncolon) {

@@ -993,6 +993,134 @@ void test(int a, int b) {
 )txt");
 }
 
+TEST_F(SyntaxTreeTest, UserDefinedBinaryOperator) {
+  expectTreeDumpEqual(
+      R"cpp(
+struct X {
+  X& operator=(const X&);
+  friend X operator+(X, const X&);
+  friend bool operator<(const X&, const X&);
+};
+void test(X x, X y) {
+  x = y;
+  x + y;
+  x < y;
+}
+      )cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-&
+| | | |-operator
+| | | |-=
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   |-SimpleDeclaration
+| | |   | |-const
+| | |   | |-X
+| | |   | `-SimpleDeclarator
+| | |   |   `-&
+| | |   `-)
+| | `-;
+| |-UnknownDeclaration
+| | `-SimpleDeclaration
+| |   |-friend
+| |   |-X
+| |   |-SimpleDeclarator
+| |   | |-operator
+| |   | |-+
+| |   | `-ParametersAndQualifiers
+| |   |   |-(
+| |   |   |-SimpleDeclaration
+| |   |   | `-X
+| |   |   |-,
+| |   |   |-SimpleDeclaration
+| |   |   | |-const
+| |   |   | |-X
+| |   |   | `-SimpleDeclarator
+| |   |   |   `-&
+| |   |   `-)
+| |   `-;
+| |-UnknownDeclaration
+| | `-SimpleDeclaration
+| |   |-friend
+| |   |-bool
+| |   |-SimpleDeclarator
+| |   | |-operator
+| |   | |-<
+| |   | `-ParametersAndQualifiers
+| |   |   |-(
+| |   |   |-SimpleDeclaration
+| |   |   | |-const
+| |   |   | |-X
+| |   |   | `-SimpleDeclarator
+| |   |   |   `-&
+| |   |   |-,
+| |   |   |-SimpleDeclaration
+| |   |   | |-const
+| |   |   | |-X
+| |   |   | `-SimpleDeclarator
+| |   |   |   `-&
+| |   |   `-)
+| |   `-;
+| |-}
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-x
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-y
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-UnknownExpression
+    | | | `-x
+    | | |-UnknownExpression
+    | | | `-=
+    | | `-UnknownExpression
+    | |   `-y
+    | `-;
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-UnknownExpression
+    | | | `-UnknownExpression
+    | | |   `-x
+    | | |-UnknownExpression
+    | | | `-+
+    | | `-UnknownExpression
+    | |   `-y
+    | `-;
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-UnknownExpression
+    | | | `-x
+    | | |-UnknownExpression
+    | | | `-<
+    | | `-UnknownExpression
+    | |   `-y
+    | `-;
+    `-}
+)txt");
+}
+
 TEST_F(SyntaxTreeTest, MultipleDeclaratorsGrouping) {
   expectTreeDumpEqual(
       R"cpp(
