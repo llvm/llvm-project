@@ -1862,7 +1862,7 @@ Instruction *InstCombiner::foldICmpAndConstant(ICmpInst &Cmp,
     if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
       Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
       if (auto *AndVTy = dyn_cast<VectorType>(And->getType()))
-        NTy = VectorType::get(NTy, AndVTy->getNumElements());
+        NTy = FixedVectorType::get(NTy, AndVTy->getNumElements());
       Value *Trunc = Builder.CreateTrunc(X, NTy);
       auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE
                                                             : CmpInst::ICMP_SLT;
@@ -2152,7 +2152,7 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
       DL.isLegalInteger(TypeBits - Amt)) {
     Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
     if (auto *ShVTy = dyn_cast<VectorType>(ShType))
-      TruncTy = VectorType::get(TruncTy, ShVTy->getNumElements());
+      TruncTy = FixedVectorType::get(TruncTy, ShVTy->getNumElements());
     Constant *NewC =
         ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
     return new ICmpInst(Pred, Builder.CreateTrunc(X, TruncTy), NewC);
@@ -2785,7 +2785,7 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
 
           Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
           if (auto *XVTy = dyn_cast<VectorType>(XType))
-            NewType = VectorType::get(NewType, XVTy->getNumElements());
+            NewType = FixedVectorType::get(NewType, XVTy->getNumElements());
           Value *NewBitcast = Builder.CreateBitCast(X, NewType);
           if (TrueIfSigned)
             return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
