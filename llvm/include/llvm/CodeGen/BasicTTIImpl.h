@@ -462,6 +462,11 @@ public:
     return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
   }
 
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFold) {
+    return BaseT::emitGetActiveLaneMask(L, LI, SE, TailFold);
+  }
+
   int getInstructionLatency(const Instruction *I) {
     if (isa<LoadInst>(I))
       return getST()->getSchedModel().DefaultLoadLatency;
