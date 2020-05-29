@@ -25,12 +25,7 @@ using namespace fir;
 
 namespace {
 
-// Conversion of fir control ops to more primitive control-flow.
-//
-// FIR loops that cannot be converted to the affine dialect will remain as
-// `fir.do_loop` operations.  These can be converted to control-flow operations.
-
-/// Convert `fir.do_loop` to `scf.for`
+// Conversion to CFG
 class ScfLoopConv : public mlir::OpRewritePattern<fir::LoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -39,23 +34,114 @@ public:
   // lowered to a semantically correct CFG.
   mlir::LogicalResult
   matchAndRewrite(LoopOp loop, mlir::PatternRewriter &rewriter) const override {
-    auto loc = loop.getLoc();
-    auto low = loop.lowerBound();
-    auto high = loop.upperBound();
-    auto step = loop.step();
-    assert(low && high && step);
-    // ForOp has different bounds semantics. Adjust upper bound.
-    auto adjustUp = rewriter.create<mlir::AddIOp>(loc, high, step);
-    auto f = rewriter.create<mlir::scf::ForOp>(loc, low, adjustUp, step);
-    f.region().getBlocks().clear();
-    rewriter.inlineRegionBefore(loop.region(), f.region(), f.region().end());
-    rewriter.eraseOp(loop);
+    Location loc = loop.getLoc();
+
+    // Create the start and end blocks that will wrap the LoopOp with an
+    // initalizer and an end point
+    mlir::Block *initBlock = rewriter.getInsertionBlock();
+    auto initPos = rewriter.getInsertionPoint();
+    mlir::Block *endBlock = rewriter.splitBlock(initBlock, initPos);
+
+    // Split the first LoopOp block in two parts. The part before will be the
+    // conditional block since it already has the induction variable and
+    // loop-carried values as arguments.
+    mlir::Block *conditionalBlock = &loop.region().front();
+    mlir::Block *firstBlock = rewriter.splitBlock(conditionalBlock,
+                                                  conditionalBlock->begin());
+    mlir::Block *lastBlock = &loop.region().back();
+
+    // Move the blocks from the LoopOp between initBlock and endBlock
+    rewriter.inlineRegionBefore(loop.region(), endBlock);
+
+    // Get loop values from the LoopOp
+    mlir::Value low = loop.lowerBound();
+    mlir::Value high = loop.upperBound();
+    mlir::Value step = loop.step();
+    if (!low || !high) {
+      return failure();
+    }
+
+
+    // Initalization block
+    rewriter.setInsertionPointToEnd(initBlock);
+    mlir::Value zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
+    mlir::Value one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+    mlir::Value diff = rewriter.create<mlir::SubIOp>(loc, high, low);
+    mlir::Value distance = rewriter.create<mlir::AddIOp>(loc, diff, step);
+    mlir::Value normalizedDistance =
+      rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
+    mlir::Type storeType = normalizedDistance.getType();
+    mlir::Value tripCounter =
+      rewriter.create<fir::AllocaOp>(loc, storeType, llvm::None);
+    rewriter.create<fir::StoreOp>(loc, normalizedDistance, tripCounter);
+
+    SmallVector<mlir::Value, 8> loopOperands;
+    loopOperands.push_back(low);
+    mlir::ValueRange operands = loop.getIterOperands();
+    loopOperands.append(operands.begin(), operands.end());
+
+    // TODO: replace with a command line flag
+    // onetrip flag determines whether loop should be executed once, before
+    // conditionals are checked
+    static const bool onetrip = false;
+    if (onetrip) {
+      rewriter.create<BranchOp>(loc, firstBlock, ArrayRef<Value>());
+    } else {
+      rewriter.create<BranchOp>(loc, conditionalBlock, loopOperands);
+    }
+
+
+    // Last loop block
+    mlir::Operation *terminator = lastBlock->getTerminator();
+    rewriter.setInsertionPointToEnd(lastBlock);
+    mlir::Value index = conditionalBlock->getArgument(0);
+    mlir::Value steppedIndex =
+      rewriter.create<AddIOp>(loc, index, step).getResult();
+    mlir::Value tripCount = rewriter.create<fir::LoadOp>(loc, tripCounter);
+    mlir::Value steppedTripCount =
+      rewriter.create<mlir::SubIOp>(loc, tripCount, one);
+    rewriter.create<fir::StoreOp>(loc, steppedTripCount, tripCounter);
+
+    SmallVector<mlir::Value, 8> loopCarried;
+    loopCarried.push_back(steppedIndex);
+    loopCarried.append(terminator->operand_begin(), terminator->operand_end());
+    rewriter.create<BranchOp>(loc, conditionalBlock, loopCarried);
+    rewriter.eraseOp(terminator);
+
+    if (!steppedIndex) {
+      return failure();
+    }
+
+
+    // Conditional block
+    rewriter.setInsertionPointToEnd(conditionalBlock);
+    mlir::Value tripCountValue =
+      rewriter.create<fir::LoadOp>(loc, tripCounter);
+    mlir::Value comparison =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::sgt, tripCountValue, zero);
+
+    rewriter.create<CondBranchOp>(loc, comparison, firstBlock,
+                                  ArrayRef<Value>(), endBlock,
+                                  ArrayRef<Value>());
+
+
+    // The result of the loop operation is the values of the condition block
+    // arguments except the induction variable on the last iteration.
+    rewriter.replaceOp(loop, conditionalBlock->getArguments().drop_front());
+
     return success();
   }
 };
 
-/// Convert `fir.result` to `scf.yield`
-class ScfResultConv : public mlir::OpRewritePattern<fir::ResultOp> {
+
+// Conversion to the SCF dialect.
+//
+// FIR loops that cannot be converted to the affine dialect will remain as
+// `fir.do_loop` operations.  These can be converted to `scf.for` operations.
+// MLIR includes a pass to lower `scf.for` operations to a CFG.
+
+/// Convert `fir.if` to `scf.if`
+class ScfIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
