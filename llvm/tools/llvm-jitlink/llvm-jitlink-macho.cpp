@@ -90,7 +90,8 @@ Error registerMachOStubsAndGOT(Session &S, LinkGraph &G) {
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "
-             << (llvm::empty(Sec.symbols()) ? "empty. skipping." : "processing...")
+             << (llvm::empty(Sec.symbols()) ? "empty. skipping."
+                                            : "processing...")
              << "\n";
     });
 
