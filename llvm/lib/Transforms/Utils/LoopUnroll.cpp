@@ -326,6 +326,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                          "branch in latch or a single exiting block.\n");
     return LoopUnrollResult::Unmodified;
   }
+  if (LatchBI->isConditional() && LatchBI != ExitingBI) {
+    LLVM_DEBUG(
+        dbgs() << "Can't unroll; a conditional latch must exit the loop");
+    return LoopUnrollResult::Unmodified;
+  }
   LLVM_DEBUG(dbgs() << "  Exiting Block = " << ExitingBI->getParent()->getName()
                     << "\n");
 
