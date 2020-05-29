@@ -1030,10 +1030,10 @@ bool Vectorizer::vectorizeStoreChain(
   VectorType *VecTy;
   VectorType *VecStoreTy = dyn_cast<VectorType>(StoreTy);
   if (VecStoreTy)
-    VecTy = VectorType::get(StoreTy->getScalarType(),
-                            Chain.size() * VecStoreTy->getNumElements());
+    VecTy = FixedVectorType::get(StoreTy->getScalarType(),
+                                 Chain.size() * VecStoreTy->getNumElements());
   else
-    VecTy = VectorType::get(StoreTy, Chain.size());
+    VecTy = FixedVectorType::get(StoreTy, Chain.size());
 
   // If it's more than the max vector size or the target has a better
   // vector factor, break it into two pieces.
@@ -1182,10 +1182,10 @@ bool Vectorizer::vectorizeLoadChain(
   VectorType *VecTy;
   VectorType *VecLoadTy = dyn_cast<VectorType>(LoadTy);
   if (VecLoadTy)
-    VecTy = VectorType::get(LoadTy->getScalarType(),
-                            Chain.size() * VecLoadTy->getNumElements());
+    VecTy = FixedVectorType::get(LoadTy->getScalarType(),
+                                 Chain.size() * VecLoadTy->getNumElements());
   else
-    VecTy = VectorType::get(LoadTy, Chain.size());
+    VecTy = FixedVectorType::get(LoadTy, Chain.size());
 
   // If it's more than the max vector size or the target has a better
   // vector factor, break it into two pieces.

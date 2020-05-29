@@ -767,7 +767,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // supported on the target.
         if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
           // Arbitrarily try a vector of 2 elements.
-          Type *VecTy = VectorType::get(T, /*NumElements=*/2);
+          auto *VecTy = FixedVectorType::get(T, /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of stored type");
           if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
             reportVectorizationFailure(
@@ -782,7 +782,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (LD->getMetadata(LLVMContext::MD_nontemporal)) {
           // For nontemporal loads, check that a nontemporal vector version is
           // supported on the target (arbitrarily try a vector of 2 elements).
-          Type *VecTy = VectorType::get(I.getType(), /*NumElements=*/2);
+          auto *VecTy = FixedVectorType::get(I.getType(), /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of load type");
           if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
             reportVectorizationFailure(
