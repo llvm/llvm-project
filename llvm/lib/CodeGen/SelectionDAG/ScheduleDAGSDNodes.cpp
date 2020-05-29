@@ -872,6 +872,10 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
         DAG->getTarget().Options.EmitCallSiteInfo)
       MF.addCallArgsForwardingRegs(MI, DAG->getSDCallSiteInfo(Node));
 
+    if (DAG->getNoMergeSiteInfo(Node)) {
+      MI->setFlag(MachineInstr::MIFlag::NoMerge);
+    }
+
     return MI;
   };
 

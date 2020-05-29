@@ -3626,6 +3626,7 @@ public:
     bool IsConvergent      : 1;
     bool IsPatchPoint      : 1;
     bool IsPreallocated : 1;
+    bool NoMerge           : 1;
 
     // IsTailCall should be modified by implementations of
     // TargetLowering::LowerCall that perform tail call conversions.
@@ -3651,7 +3652,8 @@ public:
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
           DoesNotReturn(false), IsReturnValueUsed(true), IsConvergent(false),
-          IsPatchPoint(false), IsPreallocated(false), DAG(DAG) {}
+          IsPatchPoint(false), IsPreallocated(false), NoMerge(false),
+          DAG(DAG) {}
 
     CallLoweringInfo &setDebugLoc(const SDLoc &dl) {
       DL = dl;
@@ -3700,7 +3702,8 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
-
+      NoMerge = Call.hasFnAttr(Attribute::NoMerge);
+      
       Callee = Target;
 
       CallConv = Call.getCallingConv();
