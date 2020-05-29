@@ -1,4 +1,4 @@
-.. _amdgpu-proposal-for-heterogeneous-debugging:
+.. _amdgpu-dwarf-proposal-for-heterogeneous-debugging:
 
 ******************************************
 DWARF Proposal For Heterogeneous Debugging
@@ -13,8 +13,75 @@ DWARF Proposal For Heterogeneous Debugging
    [:ref:`DWARF <amdgpu-dwarf-DWARF>`] to support heterogeneous debugging. It is
    not currently fully implemented and is subject to change.
 
+.. _amdgpu-dwarf-introduction:
+
 Introduction
 ============
+
+AMD [:ref:`AMD <amdgpu-dwarf-AMD>`] has been working on supporting heterogeneous
+computing through the AMD Radeon Open Compute Platform (ROCm) [:ref:`AMD-ROCm
+<amdgpu-dwarf-AMD-ROCm>`]. A heterogeneous computing program can be written in a
+high level language such as C++ or Fortran with OpenMP pragmas, OpenCL, or HIP
+(a portable C++ programming environment for heterogeneous computing [:ref:`HIP
+<amdgpu-dwarf-HIP>`]). A heterogeneous compiler and runtime allows a program to
+execute on multiple devices within the same native process. Devices could
+include CPUs, GPUs, DSPs, FPGAs, or other special purpose accelerators.
+Currently HIP programs execute on systems with CPUs and GPUs.
+
+ROCm is fully open sourced and includes contributions to open source projects
+such as LLVM for compilation [:ref:`LLVM <amdgpu-dwarf-LLVM>`] and GDB for
+debugging [:ref:`GDB <amdgpu-dwarf-GDB>`], as well as collaboration with other
+third party projects such as the GCC compiler [:ref:`GCC <amdgpu-dwarf-GCC>`]
+and the Perforce TotalView HPC debugger [:ref:`Perforce-TotalView
+<amdgpu-dwarf-Perforce-TotalView>`].
+
+To support debugging heterogeneous programs several features that are not
+provided by current DWARF Version 5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] have
+been identified. This document contains a collection of proposals to address
+providing those features.
+
+The :ref:`amdgpu-dwarf-motivation` section describes the issues that are being
+addressed for heterogeneous computing. That is followed by the
+:ref:`amdgpu-dwarf-proposed-changes-relative-to-dwarf-version-5` section
+containing the proposed textual changes relative to the DWARF Version 5
+standard. Then there is an :ref:`amdgpu-dwarf-examples` section that links to
+the AMD GPU specific usage of the features in the proposal that includes an
+example. Finally, there is a :ref:`amdgpu-dwarf-references` section. There are a
+number of notes included that raise open questions, or provide alternative
+approaches considered. The draft proposal seeks to be general in nature and
+backwards compatible with DWARF Version 5. Its goal is to be applicable to
+meeting the needs of any heterogeneous system and not be vendor or architecture
+specific.
+
+A fundamental aspect of the draft proposal is that it allows DWARF expression
+location descriptions as stack elements. The draft proposal is based on DWARF
+Version 5 and maintains compatibility with DWARF Version 5. After attempting
+several alternatives, the current thinking is that such an addition to DWARF
+Version 5 is the simplest and cleanest way to support debugging optimized GPU
+code. It also appears to be generally useful and may be able to address other
+reported DWARF issues, as well as being helpful in providing better optimization
+support for non-GPU code.
+
+General feedback on this draft proposal is sought, together with suggestions on
+how to clarify, simplify, or organize it before submitting it as a formal DWARF
+proposal. The current draft proposal is large and may need to be split into
+separate proposals before formal submission. Any suggestions on how best to do
+that are appreciated. However, at the initial review stage it is believed there
+is value in presenting a unified proposal as there are mutual dependencies
+between the various parts that would not be as apparent if it was broken up into
+separate independent proposals.
+
+We are in the process of modifying LLVM and GDB to support this draft proposal
+which is providing experience and insights. We plan to upstream the changes to
+those projects for any final form of the proposal.
+
+The author very much appreciates the input provided so far by many others which
+has been incorporated into this current version.
+
+.. _amdgpu-dwarf-motivation:
+
+Motivation
+==========
 
 This document proposes a set of backwards compatible extensions to DWARF Version
 5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] for consideration of inclusion into a
@@ -3753,11 +3820,15 @@ debugger information entries.
                                  * ``DW_AT_LLVM_lanes``
    ============================= =============================
 
+.. _amdgpu-dwarf-examples:
+
 Examples
 ========
 
 The AMD GPU specific usage of the features in the proposal, including examples,
 is available at :ref:`amdgpu-dwarf-debug-information`.
+
+.. _amdgpu-dwarf-references:
 
 References
 ==========
