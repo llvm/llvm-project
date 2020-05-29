@@ -14301,8 +14301,49 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 }
 } // namespace
 
+// For processing memory ordering and memory scope arguments of various
+// amdgcn builtins.
+// \p Order takes a C++11 comptabile memory-ordering specifier and converts
+// it into LLVM's memory ordering specifier using atomic C ABI, and writes
+// to \p AO. \p Scope takes a const char * and converts it into AMDGCN
+// specific SyncScopeID and writes it to \p SSID.
+bool CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
+                                              llvm::AtomicOrdering &AO,
+                                              llvm::SyncScope::ID &SSID) {
+  if (isa<llvm::ConstantInt>(Order)) {
+    int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+
+    // Map C11/C++11 memory ordering to LLVM memory ordering
+    switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
+    case llvm::AtomicOrderingCABI::acquire:
+      AO = llvm::AtomicOrdering::Acquire;
+      break;
+    case llvm::AtomicOrderingCABI::release:
+      AO = llvm::AtomicOrdering::Release;
+      break;
+    case llvm::AtomicOrderingCABI::acq_rel:
+      AO = llvm::AtomicOrdering::AcquireRelease;
+      break;
+    case llvm::AtomicOrderingCABI::seq_cst:
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    case llvm::AtomicOrderingCABI::consume:
+    case llvm::AtomicOrderingCABI::relaxed:
+      break;
+    }
+
+    StringRef scp;
+    llvm::getConstantStringInfo(Scope, scp);
+    SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
+    return true;
+  }
+  return false;
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
+  llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
@@ -14507,38 +14548,49 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
 
   case AMDGPU::BI__builtin_amdgcn_fence: {
-    llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
-    llvm::SyncScope::ID SSID;
-    Value *Order = EmitScalarExpr(E->getArg(0));
-    Value *Scope = EmitScalarExpr(E->getArg(1));
-
-    if (isa<llvm::ConstantInt>(Order)) {
-      int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
-
-      // Map C11/C++11 memory ordering to LLVM memory ordering
-      switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
-      case llvm::AtomicOrderingCABI::acquire:
-        AO = llvm::AtomicOrdering::Acquire;
-        break;
-      case llvm::AtomicOrderingCABI::release:
-        AO = llvm::AtomicOrdering::Release;
-        break;
-      case llvm::AtomicOrderingCABI::acq_rel:
-        AO = llvm::AtomicOrdering::AcquireRelease;
-        break;
-      case llvm::AtomicOrderingCABI::seq_cst:
-        AO = llvm::AtomicOrdering::SequentiallyConsistent;
-        break;
-      case llvm::AtomicOrderingCABI::consume: // not supported by LLVM fence
-      case llvm::AtomicOrderingCABI::relaxed: // not supported by LLVM fence
-        break;
-      }
-
-      StringRef scp;
-      llvm::getConstantStringInfo(Scope, scp);
-      SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
-
+    if (ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
+                                EmitScalarExpr(E->getArg(1)), AO, SSID))
       return Builder.CreateFence(AO, SSID);
+    LLVM_FALLTHROUGH;
+  }
+  case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
+  case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
+  case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
+  case AMDGPU::BI__builtin_amdgcn_atomic_dec64: {
+    unsigned BuiltinAtomicOp;
+    llvm::Type *ResultType = ConvertType(E->getType());
+
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
+    case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
+      BuiltinAtomicOp = Intrinsic::amdgcn_atomic_inc;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
+    case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
+      BuiltinAtomicOp = Intrinsic::amdgcn_atomic_dec;
+      break;
+    }
+
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+
+    llvm::Function *F =
+        CGM.getIntrinsic(BuiltinAtomicOp, {ResultType, Ptr->getType()});
+
+    if (ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
+                                EmitScalarExpr(E->getArg(3)), AO, SSID)) {
+
+      // llvm.amdgcn.atomic.inc and llvm.amdgcn.atomic.dec expects ordering and
+      // scope as unsigned values
+      Value *MemOrder = Builder.getInt32(static_cast<int>(AO));
+      Value *MemScope = Builder.getInt32(static_cast<int>(SSID));
+
+      QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+      bool Volatile =
+          PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+      Value *IsVolatile = Builder.getInt1(static_cast<bool>(Volatile));
+
+      return Builder.CreateCall(F, {Ptr, Val, MemOrder, MemScope, IsVolatile});
     }
     LLVM_FALLTHROUGH;
   }
