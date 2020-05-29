@@ -27,10 +27,10 @@ program test_prog
       print *, "hello", i, j
     ! CHECK: EndDoStmt
     end do
-    ! CHECK: <<EndDoConstruct>>
+    ! CHECK: <<End DoConstruct>>
   ! CHECK: EndDoStmt
   end do
-  ! CHECK: <<EndDoConstruct>>
+  ! CHECK: <<End DoConstruct>>
 
   ! CHECK: <<AssociateConstruct>>
   ! CHECK: AssociateStmt
@@ -39,9 +39,9 @@ program test_prog
     allocate(x(k))
   ! CHECK: EndAssociateStmt
   end associate
-  ! CHECK: <<EndAssociateConstruct>>
+  ! CHECK: <<End AssociateConstruct>>
 
-  ! CHECK: <<BlockConstruct>>
+  ! CHECK: <<BlockConstruct!>>
   ! CHECK: BlockStmt
   block
     integer :: k, l
@@ -52,7 +52,7 @@ program test_prog
     k = size(p)
     ! CHECK: AssignmentStmt
     l = 1
-    ! CHECK: <<CaseConstruct>>
+    ! CHECK: <<CaseConstruct!>>
     ! CHECK: SelectCaseStmt
     select case (k)
       ! CHECK: CaseStmt
@@ -76,13 +76,13 @@ program test_prog
           print *, "-"
         ! CHECK: EndIfStmt
         end if
-        ! CHECK: <<EndIfConstruct>>
+        ! CHECK: <<End IfConstruct>>
         ! CHECK: CaseStmt
       case (2:10)
       ! CHECK: CaseStmt
       case default
         ! Note: label-do-loop are canonicalized into do constructs
-        ! CHECK: <<DoConstruct>>
+        ! CHECK: <<DoConstruct!>>
         ! CHECK: NonLabelDoStmt
         do 22 while(l<=k)
           ! CHECK: IfStmt
@@ -90,15 +90,15 @@ program test_prog
           ! CHECK: CallStmt
 22        call incr(l)
         ! CHECK: EndDoStmt
-       ! CHECK: <<EndDoConstruct>>
+       ! CHECK: <<End DoConstruct!>>
       ! CHECK: CaseStmt
       case (100:)
     ! CHECK: EndSelectStmt
     end select
-  ! CHECK: <<EndCaseConstruct>>
+  ! CHECK: <<End CaseConstruct!>>
   ! CHECK: EndBlockStmt
   end block
-  ! CHECK: <<EndBlockConstruct>>
+  ! CHECK: <<End BlockConstruct!>>
 
   ! CHECK-NOT: WhereConstruct
   ! CHECK: WhereStmt
@@ -118,14 +118,14 @@ program test_prog
       ! CHECK: AssignmentStmt
       y = y/2.
     end where
-    ! CHECK: <<EndWhereConstruct>>
+    ! CHECK: <<End WhereConstruct>>
   ! CHECK: ElsewhereStmt
   elsewhere
     ! CHECK: AssignmentStmt
     x = x + 1.
   ! CHECK: EndWhereStmt
   end where
-  ! CHECK: <<EndWhereConstruct>>
+  ! CHECK: <<End WhereConstruct>>
 
   ! CHECK-NOT: ForAllConstruct
   ! CHECK: ForallStmt
@@ -138,7 +138,7 @@ program test_prog
     x(i) = x(i) + y(10*i)
   ! CHECK: EndForallStmt
   end forall
-  ! CHECK: <<EndForallConstruct>>
+  ! CHECK: <<End ForallConstruct>>
 
   ! CHECK: DeallocateStmt
   deallocate(x)
@@ -157,7 +157,7 @@ contains
   function foo(x)
     real x(..)
     integer :: foo
-    ! CHECK: <<SelectRankConstruct>>
+    ! CHECK: <<SelectRankConstruct!>>
     ! CHECK: SelectRankStmt
     select rank(x)
       ! CHECK: SelectRankCaseStmt
@@ -178,13 +178,13 @@ contains
         foo = 2
     ! CHECK: EndSelectStmt
     end select
-    ! CHECK: <<EndSelectRankConstruct>>
+    ! CHECK: <<End SelectRankConstruct!>>
   end function
 
   ! CHECK: Function bar
   function bar(x)
     class(*) :: x
-    ! CHECK: <<SelectTypeConstruct>>
+    ! CHECK: <<SelectTypeConstruct!>>
     ! CHECK: SelectTypeStmt
     select type(x)
       ! CHECK: TypeGuardStmt
@@ -203,7 +203,7 @@ contains
         bar = -1
     ! CHECK: EndSelectStmt
     end select
-    ! CHECK: <<EndSelectTypeConstruct>>
+    ! CHECK: <<End SelectTypeConstruct!>>
   end function
 
   ! CHECK: Subroutine sub
@@ -219,7 +219,7 @@ end module
 
 ! CHECK: Subroutine altreturn
 subroutine altreturn(i, j, *, *)
-  ! CHECK: <<IfConstruct>>
+  ! CHECK: <<IfConstruct!>>
   if (i>j) then
     ! CHECK: ReturnStmt
     return 1
@@ -227,7 +227,7 @@ subroutine altreturn(i, j, *, *)
     ! CHECK: ReturnStmt
     return 2
   end if
-  ! CHECK: <<EndIfConstruct>>
+  ! CHECK: <<End IfConstruct!>>
 end subroutine
 
 
@@ -246,7 +246,7 @@ subroutine iostmts(filename, a, b, c)
     ! CHECK: OpenStmt
     open(10, FILE=filename)
   end if
-  ! CHECK: <<EndIfConstruct>>
+  ! CHECK: <<End IfConstruct>>
   ! CHECK: ReadStmt
   read(10, *) length
   ! CHECK: RewindStmt
@@ -297,18 +297,18 @@ subroutine sub2()
 5 j = j + 1
 6 i = i + j/2
 
-  ! CHECK: <<DoConstruct>>
+  ! CHECK: <<DoConstruct!>>
   do1: do k=1,10
-    ! CHECK: <<DoConstruct>>
+    ! CHECK: <<DoConstruct!>>
     do2: do l=5,20
       ! CHECK: CycleStmt
       cycle do1
       ! CHECK: ExitStmt
       exit do2
     end do do2
-    ! CHECK: <<EndDoConstruct>>
+    ! CHECK: <<End DoConstruct!>>
   end do do1
-  ! CHECK: <<EndDoConstruct>>
+  ! CHECK: <<End DoConstruct!>>
 
   ! CHECK: PauseStmt
   pause 7

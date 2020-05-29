@@ -16,10 +16,10 @@ subroutine foo()
       print *, "hello", i, j
     ! CHECK: EndDoStmt
     end do
-    ! CHECK: <<EndDoConstruct>>
+    ! CHECK: <<End DoConstruct>>
   ! CHECK: EndDoStmt
   end do
-  ! CHECK: <<EndDoConstruct>>
+  ! CHECK: <<End DoConstruct>>
 end subroutine
 ! CHECK: EndSubroutine foo
 
@@ -102,7 +102,7 @@ contains
       write (*, 11) "test: ", xdim, pressure
     ! CHECK: EndIfStmt
     end if
-    ! CHECK: <<EndIfConstruct>>
+    ! CHECK: <<End IfConstruct>>
   end procedure
 end submodule
 ! CHECK: EndModuleLike
