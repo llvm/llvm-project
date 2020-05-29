@@ -17,7 +17,7 @@ define void @test1(i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:    retq
 entry:
 ; We expect the argument to be passed in an extra register to bar
-  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 1, i32 %a)
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 0) ["deopt"(i32 %a)]
   ret void
 }
 
