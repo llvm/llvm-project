@@ -164,21 +164,17 @@ def MMX_EMMS  : MMXI<0x77, RawFrm, (outs), (ins), "emms", [(int_x86_mmx_emms)]>;
 def MMX_MOVD64rr : MMXI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR64:$dst,
-                         (x86mmx (scalar_to_vector GR32:$src)))]>,
+                         (x86mmx (MMX_X86movw2d GR32:$src)))]>,
                         Sched<[WriteVecMoveFromGpr]>;
 def MMX_MOVD64rm : MMXI<0x6E, MRMSrcMem, (outs VR64:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR64:$dst,
-                        (x86mmx (scalar_to_vector (loadi32 addr:$src))))]>,
+                          (x86mmx (MMX_X86movw2d (loadi32 addr:$src))))]>,
                         Sched<[WriteVecLoad]>;
 
 let Predicates = [HasMMX] in {
-  def : Pat<(x86mmx (MMX_X86movw2d GR32:$src)),
-            (MMX_MOVD64rr GR32:$src)>;
   def : Pat<(x86mmx (MMX_X86movw2d (i32 0))),
             (MMX_SET0)>;
-  def : Pat<(x86mmx (MMX_X86movw2d (loadi32 addr:$src))),
-            (MMX_MOVD64rm addr:$src)>;
 }
 
 let mayStore = 1 in
@@ -271,14 +267,6 @@ def MMX_MOVNTQmr  : MMXI<0xE7, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                          "movntq\t{$src, $dst|$dst, $src}",
                          [(int_x86_mmx_movnt_dq addr:$dst, VR64:$src)]>,
                          Sched<[SchedWriteVecMoveLSNT.MMX.MR]>;
-
-let Predicates = [HasMMX] in {
-  // movd to MMX register zero-extends
-  def : Pat<(x86mmx (X86vzmovl (x86mmx (scalar_to_vector GR32:$src)))),
-            (MMX_MOVD64rr GR32:$src)>;
-  def : Pat<(x86mmx (X86vzmovl (x86mmx (scalar_to_vector (loadi32 addr:$src))))),
-            (MMX_MOVD64rm addr:$src)>;
-}
 
 // Arithmetic Instructions
 defm MMX_PABSB : SS3I_unop_rm_int_mm<0x1C, "pabsb", int_x86_ssse3_pabs_b,
