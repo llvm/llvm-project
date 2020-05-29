@@ -8,6 +8,7 @@
 
 #include "Headers.h"
 #include "Compiler.h"
+#include "Preamble.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "clang/Basic/SourceLocation.h"
@@ -22,11 +23,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
-  auto FE = SM.getFileManager().getFile(FileName);
-  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
-}
 
 class RecordHeaders : public PPCallbacks {
 public:
@@ -44,17 +40,8 @@ public:
                           SrcMgr::CharacteristicKind FileKind) override {
     auto MainFID = SM.getMainFileID();
     // If an include is part of the preamble patch, translate #line directives.
-    if (InBuiltinFile) {
-      auto Presumed = SM.getPresumedLoc(HashLoc);
-      // Presumed locations will have an invalid file id when #line directive
-      // changes the filename.
-      if (Presumed.getFileID().isInvalid() &&
-          isMainFile(Presumed.getFilename(), SM)) {
-        // Now we'll hit the case below.
-        HashLoc = SM.translateLineCol(MainFID, Presumed.getLine(),
-                                      Presumed.getColumn());
-      }
-    }
+    if (InBuiltinFile)
+      HashLoc = translatePreamblePatchLocation(HashLoc, SM);
 
     // Record main-file inclusions (including those mapped from the preamble
     // patch).
