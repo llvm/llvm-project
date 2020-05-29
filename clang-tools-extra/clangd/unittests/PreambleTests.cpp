@@ -48,7 +48,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   TU.ExtraArgs = {"-fno-ms-compatibility"};
   auto BaselinePreamble = TU.preamble();
   // Create the patch.
-  TU = TestTU::withCode(ModifiedContents);
+  TU.Code = ModifiedContents.str();
   auto PI = TU.inputs();
   auto PP = PreamblePatch::create(testPath(TU.Filename), PI, *BaselinePreamble);
   // Collect patch contents.
