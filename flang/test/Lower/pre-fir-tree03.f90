@@ -20,10 +20,10 @@ program test_omp
       print *, "in omp do"
     ! CHECK: EndDoStmt
     end do
-    ! CHECK: <<EndDoConstruct>>
+    ! CHECK: <<End DoConstruct>>
     ! CHECK: OmpEndLoopDirective
     !$omp end do
-    ! CHECK: <<EndOpenMPConstruct>>
+    ! CHECK: <<End OpenMPConstruct>>
 
     ! CHECK: PrintStmt
     print *, "not in omp do"
@@ -37,13 +37,13 @@ program test_omp
       print *, "in omp do"
     ! CHECK: EndDoStmt
     end do
-    ! CHECK: <<EndDoConstruct>>
-    ! CHECK: <<EndOpenMPConstruct>>
+    ! CHECK: <<End DoConstruct>>
+    ! CHECK: <<End OpenMPConstruct>>
     ! CHECK-NOT: OmpEndLoopDirective
     ! CHECK: PrintStmt
     print *, "no in omp do"
   !$omp end parallel
-    ! CHECK: <<EndOpenMPConstruct>>
+    ! CHECK: <<End OpenMPConstruct>>
 
   ! CHECK: PrintStmt
   print *, "sequential again"
@@ -53,7 +53,7 @@ program test_omp
     ! CHECK: PrintStmt
     print *, "in task"
   !$omp end task
-  ! CHECK: <<EndOpenMPConstruct>>
+  ! CHECK: <<End OpenMPConstruct>>
 
   ! CHECK: PrintStmt
   print *, "sequential again"
