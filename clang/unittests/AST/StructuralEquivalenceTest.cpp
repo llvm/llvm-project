@@ -2,10 +2,10 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Host.h"
 
-#include "Language.h"
 #include "DeclMatcher.h"
 
 #include "gtest/gtest.h"

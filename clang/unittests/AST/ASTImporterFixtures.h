@@ -19,11 +19,11 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "DeclMatcher.h"
-#include "Language.h"
 
 #include <sstream>
 

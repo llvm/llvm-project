@@ -1,4 +1,4 @@
-//===------ unittest/AST/Language.h - AST unit test support ---------------===//
+//===--- CommandLineArgs.h ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines language options for AST unittests.
+//  This file defines language options for Clang unittests.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_UNITTESTS_AST_LANGUAGE_H
-#define LLVM_CLANG_UNITTESTS_AST_LANGUAGE_H
+#ifndef LLVM_CLANG_TESTING_COMMANDLINEARGS_H
+#define LLVM_CLANG_TESTING_COMMANDLINEARGS_H
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace clang {
 
