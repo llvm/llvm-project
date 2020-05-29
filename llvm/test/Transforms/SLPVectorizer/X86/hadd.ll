@@ -179,13 +179,22 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE-NEXT:    ret <4 x double> [[R03]]
 ;
 ; SLM-LABEL: @test_v4f64(
-; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 4>
-; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
-; SLM-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 2, i32 6>
-; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 3, i32 7>
-; SLM-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
-; SLM-NEXT:    [[R03:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i32 0
+; SLM-NEXT:    [[A1:%.*]] = extractelement <4 x double> [[A]], i32 1
+; SLM-NEXT:    [[A2:%.*]] = extractelement <4 x double> [[A]], i32 2
+; SLM-NEXT:    [[A3:%.*]] = extractelement <4 x double> [[A]], i32 3
+; SLM-NEXT:    [[B0:%.*]] = extractelement <4 x double> [[B:%.*]], i32 0
+; SLM-NEXT:    [[B1:%.*]] = extractelement <4 x double> [[B]], i32 1
+; SLM-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B]], i32 2
+; SLM-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i32 3
+; SLM-NEXT:    [[R0:%.*]] = fadd double [[A0]], [[A1]]
+; SLM-NEXT:    [[R1:%.*]] = fadd double [[B0]], [[B1]]
+; SLM-NEXT:    [[R2:%.*]] = fadd double [[A2]], [[A3]]
+; SLM-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; SLM-NEXT:    [[R00:%.*]] = insertelement <4 x double> undef, double [[R0]], i32 0
+; SLM-NEXT:    [[R01:%.*]] = insertelement <4 x double> [[R00]], double [[R1]], i32 1
+; SLM-NEXT:    [[R02:%.*]] = insertelement <4 x double> [[R01]], double [[R2]], i32 2
+; SLM-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R02]], double [[R3]], i32 3
 ; SLM-NEXT:    ret <4 x double> [[R03]]
 ;
 ; AVX-LABEL: @test_v4f64(
