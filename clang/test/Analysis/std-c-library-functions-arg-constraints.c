@@ -149,3 +149,27 @@ void test_buf_size_symbolic_and_offset(int s) {
   // bugpath-note{{TRUE}} \
   // bugpath-note{{'s' is <= 2}}
 }
+int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
+void test_buf_size_concrete_with_multiplication() {
+  short buf[3];         // bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+}
+void test_buf_size_symbolic_with_multiplication(size_t s) {
+  short buf[3];
+  __buf_size_arg_constraint_mul(buf, s, sizeof(short));
+  clang_analyzer_eval(s * sizeof(short) <= 6); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
+}
+void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
+  short buf[3];
+  __buf_size_arg_constraint_mul(buf + 1, s, sizeof(short));
+  clang_analyzer_eval(s * sizeof(short) <= 4); // \
+  // report-warning{{TRUE}} \
+  // bugpath-warning{{TRUE}} \
+  // bugpath-note{{TRUE}}
+}
