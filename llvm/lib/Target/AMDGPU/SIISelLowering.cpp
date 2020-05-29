@@ -3716,16 +3716,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineFunction *MF = BB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
 
-  if (TII->isMIMG(MI)) {
-    if (MI.memoperands_empty() && MI.mayLoadOrStore()) {
-      report_fatal_error("missing mem operand from MIMG instruction");
-    }
-    // Add a memoperand for mimg instructions so that they aren't assumed to
-    // be ordered memory instuctions.
-
-    return BB;
-  }
-
   switch (MI.getOpcode()) {
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
