@@ -1235,7 +1235,14 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   case ToolChain::UNW_CompilerRT:
     if (LGT == LibGccType::StaticLibGcc)
       CmdArgs.push_back("-l:libunwind.a");
-    else
+    else if (TC.getTriple().isOSCygMing()) {
+      if (LGT == LibGccType::SharedLibGcc)
+        CmdArgs.push_back("-l:libunwind.dll.a");
+      else
+        // Let the linker choose between libunwind.dll.a and libunwind.a
+        // depending on what's available, and depending on the -static flag
+        CmdArgs.push_back("-lunwind");
+    } else
       CmdArgs.push_back("-l:libunwind.so");
     break;
   }
