@@ -770,7 +770,7 @@ define <2 x i64> @v_urem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v9
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v1, v5, vcc
 ; CGP-NEXT:    v_cndmask_b32_e32 v1, v10, v11, vcc
-; CGP-NEXT:  BB2_2: ; %Flow1
+; CGP-NEXT:  BB2_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[8:9], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; CGP-NEXT:    s_cbranch_execz BB2_4
@@ -2866,7 +2866,7 @@ define <2 x i64> @v_urem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v1, v7, vcc
 ; CGP-NEXT:    v_cndmask_b32_e32 v1, v4, v11, vcc
-; CGP-NEXT:  BB8_2: ; %Flow1
+; CGP-NEXT:  BB8_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[8:9], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; CGP-NEXT:    s_cbranch_execz BB8_4
