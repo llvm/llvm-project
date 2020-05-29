@@ -153,7 +153,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   TargetTriple(TT),
   Has16BitInsts(false),
   HasMadMixInsts(false),
-  FPExceptions(false),
   HasSDWA(false),
   HasVOP3PInsts(false),
   HasMulI24(true),

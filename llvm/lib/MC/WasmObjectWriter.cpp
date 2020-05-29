@@ -565,7 +565,10 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
     // Provisional value is table address of the resolved symbol itself
     const MCSymbolWasm *Sym = resolveSymbol(*RelEntry.Symbol);
     assert(Sym->isFunction());
-    return TableIndices[Sym];
+    if (RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB)
+      return TableIndices[Sym] - InitialTableOffset;
+    else
+      return TableIndices[Sym];
   }
   case wasm::R_WASM_TYPE_INDEX_LEB:
     // Provisional value is same as the index
@@ -1559,7 +1562,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       // purely to make the object file's provisional values readable, and is
       // ignored by the linker, which re-calculates the relocations itself.
       if (Rel.Type != wasm::R_WASM_TABLE_INDEX_I32 &&
-          Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB)
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB &&
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_REL_SLEB)
         return;
       assert(Rel.Symbol->isFunction());
       const MCSymbolWasm &WS = *resolveSymbol(*Rel.Symbol);

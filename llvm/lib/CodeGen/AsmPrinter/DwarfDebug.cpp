@@ -2924,26 +2924,23 @@ void DwarfDebug::emitMacro(DIMacro &M) {
 
   if (UseMacro) {
     unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
-                        ? dwarf::DW_MACRO_define_strp
-                        : dwarf::DW_MACRO_undef_strp;
+                        ? dwarf::DW_MACRO_define_strx
+                        : dwarf::DW_MACRO_undef_strx;
     Asm->OutStreamer->AddComment(dwarf::MacroString(Type));
     Asm->emitULEB128(Type);
     Asm->OutStreamer->AddComment("Line Number");
     Asm->emitULEB128(M.getLine());
     Asm->OutStreamer->AddComment("Macro String");
     if (!Value.empty())
-      Asm->OutStreamer->emitSymbolValue(
-          this->InfoHolder.getStringPool()
-              .getEntry(*Asm, (Name + " " + Value).str())
-              .getSymbol(),
-          4);
+      Asm->emitULEB128(this->InfoHolder.getStringPool()
+                           .getIndexedEntry(*Asm, (Name + " " + Value).str())
+                           .getIndex());
     else
-      // DW_MACRO_undef_strp doesn't have a value, so just emit the macro
+      // DW_MACRO_undef_strx doesn't have a value, so just emit the macro
       // string.
-      Asm->OutStreamer->emitSymbolValue(this->InfoHolder.getStringPool()
-                                            .getEntry(*Asm, (Name).str())
-                                            .getSymbol(),
-                                        4);
+      Asm->emitULEB128(this->InfoHolder.getStringPool()
+                           .getIndexedEntry(*Asm, (Name).str())
+                           .getIndex());
   } else {
     Asm->OutStreamer->AddComment(dwarf::MacinfoString(M.getMacinfoType()));
     Asm->emitULEB128(M.getMacinfoType());

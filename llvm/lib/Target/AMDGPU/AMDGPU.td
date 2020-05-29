@@ -500,12 +500,6 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",
-  "FPExceptions",
-  "true",
-  "Enable floating point exceptions"
->;
-
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
   "max-private-element-size-"#size,
   "MaxPrivateElementSize",

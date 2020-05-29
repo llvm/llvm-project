@@ -118,6 +118,7 @@ public:
   std::vector<bool> typeIsUsed;
   // Maps function indices to table indices
   std::vector<uint32_t> tableEntries;
+  std::vector<uint32_t> tableEntriesRel;
   std::vector<bool> keptComdats;
   std::vector<InputSegment *> segments;
   std::vector<InputFunction *> functions;

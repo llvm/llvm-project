@@ -27,6 +27,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
   { NKI_None, "NestedNameSpecifierLoc" },
   { NKI_None, "QualType" },
   { NKI_None, "TypeLoc" },
+  { NKI_None, "CXXBaseSpecifier" },
   { NKI_None, "CXXCtorInitializer" },
   { NKI_None, "NestedNameSpecifier" },
   { NKI_None, "Decl" },

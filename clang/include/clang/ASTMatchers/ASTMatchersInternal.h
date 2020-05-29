@@ -130,6 +130,9 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
     return TSI->getType();
   return QualType();
 }
+inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
+  return Node.getType();
+}
 
 /// Unifies obtaining the FunctionProtoType pointer from both
 /// FunctionProtoType and FunctionDecl nodes..
@@ -140,6 +143,15 @@ getFunctionProtoType(const FunctionProtoType &Node) {
 
 inline const FunctionProtoType *getFunctionProtoType(const FunctionDecl &Node) {
   return Node.getType()->getAs<FunctionProtoType>();
+}
+
+/// Unifies obtaining the access specifier from Decl and CXXBaseSpecifier nodes.
+inline clang::AccessSpecifier getAccessSpecifier(const Decl &Node) {
+  return Node.getAccess();
+}
+
+inline clang::AccessSpecifier getAccessSpecifier(const CXXBaseSpecifier &Node) {
+  return Node.getAccessSpecifier();
 }
 
 /// Internal version of BoundNodes. Holds all the bound nodes.
@@ -1928,6 +1940,13 @@ using HasOverloadOpNameMatcher = PolymorphicMatcherWithParam1<
 
 HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+
+/// Returns true if \p Node has a base specifier matching \p BaseSpec.
+///
+/// A class is not considered to be derived from itself.
+bool matchesAnyBase(const CXXRecordDecl &Node,
+                    const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
+                    ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder);
 
 } // namespace internal
 

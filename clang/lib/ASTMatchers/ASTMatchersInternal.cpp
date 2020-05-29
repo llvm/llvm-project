@@ -68,6 +68,30 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers);
 
+bool matchesAnyBase(const CXXRecordDecl &Node,
+                    const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
+                    ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder) {
+  if (!Node.hasDefinition())
+    return false;
+
+  CXXBasePaths Paths;
+  Paths.setOrigin(&Node);
+
+  const auto basePredicate =
+      [Finder, Builder, &BaseSpecMatcher](const CXXBaseSpecifier *BaseSpec,
+                                          CXXBasePath &IgnoredParam) {
+        BoundNodesTreeBuilder Result(*Builder);
+        if (BaseSpecMatcher.matches(*BaseSpec, Finder, Builder)) {
+          *Builder = std::move(Result);
+          return true;
+        }
+        return false;
+      };
+
+  return Node.lookupInBases(basePredicate, Paths,
+                            /*LookupInDependent =*/true);
+}
+
 void BoundNodesTreeBuilder::visitMatches(Visitor *ResultVisitor) {
   if (Bindings.empty())
     Bindings.push_back(BoundNodesMap());

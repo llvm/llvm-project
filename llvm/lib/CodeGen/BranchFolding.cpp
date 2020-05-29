@@ -348,6 +348,9 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
         MBBI1->isInlineAsm()) {
       break;
     }
+    if (MBBI1->getFlag(MachineInstr::NoMerge) ||
+        MBBI2->getFlag(MachineInstr::NoMerge))
+      break;
     ++TailLen;
     I1 = MBBI1;
     I2 = MBBI2;
