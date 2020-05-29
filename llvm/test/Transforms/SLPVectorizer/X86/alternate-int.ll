@@ -101,11 +101,44 @@ define <4 x i32> @add_mul_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <8 x i32> @ashr_shl_v8i32(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: @ashr_shl_v8i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    ret <8 x i32> [[R7]]
+; SSE-LABEL: @ashr_shl_v8i32(
+; SSE-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[A:%.*]], [[B:%.*]]
+; SSE-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[A]], [[B]]
+; SSE-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    ret <8 x i32> [[R7]]
+;
+; AVX1-LABEL: @ashr_shl_v8i32(
+; AVX1-NEXT:    [[A0:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 0
+; AVX1-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A]], i32 1
+; AVX1-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
+; AVX1-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
+; AVX1-NEXT:    [[B0:%.*]] = extractelement <8 x i32> [[B:%.*]], i32 0
+; AVX1-NEXT:    [[B1:%.*]] = extractelement <8 x i32> [[B]], i32 1
+; AVX1-NEXT:    [[B2:%.*]] = extractelement <8 x i32> [[B]], i32 2
+; AVX1-NEXT:    [[B3:%.*]] = extractelement <8 x i32> [[B]], i32 3
+; AVX1-NEXT:    [[AB0:%.*]] = ashr i32 [[A0]], [[B0]]
+; AVX1-NEXT:    [[AB1:%.*]] = ashr i32 [[A1]], [[B1]]
+; AVX1-NEXT:    [[AB2:%.*]] = ashr i32 [[A2]], [[B2]]
+; AVX1-NEXT:    [[AB3:%.*]] = ashr i32 [[A3]], [[B3]]
+; AVX1-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[A]], [[B]]
+; AVX1-NEXT:    [[R0:%.*]] = insertelement <8 x i32> undef, i32 [[AB0]], i32 0
+; AVX1-NEXT:    [[R1:%.*]] = insertelement <8 x i32> [[R0]], i32 [[AB1]], i32 1
+; AVX1-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
+; AVX1-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
+; AVX1-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[R3]], <8 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; AVX1-NEXT:    ret <8 x i32> [[R7]]
+;
+; AVX2-LABEL: @ashr_shl_v8i32(
+; AVX2-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[A:%.*]], [[B:%.*]]
+; AVX2-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[A]], [[B]]
+; AVX2-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; AVX2-NEXT:    ret <8 x i32> [[R7]]
+;
+; AVX512-LABEL: @ashr_shl_v8i32(
+; AVX512-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[A:%.*]], [[B:%.*]]
+; AVX512-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[A]], [[B]]
+; AVX512-NEXT:    [[R7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; AVX512-NEXT:    ret <8 x i32> [[R7]]
 ;
   %a0 = extractelement <8 x i32> %a, i32 0
   %a1 = extractelement <8 x i32> %a, i32 1
