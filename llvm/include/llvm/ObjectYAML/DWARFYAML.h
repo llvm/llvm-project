@@ -99,6 +99,9 @@ struct PubSection {
   uint32_t UnitSize;
   bool IsGNUStyle = false;
   std::vector<PubEntry> Entries;
+
+  PubSection() = default;
+  PubSection(bool IsGNUStyle) : IsGNUStyle(IsGNUStyle) {}
 };
 
 struct FormValue {
@@ -161,11 +164,11 @@ struct Data {
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
   std::vector<Ranges> DebugRanges;
-  PubSection PubNames;
-  PubSection PubTypes;
+  Optional<PubSection> PubNames;
+  Optional<PubSection> PubTypes;
 
-  PubSection GNUPubNames;
-  PubSection GNUPubTypes;
+  Optional<PubSection> GNUPubNames;
+  Optional<PubSection> GNUPubTypes;
 
   std::vector<Unit> CompileUnits;
 

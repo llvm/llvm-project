@@ -12,6 +12,7 @@
 
 #include "TextStubCommon.h"
 #include "TextAPIContext.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm::MachO;
 
