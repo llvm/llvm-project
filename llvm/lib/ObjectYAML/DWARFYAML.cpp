@@ -17,10 +17,8 @@ namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
   return DebugStrings.empty() && AbbrevDecls.empty() && ARanges.empty() &&
-         DebugRanges.empty() && PubNames.Entries.empty() &&
-         PubTypes.Entries.empty() && GNUPubNames.Entries.empty() &&
-         GNUPubTypes.Entries.empty() && CompileUnits.empty() &&
-         DebugLines.empty();
+         DebugRanges.empty() && !PubNames && !PubTypes && !GNUPubNames &&
+         !GNUPubTypes && CompileUnits.empty() && DebugLines.empty();
 }
 
 SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
@@ -41,14 +39,10 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
     IO.mapOptional("debug_aranges", DWARF.ARanges);
   if (!DWARF.DebugRanges.empty() || !IO.outputting())
     IO.mapOptional("debug_ranges", DWARF.DebugRanges);
-  if (!DWARF.PubNames.Entries.empty() || !IO.outputting())
-    IO.mapOptional("debug_pubnames", DWARF.PubNames);
-  if (!DWARF.PubTypes.Entries.empty() || !IO.outputting())
-    IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
-  if (!DWARF.GNUPubNames.Entries.empty() || !IO.outputting())
-    IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
-  if (!DWARF.GNUPubTypes.Entries.empty() || !IO.outputting())
-    IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
+  IO.mapOptional("debug_pubnames", DWARF.PubNames);
+  IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
+  IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
+  IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
   IO.mapOptional("debug_info", DWARF.CompileUnits);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.setContext(&oldContext);
