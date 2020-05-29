@@ -135,8 +135,7 @@ entry:
 define arm_aapcs_vfpcc zeroext i16 @add_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_v8i16_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmul.i16 q0, q0, q1
-; CHECK-NEXT:    vaddv.u16 r0, q0
+; CHECK-NEXT:    vmlav.u16 r0, q0, q1
 ; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -438,8 +437,9 @@ entry:
 define arm_aapcs_vfpcc zeroext i16 @add_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_v8i8_v8i16_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmullb.u8 q0, q0, q1
-; CHECK-NEXT:    vaddv.u16 r0, q0
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmovlb.u8 q0, q0
+; CHECK-NEXT:    vmlav.u16 r0, q0, q1
 ; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -453,8 +453,9 @@ entry:
 define arm_aapcs_vfpcc signext i16 @add_v8i8_v8i16_sext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_v8i8_v8i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmullb.s8 q0, q0, q1
-; CHECK-NEXT:    vaddv.u16 r0, q0
+; CHECK-NEXT:    vmovlb.s8 q1, q1
+; CHECK-NEXT:    vmovlb.s8 q0, q0
+; CHECK-NEXT:    vmlav.u16 r0, q0, q1
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -468,8 +469,7 @@ entry:
 define arm_aapcs_vfpcc zeroext i8 @add_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_v16i8_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmul.i8 q0, q0, q1
-; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    vmlav.u8 r0, q0, q1
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1086,8 +1086,7 @@ entry:
 define arm_aapcs_vfpcc zeroext i16 @add_v8i16_v8i16_acc(<8 x i16> %x, <8 x i16> %y, i16 %a) {
 ; CHECK-LABEL: add_v8i16_v8i16_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmul.i16 q0, q0, q1
-; CHECK-NEXT:    vaddva.u16 r0, q0
+; CHECK-NEXT:    vmlava.u16 r0, q0, q1
 ; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1408,8 +1407,9 @@ entry:
 define arm_aapcs_vfpcc zeroext i16 @add_v8i8_v8i16_acc_zext(<8 x i8> %x, <8 x i8> %y, i16 %a) {
 ; CHECK-LABEL: add_v8i8_v8i16_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmullb.u8 q0, q0, q1
-; CHECK-NEXT:    vaddva.u16 r0, q0
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmovlb.u8 q0, q0
+; CHECK-NEXT:    vmlava.u16 r0, q0, q1
 ; CHECK-NEXT:    uxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1424,8 +1424,9 @@ entry:
 define arm_aapcs_vfpcc signext i16 @add_v8i8_v8i16_acc_sext(<8 x i8> %x, <8 x i8> %y, i16 %a) {
 ; CHECK-LABEL: add_v8i8_v8i16_acc_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmullb.s8 q0, q0, q1
-; CHECK-NEXT:    vaddva.u16 r0, q0
+; CHECK-NEXT:    vmovlb.s8 q1, q1
+; CHECK-NEXT:    vmovlb.s8 q0, q0
+; CHECK-NEXT:    vmlava.u16 r0, q0, q1
 ; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1440,8 +1441,7 @@ entry:
 define arm_aapcs_vfpcc zeroext i8 @add_v16i8_v16i8_acc(<16 x i8> %x, <16 x i8> %y, i8 %a) {
 ; CHECK-LABEL: add_v16i8_v16i8_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmul.i8 q0, q0, q1
-; CHECK-NEXT:    vaddva.u8 r0, q0
+; CHECK-NEXT:    vmlava.u8 r0, q0, q1
 ; CHECK-NEXT:    uxtb r0, r0
 ; CHECK-NEXT:    bx lr
 entry:
