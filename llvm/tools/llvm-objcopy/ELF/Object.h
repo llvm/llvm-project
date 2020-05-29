@@ -424,6 +424,8 @@ public:
   virtual void markSymbols();
   virtual void
   replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
+  // Notify the section that it is subject to removal.
+  virtual void onRemove();
 };
 
 class Segment {
@@ -803,6 +805,7 @@ public:
   void markSymbols() override;
   void replaceSectionReferences(
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
+  void onRemove() override;
 
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_GROUP;
