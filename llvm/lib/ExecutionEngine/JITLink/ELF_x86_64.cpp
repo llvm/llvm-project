@@ -24,12 +24,19 @@ static const char *CommonSectionName = "__common";
 
 namespace llvm {
 namespace jitlink {
+
 // This should become a template as the ELFFile is so a lot of this could become
 // generic
 class ELFLinkGraphBuilder_x86_64 {
 
 private:
   Section *CommonSection = nullptr;
+  // TODO hack to get this working
+  // Find a better way
+  using SymbolTable = object::ELFFile<object::ELF64LE>::Elf_Shdr;
+  // For now we just assume
+  std::map<int32_t, Symbol *> JITSymbolTable;
+
   Section &getCommonSection() {
     if (!CommonSection) {
       auto Prot = static_cast<sys::Memory::ProtectionFlags>(
@@ -39,10 +46,21 @@ private:
     return *CommonSection;
   }
 
+  static Expected<ELF_x86_64_Edges::ELFX86RelocationKind>
+  getRelocationKind(const uint32_t Type) {
+    switch (Type) {
+    case ELF::R_X86_64_PC32:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
+    }
+    return make_error<JITLinkError>("Unsupported x86-64 relocation:" +
+                                    formatv("{0:d}", Type));
+  }
+
   std::unique_ptr<LinkGraph> G;
   // This could be a template
   const object::ELFFile<object::ELF64LE> &Obj;
   object::ELFFile<object::ELF64LE>::Elf_Shdr_Range sections;
+  SymbolTable SymTab;
 
   bool isRelocatable() { return Obj.getHeader()->e_type == llvm::ELF::ET_REL; }
 
@@ -88,11 +106,11 @@ private:
         // FIXME: Read size.
         (void)Size;
 
-        if (auto NameOrErr = SymRef.getName(*StringTable)) {
+        if (auto NameOrErr = SymRef.getName(*StringTable))
           Name = *NameOrErr;
-        } else {
+        else
           return NameOrErr.takeError();
-        }
+
         LLVM_DEBUG({
           dbgs() << "  ";
           if (!Name)
@@ -157,9 +175,90 @@ private:
         // Do this here because we have it, but move it into graphify later
         G->createContentBlock(section, StringRef(Data, Size), Address,
                               Alignment, 0);
+        if (SecRef.sh_type == ELF::SHT_SYMTAB)
+          // TODO: Dynamic?
+          SymTab = SecRef;
       }
     }
 
+    return Error::success();
+  }
+
+  Error addRelocations() {
+    LLVM_DEBUG(dbgs() << "Adding relocations\n");
+    // TODO a partern is forming of iterate some sections but only give me
+    // ones I am interested, i should abstract that concept some where
+    for (auto &SecRef : sections) {
+      if (SecRef.sh_type != ELF::SHT_RELA && SecRef.sh_type != ELF::SHT_REL)
+        continue;
+      // TODO can the elf obj file do this for me?
+      if (SecRef.sh_type == ELF::SHT_REL)
+        return make_error<llvm::StringError>("Shouldn't have REL in x64",
+                                             llvm::inconvertibleErrorCode());
+
+      auto RelSectName = Obj.getSectionName(&SecRef);
+      if (!RelSectName)
+        return RelSectName.takeError();
+      // Deal with .eh_frame later
+      if (*RelSectName == StringRef(".rela.eh_frame"))
+        continue;
+
+      auto UpdateSection = Obj.getSection(SecRef.sh_info);
+      if (!UpdateSection)
+        return UpdateSection.takeError();
+
+      auto UpdateSectionName = Obj.getSectionName(*UpdateSection);
+      if (!UpdateSectionName)
+        return UpdateSectionName.takeError();
+
+      auto JITSection = G->findSectionByName(*UpdateSectionName);
+      if (!JITSection)
+        return make_error<llvm::StringError>(
+            "Refencing a a section that wasn't added to graph" +
+                *UpdateSectionName,
+            llvm::inconvertibleErrorCode());
+
+      auto Relocations = Obj.relas(&SecRef);
+      if (!Relocations)
+        return Relocations.takeError();
+
+      for (const auto &Rela : *Relocations) {
+        auto Type = Rela.getType(false);
+
+        LLVM_DEBUG({
+          dbgs() << "Relocation Type: " << Type << "\n"
+                 << "Name: " << Obj.getRelocationTypeName(Type) << "\n";
+        });
+
+        auto Symbol = Obj.getRelocationSymbol(&Rela, &SymTab);
+        if (!Symbol)
+          return Symbol.takeError();
+
+        auto BlockToFix = *(JITSection->blocks().begin());
+        auto TargetSymbol = JITSymbolTable[(*Symbol)->st_shndx];
+        uint64_t Addend = Rela.r_addend;
+        JITTargetAddress FixupAddress =
+            (*UpdateSection)->sh_addr + Rela.r_offset;
+
+        LLVM_DEBUG({
+          dbgs() << "Processing relocation at "
+                 << format("0x%016" PRIx64, FixupAddress) << "\n";
+        });
+        auto Kind = getRelocationKind(Type);
+        if (!Kind)
+          return Kind.takeError();
+
+        LLVM_DEBUG({
+          Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
+                  Addend);
+          // TODO a mapping of KIND => type then call getRelocationTypeName4
+          printEdge(dbgs(), *BlockToFix, GE, StringRef(""));
+          dbgs() << "\n";
+        });
+        BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
+                            *TargetSymbol, Addend);
+      }
+    }
     return Error::success();
   }
 
@@ -219,11 +318,10 @@ private:
         if (!Name)
           return Name.takeError();
         // TODO: weak and hidden
-        if (SymRef.isExternal()) {
+        if (SymRef.isExternal())
           bindings = {Linkage::Strong, Scope::Default};
-        } else {
+        else
           bindings = {Linkage::Strong, Scope::Local};
-        }
 
         if (SymRef.isDefined() &&
             (Type == ELF::STT_FUNC || Type == ELF::STT_OBJECT)) {
@@ -247,9 +345,10 @@ private:
           auto B = *bs.begin();
           LLVM_DEBUG({ dbgs() << "  " << *Name << ": "; });
 
-          G->addDefinedSymbol(*B, SymRef.getValue(), *Name, SymRef.st_size,
-                              bindings.first, bindings.second,
-                              SymRef.getType() == ELF::STT_FUNC, false);
+          auto &S = G->addDefinedSymbol(
+              *B, SymRef.getValue(), *Name, SymRef.st_size, bindings.first,
+              bindings.second, SymRef.getType() == ELF::STT_FUNC, false);
+          JITSymbolTable[SymRef.st_shndx] = &S;
         }
         //TODO: The following has to be implmented.
         // leaving commented out to save time for future patchs
@@ -298,6 +397,9 @@ public:
     if (auto Err = graphifyRegularSymbols())
       return std::move(Err);
 
+    if (auto Err = addRelocations())
+      return std::move(Err);
+
     return std::move(G);
   }
 };
@@ -311,9 +413,7 @@ public:
       : JITLinker(std::move(Ctx), std::move(PassConfig)) {}
 
 private:
-  StringRef getEdgeKindName(Edge::Kind R) const override {
-    return getELFX86RelocationKindName(R);
-  }
+  StringRef getEdgeKindName(Edge::Kind R) const override { return StringRef(); }
 
   Expected<std::unique_ptr<LinkGraph>>
   buildGraph(MemoryBufferRef ObjBuffer) override {
@@ -329,7 +429,17 @@ private:
   }
 
   Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
-    //TODO: add relocation handling
+    using namespace ELF_x86_64_Edges;
+    char *FixupPtr = BlockWorkingMem + E.getOffset();
+    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
+    switch (E.getKind()) {
+
+    case ELFX86RelocationKind::PCRel32:
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      // verify
+      *(support::little32_t *)FixupPtr = Value;
+      break;
+    }
     return Error::success();
   }
 };
@@ -348,31 +458,6 @@ void jitLink_ELF_x86_64(std::unique_ptr<JITLinkContext> Ctx) {
     return Ctx->notifyFailed(std::move(Err));
 
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(Config));
-}
-
-StringRef getELFX86RelocationKindName(Edge::Kind R) {
-  // case R_AMD64_NONE:
-  //   return "None";
-  // case R_AMD64_PC32:
-  // case R_AMD64_GOT32:
-  // case R_AMD64_PLT32,
-  // R_AMD64_COPY,
-  // R_AMD64_GLOB_DAT,
-  // R_AMD64_JUMP_SLOT,
-  // R_AMD64_RELATIVE,
-  // R_AMD64_GOTPCREL,
-  // R_AMD64_32,
-  // R_AMD64_32S,
-  // R_AMD64_16,
-  // R_AMD64_PC16,
-  // R_AMD64_8,
-  // R_AMD64_PC8,
-  // R_AMD64_PC64,
-  // R_AMD64_GOTOFF64,
-  // R_AMD64_GOTPC32,
-  // R_AMD64_SIZE32,
-  // R_AMD64_SIZE64
-  return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
 } // end namespace jitlink
 } // end namespace llvm
