@@ -100,6 +100,11 @@ static cl::opt<std::string> OptimizerLastEPPipeline(
              "the OptimizerLast extension point into default pipelines"),
     cl::Hidden);
 
+// Individual pipeline tuning options.
+static cl::opt<bool> DisableLoopUnrolling(
+    "new-pm-disable-loop-unrolling",
+    cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
+
 extern cl::opt<PGOKind> PGOKindFlag;
 extern cl::opt<std::string> ProfileFile;
 extern cl::opt<CSPGOKind> CSPGOKindFlag;
@@ -260,6 +265,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   SI.registerCallbacks(PIC);
 
   PipelineTuningOptions PTO;
+  // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
+  // to false above so we shouldn't necessarily need to check whether or not the
+  // option has been enabled.
+  PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.Coroutines = Coroutines;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB, VerifyEachPass, DebugPM);

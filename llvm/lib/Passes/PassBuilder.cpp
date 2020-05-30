@@ -519,12 +519,13 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(LoopDeletionPass());
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
-  // inaccurate.
-  if ((Phase != ThinLTOPhase::PreLink || !PGOOpt ||
-       PGOOpt->Action != PGOOptions::SampleUse) &&
-      PTO.LoopUnrolling)
+  // inaccurate. The normal unroller doesn't pay attention to forced full unroll
+  // attributes so we need to make sure and allow the full unroll pass to pay
+  // attention to it.
+  if (Phase != ThinLTOPhase::PreLink || !PGOOpt ||
+      PGOOpt->Action != PGOOptions::SampleUse)
     LPM2.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
-                                    /*OnlyWhenForced=*/false,
+                                    /* OnlyWhenForced= */ !PTO.LoopUnrolling,
                                     PTO.ForgetAllSCEVInLoopUnroll));
 
   for (auto &C : LoopOptimizerEndEPCallbacks)
