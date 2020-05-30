@@ -13,13 +13,13 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
 namespace llvm {
 
+class AllocaInst;
 class BasicBlock;
 class Function;
 class Instruction;
