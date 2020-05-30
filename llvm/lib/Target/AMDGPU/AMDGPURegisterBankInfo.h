@@ -69,13 +69,12 @@ public:
 
   void constrainOpWithReadfirstlane(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     unsigned OpIdx) const;
-  bool applyMappingWideLoad(MachineInstr &MI,
-                            const OperandsMapper &OpdMapper,
-                            MachineRegisterInfo &MRI) const;
-
   bool applyMappingDynStackAlloc(MachineInstr &MI,
                                  const OperandsMapper &OpdMapper,
                                  MachineRegisterInfo &MRI) const;
+  bool applyMappingLoad(MachineInstr &MI,
+                        const OperandsMapper &OpdMapper,
+                        MachineRegisterInfo &MRI) const;
   bool
   applyMappingImage(MachineInstr &MI,
                     const OperandsMapper &OpdMapper,
