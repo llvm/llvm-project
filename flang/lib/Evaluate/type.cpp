@@ -23,6 +23,7 @@
 // IsDescriptor() predicate
 // TODO there's probably a better place for this predicate than here
 namespace Fortran::semantics {
+
 static bool IsDescriptor(const ObjectEntityDetails &details) {
   if (const auto *type{details.type()}) {
     if (auto dynamicType{evaluate::DynamicType::From(*type)}) {
@@ -32,7 +33,14 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
     }
   }
   // TODO: Automatic (adjustable) arrays - are they descriptors?
-  return !details.shape().empty() && !details.shape().IsConstantShape();
+  for (const ShapeSpec &shapeSpec : details.shape()) {
+    const auto &lb{shapeSpec.lbound().GetExplicit()};
+    const auto &ub{shapeSpec.ubound().GetExplicit()};
+    if (!lb || !ub || !IsConstantExpr(*lb) || !IsConstantExpr(*ub)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 static bool IsDescriptor(const ProcEntityDetails &details) {
@@ -427,7 +435,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
 
 bool DynamicType::RequiresDescriptor() const {
   return IsPolymorphic() || IsUnknownLengthCharacter() ||
-      (derived_ && derived_->NumLengthParameters() > 0);
+      (derived_ && CountLenParameters(*derived_) > 0);
 }
 
 bool DynamicType::HasDeferredTypeParameter() const {

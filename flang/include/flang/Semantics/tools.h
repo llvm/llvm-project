@@ -31,7 +31,6 @@ class Scope;
 class Symbol;
 
 const Scope *FindModuleContaining(const Scope &);
-const Symbol *FindCommonBlockContaining(const Symbol &object);
 const Scope *FindProgramUnitContaining(const Scope &);
 const Scope *FindProgramUnitContaining(const Symbol &);
 const Scope *FindPureProcedureContaining(const Scope &);
@@ -49,9 +48,6 @@ const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const DeclTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const Scope &);
 const DeclTypeSpec *FindParentTypeSpec(const Symbol &);
-
-// Return the Symbol of the variable of a construct association, if it exists
-const Symbol *GetAssociationRoot(const Symbol &);
 
 enum class Tristate { No, Yes, Maybe };
 inline Tristate ToTristate(bool x) { return x ? Tristate::Yes : Tristate::No; }
@@ -78,21 +74,17 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Scope &maybeDescendent);
 bool DoesScopeContain(const Scope *, const Symbol &);
 bool IsUseAssociated(const Symbol &, const Scope &);
 bool IsHostAssociated(const Symbol &, const Scope &);
-bool IsDummy(const Symbol &);
-bool IsStmtFunction(const Symbol &);
+inline bool IsStmtFunction(const Symbol &symbol) {
+  const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
+  return subprogram && subprogram->stmtFunction();
+}
 bool IsInStmtFunction(const Symbol &);
 bool IsStmtFunctionDummy(const Symbol &);
 bool IsStmtFunctionResult(const Symbol &);
 bool IsPointerDummy(const Symbol &);
-bool IsFunction(const Symbol &);
-bool IsPureProcedure(const Symbol &);
-bool IsPureProcedure(const Scope &);
 bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
-bool IsProcedure(const Symbol &);
 bool IsProcName(const Symbol &symbol); // proc-name
-bool IsVariableName(const Symbol &symbol); // variable-name
-bool IsProcedurePointer(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
@@ -103,8 +95,6 @@ bool IsTeamType(const DerivedTypeSpec *);
 bool IsIsoCType(const DerivedTypeSpec *);
 bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
-// Has an explicit or implied SAVE attribute
-bool IsSaved(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 bool IsInitialized(const Symbol &);
 bool HasIntrinsicTypeName(const Symbol &);

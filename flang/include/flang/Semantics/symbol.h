@@ -365,7 +365,6 @@ public:
       : location_{location}, symbol_{symbol} {}
   const SourceName &location() const { return location_; }
   const Symbol &symbol() const { return symbol_; }
-  const Symbol &module() const;
 
 private:
   SourceName location_;
@@ -553,51 +552,13 @@ public:
   bool CanReplaceDetails(const Details &details) const;
 
   // Follow use-associations and host-associations to get the ultimate entity.
-  Symbol &GetUltimate() {
-    return const_cast<Symbol &>(
-        const_cast<const Symbol *>(this)->GetUltimate());
-  }
-  const Symbol &GetUltimate() const {
-    if (const auto *details{detailsIf<UseDetails>()}) {
-      return details->symbol().GetUltimate();
-    } else if (const auto *details{detailsIf<HostAssocDetails>()}) {
-      return details->symbol().GetUltimate();
-    } else {
-      return *this;
-    }
-  }
+  inline Symbol &GetUltimate();
+  inline const Symbol &GetUltimate() const;
 
-  DeclTypeSpec *GetType() {
-    return const_cast<DeclTypeSpec *>(
-        const_cast<const Symbol *>(this)->GetType());
-  }
-  const DeclTypeSpec *GetType() const {
-    return std::visit(
-        common::visitors{
-            [](const EntityDetails &x) { return x.type(); },
-            [](const ObjectEntityDetails &x) { return x.type(); },
-            [](const AssocEntityDetails &x) { return x.type(); },
-            [](const SubprogramDetails &x) {
-              return x.isFunction() ? x.result().GetType() : nullptr;
-            },
-            [](const ProcEntityDetails &x) {
-              if (const Symbol * symbol{x.interface().symbol()}) {
-                return symbol->GetType();
-              } else {
-                return x.interface().type();
-              }
-            },
-            [&](const ProcBindingDetails &x) { return x.symbol().GetType(); },
-            [](const TypeParamDetails &x) { return x.type(); },
-            [](const UseDetails &x) { return x.symbol().GetType(); },
-            [](const HostAssocDetails &x) { return x.symbol().GetType(); },
-            [](const auto &) -> const DeclTypeSpec * { return nullptr; },
-        },
-        details_);
-  }
+  inline DeclTypeSpec *GetType();
+  inline const DeclTypeSpec *GetType() const;
 
   void SetType(const DeclTypeSpec &);
-  bool IsDummy() const;
   bool IsFuncResult() const;
   bool IsObjectArray() const;
   bool IsSubprogram() const;
@@ -752,6 +713,45 @@ inline bool ProcEntityDetails::HasExplicitInterface() const {
     return symbol->HasExplicitInterface();
   }
   return false;
+}
+
+inline Symbol &Symbol::GetUltimate() {
+  return const_cast<Symbol &>(const_cast<const Symbol *>(this)->GetUltimate());
+}
+inline const Symbol &Symbol::GetUltimate() const {
+  if (const auto *details{detailsIf<UseDetails>()}) {
+    return details->symbol().GetUltimate();
+  } else if (const auto *details{detailsIf<HostAssocDetails>()}) {
+    return details->symbol().GetUltimate();
+  } else {
+    return *this;
+  }
+}
+
+inline DeclTypeSpec *Symbol::GetType() {
+  return const_cast<DeclTypeSpec *>(
+      const_cast<const Symbol *>(this)->GetType());
+}
+inline const DeclTypeSpec *Symbol::GetType() const {
+  return std::visit(
+      common::visitors{
+          [](const EntityDetails &x) { return x.type(); },
+          [](const ObjectEntityDetails &x) { return x.type(); },
+          [](const AssocEntityDetails &x) { return x.type(); },
+          [](const SubprogramDetails &x) {
+            return x.isFunction() ? x.result().GetType() : nullptr;
+          },
+          [](const ProcEntityDetails &x) {
+            const Symbol *symbol{x.interface().symbol()};
+            return symbol ? symbol->GetType() : x.interface().type();
+          },
+          [](const ProcBindingDetails &x) { return x.symbol().GetType(); },
+          [](const TypeParamDetails &x) { return x.type(); },
+          [](const UseDetails &x) { return x.symbol().GetType(); },
+          [](const HostAssocDetails &x) { return x.symbol().GetType(); },
+          [](const auto &) -> const DeclTypeSpec * { return nullptr; },
+      },
+      details_);
 }
 
 inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
