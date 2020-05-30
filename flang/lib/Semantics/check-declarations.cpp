@@ -341,7 +341,7 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
     const Symbol &symbol, const ObjectEntityDetails &details) {
   if (const DeclTypeSpec * type{symbol.GetType()};
       type && type->category() == DeclTypeSpec::TypeStar) {
-    if (!symbol.IsDummy()) {
+    if (!IsDummy(symbol)) {
       messages_.Say(
           "Assumed-type entity '%s' must be a dummy argument"_err_en_US,
           symbol.name());
@@ -477,7 +477,7 @@ void CheckHelper::CheckObjectEntity(
   if (const DeclTypeSpec * type{details.type()}) { // C708
     if (type->IsPolymorphic() &&
         !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
-            symbol.IsDummy())) {
+            IsDummy(symbol))) {
       messages_.Say("CLASS entity '%s' must be a dummy argument or have "
                     "ALLOCATABLE or POINTER attribute"_err_en_US,
           symbol.name());
@@ -530,7 +530,7 @@ void CheckHelper::CheckArraySpec(
               " assumed rank"_err_en_US;
       }
     }
-  } else if (symbol.IsDummy()) {
+  } else if (IsDummy(symbol)) {
     if (isImplied && !isAssumedSize) { // C836
       msg = "Dummy array argument '%s' may not have implied shape"_err_en_US;
     }

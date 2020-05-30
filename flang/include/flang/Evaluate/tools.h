@@ -840,4 +840,29 @@ std::optional<std::string> FindImpureCall(
     const IntrinsicProcTable &, const ProcedureRef &);
 
 } // namespace Fortran::evaluate
+
+namespace Fortran::semantics {
+
+class Scope;
+
+// These functions are used in Evaluate so they are defined here rather than in
+// Semantics to avoid a link-time dependency on Semantics.
+
+bool IsVariableName(const Symbol &);
+bool IsPureProcedure(const Symbol &);
+bool IsPureProcedure(const Scope &);
+bool IsFunction(const Symbol &);
+bool IsProcedure(const Symbol &);
+bool IsProcedurePointer(const Symbol &);
+bool IsSaved(const Symbol &); // saved implicitly or explicitly
+bool IsDummy(const Symbol &);
+
+// Follow use, host, and construct assocations to a variable, if any.
+const Symbol *GetAssociationRoot(const Symbol &);
+const Symbol *FindCommonBlockContaining(const Symbol &);
+int CountLenParameters(const DerivedTypeSpec &);
+const Symbol &GetUsedModule(const UseDetails &);
+
+} // namespace Fortran::semantics
+
 #endif // FORTRAN_EVALUATE_TOOLS_H_

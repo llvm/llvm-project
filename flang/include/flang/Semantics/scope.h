@@ -89,7 +89,7 @@ public:
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
 
-  const Symbol *GetSymbol() const;
+  inline const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
   std::optional<SourceName> GetName() const;
@@ -255,5 +255,13 @@ private:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);
 };
+
+// Inline so that it can be called from Evaluate without a link-time dependency.
+
+inline const Symbol *Scope::GetSymbol() const {
+  return symbol_ ? symbol_
+                 : derivedTypeSpec_ ? &derivedTypeSpec_->typeSymbol() : nullptr;
+}
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_SCOPE_H_

@@ -217,13 +217,12 @@ private:
 struct ArraySpec : public std::vector<ShapeSpec> {
   ArraySpec() {}
   int Rank() const { return size(); }
-  bool IsExplicitShape() const;
-  bool IsAssumedShape() const;
-  bool IsDeferredShape() const;
-  bool IsImpliedShape() const;
-  bool IsAssumedSize() const;
-  bool IsAssumedRank() const;
-  bool IsConstantShape() const; // explicit shape with constant bounds
+  inline bool IsExplicitShape() const;
+  inline bool IsAssumedShape() const;
+  inline bool IsDeferredShape() const;
+  inline bool IsImpliedShape() const;
+  inline bool IsAssumedSize() const;
+  inline bool IsAssumedRank() const;
 
 private:
   // Check non-empty and predicate is true for each element.
@@ -251,7 +250,6 @@ public:
   void ReplaceScope(const Scope &);
   RawParameters &rawParameters() { return rawParameters_; }
   const ParameterMapType &parameters() const { return parameters_; }
-  int NumLengthParameters() const;
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
@@ -354,10 +352,10 @@ public:
     return std::get<DerivedTypeSpec>(typeSpec_);
   }
 
-  IntrinsicTypeSpec *AsIntrinsic();
-  const IntrinsicTypeSpec *AsIntrinsic() const;
-  DerivedTypeSpec *AsDerived();
-  const DerivedTypeSpec *AsDerived() const;
+  inline IntrinsicTypeSpec *AsIntrinsic();
+  inline const IntrinsicTypeSpec *AsIntrinsic() const;
+  inline DerivedTypeSpec *AsDerived();
+  inline const DerivedTypeSpec *AsDerived() const;
 
   std::string AsFortran() const;
 
@@ -383,5 +381,62 @@ private:
   const Symbol *symbol_{nullptr};
   const DeclTypeSpec *type_{nullptr};
 };
+
+// Define some member functions here in the header so that they can be used by
+// lib/Evaluate without link-time dependency on Semantics.
+
+inline bool ArraySpec::IsExplicitShape() const {
+  return CheckAll([](const ShapeSpec &x) { return x.ubound().isExplicit(); });
+}
+inline bool ArraySpec::IsAssumedShape() const {
+  return CheckAll([](const ShapeSpec &x) { return x.ubound().isDeferred(); });
+}
+inline bool ArraySpec::IsDeferredShape() const {
+  return CheckAll([](const ShapeSpec &x) {
+    return x.lbound().isDeferred() && x.ubound().isDeferred();
+  });
+}
+inline bool ArraySpec::IsImpliedShape() const {
+  return !IsAssumedRank() &&
+      CheckAll([](const ShapeSpec &x) { return x.ubound().isAssumed(); });
+}
+inline bool ArraySpec::IsAssumedSize() const {
+  return !empty() && !IsAssumedRank() && back().ubound().isAssumed() &&
+      std::all_of(begin(), end() - 1,
+          [](const ShapeSpec &x) { return x.ubound().isExplicit(); });
+}
+inline bool ArraySpec::IsAssumedRank() const {
+  return Rank() == 1 && front().lbound().isAssumed();
+}
+
+inline IntrinsicTypeSpec *DeclTypeSpec::AsIntrinsic() {
+  switch (category_) {
+  case Numeric:
+    return &std::get<NumericTypeSpec>(typeSpec_);
+  case Logical:
+    return &std::get<LogicalTypeSpec>(typeSpec_);
+  case Character:
+    return &std::get<CharacterTypeSpec>(typeSpec_);
+  default:
+    return nullptr;
+  }
+}
+inline const IntrinsicTypeSpec *DeclTypeSpec::AsIntrinsic() const {
+  return const_cast<DeclTypeSpec *>(this)->AsIntrinsic();
+}
+
+inline DerivedTypeSpec *DeclTypeSpec::AsDerived() {
+  switch (category_) {
+  case TypeDerived:
+  case ClassDerived:
+    return &std::get<DerivedTypeSpec>(typeSpec_);
+  default:
+    return nullptr;
+  }
+}
+inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
+  return const_cast<DeclTypeSpec *>(this)->AsDerived();
+}
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TYPE_H_
