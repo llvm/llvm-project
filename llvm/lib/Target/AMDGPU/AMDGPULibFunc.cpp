@@ -902,7 +902,7 @@ static Type* getIntrinsicParamType(
     return nullptr;
   }
   if (P.VectorSize > 1)
-    T = VectorType::get(T, P.VectorSize);
+    T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = useAddrSpace ? T->getPointerTo((P.PtrKind & AMDGPULibFunc::ADDR_SPACE)
                                        - 1)
