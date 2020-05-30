@@ -54,7 +54,7 @@ define i64 @foo(i64 %x, i64 %y) nounwind {
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-BMI-NEXT:    movl %eax, %edx
-; X86-BMI-NEXT:    mulxl %esi, %edx, %ebx
+; X86-BMI-NEXT:    mulxl %esi, %ebx, %ebx
 ; X86-BMI-NEXT:    movl %ecx, %edx
 ; X86-BMI-NEXT:    mulxl %esi, %esi, %ebp
 ; X86-BMI-NEXT:    addl %ebx, %esi
@@ -85,7 +85,7 @@ define i64 @foo(i64 %x, i64 %y) nounwind {
 ; X64-BMI-LABEL: foo:
 ; X64-BMI:       # %bb.0:
 ; X64-BMI-NEXT:    movq %rdi, %rdx
-; X64-BMI-NEXT:    mulxq %rsi, %rcx, %rax
+; X64-BMI-NEXT:    mulxq %rsi, %rax, %rax
 ; X64-BMI-NEXT:    retq
   %tmp0 = zext i64 %x to i128
   %tmp1 = zext i64 %y to i128

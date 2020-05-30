@@ -4759,20 +4759,25 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     unsigned LoReg, HiReg;
     bool IsSigned = Opcode == ISD::SMUL_LOHI;
     bool UseMULX = !IsSigned && Subtarget->hasBMI2();
+    bool UseMULXHi = UseMULX && SDValue(Node, 0).use_empty();
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     case MVT::i32:
-      Opc  = UseMULX ? X86::MULX32rr :
+      Opc  = UseMULXHi ? X86::MULX32Hrr :
+             UseMULX ? X86::MULX32rr :
              IsSigned ? X86::IMUL32r : X86::MUL32r;
-      MOpc = UseMULX ? X86::MULX32rm :
+      MOpc = UseMULXHi ? X86::MULX32Hrm :
+             UseMULX ? X86::MULX32rm :
              IsSigned ? X86::IMUL32m : X86::MUL32m;
       LoReg = UseMULX ? X86::EDX : X86::EAX;
       HiReg = X86::EDX;
       break;
     case MVT::i64:
-      Opc  = UseMULX ? X86::MULX64rr :
+      Opc  = UseMULXHi ? X86::MULX64Hrr :
+             UseMULX ? X86::MULX64rr :
              IsSigned ? X86::IMUL64r : X86::MUL64r;
-      MOpc = UseMULX ? X86::MULX64rm :
+      MOpc = UseMULXHi ? X86::MULX64Hrm :
+             UseMULX ? X86::MULX64rm :
              IsSigned ? X86::IMUL64m : X86::MUL64m;
       LoReg = UseMULX ? X86::RDX : X86::RAX;
       HiReg = X86::RDX;
@@ -4796,7 +4801,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *CNode = nullptr;
       SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N1.getOperand(0),
                         InFlag };
-      if (UseMULX) {
+      if (UseMULXHi) {
+        SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
+        CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+        ResHi = SDValue(CNode, 0);
+        Chain = SDValue(CNode, 1);
+      } else if (UseMULX) {
         SDVTList VTs = CurDAG->getVTList(NVT, NVT, MVT::Other);
         CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
         ResHi = SDValue(CNode, 0);
@@ -4815,7 +4825,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
     } else {
       SDValue Ops[] = { N1, InFlag };
-      if (UseMULX) {
+      if (UseMULXHi) {
+        SDVTList VTs = CurDAG->getVTList(NVT);
+        SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
+        ResHi = SDValue(CNode, 0);
+      } else if (UseMULX) {
         SDVTList VTs = CurDAG->getVTList(NVT, NVT);
         SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
         ResHi = SDValue(CNode, 0);
