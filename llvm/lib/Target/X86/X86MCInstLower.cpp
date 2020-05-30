@@ -1984,28 +1984,19 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrm:
   case X86::VPSHUFBZrmk:
   case X86::VPSHUFBZrmkz: {
-    unsigned SrcIdx, MaskIdx;
-    switch (MI->getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::PSHUFBrm:
-    case X86::VPSHUFBrm:
-    case X86::VPSHUFBYrm:
-    case X86::VPSHUFBZ128rm:
-    case X86::VPSHUFBZ256rm:
-    case X86::VPSHUFBZrm:
-      SrcIdx = 1; MaskIdx = 5; break;
-    case X86::VPSHUFBZ128rmkz:
-    case X86::VPSHUFBZ256rmkz:
-    case X86::VPSHUFBZrmkz:
-      SrcIdx = 2; MaskIdx = 6; break;
-    case X86::VPSHUFBZ128rmk:
-    case X86::VPSHUFBZ256rmk:
-    case X86::VPSHUFBZrmk:
-      SrcIdx = 3; MaskIdx = 7; break;
+    unsigned SrcIdx = 1;
+    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+      // Skip mask operand.
+      ++SrcIdx;
+      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+        // Skip passthru operand.
+        ++SrcIdx;
+      }
     }
+    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
 
-    assert(MI->getNumOperands() >= 6 &&
-           "We should always have at least 6 operands!");
+    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
 
     const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
     if (auto *C = getConstantFromPool(*MI, MaskOp)) {
@@ -2040,7 +2031,6 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPDZrm:
   case X86::VPERMILPDZrmk:
   case X86::VPERMILPDZrmkz: {
-    unsigned SrcIdx, MaskIdx;
     unsigned ElSize;
     switch (MI->getOpcode()) {
     default: llvm_unreachable("Invalid opcode");
@@ -2049,33 +2039,42 @@ static void addConstantComments(const MachineInstr *MI,
     case X86::VPERMILPSZ128rm:
     case X86::VPERMILPSZ256rm:
     case X86::VPERMILPSZrm:
-      SrcIdx = 1; MaskIdx = 5; ElSize = 32; break;
     case X86::VPERMILPSZ128rmkz:
     case X86::VPERMILPSZ256rmkz:
     case X86::VPERMILPSZrmkz:
-      SrcIdx = 2; MaskIdx = 6; ElSize = 32; break;
     case X86::VPERMILPSZ128rmk:
     case X86::VPERMILPSZ256rmk:
     case X86::VPERMILPSZrmk:
-      SrcIdx = 3; MaskIdx = 7; ElSize = 32; break;
+      ElSize = 32;
+      break;
     case X86::VPERMILPDrm:
     case X86::VPERMILPDYrm:
     case X86::VPERMILPDZ128rm:
     case X86::VPERMILPDZ256rm:
     case X86::VPERMILPDZrm:
-      SrcIdx = 1; MaskIdx = 5; ElSize = 64; break;
     case X86::VPERMILPDZ128rmkz:
     case X86::VPERMILPDZ256rmkz:
     case X86::VPERMILPDZrmkz:
-      SrcIdx = 2; MaskIdx = 6; ElSize = 64; break;
     case X86::VPERMILPDZ128rmk:
     case X86::VPERMILPDZ256rmk:
     case X86::VPERMILPDZrmk:
-      SrcIdx = 3; MaskIdx = 7; ElSize = 64; break;
+      ElSize = 64;
+      break;
     }
 
-    assert(MI->getNumOperands() >= 6 &&
-           "We should always have at least 6 operands!");
+    unsigned SrcIdx = 1;
+    if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+      // Skip mask operand.
+      ++SrcIdx;
+      if (X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+        // Skip passthru operand.
+        ++SrcIdx;
+      }
+    }
+    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
+
+    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
 
     const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
     if (auto *C = getConstantFromPool(*MI, MaskOp)) {
@@ -2092,8 +2091,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMIL2PSrm:
   case X86::VPERMIL2PDYrm:
   case X86::VPERMIL2PSYrm: {
-    assert(MI->getNumOperands() >= 8 &&
-           "We should always have at least 8 operands!");
+    assert(MI->getNumOperands() >= (3 + X86::AddrNumOperands + 1) &&
+           "Unexpected number of operands!");
 
     const MachineOperand &CtrlOp = MI->getOperand(MI->getNumOperands() - 1);
     if (!CtrlOp.isImm())
@@ -2106,7 +2105,7 @@ static void addConstantComments(const MachineInstr *MI,
     case X86::VPERMIL2PDrm: case X86::VPERMIL2PDYrm: ElSize = 64; break;
     }
 
-    const MachineOperand &MaskOp = MI->getOperand(6);
+    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
     if (auto *C = getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().OpInfo[0]);
       SmallVector<int, 16> Mask;
@@ -2118,10 +2117,10 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::VPPERMrrm: {
-    assert(MI->getNumOperands() >= 7 &&
-           "We should always have at least 7 operands!");
+    assert(MI->getNumOperands() >= (3 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
 
-    const MachineOperand &MaskOp = MI->getOperand(6);
+    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
     if (auto *C = getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().OpInfo[0]);
       SmallVector<int, 16> Mask;
@@ -2133,9 +2132,9 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::MMX_MOVQ64rm: {
-    if (MI->getNumOperands() <= 4)
-      break;
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+    assert(MI->getNumOperands() == (1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
+    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       std::string Comment;
       raw_string_ostream CS(Comment);
       const MachineOperand &DstOp = MI->getOperand(0);
@@ -2193,9 +2192,9 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VBROADCASTI64X2Z128rm:
   case X86::VBROADCASTI64X2rm:
   case X86::VBROADCASTI64X4rm:
-    if (MI->getNumOperands() <= 4)
-      break;
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+    assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
+    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       int NumLanes = 1;
       // Override NumLanes for the broadcast instructions.
       switch (MI->getOpcode()) {
@@ -2285,9 +2284,9 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPBROADCASTWZ128rm:
   case X86::VPBROADCASTWZ256rm:
   case X86::VPBROADCASTWZrm:
-    if (MI->getNumOperands() <= 4)
-      break;
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+    assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
+    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       int NumElts;
       switch (MI->getOpcode()) {
       default: llvm_unreachable("Invalid opcode");
