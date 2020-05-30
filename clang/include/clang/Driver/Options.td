@@ -3316,11 +3316,9 @@ def Z_reserved_lib_cckext : Flag<["-"], "Z-reserved-lib-cckext">,
     Flags<[LinkerInput, NoArgumentUnused, Unsupported]>, Group<reserved_lib_Group>;
 
 // Ignored options
-// FIXME: multiclasess produce suffixes, not prefixes. This is fine for now
-// since it is only used in ignored options.
 multiclass BooleanFFlag<string name> {
-  def _f : Flag<["-"], "f"#name>;
-  def _fno : Flag<["-"], "fno-"#name>;
+  def f#NAME : Flag<["-"], "f"#name>;
+  def fno_#NAME : Flag<["-"], "fno-"#name>;
 }
 
 defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
