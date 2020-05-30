@@ -334,12 +334,12 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
       SrcAddrSpace == AMDGPUAS::REGION_ADDRESS ||
       DestAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       DestAddrSpace == AMDGPUAS::REGION_ADDRESS) {
-    return VectorType::get(Type::getInt32Ty(Context), 2);
+    return FixedVectorType::get(Type::getInt32Ty(Context), 2);
   }
 
   // Global memory works best with 16-byte accesses. Private memory will also
   // hit this, although they'll be decomposed.
-  return VectorType::get(Type::getInt32Ty(Context), 4);
+  return FixedVectorType::get(Type::getInt32Ty(Context), 4);
 }
 
 void GCNTTIImpl::getMemcpyLoopResidualLoweringType(

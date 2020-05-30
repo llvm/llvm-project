@@ -598,7 +598,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (Size <= 8)
     PtrElemTy = Type::getIntNTy(Ctx, Size * 8);
   else
-    PtrElemTy = VectorType::get(Type::getInt64Ty(Ctx), Size / 8);
+    PtrElemTy = FixedVectorType::get(Type::getInt64Ty(Ctx), Size / 8);
   unsigned PtrArgLoc = CI->getNumArgOperands() - 3;
   auto PtrArg = CI->getArgOperand(PtrArgLoc);
   unsigned PtrArgAS = PtrArg->getType()->getPointerAddressSpace();

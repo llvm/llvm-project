@@ -167,7 +167,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     }
 
     if (IsV3 && Size >= 32) {
-      V4Ty = VectorType::get(VT->getElementType(), 4);
+      V4Ty = FixedVectorType::get(VT->getElementType(), 4);
       // Use the hack that clang uses to avoid SelectionDAG ruining v3 loads
       AdjustedArgTy = V4Ty;
     }
