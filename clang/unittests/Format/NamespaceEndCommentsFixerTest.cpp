@@ -1089,6 +1089,34 @@ TEST_F(NamespaceEndCommentsFixerTest, HandlesInlineAtEndOfLine_PR32438) {
                                     "void d() {\n"
                                     "}\n"));
 }
+
+TEST_F(NamespaceEndCommentsFixerTest, IgnoreUnbalanced) {
+  EXPECT_EQ("namespace A {\n"
+            "class Foo {\n"
+            "}\n"
+            "}// namespace A\n",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "class Foo {\n"
+                                    "}\n"
+                                    "}\n"));
+  EXPECT_EQ("namespace A {\n"
+            "class Foo {\n"
+            "}\n",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "class Foo {\n"
+                                    "}\n"));
+
+  EXPECT_EQ("namespace A {\n"
+            "class Foo {\n"
+            "}\n"
+            "}\n"
+            "}\n",
+            fixNamespaceEndComments("namespace A {\n"
+                                    "class Foo {\n"
+                                    "}\n"
+                                    "}\n"
+                                    "}\n"));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang
