@@ -120,3 +120,14 @@ void hostFoo() {
 long double qa, qb;
 decltype(qa + qb) qc;
 double qd[sizeof(-(-(qc * 2)))];
+
+struct A { };
+
+template <bool>
+struct A_type { typedef A type; };
+
+template <class Sp, class Tp>
+struct B {
+  enum { value = bool(Sp::value) || bool(Tp::value) };
+  typedef typename A_type<value>::type type;
+};
