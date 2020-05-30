@@ -18,6 +18,7 @@
 #include <iterator>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace llvm {
