@@ -12,7 +12,9 @@
 
 #include "llvm/TextAPI/MachO/Architecture.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace MachO {
