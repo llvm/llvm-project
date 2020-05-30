@@ -132,7 +132,6 @@ class MIMG_Base <dag outs, string dns = "">
 
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
-  let usesCustomInserter = 1;
 }
 
 class MIMG <dag outs, string dns = "">

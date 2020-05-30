@@ -808,6 +808,10 @@ def S_SETREG_B32 : SOPK_Pseudo <
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
   [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+
+  // Use custom inserter to optimize some cases to
+  // S_DENORM_MODE/S_ROUND_MODE.
+  let usesCustomInserter = 1;
   let Defs = [MODE];
   let Uses = [MODE];
 }
