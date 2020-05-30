@@ -21,10 +21,6 @@ class StringRef;
 
 namespace pdb {
 
-class IPDBSession;
-class PDBSymbolTypeVTable;
-class PDBSymbolTypeVTableShape;
-
 enum class PdbSymbolIdField : uint32_t {
   None = 0,
   SymIndexId = 1 << 0,
