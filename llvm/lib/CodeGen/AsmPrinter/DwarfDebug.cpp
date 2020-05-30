@@ -1291,9 +1291,11 @@ void DwarfDebug::finalizeModuleInfo() {
     // attribute.
     if (CUNode->getMacros()) {
       if (getDwarfVersion() >= 5) {
-        // FIXME: Add support for DWARFv5 DW_AT_macros attribute for split
-        // case.
-        if (!useSplitDwarf())
+        if (useSplitDwarf())
+          TheCU.addSectionDelta(
+              TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
+              TLOF.getDwarfMacroDWOSection()->getBeginSymbol());
+        else
           U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macros,
                             U.getMacroLabelBegin(),
                             TLOF.getDwarfMacroSection()->getBeginSymbol());
@@ -3014,10 +3016,10 @@ void DwarfDebug::emitDebugMacinfo() {
 }
 
 void DwarfDebug::emitDebugMacinfoDWO() {
-  // FIXME: Add support for macro.dwo section.
-  if (getDwarfVersion() >= 5)
-    return;
-  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
+  auto &ObjLower = Asm->getObjFileLowering();
+  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+                           ? ObjLower.getDwarfMacroDWOSection()
+                           : ObjLower.getDwarfMacinfoDWOSection());
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.
