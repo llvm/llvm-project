@@ -3546,7 +3546,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
-      Tmp2 = ComputeNumSignBits(Op.getOperand(i), Depth + 1);
+      Tmp2 = ComputeNumSignBits(SrcOp, Depth + 1);
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
       if (SrcOp.getValueSizeInBits() != VTBits) {
