@@ -1366,19 +1366,16 @@ bool TargetLowering::SimplifyDemandedBits(
         if (!DemandedBits.intersects(APInt::getLowBitsSet(BitWidth, ShAmt))) {
           if (const APInt *SA2 =
                   TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
-            if (SA2->ult(BitWidth)) {
-              unsigned C1 = SA2->getZExtValue();
-              unsigned Opc = ISD::SHL;
-              int Diff = ShAmt - C1;
-              if (Diff < 0) {
-                Diff = -Diff;
-                Opc = ISD::SRL;
-              }
-
-              SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
-              return TLO.CombineTo(
-                  Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
+            unsigned C1 = SA2->getZExtValue();
+            unsigned Opc = ISD::SHL;
+            int Diff = ShAmt - C1;
+            if (Diff < 0) {
+              Diff = -Diff;
+              Opc = ISD::SRL;
             }
+            SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
+            return TLO.CombineTo(
+                Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
           }
         }
       }
@@ -1412,7 +1409,7 @@ bool TargetLowering::SimplifyDemandedBits(
             InnerOp.hasOneUse()) {
           if (const APInt *SA2 =
                   TLO.DAG.getValidShiftAmountConstant(InnerOp, DemandedElts)) {
-            unsigned InnerShAmt = SA2->getLimitedValue(InnerBits);
+            unsigned InnerShAmt = SA2->getZExtValue();
             if (InnerShAmt < ShAmt && InnerShAmt < InnerBits &&
                 DemandedBits.getActiveBits() <=
                     (InnerBits - InnerShAmt + ShAmt) &&
@@ -1462,23 +1459,19 @@ bool TargetLowering::SimplifyDemandedBits(
       // are never demanded.
       // TODO - support non-uniform vector amounts.
       if (Op0.getOpcode() == ISD::SHL) {
-        if (const APInt *SA2 =
-                TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
-          if (!DemandedBits.intersects(
-                  APInt::getHighBitsSet(BitWidth, ShAmt))) {
-            if (SA2->ult(BitWidth)) {
-              unsigned C1 = SA2->getZExtValue();
-              unsigned Opc = ISD::SRL;
-              int Diff = ShAmt - C1;
-              if (Diff < 0) {
-                Diff = -Diff;
-                Opc = ISD::SHL;
-              }
-
-              SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
-              return TLO.CombineTo(
-                  Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
+        if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
+          if (const APInt *SA2 =
+                  TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
+            unsigned C1 = SA2->getZExtValue();
+            unsigned Opc = ISD::SRL;
+            int Diff = ShAmt - C1;
+            if (Diff < 0) {
+              Diff = -Diff;
+              Opc = ISD::SHL;
             }
+            SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
+            return TLO.CombineTo(
+                Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
           }
         }
       }
