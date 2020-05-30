@@ -71,6 +71,10 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::Win64)
+    // This is for OSes other than Windows; Windows is a separate case further
+    // above.
+    return CSR_AArch64_AAPCS_X18_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
 
