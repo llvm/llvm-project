@@ -16,6 +16,7 @@
 // RUN: FileCheck %s -input-file=%t.process_syslog_output.txt
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <sanitizer/asan_interface.h>
 
 const int kBufferSize = 512;
@@ -37,6 +38,7 @@ void readOne() {
 
 int main() {
   buffer = static_cast<char *>(malloc(kBufferSize));
+  memset(static_cast<void *>(buffer), static_cast<int>('.'), kBufferSize);
   assert(buffer);
   // Deliberately poison `buffer` so that we have a deterministic way
   // triggering two ASan reports in a row in the no halt_on_error mode (e.g. Two
