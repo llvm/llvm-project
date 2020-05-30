@@ -1095,6 +1095,60 @@ the ``mesa3d`` OS, which does not support ``R_AMDGPU_ABS64``.
 There is no current OS loader support for 32-bit programs and so
 ``R_AMDGPU_ABS32`` is not used.
 
+.. _amdgpu-loaded-code-object-path-uniform-resource-identifier:
+
+Loaded Code Object Path Uniform Resource Identifier (URI)
+---------------------------------------------------------
+
+The AMD GPU code object loader represents the path of the ELF shared object from
+which the code object was loaded as a textual Unifom Resource Identifier (URI).
+Note that the code object is the in memory loaded relocated form of the ELF
+shared object.  Multiple code objects may be loaded at different memory
+addresses in the same process from the same ELF shared object.
+
+The loaded code object path URI syntax is defined by the following BNF syntax:
+
+.. code::
+
+  code_object_uri ::== file_uri | memory_uri
+  file_uri        ::== "file://" file_path [ range_specifier ]
+  memory_uri      ::== "memory://" process_id range_specifier
+  range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
+  file_path       ::== URI_ENCODED_OS_FILE_PATH
+  process_id      ::== DECIMAL_NUMBER
+  number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+
+**number**
+  Is a C integral literal where hexadecimal values are prefixed by "0x" or "0X",
+  and octal values by "0".
+
+**file_path**
+  Is the file's path specified as a URI encoded UTF-8 string. In URI encoding,
+  every character that is not in the regular expression ``[a-zA-Z0-9/_.~-]`` is
+  encoded as two uppercase hexidecimal digits proceeded by "%".  Directories in
+  the path are separated by "/".
+
+**offset**
+  Is a 0-based byte offset to the start of the code object.  For a file URI, it
+  is from the start of the file specified by the ``file_path``, and if omitted
+  defaults to 0. For a memory URI, it is the memory address and is required.
+
+**size**
+  Is the number of bytes in the code object.  For a file URI, if omitted it
+  defaults to the size of the file.  It is required for a memory URI.
+
+**process_id**
+  Is the identity of the process owning the memory.  For Linux it is the C
+  unsigned integral decimal literal for the process ID (PID).
+
+For example:
+
+.. code::
+
+  file:///dir1/dir2/file1
+  file:///dir3/dir4/file2#offset=0x2000&size=3000
+  memory://1234#offset=0x20000&size=3000
+
 .. _amdgpu-dwarf-debug-information:
 
 DWARF Debug Information
