@@ -392,7 +392,7 @@ struct BufferPlacementPass
       // If the Dealloc position is at the terminator operation of the block,
       // then the value should escape from a deallocation.
       if (!nextOp) {
-        assert(deallocs.size() == 0 &&
+        assert(deallocs.empty() &&
                "There should be no dealloc for the returned buffer");
         continue;
       }
