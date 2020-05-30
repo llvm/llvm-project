@@ -683,6 +683,10 @@ public:
   }
 
 private:
+  // O1 pass pipeline
+  FunctionPassManager buildO1FunctionSimplificationPipeline(
+      OptimizationLevel Level, ThinLTOPhase Phase, bool DebugLogging = false);
+
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
