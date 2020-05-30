@@ -1725,6 +1725,9 @@ void Sema::checkDeviceDecl(const ValueDecl *D, SourceLocation Loc) {
   }
 
   auto CheckType = [&](QualType Ty) {
+    if (Ty->isDependentType())
+      return;
+
     if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
         ((Ty->isFloat128Type() ||
           (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128)) &&
