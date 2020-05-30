@@ -509,6 +509,26 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
            "LEA has segment specified!");
     break;
 
+  case X86::MULX32Hrr:
+  case X86::MULX32Hrm:
+  case X86::MULX64Hrr:
+  case X86::MULX64Hrm: {
+    // Turn into regular MULX by duplicating the destination.
+    unsigned NewOpc;
+    switch (OutMI.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::MULX32Hrr: NewOpc = X86::MULX32rr; break;
+    case X86::MULX32Hrm: NewOpc = X86::MULX32rr; break;
+    case X86::MULX64Hrr: NewOpc = X86::MULX64rr; break;
+    case X86::MULX64Hrm: NewOpc = X86::MULX64rm; break;
+    }
+    OutMI.setOpcode(NewOpc);
+    // Duplicate the destination.
+    unsigned DestReg = OutMI.getOperand(0).getReg();
+    OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
+    break;
+  }
+
   // Commute operands to get a smaller encoding by using VEX.R instead of VEX.B
   // if one of the registers is extended, but other isn't.
   case X86::VMOVZPQILo2PQIrr:
