@@ -4119,6 +4119,75 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     }
 
     return emitGWSMemViolTestLoop(MI, BB);
+  case AMDGPU::S_SETREG_B32: {
+    if (!getSubtarget()->hasDenormModeInst())
+      return BB;
+
+    // Try to optimize cases that only set the denormal mode or rounding mode.
+    //
+    // If the s_setreg_b32 fully sets all of the bits in the rounding mode or
+    // denormal mode to a constant, we can use s_round_mode or s_denorm_mode
+    // instead.
+    //
+    // FIXME: This could be predicates on the immediate, but tablegen doesn't
+    // allow you to have a no side effect instruction in the output of a
+    // sideeffecting pattern.
+
+    // TODO: Should also emit a no side effects pseudo if only FP bits are
+    // touched, even if not all of them or to a variable.
+    unsigned ID, Offset, Width;
+    AMDGPU::Hwreg::decodeHwreg(MI.getOperand(1).getImm(), ID, Offset, Width);
+    if (ID != AMDGPU::Hwreg::ID_MODE)
+      return BB;
+
+    const unsigned WidthMask = maskTrailingOnes<unsigned>(Width);
+    const unsigned SetMask = WidthMask << Offset;
+    unsigned SetDenormOp = 0;
+    unsigned SetRoundOp = 0;
+
+    // The dedicated instructions can only set the whole denorm or round mode at
+    // once, not a subset of bits in either.
+    if (Width == 8 && (SetMask & (AMDGPU::Hwreg::FP_ROUND_MASK |
+                                  AMDGPU::Hwreg::FP_DENORM_MASK)) == SetMask) {
+      // If this fully sets both the round and denorm mode, emit the two
+      // dedicated instructions for these.
+      assert(Offset == 0);
+      SetRoundOp = AMDGPU::S_ROUND_MODE;
+      SetDenormOp = AMDGPU::S_DENORM_MODE;
+    } else if (Width == 4) {
+      if ((SetMask & AMDGPU::Hwreg::FP_ROUND_MASK) == SetMask) {
+        SetRoundOp = AMDGPU::S_ROUND_MODE;
+        assert(Offset == 0);
+      } else if ((SetMask & AMDGPU::Hwreg::FP_DENORM_MASK) == SetMask) {
+        SetDenormOp = AMDGPU::S_DENORM_MODE;
+        assert(Offset == 4);
+      }
+    }
+
+    if (SetRoundOp || SetDenormOp) {
+      MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+      MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
+      if (Def && Def->isMoveImmediate() && Def->getOperand(1).isImm()) {
+        unsigned ImmVal = Def->getOperand(1).getImm();
+        if (SetRoundOp) {
+          BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetRoundOp))
+            .addImm(ImmVal & 0xf);
+
+          // If we also have the denorm mode, get just the denorm mode bits.
+          ImmVal >>= 4;
+        }
+
+        if (SetDenormOp) {
+          BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetDenormOp))
+            .addImm(ImmVal & 0xf);
+        }
+
+        MI.eraseFromParent();
+      }
+    }
+
+    return BB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
