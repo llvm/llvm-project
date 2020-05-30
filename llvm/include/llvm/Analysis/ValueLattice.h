@@ -142,11 +142,12 @@ public:
   };
 
   // ConstVal and Range are initialized on-demand.
-  ValueLatticeElement() : Tag(unknown) {}
+  ValueLatticeElement() : Tag(unknown), NumRangeExtensions(0) {}
 
   ~ValueLatticeElement() { destroy(); }
 
-  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(Other.Tag) {
+  ValueLatticeElement(const ValueLatticeElement &Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -164,7 +165,8 @@ public:
     }
   }
 
-  ValueLatticeElement(ValueLatticeElement &&Other) : Tag(Other.Tag) {
+  ValueLatticeElement(ValueLatticeElement &&Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
