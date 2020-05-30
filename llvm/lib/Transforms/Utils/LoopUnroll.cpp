@@ -818,10 +818,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         // For loops exiting from non latch exiting block, we limit the
         // supported loops to have a single exiting block.
         NewIDom = TermBlocks.back();
-        for (BasicBlock *Iter : TermBlocks) {
-          Instruction *Term = Iter->getTerminator();
+        for (unsigned i = 0, e = TermBlocks.size(); i != e; ++i) {
+          Instruction *Term = TermBlocks[i]->getTerminator();
           if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
-            NewIDom = Iter;
+            NewIDom = DT->findNearestCommonDominator(TermBlocks[i], Latches[i]);
             break;
           }
         }
