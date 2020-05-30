@@ -2,16 +2,18 @@
 
 define win64cc void @pass_va(i32 %count, ...) nounwind {
 entry:
-; CHECK: str     x30, [sp, #-80]!
-; CHECK: add     x8, sp, #24
-; CHECK: add     x0, sp, #24
-; CHECK: stp     x1, x2, [sp, #24]
-; CHECK: stp     x3, x4, [sp, #40]
-; CHECK: stp     x5, x6, [sp, #56]
-; CHECK: str     x7, [sp, #72]
+; CHECK: sub     sp, sp, #96
+; CHECK: add     x8, sp, #40
+; CHECK: add     x0, sp, #40
+; CHECK: stp     x30, x18, [sp, #16]
+; CHECK: stp     x1, x2, [sp, #40]
+; CHECK: stp     x3, x4, [sp, #56]
+; CHECK: stp     x5, x6, [sp, #72]
+; CHECK: str     x7, [sp, #88]
 ; CHECK: str     x8, [sp, #8]
 ; CHECK: bl      other_func
-; CHECK: ldr     x30, [sp], #80
+; CHECK: ldp     x30, x18, [sp, #16]
+; CHECK: add     sp, sp, #96
 ; CHECK: ret
   %ap = alloca i8*, align 8
   %ap1 = bitcast i8** %ap to i8*
@@ -27,11 +29,11 @@ declare void @llvm.va_start(i8*) nounwind
 declare void @llvm.va_copy(i8*, i8*) nounwind
 
 ; CHECK-LABEL: f9:
-; CHECK: sub     sp, sp, #16
+; CHECK: str     x18, [sp, #-16]!
 ; CHECK: add     x8, sp, #24
 ; CHECK: add     x0, sp, #24
 ; CHECK: str     x8, [sp, #8]
-; CHECK: add     sp, sp, #16
+; CHECK: ldr     x18, [sp], #16
 ; CHECK: ret
 define win64cc i8* @f9(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, ...) nounwind {
 entry:
@@ -43,11 +45,11 @@ entry:
 }
 
 ; CHECK-LABEL: f8:
-; CHECK: sub     sp, sp, #16
+; CHECK: str     x18, [sp, #-16]!
 ; CHECK: add     x8, sp, #16
 ; CHECK: add     x0, sp, #16
 ; CHECK: str     x8, [sp, #8]
-; CHECK: add     sp, sp, #16
+; CHECK: ldr     x18, [sp], #16
 ; CHECK: ret
 define win64cc i8* @f8(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ...) nounwind {
 entry:
@@ -59,12 +61,12 @@ entry:
 }
 
 ; CHECK-LABEL: f7:
-; CHECK: sub     sp, sp, #32
+; CHECK: str     x18, [sp, #-32]!
 ; CHECK: add     x8, sp, #24
 ; CHECK: str     x7, [sp, #24]
 ; CHECK: add     x0, sp, #24
 ; CHECK: str     x8, [sp, #8]
-; CHECK: add     sp, sp, #32
+; CHECK: ldr     x18, [sp], #32
 ; CHECK: ret
 define win64cc i8* @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, ...) nounwind {
 entry:
