@@ -31,6 +31,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -564,10 +565,11 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        Decomposed.OtherOffset +=
-            (DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
-             CIdx->getValue().sextOrSelf(MaxPointerSize))
-                .sextOrTrunc(MaxPointerSize);
+        APInt Offset = (DL.getTypeAllocSize(GTI.getIndexedType()) *
+                        CIdx->getValue().sextOrSelf(MaxPointerSize))
+                           .sextOrTrunc(MaxPointerSize);
+        Decomposed.OtherOffset += Offset;
+        Decomposed.MinOtherOffset += Offset;
         continue;
       }
 
@@ -611,7 +613,18 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (PointerSize > Width)
           SExtBits += PointerSize - Width;
       } else {
-        Decomposed.OtherOffset += IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        APInt Offset = IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        Decomposed.OtherOffset += Offset;
+        APInt IndexBound =
+            computeConstantRange(Index, true, AC, dyn_cast<Instruction>(GEPOp))
+                .getLower()
+                .sextOrTrunc(MaxPointerSize);
+        // If we find a non-negative lower bound for the index value, we can
+        // improve the known offset to include it. By just using non-negative
+        // lower bounds, we conveniently skip any index values for which we do
+        // not find a useful lower bound.
+        if (IndexBound.isNonNegative())
+          Decomposed.MinOtherOffset += Offset + IndexBound * Scale;
         Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
       }
 
@@ -1328,6 +1341,8 @@ AliasResult BasicAAResult::aliasGEP(
   DecompGEP2.StructOffset = DecompGEP2.OtherOffset = APInt(MaxPointerSize, 0);
   DecompGEP1.HasCompileTimeConstantScale =
       DecompGEP2.HasCompileTimeConstantScale = true;
+  DecompGEP1.MinOtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP2.MinOtherOffset = APInt(MaxPointerSize, 0);
 
   bool GEP1MaxLookupReached =
     DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
@@ -1342,6 +1357,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   APInt GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
   APInt GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
+  APInt GEP1BaseOffsetMin = DecompGEP1.StructOffset + DecompGEP1.MinOtherOffset;
+  APInt GEP2BaseOffsetMin = DecompGEP2.StructOffset + DecompGEP2.MinOtherOffset;
 
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "
@@ -1416,6 +1433,7 @@ AliasResult BasicAAResult::aliasGEP(
     // Subtract the GEP2 pointer from the GEP1 pointer to find out their
     // symbolic difference.
     GEP1BaseOffset -= GEP2BaseOffset;
+    GEP1BaseOffsetMin -= GEP2BaseOffsetMin;
     GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
   } else {
@@ -1534,10 +1552,11 @@ AliasResult BasicAAResult::aliasGEP(
     // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
     // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
     // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset.sgt(0) &&
+    if (AllPositive && GEP1BaseOffsetMin.sgt(0) &&
         V2Size != LocationSize::unknown() &&
-        GEP1BaseOffset.uge(V2Size.getValue()))
+        GEP1BaseOffsetMin.uge(V2Size.getValue())) {
       return NoAlias;
+    }
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
                                 GEP1BaseOffset, &AC, DT))

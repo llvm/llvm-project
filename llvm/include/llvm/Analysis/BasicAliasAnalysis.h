@@ -140,6 +140,11 @@ private:
     // Total constant offset w.r.t the base from indexing through
     // pointers/arrays/vectors
     APInt OtherOffset;
+    // Constant offset w.r.t the base from indexing through
+    // pointers/arrays/vectors, including the lower bounds of index variables,
+    // if there are any. Currently only known non-negative lower bounds are
+    // added.
+    APInt MinOtherOffset;
     // Scaled variable (non-constant) indices.
     SmallVector<VariableGEPIndex, 4> VarIndices;
     // Is GEP index scale compile-time constant.
