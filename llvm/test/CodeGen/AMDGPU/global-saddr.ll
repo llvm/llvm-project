@@ -84,6 +84,7 @@ entry:
   ret void
 }
 
+; GFX9-LABEL: {{^}}_amdgpu_cs_main:
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:16{{$}}
 ; GFX9-NEXT: s_waitcnt
@@ -92,7 +93,7 @@ entry:
 define amdgpu_cs void @_amdgpu_cs_main(i64 inreg %arg) {
 bb:
   %tmp1 = inttoptr i64 %arg to <4 x i64> addrspace(1)*
-  %tmp2 = load <4 x i64>, <4 x i64> addrspace(1)* %tmp1, align 16
+  %tmp2 = load volatile <4 x i64>, <4 x i64> addrspace(1)* %tmp1, align 16
   store volatile <4 x i64> %tmp2, <4 x i64> addrspace(1)* undef
   ret void
 }
