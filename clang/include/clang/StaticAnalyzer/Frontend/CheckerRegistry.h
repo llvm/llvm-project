@@ -13,6 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <vector>
 
@@ -133,6 +134,9 @@ public:
               DevelopmentStatus == "released") &&
              "Invalid development status!");
     }
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using CmdLineOptionList = llvm::SmallVector<CmdLineOption, 0>;
@@ -189,6 +193,9 @@ public:
 
     // Used for lower_bound.
     explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
@@ -206,6 +213,9 @@ public:
     }
 
     explicit PackageInfo(StringRef FullName) : FullName(FullName) {}
+
+    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
   };
 
   using PackageInfoList = llvm::SmallVector<PackageInfo, 0>;
