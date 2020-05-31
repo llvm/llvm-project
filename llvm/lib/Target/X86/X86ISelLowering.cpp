@@ -7662,20 +7662,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   }
   case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
-    if (!SrcVT.isVector())
+    if (!Src.getSimpleValueType().isVector())
       return false;
-
-    if (NumSizeInBits != SrcVT.getSizeInBits()) {
-      assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
-             "Illegal broadcast type");
-      SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
-                               NumSizeInBits / SrcVT.getScalarSizeInBits());
-      Src = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), SrcVT,
-                        DAG.getUNDEF(SrcVT), Src,
-                        DAG.getIntPtrConstant(0, SDLoc(N)));
-    }
-
     Ops.push_back(Src);
     Mask.append(NumElts, 0);
     return true;
@@ -7692,22 +7680,10 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         (SrcVT.getScalarSizeInBits() % 8) != 0)
       return false;
 
-    unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
     bool IsAnyExtend =
         (ISD::ANY_EXTEND == Opcode || ISD::ANY_EXTEND_VECTOR_INREG == Opcode);
-    DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, IsAnyExtend,
-                         Mask);
-
-    if (NumSizeInBits != SrcVT.getSizeInBits()) {
-      assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
-             "Illegal zero-extension type");
-      SrcVT = MVT::getVectorVT(SrcVT.getSimpleVT().getScalarType(),
-                               NumSizeInBits / NumSrcBitsPerElt);
-      Src = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), SrcVT,
-                        DAG.getUNDEF(SrcVT), Src,
-                        DAG.getIntPtrConstant(0, SDLoc(N)));
-    }
-
+    DecodeZeroExtendMask(SrcVT.getScalarSizeInBits(), NumBitsPerElt, NumElts,
+                         IsAnyExtend, Mask);
     Ops.push_back(Src);
     return true;
   }
@@ -35054,7 +35030,8 @@ static SDValue combineX86ShufflesRecursively(
 
   assert(Root.getSimpleValueType().isVector() &&
          "Shuffles operate on vector types!");
-  assert(VT.getSizeInBits() == Root.getSimpleValueType().getSizeInBits() &&
+  unsigned RootSizeInBits = Root.getSimpleValueType().getSizeInBits();
+  assert(VT.getSizeInBits() == RootSizeInBits &&
          "Can only combine shuffles of the same vector register size.");
 
   // Extract target shuffle mask and resolve sentinels and inputs.
@@ -35068,11 +35045,16 @@ static SDValue combineX86ShufflesRecursively(
                               OpZero, DAG, Depth, false))
     return SDValue();
 
-  // Shuffle inputs must be the same size as the result.
-  if (llvm::any_of(OpInputs, [VT](SDValue Op) {
-        return VT.getSizeInBits() != Op.getValueSizeInBits();
+  // Shuffle inputs must be the same size as the result, bail on any larger
+  // inputs and widen any smaller inputs.
+  if (llvm::any_of(OpInputs, [RootSizeInBits](SDValue Op) {
+        return Op.getValueSizeInBits() > RootSizeInBits;
       }))
     return SDValue();
+
+  for (SDValue &Op : OpInputs)
+    if (Op.getValueSizeInBits() < RootSizeInBits)
+      Op = widenSubVector(Op, false, Subtarget, DAG, SDLoc(Op), RootSizeInBits);
 
   SmallVector<int, 64> Mask;
   SmallVector<SDValue, 16> Ops;
