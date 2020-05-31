@@ -1060,6 +1060,12 @@ SDValue DAGCombiner::CombineTo(SDNode *N, const SDValue *To, unsigned NumTo,
 
 void DAGCombiner::
 CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO) {
+  // Replace the old value with the new one.
+  ++NodesCombined;
+  LLVM_DEBUG(dbgs() << "\nReplacing.2 "; TLO.Old.getNode()->dump(&DAG);
+             dbgs() << "\nWith: "; TLO.New.getNode()->dump(&DAG);
+             dbgs() << '\n');
+
   // Replace all uses.  If any nodes become isomorphic to other nodes and
   // are deleted, make sure to remove them from our worklist.
   WorklistRemover DeadNodes(*this);
@@ -1089,12 +1095,6 @@ bool DAGCombiner::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
   // Revisit the node.
   AddToWorklist(Op.getNode());
 
-  // Replace the old value with the new one.
-  ++NodesCombined;
-  LLVM_DEBUG(dbgs() << "\nReplacing.2 "; TLO.Old.getNode()->dump(&DAG);
-             dbgs() << "\nWith: "; TLO.New.getNode()->dump(&DAG);
-             dbgs() << '\n');
-
   CommitTargetLoweringOpt(TLO);
   return true;
 }
@@ -1113,12 +1113,6 @@ bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op,
 
   // Revisit the node.
   AddToWorklist(Op.getNode());
-
-  // Replace the old value with the new one.
-  ++NodesCombined;
-  LLVM_DEBUG(dbgs() << "\nReplacing.2 "; TLO.Old.getNode()->dump(&DAG);
-             dbgs() << "\nWith: "; TLO.New.getNode()->dump(&DAG);
-             dbgs() << '\n');
 
   CommitTargetLoweringOpt(TLO);
   return true;
