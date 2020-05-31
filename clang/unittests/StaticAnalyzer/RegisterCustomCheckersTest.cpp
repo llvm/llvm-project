@@ -16,7 +16,9 @@
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 namespace clang {
 namespace ento {
@@ -60,7 +62,7 @@ class LocIncDecChecker : public Checker<check::Location> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const {
-    auto UnaryOp = dyn_cast<UnaryOperator>(S);
+    const auto *UnaryOp = dyn_cast<UnaryOperator>(S);
     if (UnaryOp && !IsLoad) {
       EXPECT_FALSE(UnaryOp->isIncrementOp());
     }
@@ -85,62 +87,90 @@ TEST(RegisterCustomCheckers, CheckLocationIncDec) {
 // Unsatisfied checker dependency
 //===----------------------------------------------------------------------===//
 
-class PrerequisiteChecker : public Checker<check::ASTCodeBody> {
+class CheckerRegistrationOrderPrinter
+    : public Checker<check::PreStmt<DeclStmt>> {
+  std::unique_ptr<BuiltinBug> BT =
+      std::make_unique<BuiltinBug>(this, "Registration order");
+
 public:
-  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
-                        BugReporter &BR) const {
-    BR.EmitBasicReport(D, this, "Prerequisite", categories::LogicError,
-                       "This is the prerequisite checker",
-                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
+  void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
+    ExplodedNode *N = nullptr;
+    N = C.generateErrorNode();
+    llvm::SmallString<200> Buf;
+    llvm::raw_svector_ostream OS(Buf);
+    C.getAnalysisManager()
+        .getCheckerManager()
+        ->getCheckerRegistry()
+        .printEnabledCheckerList(OS);
+    // Strip a newline off.
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(*BT, OS.str().drop_back(1), N);
+    C.emitReport(std::move(R));
   }
 };
 
-void registerPrerequisiteChecker(CheckerManager &mgr) {
-  mgr.registerChecker<PrerequisiteChecker>();
+void registerCheckerRegistrationOrderPrinter(CheckerManager &mgr) {
+  mgr.registerChecker<CheckerRegistrationOrderPrinter>();
 }
 
-bool shouldRegisterPrerequisiteChecker(const CheckerManager &mgr) {
-  return false;
-}
-
-class DependentChecker : public Checker<check::ASTCodeBody> {
-public:
-  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
-                        BugReporter &BR) const {
-    BR.EmitBasicReport(D, this, "Dependent", categories::LogicError,
-                       "This is the Dependent Checker",
-                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
-  }
-};
-
-void registerDependentChecker(CheckerManager &mgr) {
-  mgr.registerChecker<DependentChecker>();
-}
-
-bool shouldRegisterDependentChecker(const CheckerManager &mgr) {
+bool shouldRegisterCheckerRegistrationOrderPrinter(const CheckerManager &mgr) {
   return true;
 }
 
-void addDependentChecker(AnalysisASTConsumer &AnalysisConsumer,
-                         AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dependent", true}};
+void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
+  Registry.addChecker(registerCheckerRegistrationOrderPrinter,
+                      shouldRegisterCheckerRegistrationOrderPrinter,
+                      "custom.RegistrationOrder", "Description", "", false);
+}
+
+#define UNITTEST_CHECKER(CHECKER_NAME, DIAG_MSG)                               \
+  class CHECKER_NAME : public Checker<check::PreStmt<DeclStmt>> {              \
+    std::unique_ptr<BuiltinBug> BT =                                           \
+        std::make_unique<BuiltinBug>(this, DIAG_MSG);                          \
+                                                                               \
+  public:                                                                      \
+    void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {}          \
+  };                                                                           \
+                                                                               \
+  void register##CHECKER_NAME(CheckerManager &mgr) {                           \
+    mgr.registerChecker<CHECKER_NAME>();                                       \
+  }                                                                            \
+                                                                               \
+  bool shouldRegister##CHECKER_NAME(const CheckerManager &mgr) {               \
+    return true;                                                               \
+  }                                                                            \
+  void add##CHECKER_NAME(CheckerRegistry &Registry) {                          \
+    Registry.addChecker(register##CHECKER_NAME, shouldRegister##CHECKER_NAME,  \
+                        "custom." #CHECKER_NAME, "Description", "", false);    \
+  }
+
+UNITTEST_CHECKER(StrongDep, "Strong")
+UNITTEST_CHECKER(Dep, "Dep")
+
+bool shouldRegisterStrongFALSE(const CheckerManager &mgr) {
+  return false;
+}
+
+
+void addDep(AnalysisASTConsumer &AnalysisConsumer,
+                  AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
+                                {"custom.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-     Registry.addChecker(registerPrerequisiteChecker,
-                         shouldRegisterPrerequisiteChecker,
-                         "custom.Prerequisite", "Description", "", false);
-     Registry.addChecker(registerDependentChecker,
-                         shouldRegisterDependentChecker,
-                         "custom.Dependent", "Description", "", false);
-     Registry.addDependency("custom.Dependent", "custom.Prerequisite");
-    });
+    Registry.addChecker(registerStrongDep, shouldRegisterStrongFALSE,
+                        "custom.Strong", "Description", "", false);
+    addStrongDep(Registry);
+    addDep(Registry);
+    addCheckerRegistrationOrderPrinter(Registry);
+    Registry.addDependency("custom.Dep", "custom.Strong");
+  });
 }
 
-TEST(RegisterDependentCheckers, RegisterChecker) {
+TEST(RegisterDeps, UnsatisfiedDependency) {
   std::string Diags;
-  EXPECT_TRUE(runCheckerOnCode<addDependentChecker>("void f() {;}", Diags));
-  EXPECT_EQ(Diags, "");
+  EXPECT_TRUE(runCheckerOnCode<addDep>("void f() {int i;}", Diags));
+  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.RegistrationOrder\n");
 }
-
 } // namespace
 } // namespace ento
 } // namespace clang
