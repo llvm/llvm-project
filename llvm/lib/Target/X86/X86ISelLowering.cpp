@@ -33402,6 +33402,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::MOVQ2DQ: {
+    // Move from MMX to XMM. Upper half of XMM should be 0.
+    if (DemandedElts.countTrailingZeros() >= (NumElts / 2))
+      Known.setAllZero();
+    break;
+  }
   }
 
   // Handle target shuffles.
