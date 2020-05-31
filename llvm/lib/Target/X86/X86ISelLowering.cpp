@@ -7438,9 +7438,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                 SubMask, DAG, Depth + 1, ResolveKnownElts))
       return false;
 
-    // Shuffle inputs must be the same size as the subvector.
+    // Subvector shuffle inputs must not be larger than the subvector.
     if (llvm::any_of(SubInputs, [SubVT](SDValue Op) {
-          return SubVT.getSizeInBits() != Op.getValueSizeInBits();
+          return SubVT.getSizeInBits() > Op.getValueSizeInBits();
         }))
       return false;
 
@@ -7460,14 +7460,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
     Ops.push_back(Src);
-    for (SDValue &SubInput : SubInputs) {
-      EVT SubSVT = SubInput.getValueType().getScalarType();
-      EVT AltVT = EVT::getVectorVT(*DAG.getContext(), SubSVT,
-                                   NumSizeInBits / SubSVT.getSizeInBits());
-      Ops.push_back(DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), AltVT,
-                                DAG.getUNDEF(AltVT), SubInput,
-                                DAG.getIntPtrConstant(0, SDLoc(N))));
-    }
+    Ops.append(SubInputs.begin(), SubInputs.end());
     for (int i = 0; i != (int)NumElts; ++i)
       Mask.push_back(i);
     for (int i = 0; i != (int)NumSubElts; ++i) {
