@@ -9,10 +9,10 @@
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP0]], [[CONV]]
+// CHECK-NEXT:    [[NAMELESS0:%.*]] = load i64, i64* [[A_ADDR]], align 8
+// CHECK-NEXT:    [[NAMELESS1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NAMELESS1]] to i64
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[NAMELESS0]], [[CONV]]
 // CHECK-NEXT:    ret i64 [[ADD]]
 //
 long test(long a, int b) {
@@ -29,12 +29,12 @@ long test(long a, int b) {
 // CHECK-NEXT:    store i64 [[A]], i64* [[A_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[B]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[C]], i32* [[C_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B_ADDR]], align 4
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP0]], [[CONV]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[C_ADDR]], align 4
-// CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP2]] to i64
+// CHECK-NEXT:    [[NAMELESS0:%.*]] = load i64, i64* [[A_ADDR]], align 8
+// CHECK-NEXT:    [[NAMELESS1:%.*]] = load i32, i32* [[B_ADDR]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NAMELESS1]] to i64
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[NAMELESS0]], [[CONV]]
+// CHECK-NEXT:    [[NAMELESS2:%.*]] = load i32, i32* [[C_ADDR]], align 4
+// CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[NAMELESS2]] to i64
 // CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[ADD]], [[CONV1]]
 // CHECK-NEXT:    ret i64 [[ADD2]]
 //
