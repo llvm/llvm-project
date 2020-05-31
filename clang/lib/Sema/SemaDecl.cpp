@@ -13757,19 +13757,17 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   // variant` annotation which specifies the mangled definition as a
   // specialization function under the OpenMP context defined as part of the
   // `omp begin declare variant`.
-  FunctionDecl *BaseFD = nullptr;
-  if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope() &&
-      TemplateParameterLists.empty())
-    BaseFD = ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
-        ParentScope, D);
+  SmallVector<FunctionDecl *, 4> Bases;
+  if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
+    ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+        ParentScope, D, TemplateParameterLists, Bases);
 
   D.setFunctionDefinitionKind(FDK_Definition);
   Decl *DP = HandleDeclarator(ParentScope, D, TemplateParameterLists);
   Decl *Dcl = ActOnStartOfFunctionDef(FnBodyScope, DP, SkipBody);
 
-  if (BaseFD)
-    ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
-        cast<FunctionDecl>(Dcl), BaseFD);
+  if (!Bases.empty())
+    ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
 
   return Dcl;
 }
