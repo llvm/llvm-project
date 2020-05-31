@@ -23,7 +23,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/WithColor.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::driver;
@@ -334,14 +333,8 @@ getVfsFromFile(const std::string &OverlayFile,
 
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
-  llvm::Expected<CommonOptionsParser> OptionsParser =
-      CommonOptionsParser::create(argc, argv, ClangTidyCategory,
-                                  cl::ZeroOrMore);
-  if (!OptionsParser) {
-    llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
-    return 1;
-  }
-
+  CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
+                                    cl::ZeroOrMore);
   llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
       new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
 
@@ -372,7 +365,7 @@ int clangTidyMain(int argc, const char **argv) {
   SmallString<256> ProfilePrefix = MakeAbsolute(StoreCheckProfile);
 
   StringRef FileName("dummy");
-  auto PathList = OptionsParser->getSourcePathList();
+  auto PathList = OptionsParser.getSourcePathList();
   if (!PathList.empty()) {
     FileName = PathList.front();
   }
@@ -440,7 +433,7 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyContext Context(std::move(OwningOptionsProvider),
                            AllowEnablingAnalyzerAlphaCheckers);
   std::vector<ClangTidyError> Errors =
-      runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
+      runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
                    EnableCheckProfile, ProfilePrefix);
   bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
                        return E.DiagLevel == ClangTidyError::Error;
