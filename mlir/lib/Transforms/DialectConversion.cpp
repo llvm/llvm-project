@@ -877,8 +877,8 @@ void ConversionPatternRewriterImpl::replaceOp(Operation *op,
   // Record the requested operation replacement.
   replacements.emplace_back(op, newValues);
 
-  /// Mark this operation as recursively ignored so that we don't need to
-  /// convert any nested operations.
+  // Mark this operation as recursively ignored so that we don't need to
+  // convert any nested operations.
   markNestedOpsIgnored(op);
 }
 
@@ -1647,13 +1647,13 @@ LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
   // Legalize the given operation.
   if (failed(opLegalizer.legalize(op, rewriter))) {
     // Handle the case of a failed conversion for each of the different modes.
-    /// Full conversions expect all operations to be converted.
+    // Full conversions expect all operations to be converted.
     if (mode == OpConversionMode::Full)
       return op->emitError()
              << "failed to legalize operation '" << op->getName() << "'";
-    /// Partial conversions allow conversions to fail iff the operation was not
-    /// explicitly marked as illegal. If the user provided a nonlegalizableOps
-    /// set, non-legalizable ops are included.
+    // Partial conversions allow conversions to fail iff the operation was not
+    // explicitly marked as illegal. If the user provided a nonlegalizableOps
+    // set, non-legalizable ops are included.
     if (mode == OpConversionMode::Partial) {
       if (opLegalizer.isIllegal(op))
         return op->emitError()
@@ -1663,9 +1663,9 @@ LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
         trackedOps->insert(op);
     }
   } else {
-    /// Analysis conversions don't fail if any operations fail to legalize,
-    /// they are only interested in the operations that were successfully
-    /// legalized.
+    // Analysis conversions don't fail if any operations fail to legalize,
+    // they are only interested in the operations that were successfully
+    // legalized.
     if (mode == OpConversionMode::Analysis)
       trackedOps->insert(op);
 
@@ -1684,7 +1684,7 @@ OperationConverter::convertOperations(ArrayRef<Operation *> ops,
     return success();
   ConversionTarget &target = opLegalizer.getTarget();
 
-  /// Compute the set of operations and blocks to convert.
+  // Compute the set of operations and blocks to convert.
   std::vector<Operation *> toConvert;
   for (auto *op : ops) {
     toConvert.emplace_back(op);
