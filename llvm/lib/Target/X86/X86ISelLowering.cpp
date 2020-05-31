@@ -30002,10 +30002,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
 
     if (DstVT.isVector() && SrcVT == MVT::x86mmx) {
+      // FIXME: Use v4f32 for SSE1?
+      assert(Subtarget.hasSSE2() && "Requires SSE2");
       assert(getTypeAction(*DAG.getContext(), DstVT) == TypeWidenVector &&
              "Unexpected type action!");
       EVT WideVT = getTypeToTransformTo(*DAG.getContext(), DstVT);
-      SDValue Res = DAG.getNode(X86ISD::MOVQ2DQ, dl, WideVT, N->getOperand(0));
+      SDValue Res = DAG.getNode(X86ISD::MOVQ2DQ, dl, MVT::v2i64,
+                                N->getOperand(0));
+      Res = DAG.getBitcast(WideVT, Res);
       Results.push_back(Res);
       return;
     }
@@ -33396,6 +33400,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           DemandedElts.countTrailingZeros() >= NumSrcElts)
         Known.setAllZero();
     }
+    break;
+  }
+  case X86ISD::MOVQ2DQ: {
+    // Move from MMX to XMM. Upper half of XMM should be 0.
+    if (DemandedElts.countTrailingZeros() >= (NumElts / 2))
+      Known.setAllZero();
     break;
   }
   }
@@ -47452,6 +47462,11 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
     return DAG.getBitcast(
         VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32,
                         DAG.getAnyExtOrTrunc(Src.getOperand(0), DL, MVT::i32)));
+
+  // Combine (v2i64 (scalar_to_vector (i64 (bitconvert (mmx))))) to MOVQ2DQ.
+  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST &&
+      Src.getOperand(0).getValueType() == MVT::x86mmx)
+    return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, Src.getOperand(0));
 
   return SDValue();
 }
