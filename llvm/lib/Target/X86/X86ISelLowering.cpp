@@ -47463,6 +47463,11 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
         VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32,
                         DAG.getAnyExtOrTrunc(Src.getOperand(0), DL, MVT::i32)));
 
+  // Combine (v2i64 (scalar_to_vector (i64 (bitconvert (mmx))))) to MOVQ2DQ.
+  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST &&
+      Src.getOperand(0).getValueType() == MVT::x86mmx)
+    return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, Src.getOperand(0));
+
   return SDValue();
 }
 
