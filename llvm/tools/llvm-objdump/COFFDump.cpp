@@ -27,6 +27,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::objdump;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
