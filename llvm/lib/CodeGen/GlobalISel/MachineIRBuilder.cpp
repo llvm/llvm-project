@@ -243,7 +243,7 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
   LLT PtrTy = Res.getLLTTy(*getMRI());
   LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
-  buildConstant(MaskReg, maskTrailingOnes<uint64_t>(NumBits));
+  buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
   return buildPtrMask(Res, Op0, MaskReg);
 }
 

@@ -23,8 +23,8 @@ body: |
     ; CHECK: [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0) :: (load 8)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD2]], [[C1]](s64)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[C1]](s64)
-    ; CHECK: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[PTR_ADD2]], [[COPY1]](s64)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
+    ; CHECK: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[PTR_ADD2]], [[C2]](s64)
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C]](s64)
     ; CHECK: G_STORE [[PTR_ADD3]](p0), [[COPY]](p0) :: (store 8)
     %0:_(p0) = COPY $x0
