@@ -7271,7 +7271,7 @@ static void resolveZeroablesFromTargetShuffle(const SmallVectorImpl<int> &Mask,
 // TODO: Use DemandedElts variant.
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
-                                   SelectionDAG &DAG, unsigned Depth,
+                                   const SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveKnownElts);
 
 // Attempt to decode ops that could be represented as a shuffle mask.
@@ -7280,7 +7280,7 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
 static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<SDValue> &Ops,
-                               SelectionDAG &DAG, unsigned Depth,
+                               const SelectionDAG &DAG, unsigned Depth,
                                bool ResolveKnownElts) {
   Mask.clear();
   Ops.clear();
@@ -7734,7 +7734,7 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
                                    SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    APInt &KnownUndef, APInt &KnownZero,
-                                   SelectionDAG &DAG, unsigned Depth,
+                                   const SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveKnownElts) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
@@ -7755,7 +7755,7 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
 
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
-                                   SelectionDAG &DAG, unsigned Depth = 0,
+                                   const SelectionDAG &DAG, unsigned Depth = 0,
                                    bool ResolveKnownElts = true) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
