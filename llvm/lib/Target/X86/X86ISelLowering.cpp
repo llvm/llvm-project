@@ -30002,10 +30002,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
 
     if (DstVT.isVector() && SrcVT == MVT::x86mmx) {
+      // FIXME: Use v4f32 for SSE1?
+      assert(Subtarget.hasSSE2() && "Requires SSE2");
       assert(getTypeAction(*DAG.getContext(), DstVT) == TypeWidenVector &&
              "Unexpected type action!");
       EVT WideVT = getTypeToTransformTo(*DAG.getContext(), DstVT);
-      SDValue Res = DAG.getNode(X86ISD::MOVQ2DQ, dl, WideVT, N->getOperand(0));
+      SDValue Res = DAG.getNode(X86ISD::MOVQ2DQ, dl, MVT::v2i64,
+                                N->getOperand(0));
+      Res = DAG.getBitcast(WideVT, Res);
       Results.push_back(Res);
       return;
     }
