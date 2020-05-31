@@ -218,10 +218,12 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 # spaces, commas, paren, or end of the string
 IR_VALUE_RE = re.compile(r'(\s+)%([\w.-]+?)([,\s\(\)]|\Z)')
 
+NAMELESS_PREFIX = "NAMELESS"
+
 # Create a FileCheck variable name based on an IR name.
 def get_value_name(var):
   if var.isdigit():
-    var = 'TMP' + var
+    var = NAMELESS_PREFIX + var
   var = var.replace('.', '_')
   var = var.replace('-', '_')
   return var.upper()
@@ -243,6 +245,8 @@ def genericize_check_lines(lines, is_analyze, vars_seen):
   # into defs, and variables we have seen into uses.
   def transform_line_vars(match):
     var = match.group(2)
+    if NAMELESS_PREFIX.lower() in var.lower():
+      warn("Change IR value name '%s' to prevent possible conflict with scripted FileCheck name." % (var,))
     if var in vars_seen:
       rv = get_value_use(var)
     else:
