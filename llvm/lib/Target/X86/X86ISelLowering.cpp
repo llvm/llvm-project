@@ -35047,7 +35047,8 @@ static SDValue combineX86ShufflesRecursively(
 
   for (SDValue &Op : OpInputs)
     if (Op.getValueSizeInBits() < RootSizeInBits)
-      Op = widenSubVector(Op, false, Subtarget, DAG, SDLoc(Op), RootSizeInBits);
+      Op = widenSubVector(peekThroughOneUseBitcasts(Op), false, Subtarget, DAG,
+                          SDLoc(Op), RootSizeInBits);
 
   SmallVector<int, 64> Mask;
   SmallVector<SDValue, 16> Ops;
