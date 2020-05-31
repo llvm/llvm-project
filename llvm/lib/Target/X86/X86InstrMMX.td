@@ -44,8 +44,7 @@ let Constraints = "$src1 = $dst" in {
     def irm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
                  (ins VR64:$src1, OType:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
-                 [(set VR64:$dst, (IntId VR64:$src1,
-                                   (bitconvert (load_mmx addr:$src2))))]>,
+                 [(set VR64:$dst, (IntId VR64:$src1, (load_mmx addr:$src2)))]>,
                  Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 
@@ -61,8 +60,7 @@ let Constraints = "$src1 = $dst" in {
     def rm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
                                   (ins VR64:$src1, i64mem:$src2),
                   !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
-                  [(set VR64:$dst, (IntId VR64:$src1,
-                                    (bitconvert (load_mmx addr:$src2))))]>,
+                  [(set VR64:$dst, (IntId VR64:$src1, (load_mmx addr:$src2)))]>,
                   Sched<[sched.Folded, sched.ReadAfterFold]>;
     def ri : MMXIi8<opc2, ImmForm, (outs VR64:$dst),
                                    (ins VR64:$src1, i32u8imm:$src2),
@@ -82,8 +80,7 @@ multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
 
   def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
                  !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                 [(set VR64:$dst,
-                   (IntId64 (bitconvert (load_mmx addr:$src))))]>,
+                 [(set VR64:$dst, (IntId64 (load_mmx addr:$src)))]>,
                  Sched<[sched.Folded]>;
 }
 
@@ -102,8 +99,7 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
        (ins VR64:$src1, i64mem:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst,
-         (IntId64 VR64:$src1,
-          (bitconvert (load_mmx addr:$src2))))]>,
+         (IntId64 VR64:$src1, (load_mmx addr:$src2)))]>,
       Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 }
@@ -119,8 +115,8 @@ multiclass ssse3_palign_mm<string asm, Intrinsic IntId,
   def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
       (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-      [(set VR64:$dst, (IntId VR64:$src1,
-                       (bitconvert (load_mmx addr:$src2)), (i8 timm:$src3)))]>,
+      [(set VR64:$dst, (IntId VR64:$src1, (load_mmx addr:$src2),
+                                          (i8 timm:$src3)))]>,
       Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
