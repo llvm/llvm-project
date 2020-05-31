@@ -24,8 +24,9 @@
 // We set canFoldAsLoad because this can be converted to a constant-pool
 // load of an all-zeros value if folding it would be beneficial.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
-    isPseudo = 1, SchedRW = [WriteZero] in {
-def MMX_SET0 : I<0, Pseudo, (outs VR64:$dst), (ins), "", []>;
+    isPseudo = 1, SchedRW = [WriteZero], Predicates = [HasMMX] in {
+def MMX_SET0 : I<0, Pseudo, (outs VR64:$dst), (ins), "",
+                 [(set VR64:$dst, (x86mmx (MMX_X86movw2d (i32 0))))]>;
 }
 
 let Constraints = "$src1 = $dst" in {
@@ -171,11 +172,6 @@ def MMX_MOVD64rm : MMXI<0x6E, MRMSrcMem, (outs VR64:$dst), (ins i32mem:$src),
                         [(set VR64:$dst,
                           (x86mmx (MMX_X86movw2d (loadi32 addr:$src))))]>,
                         Sched<[WriteVecLoad]>;
-
-let Predicates = [HasMMX] in {
-  def : Pat<(x86mmx (MMX_X86movw2d (i32 0))),
-            (MMX_SET0)>;
-}
 
 let mayStore = 1 in
 def MMX_MOVD64mr : MMXI<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR64:$src),
