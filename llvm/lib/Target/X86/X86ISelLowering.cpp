@@ -36830,6 +36830,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
+    // Aggressively peek through src to get at the demanded elt.
+    // TODO - we should do this for all target/faux shuffles ops.
+    APInt SrcBits = APInt::getAllOnesValue(SrcVT.getScalarSizeInBits());
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(Src, SrcBits, SrcElts,
+                                                         TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     break;
   }
   case X86ISD::VPERMV: {
