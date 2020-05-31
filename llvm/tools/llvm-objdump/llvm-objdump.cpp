@@ -420,10 +420,10 @@ void reportWarning(Twine Message, StringRef File) {
   outs().flush();
   WithColor::warning(errs(), ToolName)
       << "'" << File << "': " << Message << "\n";
-  errs().flush();
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message) {
+  outs().flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Message << "\n";
   exit(1);
 }
@@ -432,6 +432,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
                                          StringRef ArchiveName,
                                          StringRef ArchitectureName) {
   assert(E);
+  outs().flush();
   WithColor::error(errs(), ToolName);
   if (ArchiveName != "")
     errs() << ArchiveName << "(" << FileName << ")";
@@ -439,11 +440,8 @@ LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
     errs() << "'" << FileName << "'";
   if (!ArchitectureName.empty())
     errs() << " (for architecture " << ArchitectureName << ")";
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  errs() << ": " << Buf;
+  errs() << ": ";
+  logAllUnhandledErrors(std::move(E), errs());
   exit(1);
 }
 
