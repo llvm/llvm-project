@@ -35,6 +35,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include <fstream>
 #include <string>
 
@@ -86,7 +87,14 @@ bool runCommandsInFile(const char *ExeName, std::string const &FileName,
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
-  CommonOptionsParser OptionsParser(argc, argv, ClangQueryCategory);
+  llvm::Expected<CommonOptionsParser> OptionsParser =
+      CommonOptionsParser::create(argc, argv, ClangQueryCategory,
+                                  llvm::cl::OneOrMore);
+
+  if (!OptionsParser) {
+    llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
+    return 1;
+  }
 
   if (!Commands.empty() && !CommandFiles.empty()) {
     llvm::errs() << argv[0] << ": cannot specify both -c and -f\n";
@@ -99,8 +107,8 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  ClangTool Tool(OptionsParser.getCompilations(),
-                 OptionsParser.getSourcePathList());
+  ClangTool Tool(OptionsParser->getCompilations(),
+                 OptionsParser->getSourcePathList());
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   int Status = Tool.buildASTs(ASTs);
   int ASTStatus = 0;
