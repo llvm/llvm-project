@@ -52,7 +52,8 @@ define amdgpu_kernel void @unsafe_sin_3x_f32(float addrspace(1)* %out, float %x)
 }
 
 ; FUNC-LABEL: {{^}}fmf_sin_3x_f32:
-; GCN: v_mul_f32
+; GCN-NOT: v_add_f32
+; GCN: 0x3ef47644
 ; GCN: v_mul_f32
 ; SICIVI: v_fract_f32
 ; GFX9-NOT: v_fract_f32
@@ -95,7 +96,8 @@ define amdgpu_kernel void @unsafe_sin_2x_f32(float addrspace(1)* %out, float %x)
 }
 
 ; FUNC-LABEL: {{^}}fmf_sin_2x_f32:
-; GCN: v_add_f32
+; GCN-NOT: v_add_f32
+; GCN: 0x3ea2f983
 ; GCN: v_mul_f32
 ; SICIVI: v_fract_f32
 ; GFX9-NOT: v_fract_f32
@@ -137,8 +139,8 @@ define amdgpu_kernel void @unsafe_sin_cancel_f32(float addrspace(1)* %out, float
 }
 
 ; FUNC-LABEL: {{^}}fmf_sin_cancel_f32:
-; GCN: v_mul_f32
-; GCN: v_mul_f32
+; GCN-NOT: v_add_f32
+; GCN-NOT: v_mul_f32
 ; SICIVI: v_fract_f32
 ; GFX9-NOT: v_fract_f32
 ; GCN: v_sin_f32
