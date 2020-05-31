@@ -449,10 +449,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-export-dynamic");
 
     if (!Args.hasArg(options::OPT_shared) && !IsStaticPIE) {
-      const std::string Loader =
-          D.DyldPrefix + ToolChain.getDynamicLinker(Args);
       CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back(Args.MakeArgString(Loader));
+      CmdArgs.push_back(Args.MakeArgString(Twine(D.DyldPrefix) +
+                                           ToolChain.getDynamicLinker(Args)));
     }
   }
 
