@@ -13,8 +13,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvv
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %4:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -36,8 +36,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vsv
     ; GFX8: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %4:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %4
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:sgpr(s16) = G_TRUNC %0
@@ -59,8 +59,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvs
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %4:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %4
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s16) = G_TRUNC %0
@@ -82,8 +82,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvv_fabs_lhs
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 2, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %5:vgpr_32 = nofpexcept V_ADD_F16_e64 2, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %5
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -106,8 +106,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvv_fabs_rhs
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 2, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %5:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 2, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %5
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -130,8 +130,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvv_fneg_fabs_lhs
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 3, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %6:vgpr_32 = nofpexcept V_ADD_F16_e64 3, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %6
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -155,8 +155,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_vvv_fneg_fabs_rhs
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 3, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %6:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 3, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %6
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0
@@ -180,8 +180,8 @@ body: |
     ; GFX8-LABEL: name: fadd_s16_fneg_copy_sgpr
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX8: [[V_ADD_F16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX8: S_ENDPGM 0, implicit [[V_ADD_F16_e64_]]
+    ; GFX8: %5:vgpr_32 = nofpexcept V_ADD_F16_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: S_ENDPGM 0, implicit %5
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s16) = G_TRUNC %0
