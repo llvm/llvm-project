@@ -7271,7 +7271,7 @@ static void resolveZeroablesFromTargetShuffle(const SmallVectorImpl<int> &Mask,
 // TODO: Use DemandedElts variant.
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
-                                   SelectionDAG &DAG, unsigned Depth,
+                                   const SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveKnownElts);
 
 // Attempt to decode ops that could be represented as a shuffle mask.
@@ -7280,7 +7280,7 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
 static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<SDValue> &Ops,
-                               SelectionDAG &DAG, unsigned Depth,
+                               const SelectionDAG &DAG, unsigned Depth,
                                bool ResolveKnownElts) {
   Mask.clear();
   Ops.clear();
@@ -7438,9 +7438,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                 SubMask, DAG, Depth + 1, ResolveKnownElts))
       return false;
 
-    // Shuffle inputs must be the same size as the subvector.
+    // Subvector shuffle inputs must not be larger than the subvector.
     if (llvm::any_of(SubInputs, [SubVT](SDValue Op) {
-          return SubVT.getSizeInBits() != Op.getValueSizeInBits();
+          return SubVT.getSizeInBits() > Op.getValueSizeInBits();
         }))
       return false;
 
@@ -7460,14 +7460,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
     Ops.push_back(Src);
-    for (SDValue &SubInput : SubInputs) {
-      EVT SubSVT = SubInput.getValueType().getScalarType();
-      EVT AltVT = EVT::getVectorVT(*DAG.getContext(), SubSVT,
-                                   NumSizeInBits / SubSVT.getSizeInBits());
-      Ops.push_back(DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), AltVT,
-                                DAG.getUNDEF(AltVT), SubInput,
-                                DAG.getIntPtrConstant(0, SDLoc(N))));
-    }
+    Ops.append(SubInputs.begin(), SubInputs.end());
     for (int i = 0; i != (int)NumElts; ++i)
       Mask.push_back(i);
     for (int i = 0; i != (int)NumSubElts; ++i) {
@@ -7741,7 +7734,7 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
                                    SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    APInt &KnownUndef, APInt &KnownZero,
-                                   SelectionDAG &DAG, unsigned Depth,
+                                   const SelectionDAG &DAG, unsigned Depth,
                                    bool ResolveKnownElts) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
@@ -7762,7 +7755,7 @@ static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
 
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
-                                   SelectionDAG &DAG, unsigned Depth = 0,
+                                   const SelectionDAG &DAG, unsigned Depth = 0,
                                    bool ResolveKnownElts = true) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
@@ -36837,6 +36830,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
+    // Aggressively peek through src to get at the demanded elt.
+    // TODO - we should do this for all target/faux shuffles ops.
+    APInt SrcBits = APInt::getAllOnesValue(SrcVT.getScalarSizeInBits());
+    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(Src, SrcBits, SrcElts,
+                                                         TLO.DAG, Depth + 1))
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     break;
   }
   case X86ISD::VPERMV: {
