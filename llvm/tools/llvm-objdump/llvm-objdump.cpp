@@ -386,8 +386,6 @@ static FilterResult checkSectionFilter(object::SectionRef S) {
           /*IncrementIndex=*/true};
 }
 
-namespace llvm {
-
 SectionFilter objdump::ToolSectionFilter(object::ObjectFile const &O,
                                          uint64_t *Idx) {
   // Start at UINT64_MAX so that the first index returned after an increment is
@@ -2422,7 +2420,6 @@ static void dumpInput(StringRef file) {
   else
     reportError(errorCodeToError(object_error::invalid_file_type), file);
 }
-} // namespace llvm
 
 int main(int argc, char **argv) {
   using namespace llvm;
