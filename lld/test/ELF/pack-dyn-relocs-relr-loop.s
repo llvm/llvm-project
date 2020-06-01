@@ -12,14 +12,14 @@
 # CHECK: .relr.dyn needs 1 padding word(s)
 
 # RELR:      .relr.dyn {
-# RELR-NEXT:   0x2F40 R_AARCH64_RELATIVE - 0x0
-# RELR-NEXT:   0x2F48 R_AARCH64_RELATIVE - 0x0
+# RELR-NEXT:   0x2F30 R_AARCH64_RELATIVE - 0x0
+# RELR-NEXT:   0x2F38 R_AARCH64_RELATIVE - 0x0
 # RELR-NEXT:   0x3000 R_AARCH64_RELATIVE - 0x0
 # RELR-NEXT: }
 
 .section .data.rel.ro
 .align 3
-.space 0xce0
+.space 0xcd0
 foo:
 ## Encoded by the first word of .relr.dyn
 .quad foo

@@ -1473,10 +1473,12 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     SUnit *SU;
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
+    unsigned Width;
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset)
-        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset) {}
+              int64_t Offset, unsigned Width)
+        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
+          Width(Width) {}
 
     static bool Compare(const MachineOperand *const &A,
                         const MachineOperand *const &B) {
@@ -1565,12 +1567,14 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
+    const MachineInstr &MI = *SU->getInstr();
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    if (TII->getMemOperandsWithOffset(*SU->getInstr(), BaseOps, Offset,
-                                      OffsetIsScalable, TRI))
-      MemOpRecords.push_back(MemOpInfo(SU, BaseOps, Offset));
+    unsigned Width;
+    if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
+                                           OffsetIsScalable, Width, TRI))
+      MemOpRecords.push_back(MemOpInfo(SU, BaseOps, Offset, Width));
 #ifndef NDEBUG
     for (auto *Op : BaseOps)
       assert(Op);
@@ -1584,16 +1588,19 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   // At this point, `MemOpRecords` array must hold atleast two mem ops. Try to
   // cluster mem ops collected within `MemOpRecords` array.
   unsigned ClusterLength = 1;
+  unsigned CurrentClusterBytes = MemOpRecords[0].Width;
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     // Decision to cluster mem ops is taken based on target dependent logic
     auto MemOpa = MemOpRecords[Idx];
     auto MemOpb = MemOpRecords[Idx + 1];
     ++ClusterLength;
-    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpb.BaseOps,
-                                  ClusterLength)) {
+    CurrentClusterBytes += MemOpb.Width;
+    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpb.BaseOps, ClusterLength,
+                                  CurrentClusterBytes)) {
       // Current mem ops pair could not be clustered, reset cluster length, and
       // go to next pair
       ClusterLength = 1;
+      CurrentClusterBytes = MemOpb.Width;
       continue;
     }
 
@@ -1605,6 +1612,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     // FIXME: Is this check really required?
     if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
       ClusterLength = 1;
+      CurrentClusterBytes = MemOpb.Width;
       continue;
     }
 

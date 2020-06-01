@@ -1254,11 +1254,10 @@ public:
   /// It returns false if no base operands and offset was found.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
-  virtual bool
-  getMemOperandsWithOffset(const MachineInstr &MI,
-                           SmallVectorImpl<const MachineOperand *> &BaseOps,
-                           int64_t &Offset, bool &OffsetIsScalable,
-                           const TargetRegisterInfo *TRI) const {
+  virtual bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
+      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const {
     return false;
   }
 
@@ -1286,9 +1285,11 @@ public:
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
   /// \p NumLoads is the number of loads that will be in the cluster if this
   /// hook returns true.
+  /// \p NumBytes is the number of bytes that will be loaded from all the
+  /// clustered loads if this hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
-                                   unsigned NumLoads) const {
+                                   unsigned NumLoads, unsigned NumBytes) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }
 

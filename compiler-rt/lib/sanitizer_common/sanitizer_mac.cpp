@@ -635,11 +635,7 @@ MacosVersion GetMacosVersionInternal() {
     case 14: return MACOS_VERSION_YOSEMITE;
     case 15: return MACOS_VERSION_EL_CAPITAN;
     case 16: return MACOS_VERSION_SIERRA;
-    case 17:
-      // Not a typo, 17.5 Darwin Kernel Version maps to High Sierra 10.13.4.
-      if (minor >= 5)
-        return MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
-      return MACOS_VERSION_HIGH_SIERRA;
+    case 17: return MACOS_VERSION_HIGH_SIERRA;
     case 18: return MACOS_VERSION_MOJAVE;
     case 19: return MACOS_VERSION_CATALINA;
     default:
@@ -658,6 +654,23 @@ MacosVersion GetMacosVersion() {
     atomic_store(cache, result, memory_order_release);
   }
   return result;
+}
+
+DarwinKernelVersion GetDarwinKernelVersion() {
+  char buf[100];
+  size_t len = sizeof(buf);
+  int res = internal_sysctlbyname("kern.osrelease", buf, &len, nullptr, 0);
+  CHECK_EQ(res, 0);
+
+  // Format: <major>.<minor>.<patch>\0
+  CHECK_GE(len, 6);
+  const char *p = buf;
+  u16 major = internal_simple_strtoll(p, &p, /*base=*/10);
+  CHECK_EQ(*p, '.');
+  p += 1;
+  u16 minor = internal_simple_strtoll(p, &p, /*base=*/10);
+
+  return DarwinKernelVersion(major, minor);
 }
 
 uptr GetRSS() {
@@ -796,10 +809,10 @@ void SignalContext::InitPcSpBp() {
 }
 
 void InitializePlatformEarly() {
-  // Only use xnu_fast_mmap when on x86_64 and the OS supports it.
+  // Only use xnu_fast_mmap when on x86_64 and the kernel supports it.
   use_xnu_fast_mmap =
 #if defined(__x86_64__)
-      GetMacosVersion() >= MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+      GetDarwinKernelVersion() >= DarwinKernelVersion(17, 5);
 #else
       false;
 #endif
