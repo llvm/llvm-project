@@ -40,6 +40,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -2270,6 +2271,118 @@ hasOnlyColdCalls(Function &F,
   return true;
 }
 
+static bool hasMustTailCallers(Function *F) {
+  for (User *U : F->users()) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB) {
+      assert(isa<BlockAddress>(U) &&
+             "Expected either CallBase or BlockAddress");
+      continue;
+    }
+    if (CB->isMustTailCall())
+      return true;
+  }
+  return false;
+}
+
+static bool hasInvokeCallers(Function *F) {
+  for (User *U : F->users())
+    if (isa<InvokeInst>(U))
+      return true;
+  return false;
+}
+
+static void RemovePreallocated(Function *F) {
+  RemoveAttribute(F, Attribute::Preallocated);
+
+  auto *M = F->getParent();
+
+  IRBuilder<> Builder(M->getContext());
+
+  // Cannot modify users() while iterating over it, so make a copy.
+  SmallVector<User *, 4> PreallocatedCalls(F->users());
+  for (User *U : PreallocatedCalls) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB)
+      continue;
+
+    assert(
+        !CB->isMustTailCall() &&
+        "Shouldn't call RemotePreallocated() on a musttail preallocated call");
+    // Create copy of call without "preallocated" operand bundle.
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CB->getOperandBundlesAsDefs(OpBundles);
+    CallBase *PreallocatedSetup = nullptr;
+    for (auto *It = OpBundles.begin(); It != OpBundles.end(); ++It) {
+      if (It->getTag() == "preallocated") {
+        PreallocatedSetup = cast<CallBase>(*It->input_begin());
+        OpBundles.erase(It);
+        break;
+      }
+    }
+    assert(PreallocatedSetup && "Did not find preallocated bundle");
+    uint64_t ArgCount =
+        cast<ConstantInt>(PreallocatedSetup->getArgOperand(0))->getZExtValue();
+    CallBase *NewCB = nullptr;
+    if (InvokeInst *II = dyn_cast<InvokeInst>(CB)) {
+      NewCB = InvokeInst::Create(II, OpBundles, CB);
+    } else {
+      CallInst *CI = cast<CallInst>(CB);
+      NewCB = CallInst::Create(CI, OpBundles, CB);
+    }
+    CB->replaceAllUsesWith(NewCB);
+    NewCB->takeName(CB);
+    CB->eraseFromParent();
+
+    Builder.SetInsertPoint(PreallocatedSetup);
+    auto *StackSave =
+        Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stacksave));
+
+    Builder.SetInsertPoint(NewCB->getNextNonDebugInstruction());
+    Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackrestore),
+                       StackSave);
+
+    // Replace @llvm.call.preallocated.arg() with alloca.
+    // Cannot modify users() while iterating over it, so make a copy.
+    // @llvm.call.preallocated.arg() can be called with the same index multiple
+    // times. So for each @llvm.call.preallocated.arg(), we see if we have
+    // already created a Value* for the index, and if not, create an alloca and
+    // bitcast right after the @llvm.call.preallocated.setup() so that it
+    // dominates all uses.
+    SmallVector<Value *, 2> ArgAllocas(ArgCount);
+    SmallVector<User *, 2> PreallocatedArgs(PreallocatedSetup->users());
+    for (auto *User : PreallocatedArgs) {
+      auto *UseCall = cast<CallBase>(User);
+      assert(UseCall->getCalledFunction()->getIntrinsicID() ==
+                 Intrinsic::call_preallocated_arg &&
+             "preallocated token use was not a llvm.call.preallocated.arg");
+      uint64_t AllocArgIndex =
+          cast<ConstantInt>(UseCall->getArgOperand(1))->getZExtValue();
+      Value *AllocaReplacement = ArgAllocas[AllocArgIndex];
+      if (!AllocaReplacement) {
+        auto AddressSpace = UseCall->getType()->getPointerAddressSpace();
+        auto *ArgType = UseCall
+                            ->getAttribute(AttributeList::FunctionIndex,
+                                           Attribute::Preallocated)
+                            .getValueAsType();
+        auto *InsertBefore = PreallocatedSetup->getNextNonDebugInstruction();
+        Builder.SetInsertPoint(InsertBefore);
+        auto *Alloca =
+            Builder.CreateAlloca(ArgType, AddressSpace, nullptr, "paarg");
+        auto *BitCast = Builder.CreateBitCast(
+            Alloca, Type::getInt8PtrTy(M->getContext()), UseCall->getName());
+        ArgAllocas[AllocArgIndex] = BitCast;
+        AllocaReplacement = BitCast;
+      }
+
+      UseCall->replaceAllUsesWith(AllocaReplacement);
+      UseCall->eraseFromParent();
+    }
+    // Remove @llvm.call.preallocated.setup().
+    cast<Instruction>(PreallocatedSetup)->eraseFromParent();
+  }
+}
+
 static bool
 OptimizeFunctions(Module &M,
                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2333,11 +2446,21 @@ OptimizeFunctions(Module &M,
     // wouldn't be safe in the presence of inalloca.
     // FIXME: We should also hoist alloca affected by this to the entry
     // block if possible.
-    // FIXME: handle preallocated
     if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca) &&
         !F->hasAddressTaken()) {
       RemoveAttribute(F, Attribute::InAlloca);
       Changed = true;
+    }
+
+    // FIXME: handle invokes
+    // FIXME: handle musttail
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Preallocated)) {
+      if (!F->hasAddressTaken() && !hasMustTailCallers(F) &&
+          !hasInvokeCallers(F)) {
+        RemovePreallocated(F);
+        Changed = true;
+      }
+      continue;
     }
 
     if (hasChangeableCC(F) && !F->isVarArg() && !F->hasAddressTaken()) {
