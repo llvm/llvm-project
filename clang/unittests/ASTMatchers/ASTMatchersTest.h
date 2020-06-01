@@ -153,7 +153,7 @@ matchesConditionally(const std::string &Code, const T &AMatcher,
   }
 
   for (auto Mode : LangModes) {
-    std::string LangModeArg;
+    StringRef LangModeArg;
     switch (Mode) {
     case LanguageMode::Cxx11:
       LangModeArg = "-std=c++11";
@@ -171,8 +171,10 @@ matchesConditionally(const std::string &Code, const T &AMatcher,
       llvm_unreachable("Invalid language mode");
     }
 
-    auto Result =
-        matchesConditionally(Code, AMatcher, ExpectMatch, LangModeArg);
+    auto Result = matchesConditionally(Code, AMatcher, ExpectMatch,
+                                       {LangModeArg, "-Werror=c++14-extensions",
+                                        "-Werror=c++17-extensions",
+                                        "-Werror=c++20-extensions"});
     if (!Result)
       return Result;
   }
