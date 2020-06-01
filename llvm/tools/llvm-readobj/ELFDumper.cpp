@@ -2642,28 +2642,30 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
 }
 
 template <class ELFT>
-static bool checkHashTable(const ELFFile<ELFT> *Obj,
-                           const typename ELFT::Hash *H, StringRef FileName) {
-  auto WarnAndReturn = [&](uint64_t Off, const Twine &Msg = "") {
-    reportWarning(createError("the hash table at offset 0x" +
-                              Twine::utohexstr(Off) +
-                              " goes past the end of the file (0x" +
-                              Twine::utohexstr(Obj->getBufSize()) + ")" + Msg),
-                  FileName);
-    return false;
+static Error checkHashTable(const ELFFile<ELFT> *Obj,
+                            const typename ELFT::Hash *H,
+                            bool *IsHeaderValid = nullptr) {
+  auto MakeError = [&](uint64_t Off, const Twine &Msg = "") {
+    return createError("the hash table at offset 0x" + Twine::utohexstr(Off) +
+                       " goes past the end of the file (0x" +
+                       Twine::utohexstr(Obj->getBufSize()) + ")" + Msg);
   };
 
   // Each SHT_HASH section starts from two 32-bit fields: nbucket and nchain.
   const unsigned HeaderSize = 2 * sizeof(typename ELFT::Word);
   const uint64_t SecOffset = (const uint8_t *)H - Obj->base();
+
+  if (IsHeaderValid)
+    *IsHeaderValid = Obj->getBufSize() - SecOffset >= HeaderSize;
+
   if (Obj->getBufSize() - SecOffset < HeaderSize)
-    return WarnAndReturn(SecOffset);
+    return MakeError(SecOffset);
 
   if (Obj->getBufSize() - SecOffset - HeaderSize <
       ((uint64_t)H->nbucket + H->nchain) * sizeof(typename ELFT::Word))
-    return WarnAndReturn(SecOffset, ", nbucket = " + Twine(H->nbucket) +
-                                        ", nchain = " + Twine(H->nchain));
-  return true;
+    return MakeError(SecOffset, ", nbucket = " + Twine(H->nbucket) +
+                                    ", nchain = " + Twine(H->nchain));
+  return Error::success();
 }
 
 template <class ELFT>
@@ -2690,11 +2692,21 @@ static Error checkGNUHashTable(const ELFFile<ELFT> *Obj,
 
 template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   DictScope D(W, "HashTable");
-  if (!HashTable ||
-      !checkHashTable(ObjF->getELFFile(), HashTable, ObjF->getFileName()))
+  if (!HashTable)
     return;
-  W.printNumber("Num Buckets", HashTable->nbucket);
-  W.printNumber("Num Chains", HashTable->nchain);
+
+  bool IsHeaderValid;
+  Error Err = checkHashTable(ObjF->getELFFile(), HashTable, &IsHeaderValid);
+  if (IsHeaderValid) {
+    W.printNumber("Num Buckets", HashTable->nbucket);
+    W.printNumber("Num Chains", HashTable->nchain);
+  }
+
+  if (Err) {
+    reportUniqueWarning(std::move(Err));
+    return;
+  }
+
   W.printList("Buckets", HashTable->buckets());
   W.printList("Chains", HashTable->chains());
 }
@@ -4026,7 +4038,9 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
 
   if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
     OS << "\n Symbol table of .hash for image:\n";
-    if (checkHashTable(Obj, SysVHash, this->FileName))
+    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
+      this->reportUniqueWarning(std::move(E));
+    else
       PrintHashTable(SysVHash);
   }
 
@@ -4689,7 +4703,9 @@ template <class ELFT>
 void GNUStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
   // Print histogram for the .hash section.
   if (const Elf_Hash *HashTable = this->dumper()->getHashTable())
-    if (checkHashTable(Obj, HashTable, this->FileName))
+    if (Error E = checkHashTable<ELFT>(Obj, HashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
       printHashHistogram(*HashTable);
 
   // Print histogram for the .gnu.hash section.
