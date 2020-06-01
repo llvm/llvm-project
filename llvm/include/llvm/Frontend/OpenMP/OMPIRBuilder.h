@@ -39,7 +39,7 @@ public:
   void finalize();
 
   /// Add attributes known for \p FnID to \p Fn.
-  void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
+  static void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
@@ -199,7 +199,10 @@ public:
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
-  Function *getOrCreateRuntimeFunction(omp::RuntimeFunction FnID);
+  static FunctionCallee getOrCreateRuntimeFunction(Module &M,
+                                                   omp::RuntimeFunction FnID);
+
+  Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   Constant *getOrCreateSrcLocStr(StringRef LocStr);

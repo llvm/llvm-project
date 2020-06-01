@@ -2470,7 +2470,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
       Kind = OAR_DoNotTrackAfterFailure;
 
     // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
-    SymbolRef FromPtr = arg0Val.getAsSymbol();
+    SymbolRef FromPtr = arg0Val.getLocSymbolInBase();
     SVal RetVal = C.getSVal(CE);
     SymbolRef ToPtr = RetVal.getAsSymbol();
     assert(FromPtr && ToPtr &&

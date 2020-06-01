@@ -54,6 +54,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFloat128 = true;
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
+    } else if (Feature == "+pcrelative-memops") {
+      HasPCRelativeMemops = true;
     } else if (Feature == "+spe") {
       HasSPE = true;
       LongDoubleWidth = LongDoubleAlign = 64;
@@ -346,6 +348,7 @@ bool PPCTargetInfo::initFeatureMap(
 void PPCTargetInfo::addP10SpecificFeatures(
     llvm::StringMap<bool> &Features) const {
   Features["htm"] = false; // HTM was removed for P10.
+  Features["pcrelative-memops"] = true;
   return;
 }
 
@@ -369,6 +372,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
+      .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
       .Default(false);
 }
@@ -389,7 +393,10 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       Features["vsx"] = Features["altivec"] = true;
     if (Name == "power9-vector")
       Features["power8-vector"] = true;
-    Features[Name] = true;
+    if (Name == "pcrel")
+      Features["pcrelative-memops"] = true;
+    else
+      Features[Name] = true;
   } else {
     // If we're disabling altivec or vsx go ahead and disable all of the vsx
     // features.
@@ -398,7 +405,10 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
           Features["float128"] = Features["power9-vector"] = false;
     if (Name == "power8-vector")
       Features["power9-vector"] = false;
-    Features[Name] = false;
+    if (Name == "pcrel")
+      Features["pcrelative-memops"] = false;
+    else
+      Features[Name] = false;
   }
 }
 

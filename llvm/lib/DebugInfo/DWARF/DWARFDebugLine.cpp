@@ -1230,13 +1230,17 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   StringRef IncludeDir;
   // Be defensive about the contents of Entry.
   if (getVersion() >= 5) {
-    if (Entry.DirIdx < IncludeDirectories.size())
+    // DirIdx 0 is the compilation directory, so don't include it for
+    // relative names.
+    if ((Entry.DirIdx != 0 || Kind != FileLineInfoKind::RelativeFilePath) &&
+        Entry.DirIdx < IncludeDirectories.size())
       IncludeDir = IncludeDirectories[Entry.DirIdx].getAsCString().getValue();
   } else {
     if (0 < Entry.DirIdx && Entry.DirIdx <= IncludeDirectories.size())
       IncludeDir =
           IncludeDirectories[Entry.DirIdx - 1].getAsCString().getValue();
   }
+
   // For absolute paths only, include the compilation directory of compile unit.
   // We know that FileName is not absolute, the only way to have an absolute
   // path at this point would be if IncludeDir is absolute.
