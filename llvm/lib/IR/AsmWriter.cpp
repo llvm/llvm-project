@@ -3083,6 +3083,36 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
 
   if (const auto *TIdInfo = FS->getTypeIdInfo())
     printTypeIdInfo(*TIdInfo);
+
+  auto PrintRange = [&](const ConstantRange &Range) {
+    Out << "[" << Range.getLower() << ", " << Range.getSignedMax() << "]";
+  };
+
+  if (!FS->paramAccesses().empty()) {
+    Out << ", params: (";
+    FieldSeparator IFS;
+    for (auto &PS : FS->paramAccesses()) {
+      Out << IFS;
+      Out << "(param: " << PS.ParamNo;
+      Out << ", offset: ";
+      PrintRange(PS.Use);
+      if (!PS.Calls.empty()) {
+        Out << ", calls: (";
+        FieldSeparator IFS;
+        for (auto &Call : PS.Calls) {
+          Out << IFS;
+          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee);
+          Out << ", param: " << Call.ParamNo;
+          Out << ", offset: ";
+          PrintRange(Call.Offsets);
+          Out << ")";
+        }
+        Out << ")";
+      }
+      Out << ")";
+    }
+    Out << ")";
+  }
 }
 
 void AssemblyWriter::printTypeIdInfo(
