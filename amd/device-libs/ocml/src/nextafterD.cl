@@ -11,11 +11,9 @@ CONSTATTR double
 MATH_MANGLE(nextafter)(double x, double y)
 {
     long ix = AS_LONG(x);
-    long ax = ix & EXSIGNBIT_DP64;
     long mx = SIGNBIT_DP64 - ix;
     mx = ix < 0 ? mx : ix;
     long iy = AS_LONG(y);
-    long ay = iy & EXSIGNBIT_DP64;
     long my = SIGNBIT_DP64 - iy;
     my = iy < 0 ? my : iy;
     long t = mx + (mx < my ? 1 : -1);
@@ -25,7 +23,10 @@ MATH_MANGLE(nextafter)(double x, double y)
         r = BUILTIN_ISNAN_F64(x) ? ix : r;
         r = BUILTIN_ISNAN_F64(y) ? iy : r;
     }
-    r = ((ax|ay) == 0L | ix == iy) ? iy : r;
+
+    double ax = BUILTIN_ABS_F64(x);
+    double ay = BUILTIN_ABS_F64(y);
+    r = ((AS_LONG(ax)|AS_LONG(ay)) == 0L | ix == iy) ? iy : r;
     return AS_DOUBLE(r);
 }
 
