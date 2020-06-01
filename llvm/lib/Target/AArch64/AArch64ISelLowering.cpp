@@ -14296,13 +14296,23 @@ bool AArch64TargetLowering::needsFixedCatchObjects() const {
 
 bool AArch64TargetLowering::shouldLocalize(
     const MachineInstr &MI, const TargetTransformInfo *TTI) const {
-  if (MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_GLOBAL_VALUE: {
     // On Darwin, TLS global vars get selected into function calls, which
     // we don't want localized, as they can get moved into the middle of a
     // another call sequence.
     const GlobalValue &GV = *MI.getOperand(1).getGlobal();
     if (GV.isThreadLocal() && Subtarget->isTargetMachO())
       return false;
+    break;
+  }
+  // If we legalized G_GLOBAL_VALUE into ADRP + G_ADD_LOW, mark both as being
+  // localizable.
+  case AArch64::ADRP:
+  case AArch64::G_ADD_LOW:
+    return true;
+  default:
+    break;
   }
   return TargetLoweringBase::shouldLocalize(MI, TTI);
 }
