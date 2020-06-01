@@ -38,7 +38,7 @@
 ; the length of the header.
 ;
 ; SINGLE-4: .debug_info contents:
-; SINGLE-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
+; SINGLE-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004, abbr_offset
 ; SINGLE-4: 0x0000000b: DW_TAG_compile_unit
 ;
 ; SINGLE-4: .debug_types contents:
@@ -48,11 +48,11 @@
 ; Verify the v4 split headers.
 ;
 ; O-4: .debug_info contents:
-; O-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
+; O-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004, abbr_offset
 ; O-4: 0x0000000b: DW_TAG_compile_unit
 ;
 ; DWO-4: .debug_info.dwo contents:
-; DWO-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004 abbr_offset
+; DWO-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004, abbr_offset
 ; DWO-4: 0x0000000b: DW_TAG_compile_unit
 ;
 ; DWO-4: .debug_types.dwo contents:
@@ -67,20 +67,20 @@
 ; SINGLE-5: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_type abbr_offset
 ; SINGLE-5: 0x00000018: DW_TAG_type_unit
 ; SINGLE-5-NOT: contents:
-; SINGLE-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_compile abbr_offset
+; SINGLE-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_compile, abbr_offset
 ; SINGLE-5: 0x0000000c: DW_TAG_compile_unit
 
 ; Verify the v5 split headers.
 ;
 ; O-5: .debug_info contents:
-; O-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_skeleton abbr_offset
+; O-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_skeleton, abbr_offset
 ; O-5-SAME:        DWO_id = 0xccd7e58ef8bf4aa6
 ; O-5: 0x00000014: DW_TAG_skeleton_unit 
 ;
 ; DWO-5: .debug_info.dwo contents:
 ; DWO-5: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_type abbr_offset
 ; DWO-5: 0x00000018: DW_TAG_type_unit
-; DWO-5: 0x00000033: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_split_compile abbr_offset
+; DWO-5: 0x00000033: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset
 ; DWO-5-SAME:        DWO_id = 0xccd7e58ef8bf4aa6
 ; DWO-5: 0x00000047: DW_TAG_compile_unit
 
