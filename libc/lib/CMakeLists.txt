@@ -50,14 +50,20 @@ add_entrypoint_library(
   llvmlibm
   DEPENDS
     # math.h entrypoints
+    libc.src.math.ceil
+    libc.src.math.ceilf
     libc.src.math.cosf
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.floor
+    libc.src.math.floorf
     libc.src.math.expf
     libc.src.math.exp2f
     libc.src.math.round
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.trunc
+    libc.src.math.truncf
 )
 
 add_redirector_library(

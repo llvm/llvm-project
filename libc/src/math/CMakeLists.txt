@@ -91,6 +91,66 @@ add_entrypoint_object(
     libc.utils.FPUtil.fputil
 )
 
+add_entrypoint_object(
+  trunc
+  SRCS
+    trunc.cpp
+  HDRS
+    trunc.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  truncf
+  SRCS
+    truncf.cpp
+  HDRS
+    truncf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  ceil
+  SRCS
+    ceil.cpp
+  HDRS
+    ceil.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  ceilf
+  SRCS
+    ceilf.cpp
+  HDRS
+    ceilf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  floor
+  SRCS
+    floor.cpp
+  HDRS
+    floor.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  floorf
+  SRCS
+    floorf.cpp
+  HDRS
+    floorf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
 add_object_library(
   exp_utils
   HDRS
