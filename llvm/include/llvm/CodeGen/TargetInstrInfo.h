@@ -1093,6 +1093,9 @@ public:
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
 
+  /// The limit on resource length extension we accept in MachineCombiner Pass.
+  virtual int getExtendResourceLenLimit() const { return 0; }
+
   /// This is an architecture-specific helper function of reassociateOps.
   /// Set special operand attributes for new instructions after reassociation.
   virtual void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
