@@ -29,8 +29,8 @@ CHECK: DW_TAG_formal_parameter
 
 CHECK: .debug_info.dwo contents:
 CHECK: [[AOFF:0x[0-9a-f]*]]:
-CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
-CHECK:         0x[[AAOFF]] addr_size = 0x08 (next unit at [[BOFF:.*]])
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
+CHECK:         0x[[AAOFF]], addr_size = 0x08 (next unit at [[BOFF:.*]])
 CHECK: DW_TAG_compile_unit
 CHECK:   DW_AT_name {{.*}} "a.cpp"
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOA:.*]])
@@ -41,8 +41,8 @@ NOTYP:     DW_AT_name {{.*}} "foo"
 TYPES:     DW_AT_signature {{.*}} ([[FOOSIG:.*]])
 
 CHECK: [[BOFF]]:
-CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
-CHECK:         0x[[BAOFF]] addr_size = 0x08 (next unit at [[XOFF:.*]])
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004, abbr_offset =
+CHECK:         0x[[BAOFF]], addr_size = 0x08 (next unit at [[XOFF:.*]])
 CHECK:   DW_AT_name {{.*}} "b.cpp"
 CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
 CHECK:   DW_TAG_structure_type
