@@ -1389,6 +1389,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
     InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
   }
+  if (LangOpts.MatrixTypes)
+    InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
   // C99 6.2.5p11.
   FloatComplexTy      = getComplexType(FloatTy);
