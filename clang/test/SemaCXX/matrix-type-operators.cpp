@@ -91,3 +91,116 @@ void test_DoubleWrapper(MyMatrix<double, 10, 9> &m, StructWithC &c) {
   // expected-error@-1 {{no viable conversion from 'StructWithC' to 'double'}}
   // expected-error@-2 {{invalid operands to binary expression ('StructWithC' and 'MyMatrix<double, 10, 9>::matrix_t' (aka 'double __attribute__((matrix_type(10, 9)))'))}}
 }
+
+sx5x10_t get_matrix();
+
+void insert(sx5x10_t a, float f) {
+  // Non integer indexes.
+  a[3][f] = 0;
+  // expected-error@-1 {{matrix column index is not an integer}}
+  a[f][9] = 0;
+  // expected-error@-1 {{matrix row index is not an integer}}
+  a[f][f] = 0;
+  // expected-error@-1 {{matrix row index is not an integer}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+  a[0][f] = 0;
+  // expected-error@-1 {{matrix column index is not an integer}}
+
+  // Invalid element type.
+  a[3][4] = &f;
+  // expected-error@-1 {{assigning to 'float' from incompatible type 'float *'; remove &}}
+
+  // Indexes outside allowed dimensions.
+  a[-1][3] = 10.0;
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  a[3][-1] = 10.0;
+  // expected-error@-1 {{matrix column index is outside the allowed range [0, 10)}}
+  a[3][-1u] = 10.0;
+  // expected-error@-1 {{matrix column index is outside the allowed range [0, 10)}}
+  a[-1u][3] = 10.0;
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  a[5][2] = 10.0;
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  a[4][10] = 10.0;
+  // expected-error@-1 {{matrix column index is outside the allowed range [0, 10)}}
+  a[5][10.0] = f;
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+
+  get_matrix()[0][0] = f;
+  // expected-error@-1 {{expression is not assignable}}
+  get_matrix()[5][10.0] = f;
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+  get_matrix()[3] = 5.0;
+  // expected-error@-1 {{single subscript expressions are not allowed for matrix values}}
+
+  float &x = reinterpret_cast<float &>(a[3][3]);
+  // expected-error@-1 {{reinterpret_cast of a matrix element to 'float &' needs its address, which is not allowed}}
+
+  a[4, 5] = 5.0;
+  // expected-error@-1 {{comma expressions are not allowed as indices in matrix subscript expressions}}
+  // expected-warning@-2 {{expression result unused}}
+
+  a[4, 5, 4] = 5.0;
+  // expected-error@-1 {{comma expressions are not allowed as indices in matrix subscript expressions}}
+  // expected-warning@-2 {{expression result unused}}
+  // expected-warning@-3 {{expression result unused}}
+}
+
+void extract(sx5x10_t a, float f) {
+  // Non integer indexes.
+  float v1 = a[3][f];
+  // expected-error@-1 {{matrix column index is not an integer}}
+  float v2 = a[f][9];
+  // expected-error@-1 {{matrix row index is not an integer}}
+  float v3 = a[f][f];
+  // expected-error@-1 {{matrix row index is not an integer}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+
+  // Invalid element type.
+  char *v4 = a[3][4];
+  // expected-error@-1 {{cannot initialize a variable of type 'char *' with an lvalue of type 'float'}}
+
+  // Indexes outside allowed dimensions.
+  float v5 = a[-1][3];
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  float v6 = a[3][-1];
+  // expected-error@-1 {{matrix column index is outside the allowed range [0, 10)}}
+  float v8 = a[-1u][3];
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  float v9 = a[5][2];
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  float v10 = a[4][10];
+  // expected-error@-1 {{matrix column index is outside the allowed range [0, 10)}}
+  float v11 = a[5][10.0];
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+
+  float v12 = get_matrix()[0][0];
+  float v13 = get_matrix()[5][10.0];
+  // expected-error@-1 {{matrix row index is outside the allowed range [0, 5)}}
+  // expected-error@-2 {{matrix column index is not an integer}}
+}
+
+const float &const_subscript_reference(sx5x10_t m) {
+  return m[2][2];
+  // expected-warning@-1 {{returning reference to local temporary object}}
+}
+
+const float &const_subscript_reference(const sx5x10_t &m) {
+  return m[2][2];
+  // expected-warning@-1 {{returning reference to local temporary object}}
+}
+
+float &nonconst_subscript_reference(sx5x10_t m) {
+  return m[2][2];
+  // expected-error@-1 {{non-const reference cannot bind to matrix element}}
+}
+
+void incomplete_matrix_index_expr(sx5x10_t a, float f) {
+  float x = a[3];
+  // expected-error@-1 {{single subscript expressions are not allowed for matrix values}}
+  a[2] = f;
+  // expected-error@-1 {{single subscript expressions are not allowed for matrix values}}
+}
