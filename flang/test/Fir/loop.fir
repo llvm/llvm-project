@@ -5,7 +5,7 @@
 // CHECK-LABEL: @x
 func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   // CHECK: [[LOOP:[0-9]+]]:
-  // CHECK: %[[COND:.*]] = icmp slt i64
+  // CHECK: %[[COND:.*]] = icmp sgt i64 %{{.*}}, 0
   // CHECK: br i1 %[[COND]]
   fir.do_loop %iv = %lb to %ub step %step unordered {
     // expect following conditional blocks to get fused
