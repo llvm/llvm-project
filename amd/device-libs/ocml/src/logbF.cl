@@ -13,8 +13,8 @@ MATH_MANGLE(logb)(float x)
     float ret = (float)(BUILTIN_FREXP_EXP_F32(x) - 1);
 
     if (!FINITE_ONLY_OPT()) {
-        int ax = AS_INT(x) & EXSIGNBIT_SP32;
-        ret = ax >= PINFBITPATT_SP32 ? AS_FLOAT(ax) : ret;
+        float ax = BUILTIN_ABS_F32(x);
+        ret = BUILTIN_ISFINITE_F32(ax) ? ret : ax;
         ret = x == 0.0f ? AS_FLOAT(NINFBITPATT_SP32) : ret;
     }
 
