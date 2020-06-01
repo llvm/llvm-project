@@ -218,7 +218,7 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 # spaces, commas, paren, or end of the string
 IR_VALUE_RE = re.compile(r'(\s+)%([\w.-]+?)([,\s\(\)]|\Z)')
 
-NAMELESS_PREFIX = "NAMELESS"
+NAMELESS_PREFIX = "TMP"
 
 # Create a FileCheck variable name based on an IR name.
 def get_value_name(var):
