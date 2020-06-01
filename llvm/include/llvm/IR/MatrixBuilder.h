@@ -175,15 +175,19 @@ public:
     return B.CreateMul(LHS, ScalarVector);
   }
 
-  /// Extracts the element at (\p Row, \p Column) from \p Matrix.
-  Value *CreateExtractMatrix(Value *Matrix, Value *Row, Value *Column,
-                             unsigned NumRows, Twine const &Name = "") {
+  /// Extracts the element at (\p RowIdx, \p ColumnIdx) from \p Matrix.
+  Value *CreateExtractElement(Value *Matrix, Value *RowIdx, Value *ColumnIdx,
+                              unsigned NumRows, Twine const &Name = "") {
 
+    unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
+                                 ColumnIdx->getType()->getScalarSizeInBits());
+    Type *IntTy = IntegerType::get(RowIdx->getType()->getContext(), MaxWidth);
+    RowIdx = B.CreateZExt(RowIdx, IntTy);
+    ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
+    Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
     return B.CreateExtractElement(
-        Matrix,
-        B.CreateAdd(
-            B.CreateMul(Column, ConstantInt::get(Column->getType(), NumRows)),
-            Row));
+        Matrix, B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx),
+        "matext");
   }
 };
 

@@ -154,7 +154,10 @@ namespace clang {
     /// An Objective-C array/dictionary subscripting which reads an
     /// object or writes at the subscripted array/dictionary element via
     /// Objective-C method calls.
-    OK_ObjCSubscript
+    OK_ObjCSubscript,
+
+    /// A matrix component is a single element of a matrix.
+    OK_MatrixComponent
   };
 
   /// The reason why a DeclRefExpr does not constitute an odr-use.

@@ -2389,6 +2389,23 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   return CopySign;
 }
 
+Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
+  auto *VecTy = dyn_cast<FixedVectorType>(Sel.getType());
+  if (!VecTy)
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  APInt UndefElts(NumElts, 0);
+  APInt AllOnesEltMask(APInt::getAllOnesValue(NumElts));
+  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, UndefElts)) {
+    if (V != &Sel)
+      return replaceInstUsesWith(Sel, V);
+    return &Sel;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -2817,16 +2834,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     return &SI;
   }
 
-  if (VectorType *VecTy = dyn_cast<VectorType>(SelType)) {
-    unsigned VWidth = VecTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
-    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(&SI, AllOnesEltMask, UndefElts)) {
-      if (V != &SI)
-        return replaceInstUsesWith(SI, V);
-      return &SI;
-    }
-  }
+  if (Instruction *I = foldVectorSelect(SI))
+    return I;
 
   // If we can compute the condition, there's no need for a select.
   // Like the above fold, we are attempting to reduce compile-time cost by

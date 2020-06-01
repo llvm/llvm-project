@@ -476,6 +476,11 @@ public:
   /// Returns whether this expression refers to a vector element.
   bool refersToVectorElement() const;
 
+  /// Returns whether this expression refers to a matrix element.
+  bool refersToMatrixElement() const {
+    return getObjectKind() == OK_MatrixComponent;
+  }
+
   /// Returns whether this expression refers to a global register
   /// variable.
   bool refersToGlobalRegisterVar() const;
@@ -2589,7 +2594,7 @@ public:
       : Expr(ArraySubscriptExprClass, t, VK, OK) {
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
-    ArraySubscriptExprBits.RBracketLoc = rbracketloc;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = rbracketloc;
     setDependence(computeDependence(this));
   }
 
@@ -2626,10 +2631,10 @@ public:
   SourceLocation getEndLoc() const { return getRBracketLoc(); }
 
   SourceLocation getRBracketLoc() const {
-    return ArraySubscriptExprBits.RBracketLoc;
+    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
   }
   void setRBracketLoc(SourceLocation L) {
-    ArraySubscriptExprBits.RBracketLoc = L;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
   }
 
   SourceLocation getExprLoc() const LLVM_READONLY {
@@ -2643,6 +2648,84 @@ public:
   // Iterators
   child_range children() {
     return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+};
+
+/// MatrixSubscriptExpr - Matrix subscript expression for the MatrixType
+/// extension.
+/// MatrixSubscriptExpr can be either incomplete (only Base and RowIdx are set
+/// so far, the type is IncompleteMatrixIdx) or complete (Base, RowIdx and
+/// ColumnIdx refer to valid expressions). Incomplete matrix expressions only
+/// exist during the initial construction of the AST.
+class MatrixSubscriptExpr : public Expr {
+  enum { BASE, ROW_IDX, COLUMN_IDX, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+
+public:
+  MatrixSubscriptExpr(Expr *Base, Expr *RowIdx, Expr *ColumnIdx, QualType T,
+                      SourceLocation RBracketLoc)
+      : Expr(MatrixSubscriptExprClass, T, Base->getValueKind(),
+             OK_MatrixComponent) {
+    SubExprs[BASE] = Base;
+    SubExprs[ROW_IDX] = RowIdx;
+    SubExprs[COLUMN_IDX] = ColumnIdx;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty matrix subscript expression.
+  explicit MatrixSubscriptExpr(EmptyShell Shell)
+      : Expr(MatrixSubscriptExprClass, Shell) {}
+
+  bool isIncomplete() const {
+    bool IsIncomplete = hasPlaceholderType(BuiltinType::IncompleteMatrixIdx);
+    assert((SubExprs[COLUMN_IDX] || IsIncomplete) &&
+           "expressions without column index must be marked as incomplete");
+    return IsIncomplete;
+  }
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  Expr *getRowIdx() { return cast<Expr>(SubExprs[ROW_IDX]); }
+  const Expr *getRowIdx() const { return cast<Expr>(SubExprs[ROW_IDX]); }
+  void setRowIdx(Expr *E) { SubExprs[ROW_IDX] = E; }
+
+  Expr *getColumnIdx() { return cast_or_null<Expr>(SubExprs[COLUMN_IDX]); }
+  const Expr *getColumnIdx() const {
+    assert(!isIncomplete() &&
+           "cannot get the column index of an incomplete expression");
+    return cast<Expr>(SubExprs[COLUMN_IDX]);
+  }
+  void setColumnIdx(Expr *E) { SubExprs[COLUMN_IDX] = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const { return getRBracketLoc(); }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  SourceLocation getRBracketLoc() const {
+    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+  }
+  void setRBracketLoc(SourceLocation L) {
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixSubscriptExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
   }
   const_child_range children() const {
     return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
