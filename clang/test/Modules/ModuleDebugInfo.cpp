@@ -51,15 +51,6 @@
 // CHECK-SAME:             )
 // CHECK: !DIEnumerator(name: "e5", value: 5, isUnsigned: true)
 
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
-// no mangled name here yet.
-
-// This type is anchored by a function parameter.
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
-// CHECK-SAME:             elements:
-// CHECK-SAME:             templateParams:
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
-
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
 
@@ -85,6 +76,12 @@
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIlNS_6traitsIlEEEE")
 
+// This type is anchored by a function parameter.
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
+// CHECK-SAME:             elements:
+// CHECK-SAME:             templateParams:
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
+
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstantiation"
 // no mangled name here yet.
 
@@ -92,6 +89,9 @@
 // CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
+
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
+// no mangled name here yet.
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual"
 // CHECK-SAME:             elements:
