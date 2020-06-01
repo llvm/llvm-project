@@ -950,10 +950,14 @@ TEST(TemplateTypeParmDecl, VarTemplatePartialSpecializationDecl) {
       "template<typename U>\n"
       "template<typename U2>\n"
       "int Struct<U>::field<U2*> = 123;\n";
-  EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T"))));
-  EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T2"))));
-  EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("U"))));
-  EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("U2"))));
+  EXPECT_TRUE(
+      matches(input, templateTypeParmDecl(hasName("T")), LanguageMode::Cxx14));
+  EXPECT_TRUE(
+      matches(input, templateTypeParmDecl(hasName("T2")), LanguageMode::Cxx14));
+  EXPECT_TRUE(
+      matches(input, templateTypeParmDecl(hasName("U")), LanguageMode::Cxx14));
+  EXPECT_TRUE(
+      matches(input, templateTypeParmDecl(hasName("U2")), LanguageMode::Cxx14));
 }
 
 TEST(TemplateTypeParmDecl, ClassTemplatePartialSpecializationDecl) {
@@ -2061,113 +2065,146 @@ void func14() {
 
 )cpp";
 
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func1"))),
-                                hasReturnValue(integerLiteral(equals(42)))))));
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func1"))),
+                                  hasReturnValue(integerLiteral(equals(42))))),
+              LanguageMode::Cxx2a));
 
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     integerLiteral(equals(42),
-                                    hasParent(returnStmt(forFunction(
-                                        functionDecl(hasName("func1")))))))));
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       integerLiteral(equals(42),
+                                      hasParent(returnStmt(forFunction(
+                                          functionDecl(hasName("func1"))))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
       Code,
       traverse(TK_IgnoreUnlessSpelledInSource,
                returnStmt(forFunction(functionDecl(hasName("func2"))),
                           hasReturnValue(cxxTemporaryObjectExpr(
-                              hasArgument(0, integerLiteral(equals(42)))))))));
+                              hasArgument(0, integerLiteral(equals(42))))))),
+      LanguageMode::Cxx2a));
   EXPECT_TRUE(matches(
       Code,
-      traverse(TK_IgnoreUnlessSpelledInSource,
-               integerLiteral(
-                   equals(42),
-                   hasParent(cxxTemporaryObjectExpr(hasParent(returnStmt(
-                       forFunction(functionDecl(hasName("func2")))))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func3"))),
-                                hasReturnValue(
-                                    cxxFunctionalCastExpr(hasSourceExpression(
-                                        integerLiteral(equals(42)))))))));
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          integerLiteral(equals(42),
+                         hasParent(cxxTemporaryObjectExpr(hasParent(returnStmt(
+                             forFunction(functionDecl(hasName("func2"))))))))),
+      LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
       Code,
-      traverse(TK_IgnoreUnlessSpelledInSource,
-               integerLiteral(
-                   equals(42),
-                   hasParent(cxxFunctionalCastExpr(hasParent(returnStmt(
-                       forFunction(functionDecl(hasName("func3")))))))))));
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          returnStmt(forFunction(functionDecl(hasName("func3"))),
+                     hasReturnValue(cxxFunctionalCastExpr(
+                         hasSourceExpression(integerLiteral(equals(42))))))),
+      LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func4"))),
-                                hasReturnValue(cxxTemporaryObjectExpr())))));
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          integerLiteral(equals(42),
+                         hasParent(cxxFunctionalCastExpr(hasParent(returnStmt(
+                             forFunction(functionDecl(hasName("func3"))))))))),
+      LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func4"))),
+                                  hasReturnValue(cxxTemporaryObjectExpr()))),
+              LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func5"))),
+                                  hasReturnValue(cxxTemporaryObjectExpr()))),
+              LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func6"))),
+                                  hasReturnValue(cxxTemporaryObjectExpr()))),
+              LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func7"))),
+                                  hasReturnValue(cxxTemporaryObjectExpr()))),
+              LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func8"))),
+                                  hasReturnValue(cxxFunctionalCastExpr(
+                                      hasSourceExpression(initListExpr()))))),
+              LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       returnStmt(forFunction(functionDecl(hasName("func9"))),
+                                  hasReturnValue(cxxFunctionalCastExpr(
+                                      hasSourceExpression(initListExpr()))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func5"))),
-                                hasReturnValue(cxxTemporaryObjectExpr())))));
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          returnStmt(forFunction(functionDecl(hasName("func10"))),
+                     hasReturnValue(declRefExpr(to(varDecl(hasName("a"))))))),
+      LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       declRefExpr(to(varDecl(hasName("a"))),
+                                   hasParent(returnStmt(forFunction(
+                                       functionDecl(hasName("func10"))))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func6"))),
-                                hasReturnValue(cxxTemporaryObjectExpr())))));
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          returnStmt(forFunction(functionDecl(hasName("func11"))),
+                     hasReturnValue(declRefExpr(to(varDecl(hasName("b"))))))),
+      LanguageMode::Cxx2a));
+
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       declRefExpr(to(varDecl(hasName("b"))),
+                                   hasParent(returnStmt(forFunction(
+                                       functionDecl(hasName("func11"))))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func7"))),
-                                hasReturnValue(cxxTemporaryObjectExpr())))));
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          returnStmt(forFunction(functionDecl(hasName("func12"))),
+                     hasReturnValue(declRefExpr(to(varDecl(hasName("c"))))))),
+      LanguageMode::Cxx2a));
 
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func8"))),
-                                hasReturnValue(cxxFunctionalCastExpr(
-                                    hasSourceExpression(initListExpr())))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func9"))),
-                                hasReturnValue(cxxFunctionalCastExpr(
-                                    hasSourceExpression(initListExpr())))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func10"))),
-                                hasReturnValue(
-                                    declRefExpr(to(varDecl(hasName("a")))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     declRefExpr(to(varDecl(hasName("a"))),
-                                 hasParent(returnStmt(forFunction(
-                                     functionDecl(hasName("func10")))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func11"))),
-                                hasReturnValue(
-                                    declRefExpr(to(varDecl(hasName("b")))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     declRefExpr(to(varDecl(hasName("b"))),
-                                 hasParent(returnStmt(forFunction(
-                                     functionDecl(hasName("func11")))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     returnStmt(forFunction(functionDecl(hasName("func12"))),
-                                hasReturnValue(
-                                    declRefExpr(to(varDecl(hasName("c")))))))));
-
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     declRefExpr(to(varDecl(hasName("c"))),
-                                 hasParent(returnStmt(forFunction(
-                                     functionDecl(hasName("func12")))))))));
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       declRefExpr(to(varDecl(hasName("c"))),
+                                   hasParent(returnStmt(forFunction(
+                                       functionDecl(hasName("func12"))))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
       Code,
@@ -2178,13 +2215,16 @@ void func14() {
                      has(declRefExpr(to(varDecl(hasName("a"))))),
                      has(varDecl(hasName("b"), hasInitializer(declRefExpr(to(
                                                    varDecl(hasName("c"))))))),
-                     has(parmVarDecl(hasName("d")))))));
+                     has(parmVarDecl(hasName("d"))))),
+      LanguageMode::Cxx2a));
 
-  EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     declRefExpr(to(varDecl(hasName("a"))),
-                                 hasParent(lambdaExpr(forFunction(
-                                     functionDecl(hasName("func13")))))))));
+  EXPECT_TRUE(
+      matches(Code,
+              traverse(TK_IgnoreUnlessSpelledInSource,
+                       declRefExpr(to(varDecl(hasName("a"))),
+                                   hasParent(lambdaExpr(forFunction(
+                                       functionDecl(hasName("func13"))))))),
+              LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
       Code,
@@ -2192,18 +2232,21 @@ void func14() {
                varDecl(hasName("b"),
                        hasInitializer(declRefExpr(to(varDecl(hasName("c"))))),
                        hasParent(lambdaExpr(
-                           forFunction(functionDecl(hasName("func13")))))))));
+                           forFunction(functionDecl(hasName("func13"))))))),
+      LanguageMode::Cxx2a));
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     lambdaExpr(
-                         forFunction(functionDecl(hasName("func14"))),
-                         has(templateTypeParmDecl(hasName("TemplateType")))))));
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(forFunction(functionDecl(hasName("func14"))),
+                          has(templateTypeParmDecl(hasName("TemplateType"))))),
+      LanguageMode::Cxx2a));
 
-  EXPECT_TRUE(
-      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                             functionDecl(hasName("func14"),
-                                          hasDescendant(floatLiteral())))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               functionDecl(hasName("func14"), hasDescendant(floatLiteral()))),
+      LanguageMode::Cxx2a));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {
