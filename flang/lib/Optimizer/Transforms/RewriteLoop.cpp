@@ -45,40 +45,32 @@ public:
     // Split the first LoopOp block in two parts. The part before will be the
     // conditional block since it already has the induction variable and
     // loop-carried values as arguments.
-    mlir::Block *conditionalBlock = &loop.region().front();
-    mlir::Block *firstBlock = rewriter.splitBlock(conditionalBlock,
-                                                  conditionalBlock->begin());
-    mlir::Block *lastBlock = &loop.region().back();
+    auto *conditionalBlock = &loop.region().front();
+    conditionalBlock->addArgument(rewriter.getIndexType());
+    auto *firstBlock =
+        rewriter.splitBlock(conditionalBlock, conditionalBlock->begin());
+    auto *lastBlock = &loop.region().back();
 
     // Move the blocks from the LoopOp between initBlock and endBlock
     rewriter.inlineRegionBefore(loop.region(), endBlock);
 
     // Get loop values from the LoopOp
-    mlir::Value low = loop.lowerBound();
-    mlir::Value high = loop.upperBound();
-    mlir::Value step = loop.step();
-    if (!low || !high) {
-      return failure();
-    }
-
+    auto low = loop.lowerBound();
+    auto high = loop.upperBound();
+    assert(low && high && "must be a Value");
+    auto step = loop.step();
 
     // Initalization block
     rewriter.setInsertionPointToEnd(initBlock);
-    mlir::Value zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
-    mlir::Value one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
-    mlir::Value diff = rewriter.create<mlir::SubIOp>(loc, high, low);
-    mlir::Value distance = rewriter.create<mlir::AddIOp>(loc, diff, step);
-    mlir::Value normalizedDistance =
-      rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
-    mlir::Type storeType = normalizedDistance.getType();
-    mlir::Value tripCounter =
-      rewriter.create<fir::AllocaOp>(loc, storeType, llvm::None);
-    rewriter.create<fir::StoreOp>(loc, normalizedDistance, tripCounter);
+    auto diff = rewriter.create<mlir::SubIOp>(loc, high, low);
+    auto distance = rewriter.create<mlir::AddIOp>(loc, diff, step);
+    auto iters = rewriter.create<mlir::SignedDivIOp>(loc, distance, step);
 
     SmallVector<mlir::Value, 8> loopOperands;
     loopOperands.push_back(low);
     mlir::ValueRange operands = loop.getIterOperands();
     loopOperands.append(operands.begin(), operands.end());
+    loopOperands.push_back(iters);
 
     // TODO: replace with a command line flag
     // onetrip flag determines whether loop should be executed once, before
@@ -90,65 +82,36 @@ public:
       rewriter.create<BranchOp>(loc, conditionalBlock, loopOperands);
     }
 
-
     // Last loop block
     mlir::Operation *terminator = lastBlock->getTerminator();
     rewriter.setInsertionPointToEnd(lastBlock);
-    mlir::Value index = conditionalBlock->getArgument(0);
-    mlir::Value steppedIndex =
-      rewriter.create<AddIOp>(loc, index, step).getResult();
-    mlir::Value tripCount = rewriter.create<fir::LoadOp>(loc, tripCounter);
-    mlir::Value steppedTripCount =
-      rewriter.create<mlir::SubIOp>(loc, tripCount, one);
-    rewriter.create<fir::StoreOp>(loc, steppedTripCount, tripCounter);
+    auto iv = conditionalBlock->getArgument(0);
+    mlir::Value steppedIndex = rewriter.create<mlir::AddIOp>(loc, iv, step);
+    assert(steppedIndex && "must be a Value");
+    auto lastArg = conditionalBlock->getNumArguments() - 1;
+    auto itersLeft = conditionalBlock->getArgument(lastArg);
+    auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+    mlir::Value itersMinusOne =
+        rewriter.create<mlir::SubIOp>(loc, itersLeft, one);
 
     SmallVector<mlir::Value, 8> loopCarried;
     loopCarried.push_back(steppedIndex);
     loopCarried.append(terminator->operand_begin(), terminator->operand_end());
-    rewriter.create<BranchOp>(loc, conditionalBlock, loopCarried);
+    loopCarried.push_back(itersMinusOne);
+    rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
-
-    if (!steppedIndex) {
-      return failure();
-    }
-
 
     // Conditional block
     rewriter.setInsertionPointToEnd(conditionalBlock);
-    mlir::Value tripCountValue =
-      rewriter.create<fir::LoadOp>(loc, tripCounter);
-    mlir::Value comparison =
-      rewriter.create<CmpIOp>(loc, CmpIPredicate::sgt, tripCountValue, zero);
-
-    rewriter.create<CondBranchOp>(loc, comparison, firstBlock,
-                                  ArrayRef<Value>(), endBlock,
-                                  ArrayRef<Value>());
+    auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
+    auto comparison =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, itersLeft, zero);
 
 
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
-    rewriter.replaceOp(loop, conditionalBlock->getArguments().drop_front());
-
-    return success();
-  }
-};
-
-
-// Conversion to the SCF dialect.
-//
-// FIR loops that cannot be converted to the affine dialect will remain as
-// `fir.do_loop` operations.  These can be converted to `scf.for` operations.
-// MLIR includes a pass to lower `scf.for` operations to a CFG.
-
-/// Convert `fir.if` to `scf.if`
-class ScfIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::ResultOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(op);
+    rewriter.replaceOp(
+        loop, conditionalBlock->getArguments().drop_front().drop_back());
     return success();
   }
 };
@@ -182,8 +145,8 @@ public:
     // place it before the continuation block, and branch to it.
     auto &whereRegion = where.whereRegion();
     auto *whereBlock = &whereRegion.front();
-    mlir::Operation *whereTerminator = whereRegion.back().getTerminator();
-    mlir::ValueRange whereTerminatorOperands = whereTerminator->getOperands();
+    auto *whereTerminator = whereRegion.back().getTerminator();
+    auto whereTerminatorOperands = whereTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&whereRegion.back());
     rewriter.create<BranchOp>(loc, continueBlock, whereTerminatorOperands);
     rewriter.eraseOp(whereTerminator);
@@ -196,8 +159,8 @@ public:
     auto &otherwiseRegion = where.otherRegion();
     if (!otherwiseRegion.empty()) {
       otherwiseBlock = &otherwiseRegion.front();
-      mlir::Operation *otherwiseTerm = otherwiseRegion.back().getTerminator();
-      mlir::ValueRange otherwiseTermOperands = otherwiseTerm->getOperands();
+      auto *otherwiseTerm = otherwiseRegion.back().getTerminator();
+      auto otherwiseTermOperands = otherwiseTerm->getOperands();
       rewriter.setInsertionPointToEnd(&otherwiseRegion.back());
       rewriter.create<BranchOp>(loc, continueBlock, otherwiseTermOperands);
       rewriter.eraseOp(otherwiseTerm);
@@ -246,12 +209,11 @@ public:
     // Append the induction variable stepping logic to the last body block and
     // branch back to the condition block. Loop-carried values are taken from
     // operands of the loop terminator.
-    mlir::Operation *terminator = lastBodyBlock->getTerminator();
+    auto *terminator = lastBodyBlock->getTerminator();
     rewriter.setInsertionPointToEnd(lastBodyBlock);
     auto step = whileOp.step();
-    auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
-    if (!stepped)
-      return failure();
+    mlir::Value stepped = rewriter.create<mlir::AddIOp>(loc, iv, step);
+    assert(stepped && "must be a Value");
 
     llvm::SmallVector<mlir::Value, 8> loopCarried;
     loopCarried.push_back(stepped);
@@ -261,10 +223,9 @@ public:
 
     // Compute loop bounds before branching to the condition.
     rewriter.setInsertionPointToEnd(initBlock);
-    mlir::Value lowerBound = whileOp.lowerBound();
-    mlir::Value upperBound = whileOp.upperBound();
-    if (!lowerBound || !upperBound)
-      return failure();
+    auto lowerBound = whileOp.lowerBound();
+    auto upperBound = whileOp.upperBound();
+    assert(lowerBound && upperBound && "must be a Value");
 
     // The initial values of loop-carried values is obtained from the operands
     // of the loop operation.
