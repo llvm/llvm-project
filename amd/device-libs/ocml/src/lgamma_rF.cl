@@ -163,10 +163,8 @@ MATH_MANGLE(lgamma_r_impl)(float x)
     const float z3  = -0x1.9a4d56p-2f;
     const float z4  =  0x1.151322p-2f;
 
-    uint ux = AS_UINT(x);
-    uint uax = ux & EXSIGNBIT_SP32;
-
-    float ax = AS_FLOAT(uax);
+    float ax = BUILTIN_ABS_F32(x);
+    uint uax = AS_UINT(ax);
     float ret;
 
     if (ax < 0x1.0p-6f) {
