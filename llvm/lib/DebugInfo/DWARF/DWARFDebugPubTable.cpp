@@ -52,10 +52,10 @@ void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
     int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
     OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
-    OS << " version = " << format("0x%04x", S.Version);
-    OS << " unit_offset = "
+    OS << ", version = " << format("0x%04x", S.Version);
+    OS << ", unit_offset = "
        << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);
-    OS << " unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
+    OS << ", unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
        << '\n';
     OS << (GnuStyle ? "Offset     Linkage  Kind     Name\n"
                     : "Offset     Name\n");
