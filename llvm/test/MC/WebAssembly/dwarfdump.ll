@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: .debug_info contents:
-; CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000006e version = 0x0004 abbr_offset = 0x0000 addr_size = 0x04 (next unit at 0x00000072)
+; CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000006e, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000072)
 
 ; CHECK: 0x0000000b: DW_TAG_compile_unit
 ; CHECK-NEXT:              DW_AT_producer	("clang version 6.0.0 (trunk 315924) (llvm/trunk 315960)")

@@ -76,7 +76,7 @@ CU_5_version:
 CU_5_end:
 
 # CHECK-LABEL: .debug_info contents:
-# CHECK: 0x00000000: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000001a)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000016, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000001a)
 # CHECK: 0x0000000c: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWARF producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_compile_unit"
