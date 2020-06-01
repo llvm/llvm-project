@@ -488,6 +488,36 @@
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Lunterminated_files_end:
 
+# Opcode extends past the end of the table, as claimed by the unit length field.
+.long   .Lextended_past_end_end - .Lextended_past_end_start # Length of Unit
+.Lextended_past_end_start:
+.short  4               # DWARF version number
+.long   .Lprologue_extended_past_end_end-.Lprologue_extended_past_end_start # Length of Prologue
+.Lprologue_extended_past_end_start:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+.asciz "dir1"           # Include table
+.asciz "dir2"
+.byte   0
+.asciz "file1"          # File table
+.byte   0, 0, 0
+.asciz "file2"
+.byte   1, 0, 0
+.byte   0
+.Lprologue_extended_past_end_end:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0xfeedfeed
+.byte   1               # DW_LNS_copy
+.byte   0, 9, 2         # DW_LNE_set_address
+.long   0xf001f000      # Truncated address (should be 8 bytes)
+.byte   0xf0, 0, 1
+.Lextended_past_end_end:
+
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)
 .Lunit_good_start:

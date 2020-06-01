@@ -33,7 +33,7 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x3c9 %t-malformed.o 2> %t-malformed-off-last.err \
+# RUN: llvm-dwarfdump -debug-line=0x419 %t-malformed.o 2> %t-malformed-off-last.err \
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
@@ -243,7 +243,14 @@
 # VERBOSE:       DW_LNE_set_address (0xababcdcdefef0909)
 # VERBOSE-NEXT:  DW_LNE_end_sequence
 
-# LAST:          debug_line[0x000003c9]
+## Table with extended opcode that overruns table end.
+# NONFATAL:      debug_line[0x000003c9]
+# NONFATAL-NEXT: Line table prologue
+# VERBOSE:       DW_LNE_set_address (0x00000000feedfeed)
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       DW_LNE_set_address (0x0000000000000000)
+
+# LAST:          debug_line[0x00000419]
 # VERBOSE:       DW_LNE_set_address (0x00000000cafebabe)
 # VERBOSE-NEXT:  DW_LNE_end_sequence
 
@@ -272,4 +279,6 @@
 # ALL-NEXT: warning: include directories table was not null terminated before the end of the prologue
 # ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bf
 # ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
+# OTHER-NEXT: warning: unexpected line op length at offset 0x00000411 expected 0x09 found 0x01
+# OTHER-NEXT: warning: last sequence in debug line table at offset 0x000003c9 is not terminated
 # ALL-NOT:  warning:
