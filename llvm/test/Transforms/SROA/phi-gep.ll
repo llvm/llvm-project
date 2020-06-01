@@ -237,55 +237,6 @@ end:
   ret i32 %load
 }
 
-define i32 @test_sroa_gep_cast_phi_gep(i1 %cond) {
-; CHECK-LABEL: @test_sroa_gep_cast_phi_gep(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST:%.*]] = bitcast i32* [[A_SROA_0]] to float*
-; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST2:%.*]] = bitcast i32* [[A_SROA_0]] to float*
-; CHECK-NEXT:    [[A_SROA_0_0_GEP_SROA_CAST:%.*]] = bitcast i32* [[A_SROA_0]] to float*
-; CHECK-NEXT:    store i32 1065353216, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR:%.*]], label [[END:%.*]]
-; CHECK:       for:
-; CHECK-NEXT:    [[PHI_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I:%.*]], [[FOR]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_I32:%.*]], [[FOR]] ]
-; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_I32_SROA_GEP:%.*]], [[FOR]] ]
-; CHECK-NEXT:    [[I]] = add i32 [[PHI_I]], 1
-; CHECK-NEXT:    [[GEP_FOR_CAST:%.*]] = bitcast float* [[PHI_SROA_PHI]] to i32*
-; CHECK-NEXT:    [[GEP_FOR_CAST_TO_I32]] = bitcast i32* [[GEP_FOR_CAST]] to float*
-; CHECK-NEXT:    [[GEP_FOR_CAST_TO_I32_SROA_GEP]] = getelementptr inbounds float, float* [[GEP_FOR_CAST_TO_I32]], i32 0
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[I]], 10
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[FOR]], label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[PHI_END:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST2]], [[ENTRY]] ], [ [[PHI]], [[FOR]] ]
-; CHECK-NEXT:    [[PHI_END_1:%.*]] = bitcast float* [[PHI_END]] to i32*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[PHI_END_1]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
-;
-entry:
-  %a = alloca %pair, align 4
-  %gep_a = getelementptr inbounds %pair, %pair* %a, i32 0, i32 1
-  %gep_a_cast_to_i32 = bitcast i32* %gep_a to float*
-  store float 1.0, float* %gep_a_cast_to_i32, align 4
-  br i1 %cond, label %for, label %end
-
-for:
-  %phi_i = phi i32 [ 0, %entry ], [ %i, %for ]
-  %phi = phi float* [ %gep_a_cast_to_i32, %entry], [ %gep_for_cast_to_i32, %for ]
-  %i = add i32 %phi_i, 1
-  %gep_for = getelementptr inbounds float, float* %phi, i32 0
-  %gep_for_cast = bitcast float* %gep_for to i32*
-  %gep_for_cast_to_i32 = bitcast i32* %gep_for_cast to float*
-  %loop.cond = icmp ult i32 %i, 10
-  br i1 %loop.cond, label %for, label %end
-
-end:
-  %phi_end = phi float* [ %gep_a_cast_to_i32, %entry], [ %phi, %for ]
-  %phi_end.1 = bitcast float* %phi_end to i32*
-  %load = load i32, i32* %phi_end.1, align 4
-  ret i32 %load
-}
-
 define i32 @test_sroa_invoke_phi_gep(i1 %cond) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-LABEL: @test_sroa_invoke_phi_gep(
 ; CHECK-NEXT:  entry:
