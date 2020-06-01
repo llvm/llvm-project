@@ -709,8 +709,10 @@ The syntax of a function call is ``<name>(<arguments>)`` where:
 * ``name`` is a predefined string literal. Accepted values are:
 
   * add - Returns the sum of its two operands.
+  * div - Returns the quotient of its two operands.
   * max - Returns the largest of its two operands.
   * min - Returns the smallest of its two operands.
+  * mul - Returns the product of its two operands.
   * sub - Returns the difference of its two operands.
 
 * ``<arguments>`` is a comma seperated list of expressions.
