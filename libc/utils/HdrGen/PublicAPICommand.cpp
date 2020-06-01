@@ -57,218 +57,196 @@ static void dedentAndWrite(llvm::StringRef Text, llvm::raw_ostream &OS) {
   }
 }
 
-class APIGenerator {
-  llvm::StringRef StdHeader;
-
-  // TableGen classes in spec.td.
-  llvm::Record *NamedTypeClass;
-  llvm::Record *PtrTypeClass;
-  llvm::Record *RestrictedPtrTypeClass;
-  llvm::Record *ConstTypeClass;
-  llvm::Record *StructClass;
-  llvm::Record *StandardSpecClass;
-  llvm::Record *PublicAPIClass;
-
-  using NameToRecordMapping = std::unordered_map<std::string, llvm::Record *>;
-  using NameSet = std::unordered_set<std::string>;
-
-  // Mapping from names to records defining them.
-  NameToRecordMapping MacroSpecMap;
-  NameToRecordMapping TypeSpecMap;
-  NameToRecordMapping EnumerationSpecMap;
-  NameToRecordMapping FunctionSpecMap;
-  NameToRecordMapping MacroDefsMap;
-  NameToRecordMapping TypeDeclsMap;
-
-  NameSet Structs;
-  NameSet Enumerations;
-  NameSet Functions;
-
-  bool isaNamedType(llvm::Record *Def) { return isa(Def, NamedTypeClass); }
-
-  bool isaStructType(llvm::Record *Def) { return isa(Def, StructClass); }
-
-  bool isaPtrType(llvm::Record *Def) { return isa(Def, PtrTypeClass); }
-
-  bool isaConstType(llvm::Record *Def) { return isa(Def, ConstTypeClass); }
-
-  bool isaRestrictedPtrType(llvm::Record *Def) {
-    return isa(Def, RestrictedPtrTypeClass);
-  }
-
-  bool isaStandardSpec(llvm::Record *Def) {
-    return isa(Def, StandardSpecClass);
-  }
-
-  bool isaPublicAPI(llvm::Record *Def) { return isa(Def, PublicAPIClass); }
-
-  std::string getTypeAsString(llvm::Record *TypeRecord) {
-    if (isaNamedType(TypeRecord) || isaStructType(TypeRecord)) {
-      return std::string(TypeRecord->getValueAsString("Name"));
-    } else if (isaPtrType(TypeRecord)) {
-      return getTypeAsString(TypeRecord->getValueAsDef("PointeeType")) + " *";
-    } else if (isaConstType(TypeRecord)) {
-      return std::string("const ") +
-             getTypeAsString(TypeRecord->getValueAsDef("UnqualifiedType"));
-    } else if (isaRestrictedPtrType(TypeRecord)) {
-      return getTypeAsString(TypeRecord->getValueAsDef("PointeeType")) +
-             " *__restrict";
-    } else {
-      llvm::PrintFatalError(TypeRecord->getLoc(), "Invalid type.\n");
-    }
-  }
-
-  void indexStandardSpecDef(llvm::Record *StandardSpec) {
-    auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
-    for (llvm::Record *HeaderSpec : HeaderSpecList) {
-      if (HeaderSpec->getValueAsString("Name") == StdHeader) {
-        auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
-        // TODO: Trigger a fatal error on duplicate specs.
-        for (llvm::Record *MacroSpec : MacroSpecList)
-          MacroSpecMap[std::string(MacroSpec->getValueAsString("Name"))] =
-              MacroSpec;
-
-        auto TypeSpecList = HeaderSpec->getValueAsListOfDefs("Types");
-        for (llvm::Record *TypeSpec : TypeSpecList)
-          TypeSpecMap[std::string(TypeSpec->getValueAsString("Name"))] =
-              TypeSpec;
-
-        auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
-        for (llvm::Record *FunctionSpec : FunctionSpecList) {
-          FunctionSpecMap[std::string(FunctionSpec->getValueAsString("Name"))] =
-              FunctionSpec;
-        }
-
-        auto EnumerationSpecList =
-            HeaderSpec->getValueAsListOfDefs("Enumerations");
-        for (llvm::Record *EnumerationSpec : EnumerationSpecList) {
-          EnumerationSpecMap[std::string(
-              EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
-        }
-      }
-    }
-  }
-
-  void indexPublicAPIDef(llvm::Record *PublicAPI) {
-    // While indexing the public API, we do not check if any of the entities
-    // requested is from an included standard. Such a check is done while
-    // generating the API.
-    auto MacroDefList = PublicAPI->getValueAsListOfDefs("Macros");
-    for (llvm::Record *MacroDef : MacroDefList)
-      MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
-
-    auto TypeDeclList = PublicAPI->getValueAsListOfDefs("TypeDeclarations");
-    for (llvm::Record *TypeDecl : TypeDeclList)
-      TypeDeclsMap[std::string(TypeDecl->getValueAsString("Name"))] = TypeDecl;
-
-    auto StructList = PublicAPI->getValueAsListOfStrings("Structs");
-    for (llvm::StringRef StructName : StructList)
-      Structs.insert(std::string(StructName));
-
-    auto FunctionList = PublicAPI->getValueAsListOfStrings("Functions");
-    for (llvm::StringRef FunctionName : FunctionList)
-      Functions.insert(std::string(FunctionName));
-
-    auto EnumerationList = PublicAPI->getValueAsListOfStrings("Enumerations");
-    for (llvm::StringRef EnumerationName : EnumerationList)
-      Enumerations.insert(std::string(EnumerationName));
-  }
-
-  void index(llvm::RecordKeeper &Records) {
-    NamedTypeClass = Records.getClass(NamedTypeClassName);
-    PtrTypeClass = Records.getClass(PtrTypeClassName);
-    RestrictedPtrTypeClass = Records.getClass(RestrictedPtrTypeClassName);
-    StructClass = Records.getClass(StructTypeClassName);
-    ConstTypeClass = Records.getClass(ConstTypeClassName);
-    StandardSpecClass = Records.getClass(StandardSpecClassName);
-    PublicAPIClass = Records.getClass(PublicAPIClassName);
-
-    const auto &DefsMap = Records.getDefs();
-    for (auto &Pair : DefsMap) {
-      llvm::Record *Def = Pair.second.get();
-      if (isaStandardSpec(Def))
-        indexStandardSpecDef(Def);
-      if (isaPublicAPI(Def)) {
-        if (Def->getValueAsString("HeaderName") == StdHeader)
-          indexPublicAPIDef(Def);
-      }
-    }
-  }
-
-public:
-  APIGenerator(llvm::StringRef Header, llvm::RecordKeeper &Records)
-      : StdHeader(Header) {
-    index(Records);
-  }
-
-  void write(llvm::raw_ostream &OS) {
-    for (auto &Pair : MacroDefsMap) {
-      const std::string &Name = Pair.first;
-      if (MacroSpecMap.find(Name) == MacroSpecMap.end())
-        llvm::PrintFatalError(Name + " not found in any standard spec.\n");
-
-      llvm::Record *MacroDef = Pair.second;
-      dedentAndWrite(MacroDef->getValueAsString("Defn"), OS);
-
-      OS << '\n';
-    }
-
-    for (auto &Pair : TypeDeclsMap) {
-      const std::string &Name = Pair.first;
-      if (TypeSpecMap.find(Name) == TypeSpecMap.end())
-        llvm::PrintFatalError(Name + " not found in any standard spec.\n");
-
-      llvm::Record *TypeDecl = Pair.second;
-      dedentAndWrite(TypeDecl->getValueAsString("Decl"), OS);
-
-      OS << '\n';
-    }
-
-    if (Enumerations.size() != 0)
-      OS << "enum {" << '\n';
-    for (const auto &Name : Enumerations) {
-      if (EnumerationSpecMap.find(Name) == EnumerationSpecMap.end())
-        llvm::PrintFatalError(
-            Name + " is not listed as an enumeration in any standard spec.\n");
-
-      llvm::Record *EnumerationSpec = EnumerationSpecMap[Name];
-      OS << "  " << EnumerationSpec->getValueAsString("Name");
-      auto Value = EnumerationSpec->getValueAsString("Value");
-      if (Value == "__default__") {
-        OS << ",\n";
-      } else {
-        OS << " = " << Value << ",\n";
-      }
-    }
-    if (Enumerations.size() != 0)
-      OS << "};\n\n";
-
-    OS << "__BEGIN_C_DECLS\n\n";
-    for (auto &Name : Functions) {
-      if (FunctionSpecMap.find(Name) == FunctionSpecMap.end())
-        llvm::PrintFatalError(Name + " not found in any standard spec.\n");
-
-      llvm::Record *FunctionSpec = FunctionSpecMap[Name];
-      llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
-      llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
-
-      OS << getTypeAsString(ReturnType) << " " << Name << "(";
-
-      auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
-      for (size_t i = 0; i < ArgsList.size(); ++i) {
-        llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
-        OS << getTypeAsString(ArgType);
-        if (i < ArgsList.size() - 1)
-          OS << ", ";
-      }
-
-      OS << ");\n\n";
-    }
-    OS << "__END_C_DECLS\n";
-  }
-};
-
 namespace llvm_libc {
+
+bool APIIndexer::isaNamedType(llvm::Record *Def) {
+  return isa(Def, NamedTypeClass);
+}
+
+bool APIIndexer::isaStructType(llvm::Record *Def) {
+  return isa(Def, StructClass);
+}
+
+bool APIIndexer::isaPtrType(llvm::Record *Def) {
+  return isa(Def, PtrTypeClass);
+}
+
+bool APIIndexer::isaConstType(llvm::Record *Def) {
+  return isa(Def, ConstTypeClass);
+}
+
+bool APIIndexer::isaRestrictedPtrType(llvm::Record *Def) {
+  return isa(Def, RestrictedPtrTypeClass);
+}
+
+bool APIIndexer::isaStandardSpec(llvm::Record *Def) {
+  return isa(Def, StandardSpecClass);
+}
+
+bool APIIndexer::isaPublicAPI(llvm::Record *Def) {
+  return isa(Def, PublicAPIClass);
+}
+
+std::string APIIndexer::getTypeAsString(llvm::Record *TypeRecord) {
+  if (isaNamedType(TypeRecord) || isaStructType(TypeRecord)) {
+    return std::string(TypeRecord->getValueAsString("Name"));
+  } else if (isaPtrType(TypeRecord)) {
+    return getTypeAsString(TypeRecord->getValueAsDef("PointeeType")) + " *";
+  } else if (isaConstType(TypeRecord)) {
+    return std::string("const ") +
+           getTypeAsString(TypeRecord->getValueAsDef("UnqualifiedType"));
+  } else if (isaRestrictedPtrType(TypeRecord)) {
+    return getTypeAsString(TypeRecord->getValueAsDef("PointeeType")) +
+           " *__restrict";
+  } else {
+    llvm::PrintFatalError(TypeRecord->getLoc(), "Invalid type.\n");
+  }
+}
+
+void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
+  auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
+  for (llvm::Record *HeaderSpec : HeaderSpecList) {
+    llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
+    if (!StdHeader.hasValue() || Header == StdHeader) {
+      PublicHeaders.emplace(Header);
+      auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
+      // TODO: Trigger a fatal error on duplicate specs.
+      for (llvm::Record *MacroSpec : MacroSpecList)
+        MacroSpecMap[std::string(MacroSpec->getValueAsString("Name"))] =
+            MacroSpec;
+
+      auto TypeSpecList = HeaderSpec->getValueAsListOfDefs("Types");
+      for (llvm::Record *TypeSpec : TypeSpecList)
+        TypeSpecMap[std::string(TypeSpec->getValueAsString("Name"))] = TypeSpec;
+
+      auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
+      for (llvm::Record *FunctionSpec : FunctionSpecList) {
+        FunctionSpecMap[std::string(FunctionSpec->getValueAsString("Name"))] =
+            FunctionSpec;
+      }
+
+      auto EnumerationSpecList =
+          HeaderSpec->getValueAsListOfDefs("Enumerations");
+      for (llvm::Record *EnumerationSpec : EnumerationSpecList) {
+        EnumerationSpecMap[std::string(
+            EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
+      }
+    }
+  }
+}
+
+void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
+  // While indexing the public API, we do not check if any of the entities
+  // requested is from an included standard. Such a check is done while
+  // generating the API.
+  auto MacroDefList = PublicAPI->getValueAsListOfDefs("Macros");
+  for (llvm::Record *MacroDef : MacroDefList)
+    MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
+
+  auto TypeDeclList = PublicAPI->getValueAsListOfDefs("TypeDeclarations");
+  for (llvm::Record *TypeDecl : TypeDeclList)
+    TypeDeclsMap[std::string(TypeDecl->getValueAsString("Name"))] = TypeDecl;
+
+  auto StructList = PublicAPI->getValueAsListOfStrings("Structs");
+  for (llvm::StringRef StructName : StructList)
+    Structs.insert(std::string(StructName));
+
+  auto FunctionList = PublicAPI->getValueAsListOfStrings("Functions");
+  for (llvm::StringRef FunctionName : FunctionList)
+    Functions.insert(std::string(FunctionName));
+
+  auto EnumerationList = PublicAPI->getValueAsListOfStrings("Enumerations");
+  for (llvm::StringRef EnumerationName : EnumerationList)
+    Enumerations.insert(std::string(EnumerationName));
+}
+
+void APIIndexer::index(llvm::RecordKeeper &Records) {
+  NamedTypeClass = Records.getClass(NamedTypeClassName);
+  PtrTypeClass = Records.getClass(PtrTypeClassName);
+  RestrictedPtrTypeClass = Records.getClass(RestrictedPtrTypeClassName);
+  StructClass = Records.getClass(StructTypeClassName);
+  ConstTypeClass = Records.getClass(ConstTypeClassName);
+  StandardSpecClass = Records.getClass(StandardSpecClassName);
+  PublicAPIClass = Records.getClass(PublicAPIClassName);
+
+  const auto &DefsMap = Records.getDefs();
+  for (auto &Pair : DefsMap) {
+    llvm::Record *Def = Pair.second.get();
+    if (isaStandardSpec(Def))
+      indexStandardSpecDef(Def);
+    if (isaPublicAPI(Def)) {
+      if (!StdHeader.hasValue() ||
+          Def->getValueAsString("HeaderName") == StdHeader)
+        indexPublicAPIDef(Def);
+    }
+  }
+}
+
+void writeAPIFromIndex(APIIndexer &G, llvm::raw_ostream &OS) {
+  for (auto &Pair : G.MacroDefsMap) {
+    const std::string &Name = Pair.first;
+    if (G.MacroSpecMap.find(Name) == G.MacroSpecMap.end())
+      llvm::PrintFatalError(Name + " not found in any standard spec.\n");
+
+    llvm::Record *MacroDef = Pair.second;
+    dedentAndWrite(MacroDef->getValueAsString("Defn"), OS);
+
+    OS << '\n';
+  }
+
+  for (auto &Pair : G.TypeDeclsMap) {
+    const std::string &Name = Pair.first;
+    if (G.TypeSpecMap.find(Name) == G.TypeSpecMap.end())
+      llvm::PrintFatalError(Name + " not found in any standard spec.\n");
+
+    llvm::Record *TypeDecl = Pair.second;
+    dedentAndWrite(TypeDecl->getValueAsString("Decl"), OS);
+
+    OS << '\n';
+  }
+
+  if (G.Enumerations.size() != 0)
+    OS << "enum {" << '\n';
+  for (const auto &Name : G.Enumerations) {
+    if (G.EnumerationSpecMap.find(Name) == G.EnumerationSpecMap.end())
+      llvm::PrintFatalError(
+          Name + " is not listed as an enumeration in any standard spec.\n");
+
+    llvm::Record *EnumerationSpec = G.EnumerationSpecMap[Name];
+    OS << "  " << EnumerationSpec->getValueAsString("Name");
+    auto Value = EnumerationSpec->getValueAsString("Value");
+    if (Value == "__default__") {
+      OS << ",\n";
+    } else {
+      OS << " = " << Value << ",\n";
+    }
+  }
+  if (G.Enumerations.size() != 0)
+    OS << "};\n\n";
+
+  OS << "__BEGIN_C_DECLS\n\n";
+  for (auto &Name : G.Functions) {
+    if (G.FunctionSpecMap.find(Name) == G.FunctionSpecMap.end())
+      llvm::PrintFatalError(Name + " not found in any standard spec.\n");
+
+    llvm::Record *FunctionSpec = G.FunctionSpecMap[Name];
+    llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
+    llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
+
+    OS << G.getTypeAsString(ReturnType) << " " << Name << "(";
+
+    auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
+    for (size_t i = 0; i < ArgsList.size(); ++i) {
+      llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
+      OS << G.getTypeAsString(ArgType);
+      if (i < ArgsList.size() - 1)
+        OS << ", ";
+    }
+
+    OS << ");\n\n";
+  }
+  OS << "__END_C_DECLS\n";
+}
 
 void writePublicAPI(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {}
 
@@ -282,8 +260,8 @@ void PublicAPICommand::run(llvm::raw_ostream &OS, const ArgVector &Args,
     Reporter.printFatalError("public_api command does not take any arguments.");
   }
 
-  APIGenerator G(StdHeader, Records);
-  G.write(OS);
+  APIIndexer G(StdHeader, Records);
+  writeAPIFromIndex(G, OS);
 }
 
 } // namespace llvm_libc
