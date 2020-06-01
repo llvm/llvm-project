@@ -8,7 +8,7 @@
 
 // test aligned operator delete replacement.
 
-// UNSUPPORTED: sanitizer-new-delete, c++98, c++03, c++11, c++14
+// UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
 // None of the current GCC compilers support this.
 // UNSUPPORTED: gcc-5, gcc-6

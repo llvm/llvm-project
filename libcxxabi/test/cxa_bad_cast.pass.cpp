@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <cxxabi.h>
 #include <cassert>
@@ -31,7 +31,7 @@ void my_terminate() { exit(0); }
 int main ()
 {
     // swap-out the terminate handler
-    void (*default_handler)() = std::get_terminate(); 
+    void (*default_handler)() = std::get_terminate();
     std::set_terminate(my_terminate);
 
 #ifndef LIBCXXABI_HAS_NO_EXCEPTIONS

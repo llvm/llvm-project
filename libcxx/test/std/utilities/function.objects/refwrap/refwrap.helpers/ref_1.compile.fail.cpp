@@ -14,7 +14,7 @@
 
 // Don't allow binding to a temp
 
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 #include <functional>
 

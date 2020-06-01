@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // The system unwind.h on OS X provides an incorrectly aligned _Unwind_Exception
 // type. That causes these tests to fail. This XFAIL is my best attempt at
