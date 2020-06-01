@@ -116,8 +116,3 @@ endif()
 add_dependencies(lldbTarget
   LLDBTargetPropertiesGen
   LLDBTargetPropertiesEnumGen)
-
-# Necessary to ensure that the SWIFT_INLINE_NAMESPACE macro is defined for
-# swiftDemangling inclusions.
-target_compile_definitions(lldbTarget PRIVATE
-  SWIFT_INLINE_NAMESPACE=compiler)

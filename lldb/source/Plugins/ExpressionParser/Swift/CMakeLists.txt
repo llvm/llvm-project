@@ -43,8 +43,3 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
     Support
     Core
   )
-
-# Necessary to ensure that the SWIFT_INLINE_NAMESPACE macro is defined for
-# swiftDemangling inclusions.
-target_compile_definitions(lldbPluginExpressionParserSwift PRIVATE
-  SWIFT_INLINE_NAMESPACE=compiler)
