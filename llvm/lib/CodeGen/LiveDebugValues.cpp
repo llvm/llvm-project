@@ -138,24 +138,27 @@ using VarLocSet = CoalescingBitVector<uint64_t>;
 /// to find the open VarLocs killed by a register def very quickly. This is a
 /// performance-critical operation for LiveDebugValues.
 struct LocIndex {
-  uint32_t Location; // Physical registers live in the range [1;2^30) (see
-                     // \ref MCRegister), so we have plenty of range left here
-                     // to encode non-register locations.
-  uint32_t Index;
+  using u32_location_t = uint32_t;
+  using u32_index_t = uint32_t;
+
+  u32_location_t Location; // Physical registers live in the range [1;2^30) (see
+                           // \ref MCRegister), so we have plenty of range left
+                           // here to encode non-register locations.
+  u32_index_t Index;
 
   /// The first location greater than 0 that is not reserved for VarLocs of
   /// kind RegisterKind.
-  static constexpr uint32_t kFirstInvalidRegLocation = 1 << 30;
+  static constexpr u32_location_t kFirstInvalidRegLocation = 1 << 30;
 
   /// A special location reserved for VarLocs of kind SpillLocKind.
-  static constexpr uint32_t kSpillLocation = kFirstInvalidRegLocation;
+  static constexpr u32_location_t kSpillLocation = kFirstInvalidRegLocation;
 
   /// A special location reserved for VarLocs of kind EntryValueBackupKind and
   /// EntryValueCopyBackupKind.
-  static constexpr uint32_t kEntryValueBackupLocation =
+  static constexpr u32_location_t kEntryValueBackupLocation =
       kFirstInvalidRegLocation + 1;
 
-  LocIndex(uint32_t Location, uint32_t Index)
+  LocIndex(u32_location_t Location, u32_index_t Index)
       : Location(Location), Index(Index) {}
 
   uint64_t getAsRawInteger() const {
@@ -166,7 +169,8 @@ struct LocIndex {
     static_assert(std::is_unsigned<IntT>::value &&
                       sizeof(ID) == sizeof(uint64_t),
                   "Cannot convert raw integer to LocIndex");
-    return {static_cast<uint32_t>(ID >> 32), static_cast<uint32_t>(ID)};
+    return {static_cast<u32_location_t>(ID >> 32),
+            static_cast<u32_index_t>(ID)};
   }
 
   /// Get the start of the interval reserved for VarLocs of kind RegisterKind
@@ -177,7 +181,8 @@ struct LocIndex {
 
   /// Return a range covering all set indices in the interval reserved for
   /// \p Location in \p Set.
-  static auto indexRangeForLocation(const VarLocSet &Set, uint32_t Location) {
+  static auto indexRangeForLocation(const VarLocSet &Set,
+                                    u32_location_t Location) {
     uint64_t Start = LocIndex(Location, 0).getAsRawInteger();
     uint64_t End = LocIndex(Location + 1, 0).getAsRawInteger();
     return Set.half_open_range(Start, End);
@@ -490,14 +495,14 @@ private:
   class VarLocMap {
     /// Map a VarLoc to an index within the vector reserved for its location
     /// within Loc2Vars.
-    std::map<VarLoc, uint32_t> Var2Index;
+    std::map<VarLoc, LocIndex::u32_index_t> Var2Index;
 
     /// Map a location to a vector which holds VarLocs which live in that
     /// location.
-    SmallDenseMap<uint32_t, std::vector<VarLoc>> Loc2Vars;
+    SmallDenseMap<LocIndex::u32_location_t, std::vector<VarLoc>> Loc2Vars;
 
     /// Determine the 32-bit location reserved for \p VL, based on its kind.
-    static uint32_t getLocationForVar(const VarLoc &VL) {
+    static LocIndex::u32_location_t getLocationForVar(const VarLoc &VL) {
       switch (VL.Kind) {
       case VarLoc::RegisterKind:
         assert((VL.Loc.RegNo < LocIndex::kFirstInvalidRegLocation) &&
@@ -516,8 +521,8 @@ private:
   public:
     /// Retrieve a unique LocIndex for \p VL.
     LocIndex insert(const VarLoc &VL) {
-      uint32_t Location = getLocationForVar(VL);
-      uint32_t &Index = Var2Index[VL];
+      LocIndex::u32_location_t Location = getLocationForVar(VL);
+      LocIndex::u32_index_t &Index = Var2Index[VL];
       if (!Index) {
         auto &Vars = Loc2Vars[Location];
         Vars.push_back(VL);
