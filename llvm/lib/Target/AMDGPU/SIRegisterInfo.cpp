@@ -738,6 +738,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
   bool Scavenged = false;
   MCRegister SOffset = ScratchOffsetReg;
+  bool UninitStackPtrOffset = false;
 
   const unsigned EltSize = 4;
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
@@ -776,8 +777,13 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       // add the offset directly to the ScratchOffset or StackPtrOffset
       // register, and then subtract the offset after the spill to return the
       // register to it's original value.
-      if (!ScratchOffsetReg)
+      // In the case where StackPtrOffset is not initialized/otherwise used
+      // (hasCalls is false), we can just use the register directly with no
+      // adjustment required.
+      if (!ScratchOffsetReg) {
         ScratchOffsetReg = FuncInfo->getStackPtrOffsetReg();
+        UninitStackPtrOffset = !MFI.hasCalls();
+      }
       SOffset = ScratchOffsetReg;
       ScratchOffsetRegDelta = Offset;
     } else {
@@ -787,7 +793,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     if (!SOffset)
       report_fatal_error("could not scavenge SGPR to spill in entry function");
 
-    if (ScratchOffsetReg == AMDGPU::NoRegister) {
+    if (ScratchOffsetReg == AMDGPU::NoRegister || UninitStackPtrOffset) {
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
           .addImm(Offset);
     } else {
@@ -855,7 +861,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
   }
 
-  if (ScratchOffsetRegDelta != 0) {
+  if (!UninitStackPtrOffset && ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
     BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), SOffset)
         .addReg(SOffset)
