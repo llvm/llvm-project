@@ -23,7 +23,8 @@
 # RUN:   | FileCheck %s --check-prefixes=FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed.err --check-prefixes=ALL,OTHER
 # RUN: llvm-dwarfdump -debug-line %t-malformed.o -verbose 2> %t-malformed-verbose.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
+# RUN:   | FileCheck %s --check-prefixes=FIRST,VERBOSE,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]' \
+# RUN:       --implicit-check-not=' DW_LNS' --implicit-check-not=' DW_LNE' --implicit-check-not='address +='
 # RUN: FileCheck %s --input-file=%t-malformed-verbose.err --check-prefixes=ALL,OTHER
 
 ## We should still produce warnings for malformed tables after the specified unit.
@@ -36,12 +37,14 @@
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
-# FIRST:       debug_line[0x00000000]
-# FIRST:       0x000000000badbeef {{.*}} end_sequence
-# NOFIRST-NOT: debug_line[0x00000000]
-# NOFIRST-NOT: 0x000000000badbeef {{.*}} end_sequence
-# NOLATER-NOT: debug_line[{{.*}}]
-# NOLATER-NOT: end_sequence
+# FIRST:        debug_line[0x00000000]
+# VERBOSE:      DW_LNE_set_address (0x000000000badbeef)
+# VERBOSE-NEXT: DW_LNE_end_sequence
+# FIRST:        0x000000000badbeef {{.*}} end_sequence
+# NOFIRST-NOT:  debug_line[0x00000000]
+# NOFIRST-NOT:  0x000000000badbeef {{.*}} end_sequence
+# NOLATER-NOT:  debug_line[{{.*}}]
+# NOLATER-NOT:  end_sequence
 
 ## For fatal issues, the following table(s) should not be dumped:
 # FATAL:      debug_line[0x00000048]
@@ -72,7 +75,8 @@
 # NONFATAL:      prologue_length: 0x00000013
 # NONFATAL-NOT:  include_directories
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0x8877665544332211 {{.*}} end_sequence
+# VERBOSE:       DW_LNE_set_address (0x8877665544332211)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## Prologue with length shorter than parsed.
 # NONFATAL:      debug_line[0x00000081]
@@ -82,7 +86,9 @@
 # NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NEXT:        mod_time: 0x00000002
 # NONFATAL-NEXT:          length: 0x00000003
-# NONFATAL:      0x1122334455667788 {{.*}} 0 end_sequence{{$}}
+# VERBOSE:       DW_LNS_negate_stmt
+# VERBOSE-NEXT:  DW_LNE_set_address (0x1122334455667788)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## Prologue with length longer than parsed.
 # NONFATAL:      debug_line[0x000000c8]
@@ -93,21 +99,26 @@
 # NONFATAL-NEXT:        mod_time: 0x00000002
 # NONFATAL-NEXT:          length: 0x00000003
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0x1111222233334444 {{.*}} is_stmt end_sequence
+# VERBOSE:       DW_LNE_set_address (0x1111222233334444)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## Extended opcode with incorrect length versus expected.
 # NONFATAL:      debug_line[0x00000111]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      prologue_length: 0x00000030
-# NONFATAL: 0x00000000abbadaba {{.*}} end_sequence
-# NONFATAL: 0x00000000babb1e45 {{.*}} 10 is_stmt prologue_end end_sequence{{$}}
+# VERBOSE:       DW_LNE_set_address (0x00000000abbadaba)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
+# VERBOSE:       DW_LNE_set_discriminator (10)
+# VERBOSE-NEXT:  DW_LNS_set_prologue_end
+# VERBOSE-NEXT:  DW_LNE_set_address (0x00000000babb1e45)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## No end of sequence.
 # NONFATAL:      debug_line[0x0000016c]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      prologue_length: 0x00000030
-# NONFATAL:      0x00000000deadfade {{.*}} is_stmt
-# NONFATAL-NOT:  end_sequence
+# VERBOSE:       DW_LNE_set_address (0x00000000deadfade)
+# VERBOSE-NEXT:  DW_LNS_copy
 
 ## Very short prologue length for V5 (ends during parameters).
 # NONFATAL:      debug_line[0x000001b2]
@@ -116,8 +127,22 @@
 # NONFATAL-NEXT: include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
 # NONFATAL-NEXT:            name: "xyz"
-# NONFATAL:      0x0000000000000000 1 0 1 0 0 is_stmt end_sequence
-# NONFATAL:      0x0000babb1ebabb1e {{.*}} end_sequence
+# VERBOSE:       DW_LNE_end_sequence
+# VERBOSE:       DW_LNS_copy
+# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       address += 2, line += 1
+# VERBOSE:       address += 7, line += 0
+# VERBOSE:       address += 6, line += 7
+# VERBOSE:       address += 7, line += -4
+# VERBOSE:       DW_LNE_end_sequence
+# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       address += 7, line += 4
+# VERBOSE:       address += 7, line += 5
+# VERBOSE:       address += 7, line += 6
+# VERBOSE:       DW_LNE_set_address (0x0000babb1ebabb1e)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V5 prologue ends during file table.
 # NONFATAL:      debug_line[0x000001ee]
@@ -126,8 +151,14 @@
 # NONFATAL-NEXT: file_names[  0]:
 # NONFATAL-NEXT:            name: "xyz"
 # NONFATAL-NEXT:       dir_index: 1
-# NONFATAL:      0x0000000000000000 {{.*}} epilogue_begin
-# NONFATAL:      0x00000ab4acadab4a {{.*}} end_sequence
+# VERBOSE:       DW_LNS_set_epilogue_begin
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       address += 7, line += 4
+# VERBOSE:       address += 7, line += 5
+# VERBOSE:       address += 7, line += 6
+# VERBOSE:       DW_LNE_end_sequence
+# VERBOSE:       DW_LNE_set_address (0x00000ab4acadab4a)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V5 prologue ends during directory table.
 # NONFATAL:      debug_line[0x0000022f]
@@ -135,16 +166,26 @@
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
 # NONFATAL-NEXT:            name: "xyz"
-# NONFATAL:      0x0000000000000002 2 0 1 0 0 is_stmt{{$}}
-# NONFATAL:      0x4444333322221111 {{.*}} end_sequence
+# VERBOSE:       address += 2, line += 1
+# VERBOSE:       address += 7, line += 0
+# VERBOSE:       address += 6, line += 7
+# VERBOSE:       address += 7, line += -4
+# VERBOSE:       DW_LNE_end_sequence
+# VERBOSE:       DW_LNS_const_add_pc (0x0000000000000011)
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       address += 7, line += 4
+# VERBOSE:       address += 7, line += 5
+# VERBOSE:       address += 7, line += 6
+# VERBOSE:       DW_LNE_set_address (0x4444333322221111)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V5 invalid MD5 hash form when there is still data to be read.
 # NONFATAL:      debug_line[0x0000026b]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
-# NONFATAL-NOT:  is_stmt
-# NONFATAL:      0x1234123412341234 {{.*}} end_sequence
+# VERBOSE:       DW_LNE_set_address (0x1234123412341234)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V5 invalid MD5 hash form when data beyond the prologue length has
 ## been read before the MD5 problem is identified.
@@ -152,8 +193,13 @@
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0x0000000000000000 {{.*}} epilogue_begin
-# NONFATAL:      0x4321432143214321 {{.*}} is_stmt end_sequence
+# VERBOSE:       DW_LNS_set_epilogue_begin
+# VERBOSE-NEXT:  DW_LNS_copy
+# VERBOSE:       address += 7, line += 4
+# VERBOSE:       address += 7, line += 5
+# VERBOSE:       address += 7, line += 6
+# VERBOSE:       DW_LNE_set_address (0x4321432143214321)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V5 invalid directory content description has unsupported form.
 # NONFATAL:      debug_line[0x000002ec]
@@ -161,7 +207,8 @@
 # NONFATAL:      include_directories[  0] = "/foo"
 # NONFATAL-NOT:  include_directories
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0xaaaabbbbccccdddd {{.*}} is_stmt end_sequence
+# VERBOSE:       DW_LNE_set_address (0xaaaabbbbccccdddd)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## Opcode base field of value zero.
 # NONFATAL:      debug_line[0x00000332]
@@ -172,15 +219,17 @@
 # NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NEXT:        mod_time: 0x00000002
 # NONFATAL-NEXT:          length: 0x00000003
-# NONFATAL:      0xffffeeeeddddcccd 1 0 1 0 0 is_stmt{{$}}
-# NONFATAL:      0xffffeeeeddddcccd 1 0 1 0 0 is_stmt end_sequence{{$}}
+# VERBOSE:       DW_LNE_set_address (0xffffeeeeddddcccc)
+# VERBOSE-NEXT:  address += 1, line += 0
+# VERBOSE:       DW_LNE_end_sequence
 
 ## V4 table with unterminated include directory table.
 # NONFATAL:      debug_line[0x00000361]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  1] = "dir1"
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0xabcdef0123456789 {{.*}} is_stmt end_sequence
+# VERBOSE:       DW_LNE_set_address (0xabcdef0123456789)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 ## V4 table with unterminated file name table.
 # NONFATAL:      debug_line[0x00000390]
@@ -191,10 +240,12 @@
 # NONFATAL-NEXT:        mod_time: 0x00000002
 # NONFATAL-NEXT:          length: 0x00000003
 # NONFATAL-NOT:  file_names
-# NONFATAL:      0xababcdcdefef0909 {{.*}} is_stmt end_sequence
+# VERBOSE:       DW_LNE_set_address (0xababcdcdefef0909)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 # LAST:          debug_line[0x000003c9]
-# LAST:          0x00000000cafebabe {{.*}} end_sequence
+# VERBOSE:       DW_LNE_set_address (0x00000000cafebabe)
+# VERBOSE-NEXT:  DW_LNE_end_sequence
 
 # ALL-NOT:  warning:
 # ALL:      warning: parsing line table prologue at offset 0x00000048: unsupported version 0
