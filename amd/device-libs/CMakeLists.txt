@@ -36,10 +36,9 @@ endif() # if (ROCM_CCACHE_BUILD)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(LLVM REQUIRED
-    HINTS ${LLVM_DIR}
     PATHS "/opt/rocm/llvm")
   find_package(Clang
-    HINTS ${Clang_DIR} ${LLVM_DIR}/../clang
+    HINTS ${LLVM_DIR}/../clang
     PATHS "/opt/rocm/llvm")
 
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
