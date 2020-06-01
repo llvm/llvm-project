@@ -164,7 +164,6 @@ MATH_MANGLE(lgamma_r_impl)(float x)
     const float z4  =  0x1.151322p-2f;
 
     float ax = BUILTIN_ABS_F32(x);
-    uint uax = AS_UINT(ax);
     float ret;
 
     if (ax < 0x1.0p-6f) {
@@ -262,7 +261,7 @@ MATH_MANGLE(lgamma_r_impl)(float x)
     if (x >= 0.0f) {
         ret = ((x == 1.0f) | (x == 2.0f)) ? 0.0f : ret;
         s = x == 0.0f ? 0 : 1;
-    } else if (uax < 0x4b000000) { // x > -0x1.0p+23
+    } else if (ax < 0x1.0p+23f) { // x > -0x1.0p+23
         float t = MATH_MANGLE(sinpi)(x);
         float negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F32(t * x)));
         ret = negadj - ret;
@@ -273,8 +272,10 @@ MATH_MANGLE(lgamma_r_impl)(float x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (uax == 0) | (uax == PINFBITPATT_SP32) | ((x < 0.0f) & (uax >= 0x4b000000)) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
-        ret = uax > PINFBITPATT_SP32 ? x : ret;
+        ret = ((ax != 0.0f) && !BUILTIN_ISINF_F32(ax) &&
+              ((x >= 0.0f) || (ax < 0x1.0p+23f))) ? ret : AS_FLOAT(PINFBITPATT_SP32);
+
+        ret = BUILTIN_ISNAN_F32(x) ? x : ret;
     }
 
     struct ret_t result;
