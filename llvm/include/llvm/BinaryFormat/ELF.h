@@ -1296,7 +1296,8 @@ enum {
   DF_1_NORELOC = 0x00400000,
   DF_1_SYMINTPOSE = 0x00800000, // Object has individual interposers.
   DF_1_GLOBAUDIT = 0x01000000,  // Global auditing required.
-  DF_1_SINGLETON = 0x02000000   // Singleton symbols are used.
+  DF_1_SINGLETON = 0x02000000,  // Singleton symbols are used.
+  DF_1_PIE = 0x08000000,        // Object is a position-independent executable.
 };
 
 // DT_MIPS_FLAGS values.
