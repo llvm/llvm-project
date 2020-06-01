@@ -157,6 +157,8 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=ERR2 -DFILE=%t5.2.o --implicit-check-not="warning:"
 
 # ERR2:      HashTable {
+# ERR2:       Num Buckets: 94
+# ERR2:       Num Chains: 1
 # ERR2-NEXT:  warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 94, nchain = 1{{$}}
 # ERR2-NEXT: }
 
@@ -188,6 +190,8 @@ ProgramHeaders:
 
 # ERR3:      warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1)
 # ERR3:      HashTable {
+# ERR3-NEXT:  Num Buckets: 1
+# ERR3-NEXT:  Num Chains: 94
 # ERR3-NEXT:  warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 1, nchain = 94{{$}}
 # ERR3-NEXT: }
 
@@ -219,3 +223,14 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Show we do not duplicate warnings when printing both the hash table and the hash histogram.
+## Note that --elf-hash-histogram is only implemented for llvm-readelf currently.
+# RUN: yaml2obj --docnum=3 %s -o %t4.o
+# RUN: llvm-readelf --hash-table --elf-hash-histogram %t4.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SINGLE-WARN -DFILE=%t4.o --implicit-check-not="warning:"
+
+# SINGLE-WARN:      warning: '[[FILE]]': hash table nchain (0) differs from symbol count derived from SHT_DYNSYM section header (1)
+# SINGLE-WARN-NEXT: HashTable {
+# SINGLE-WARN-NEXT: warning: '[[FILE]]': the hash table at offset 0x2b1 goes past the end of the file (0x2b8)
+# SINGLE-WARN-NEXT: }
