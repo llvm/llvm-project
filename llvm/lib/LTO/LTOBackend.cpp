@@ -541,6 +541,10 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return DiagFileOrErr.takeError();
   auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
+  // Set the partial sample profile ratio in the profile summary module flag of
+  // the module, if applicable.
+  Mod.setPartialSampleProfileRatio(CombinedIndex);
+
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

@@ -46,6 +46,7 @@ class FunctionType;
 class GVMaterializer;
 class LLVMContext;
 class MemoryBuffer;
+class ModuleSummaryIndex;
 class Pass;
 class RandomNumberGenerator;
 template <class PtrType> class SmallPtrSetImpl;
@@ -882,6 +883,10 @@ public:
 
   /// Take ownership of the given memory buffer.
   void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);
+
+  /// Set the partial sample profile ratio in the profile summary module flag,
+  /// if applicable.
+  void setPartialSampleProfileRatio(const ModuleSummaryIndex &Index);
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect

@@ -59,7 +59,8 @@ private:
   bool Partial = false;
   /// This approximately represents the ratio of the number of profile counters
   /// of the program being built to the number of profile counters in the
-  /// partial sample profile. When 'Partial' is false, it is undefined.
+  /// partial sample profile. When 'Partial' is false, it is undefined. This is
+  /// currently only available under thin LTO mode.
   double PartialProfileRatio = 0;
   /// Return detailed summary as metadata.
   Metadata *getDetailedSummaryMD(LLVMContext &Context);
