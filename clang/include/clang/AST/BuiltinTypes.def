@@ -310,6 +310,9 @@ PLACEHOLDER_TYPE(BuiltinFn, BuiltinFnTy)
 // context.
 PLACEHOLDER_TYPE(ARCUnbridgedCast, ARCUnbridgedCastTy)
 
+// A placeholder type for incomplete matrix index expressions.
+PLACEHOLDER_TYPE(IncompleteMatrixIdx, IncompleteMatrixIdxTy)
+
 // A placeholder type for OpenMP array sections.
 PLACEHOLDER_TYPE(OMPArraySection, OMPArraySectionTy)
 
