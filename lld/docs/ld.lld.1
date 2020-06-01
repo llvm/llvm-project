@@ -157,6 +157,10 @@ This is recorded in an ELF segment of type
 .It Fl -dynamic-list Ns = Ns Ar file
 Read a list of dynamic symbols from
 .Ar file .
+(executable) Put matched non-local defined symbols to the dynamic symbol table.
+(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
+.Cm -Bsymbolic
+but does not set DF_SYMBOLIC
 .It Fl -eh-frame-hdr
 Request creation of
 .Li .eh_frame_hdr
@@ -184,10 +188,14 @@ This option is currently only supported on AArch64.
 Exclude static libraries from automatic export.
 .It Fl -export-dynamic , Fl E
 Put symbols in the dynamic symbol table.
-.It Fl -export-dynamic-symbol Ns = Ns Ar symbol
-Include
-.Ar symbol
-in the dynamic symbol table.
+.It Fl -export-dynamic-symbol Ns = Ns Ar glob
+(executable) Put matched non-local defined symbols to the dynamic symbol table.
+(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object even if they would otherwise be due to
+.Cm -Bsymbolic
+,
+.Cm -Bsymbolic-functions
+or
+.Cm --dynamic-list
 .It Fl -fatal-warnings
 Treat warnings as errors.
 .It Fl -filter Ns = Ns Ar value , Fl F Ar value

@@ -75,8 +75,8 @@
 ## In GNU linkers, -u does not make a backward reference.
 # RUN: ld.lld --fatal-warnings --warn-backrefs -u foo %t2.a %t1.o -o /dev/null
 
-## In GNU gold, --export-dynamic-symbol does not make a backward reference.
-# RUN: ld.lld --fatal-warnings --warn-backrefs --export-dynamic-symbol foo %t2.a %t1.o -o /dev/null
+## -u does not make a backward reference.
+# RUN: ld.lld --fatal-warnings --warn-backrefs -u foo %t2.a %t1.o -o /dev/null
 
 # RUN: not ld.lld --warn-backrefs-exclude='[' 2>&1 | FileCheck --check-prefix=INVALID %s
 # INVALID: error: --warn-backrefs-exclude: invalid glob pattern: [
