@@ -77,6 +77,9 @@ if(BUILD_HC_LIB)
   add_subdirectory(hc)
 endif()
 
+enable_testing()
+add_subdirectory(test/constant_folding)
+
 include(Packages)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
