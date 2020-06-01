@@ -4703,17 +4703,19 @@ template <class ELFT>
 void GNUStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
   // Print histogram for the .hash section.
   if (const Elf_Hash *HashTable = this->dumper()->getHashTable())
-    if (Error E = checkHashTable<ELFT>(Obj, HashTable))
+    if (Error E = checkHashTable<ELFT>(Obj, HashTable)) {
       this->reportUniqueWarning(std::move(E));
-    else
+    } else {
       printHashHistogram(*HashTable);
+    }
 
   // Print histogram for the .gnu.hash section.
   if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable()) {
-    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHashTable))
+    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHashTable)) {
       this->reportUniqueWarning(std::move(E));
-    else
+    } else {
       printGnuHashHistogram(*GnuHashTable);
+    }
   }
 }
 
