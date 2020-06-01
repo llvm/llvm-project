@@ -19,7 +19,7 @@ sym:
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (5) .rel.dyn {
-// CHECK-NEXT:     0x201DC R_ARM_RELATIVE
+// CHECK-NEXT:     0x201E4 R_ARM_RELATIVE
 
 // GOT:      section '.got':
-// GOT-NEXT: 0x000201dc e0010300
+// GOT-NEXT: 0x000201e4 e8010300

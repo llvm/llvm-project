@@ -63,10 +63,10 @@ main:
 # PIE-EMPTY:
 # PIE-NEXT: <myfunc>:
 # PIE-NEXT:    10270: adrp    x16, #131072
-# PIE-NEXT:    10274: ldr     x17, [x16, #880]
-# PIE-NEXT:    10278: add     x16, x16, #880
+# PIE-NEXT:    10274: ldr     x17, [x16, #896]
+# PIE-NEXT:    10278: add     x16, x16, #896
 # PIE-NEXT:    1027c: br      x17
 
 # PIE-RELOC:      .rela.dyn {
-# PIE-RELOC-NEXT:   0x30370 R_AARCH64_IRELATIVE - 0x10260
+# PIE-RELOC-NEXT:   0x30380 R_AARCH64_IRELATIVE - 0x10260
 # PIE-RELOC-NEXT: }
