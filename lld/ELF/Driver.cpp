@@ -1172,25 +1172,21 @@ static void readConfigs(opt::InputArgList &args) {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
   }
 
-  // Parses -dynamic-list and -export-dynamic-symbol. They make some
-  // symbols private. Note that -export-dynamic takes precedence over them
-  // as it says all symbols should be exported.
-  if (!config->exportDynamic) {
-    for (auto *arg : args.filtered(OPT_dynamic_list))
-      if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-        readDynamicList(*buffer);
+  // When producing an executable, --dynamic-list specifies non-local defined
+  // symbols whith are required to be exported. When producing a shared object,
+  // symbols not specified by --dynamic-list are non-preemptible.
+  config->symbolic =
+      args.hasArg(OPT_Bsymbolic) || args.hasArg(OPT_dynamic_list);
+  for (auto *arg : args.filtered(OPT_dynamic_list))
+    if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
+      readDynamicList(*buffer);
 
-    for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
-      config->dynamicList.push_back(
-          {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/false});
-  }
-
-  // If --export-dynamic-symbol=foo is given and symbol foo is defined in
-  // an object file in an archive file, that object file should be pulled
-  // out and linked. (It doesn't have to behave like that from technical
-  // point of view, but this is needed for compatibility with GNU.)
+  // --export-dynamic-symbol specifies additional --dynamic-list symbols if any
+  // other option expresses a symbolic intention: -no-pie, -pie, -Bsymbolic,
+  // -Bsymbolic-functions (if STT_FUNC), --dynamic-list.
   for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
-    config->undefined.push_back(arg->getValue());
+    config->dynamicList.push_back(
+        {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/true});
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (Optional<std::string> path = searchScript(arg->getValue())) {
