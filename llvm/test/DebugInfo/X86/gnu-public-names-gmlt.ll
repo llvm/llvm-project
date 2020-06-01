@@ -21,7 +21,7 @@
 ; GPUB-NEXT: "f3"
 
 ; GPUB: .debug_gnu_pubtypes contents:
-; GPUB-NEXT: length = 0x0000000e version = 0x0002 unit_offset = 0x00000000
+; GPUB-NEXT: length = 0x0000000e, version = 0x0002, unit_offset = 0x00000000
 ; GPUB-NEXT: Name
 
 ; NONE-NOT: .debug_pubnames contents:

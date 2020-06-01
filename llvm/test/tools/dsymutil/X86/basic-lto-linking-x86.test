@@ -179,21 +179,21 @@ CHECK: 0x0000000100000fb2     20      0      1   0             0  is_stmt
 CHECK: 0x0000000100000fb4     20      0      1   0             0  is_stmt end_sequence
 
 CHECK: .debug_pubnames contents:
-CHECK-NEXT: length = 0x00000017 version = 0x0002 unit_offset = 0x00000000 unit_size = 0x00000081
+CHECK-NEXT: length = 0x00000017, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000081
 CHECK-NEXT: Offset     Name
 CHECK-NEXT: 0x00000026 "main"
-CHECK-NEXT: length = 0x0000002e version = 0x0002 unit_offset = 0x00000081 unit_size = 0x000000b9
+CHECK-NEXT: length = 0x0000002e, version = 0x0002, unit_offset = 0x00000081, unit_size = 0x000000b9
 CHECK-NEXT: Offset     Name
 CHECK-NEXT: 0x00000026 "private_int"
 CHECK-NEXT: 0x0000003f "baz"
 CHECK-NEXT: 0x00000058 "foo"
-CHECK-NEXT: length = 0x0000001e version = 0x0002 unit_offset = 0x0000013a unit_size = 0x000000ac
+CHECK-NEXT: length = 0x0000001e, version = 0x0002, unit_offset = 0x0000013a, unit_size = 0x000000ac
 CHECK-NEXT: Offset     Name
 CHECK-NEXT: 0x00000026 "val"
 CHECK-NEXT: 0x00000045 "bar"
 
 CHECK: .debug_pubtypes contents:
-CHECK-NEXT: length = 0x0000001f version = 0x0002 unit_offset = 0x00000000 unit_size = 0x00000081
+CHECK-NEXT: length = 0x0000001f, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000081
 CHECK-NEXT: Offset     Name
 CHECK-NEXT: 0x00000063 "int"
 CHECK-NEXT: 0x00000079 "char"

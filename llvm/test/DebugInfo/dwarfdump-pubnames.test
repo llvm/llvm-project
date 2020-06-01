@@ -2,7 +2,7 @@ RUN: llvm-dwarfdump %p/Inputs/dwarfdump-pubnames.elf-x86-64 \
 RUN:   --debug-pubnames | FileCheck %s
 
 CHECK: .debug_pubnames contents:
-CHECK: length = 0x000000a1 version = 0x0002 unit_offset = 0x00000000 unit_size = 0x00000141
+CHECK: length = 0x000000a1, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000141
 
 CHECK: Offset        Name
 CHECK: 0x00000098    "global_namespace_variable"
