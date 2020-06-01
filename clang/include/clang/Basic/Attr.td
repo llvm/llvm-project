@@ -264,7 +264,6 @@ class AttrArgument<string name, bit opt = 0> : Argument<name, opt>;
 class Spelling<string name, string variety> {
   string Name = name;
   string Variety = variety;
-  bit KnownToGCC;
 }
 
 class GNU<string name> : Spelling<name, "GNU">;
@@ -284,11 +283,11 @@ class Pragma<string namespace, string name> : Spelling<name, "Pragma"> {
   string Namespace = namespace;
 }
 
-// The GCC spelling implies GNU<name> and CXX11<"gnu", name> and also sets
-// KnownToGCC to 1. This spelling should be used for any GCC-compatible
+// The GCC spelling implies GNU<name>, CXX11<"gnu", name>, and optionally,
+// C2x<"gnu", name>. This spelling should be used for any GCC-compatible
 // attributes.
-class GCC<string name> : Spelling<name, "GCC"> {
-  let KnownToGCC = 1;
+class GCC<string name, bit allowInC = 1> : Spelling<name, "GCC"> {
+  bit AllowInC = allowInC;
 }
 
 // The Clang spelling implies GNU<name>, CXX11<"clang", name>, and optionally,
@@ -612,7 +611,7 @@ class IgnoredAttr : Attr {
 //
 
 def AbiTag : Attr {
-  let Spellings = [GCC<"abi_tag">];
+  let Spellings = [GCC<"abi_tag", /*AllowInC*/0>];
   let Args = [VariadicStringArgument<"Tags">];
   let Subjects = SubjectList<[Struct, Var, Function, Namespace], ErrorDiag>;
   let MeaningfulToClassTemplateDefinition = 1;
@@ -2227,7 +2226,7 @@ def WorkGroupSizeHint :  InheritableAttr {
 }
 
 def InitPriority : InheritableAttr {
-  let Spellings = [GCC<"init_priority">];
+  let Spellings = [GCC<"init_priority", /*AllowInC*/0>];
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
   let Documentation = [Undocumented];
