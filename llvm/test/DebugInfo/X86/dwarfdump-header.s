@@ -181,7 +181,7 @@ TU_split_5_type:
         .byte 0 # NULL
 TU_split_5_end:
 
-# CHECK: 0x00000000: Type Unit: length = 0x00000020 version = 0x0005 unit_type = DW_UT_split_type abbr_offset = 0x0000 addr_size = 0x08 name = 'V5_split_type_unit' type_signature = 0x8899aabbccddeeff type_offset = 0x001d (next unit at 0x00000024)
+# CHECK: 0x00000000: Type Unit: length = 0x00000020, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = 'V5_split_type_unit', type_signature = 0x8899aabbccddeeff, type_offset = 0x001d (next unit at 0x00000024)
 # CHECK: 0x00000018: DW_TAG_type_unit
 
         .section .debug_types,"",@progbits
@@ -207,7 +207,7 @@ TU_4_type:
         .byte 0 # NULL
 TU_4_end:
 
-# CHECK: 0x00000000: Type Unit: length = 0x0000001f version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 name = 'V4_type_unit' type_signature = 0x0011223344556677 type_offset = 0x001c (next unit at 0x00000023)
+# CHECK: 0x00000000: Type Unit: length = 0x0000001f, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08, name = 'V4_type_unit', type_signature = 0x0011223344556677, type_offset = 0x001c (next unit at 0x00000023)
 # CHECK: 0x00000017: DW_TAG_type_unit
 
         .section .debug_line,"",@progbits

@@ -55,14 +55,14 @@ CHECK:     DW_TAG_formal_parameter
 NOTYP-NOT: .debug_types.dwo contents:
 TYPES-LABEL: .debug_types.dwo contents:
 TYPES: [[FOOUOFF:0x[0-9a-f]*]]:
-TYPES-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
-TYPES:         0x[[AAOFF]] addr_size = 0x08 name = 'foo' type_signature = [[FOOSIG]] type_offset = 0x[[FOOOFF:.*]] (next unit at [[BARUOFF:.*]])
+TYPES-LABEL: Type Unit: length = 0x00000020, version = 0x0004, abbr_offset =
+TYPES:         0x[[AAOFF]], addr_size = 0x08, name = 'foo', type_signature = [[FOOSIG]], type_offset = 0x[[FOOOFF:.*]] (next unit at [[BARUOFF:.*]])
 TYPES:             DW_TAG_type_unit
 TYPES: [[FOOOFF]]:   DW_TAG_structure_type
 TYPES:                 DW_AT_name {{.*}} "foo"
 TYPES: [[BARUOFF]]:
-TYPES-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
-TYPES:         0x[[BAOFF]] addr_size = 0x08 name = 'bar' type_signature = [[BARSIG]] type_offset = 0x001e (next unit at [[XUOFF:.*]])
+TYPES-LABEL: Type Unit: length = 0x00000020, version = 0x0004, abbr_offset =
+TYPES:         0x[[BAOFF]], addr_size = 0x08, name = 'bar', type_signature = [[BARSIG]], type_offset = 0x001e (next unit at [[XUOFF:.*]])
 TYPES:             DW_TAG_type_unit
 TYPES: 0x00000042:   DW_TAG_structure_type
 TYPES:                 DW_AT_name {{.*}} "bar"
