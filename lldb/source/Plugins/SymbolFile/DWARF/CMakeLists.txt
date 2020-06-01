@@ -66,8 +66,3 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
 add_dependencies(lldbPluginSymbolFileDWARF
   LLDBPluginSymbolFileDWARFPropertiesGen
   LLDBPluginSymbolFileDWARFPropertiesEnumGen)
-
-# Necessary to ensure that the SWIFT_INLINE_NAMESPACE macro is defined for
-# swiftDemangling inclusions.
-target_compile_definitions(lldbPluginSymbolFileDWARF PRIVATE
-  SWIFT_INLINE_NAMESPACE=compiler)

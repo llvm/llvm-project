@@ -90,11 +90,6 @@ add_lldb_library(lldbCore
     Demangle
   )
 
-# Necessary to ensure that the SWIFT_INLINE_NAMESPACE macro is defined for
-# swiftDemangling inclusions.
-target_compile_definitions(lldbCore PRIVATE
-  SWIFT_INLINE_NAMESPACE=compiler)
-
 add_dependencies(lldbCore
   LLDBCorePropertiesGen
   LLDBCorePropertiesEnumGen)
