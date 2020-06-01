@@ -19,8 +19,10 @@
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
@@ -750,11 +752,10 @@ private:
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
     info.stepValue =
-        info.stepExpr.has_value()
-            ? genFIRLoopIndex(*info.stepExpr, type)
-            : info.isStructured()
-                  ? builder->create<mlir::ConstantIndexOp>(location, 1)
-                  : builder->createIntegerConstant(info.loopVariableType, 1);
+        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
+        : info.isStructured()
+            ? builder->create<mlir::ConstantIndexOp>(location, 1)
+            : builder->createIntegerConstant(info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(location, *info.loopVariableSym);
 
