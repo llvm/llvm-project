@@ -170,10 +170,6 @@ class DebugSHandler {
   /// PDB.
   DebugChecksumsSubsectionRef checksums;
 
-  /// The DEBUG_S_INLINEELINES subsection. There can be only one of these per
-  /// object file.
-  DebugInlineeLinesSubsectionRef inlineeLines;
-
   /// The DEBUG_S_FRAMEDATA subsection(s).  There can be more than one of
   /// these and they need not appear in any specific order.  However, they
   /// contain string table references which need to be re-written, so we
@@ -189,14 +185,13 @@ class DebugSHandler {
   /// references.
   std::vector<ulittle32_t *> stringTableReferences;
 
+  void mergeInlineeLines(const DebugSubsectionRecord &inlineeLines);
+
 public:
   DebugSHandler(PDBLinker &linker, ObjFile &file, const CVIndexMap *indexMap)
       : linker(linker), file(file), indexMap(indexMap) {}
 
   void handleDebugS(lld::coff::SectionChunk &debugS);
-
-  std::shared_ptr<DebugInlineeLinesSubsection>
-  mergeInlineeLines(DebugChecksumsSubsection *newChecksums);
 
   void finish();
 };
@@ -709,9 +704,10 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &debugS) {
       file.moduleDBI->addDebugSubsection(ss);
       break;
     case DebugSubsectionKind::InlineeLines:
-      assert(!inlineeLines.valid() &&
-             "Encountered multiple inlinee lines subsections!");
-      exitOnErr(inlineeLines.initialize(ss.getRecordData()));
+      // The inlinee lines subsection also has file checksum table references
+      // that can be used directly, but it contains function id references that
+      // must be remapped.
+      mergeInlineeLines(ss);
       break;
     case DebugSubsectionKind::FrameData: {
       // We need to re-write string table indices here, so save off all
@@ -763,39 +759,24 @@ getFileName(const DebugStringTableSubsectionRef &strings,
   return strings.getString(offset);
 }
 
-std::shared_ptr<DebugInlineeLinesSubsection>
-DebugSHandler::mergeInlineeLines(DebugChecksumsSubsection *newChecksums) {
-  auto newInlineeLines = std::make_shared<DebugInlineeLinesSubsection>(
-      *newChecksums, inlineeLines.hasExtraFiles());
+void DebugSHandler::mergeInlineeLines(
+    const DebugSubsectionRecord &inlineeSubsection) {
+  DebugInlineeLinesSubsectionRef inlineeLines;
+  exitOnErr(inlineeLines.initialize(inlineeSubsection.getRecordData()));
 
+  // Remap type indices in inlinee line records in place.
   for (const InlineeSourceLine &line : inlineeLines) {
-    TypeIndex inlinee = line.Header->Inlinee;
-    uint32_t fileID = line.Header->FileID;
-    uint32_t sourceLine = line.Header->SourceLineNum;
-
+    TypeIndex &inlinee = *const_cast<TypeIndex *>(&line.Header->Inlinee);
     ArrayRef<TypeIndex> typeOrItemMap =
         indexMap->isTypeServerMap ? indexMap->ipiMap : indexMap->tpiMap;
     if (!remapTypeIndex(inlinee, typeOrItemMap)) {
-      log("ignoring inlinee line record in " + file.getName() +
+      log("bad inlinee line record in " + file.getName() +
           " with bad inlinee index 0x" + utohexstr(inlinee.getIndex()));
-      continue;
-    }
-
-    SmallString<128> filename =
-        exitOnErr(getFileName(cvStrTab, checksums, fileID));
-    pdbMakeAbsolute(filename);
-    newInlineeLines->addInlineSite(inlinee, filename, sourceLine);
-
-    if (inlineeLines.hasExtraFiles()) {
-      for (uint32_t extraFileId : line.ExtraFiles) {
-        filename = exitOnErr(getFileName(cvStrTab, checksums, extraFileId));
-        pdbMakeAbsolute(filename);
-        newInlineeLines->addExtraFile(filename);
-      }
     }
   }
 
-  return newInlineeLines;
+  // Add the modified inlinee line subsection directly.
+  file.moduleDBI->addDebugSubsection(inlineeSubsection);
 }
 
 void DebugSHandler::finish() {
@@ -833,7 +814,9 @@ void DebugSHandler::finish() {
   // Make a new file checksum table that refers to offsets in the PDB-wide
   // string table. Generally the string table subsection appears after the
   // checksum table, so we have to do this after looping over all the
-  // subsections.
+  // subsections. The new checksum table must have the exact same layout and
+  // size as the original. Otherwise, the file references in the line and
+  // inlinee line tables will be incorrect.
   auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
   for (FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
@@ -842,10 +825,9 @@ void DebugSHandler::finish() {
     exitOnErr(dbiBuilder.addModuleSourceFile(*file.moduleDBI, filename));
     newChecksums->addChecksum(filename, fc.Kind, fc.Checksum);
   }
-
-  // Rewrite inlinee item indices if present.
-  if (inlineeLines.valid())
-    file.moduleDBI->addDebugSubsection(mergeInlineeLines(newChecksums.get()));
+  assert(checksums.getArray().getUnderlyingStream().getLength() ==
+             newChecksums->calculateSerializedSize() &&
+         "file checksum table must have same layout");
 
   file.moduleDBI->addDebugSubsection(std::move(newChecksums));
 }
