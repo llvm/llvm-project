@@ -617,34 +617,41 @@ u32 __msan_get_umr_origin() {
 }
 
 u16 __sanitizer_unaligned_load16(const uu16 *p) {
-  *(uu16 *)&__msan_retval_tls[0] = *(uu16 *)MEM_TO_SHADOW((uptr)p);
+  internal_memcpy(&__msan_retval_tls[0], (void *)MEM_TO_SHADOW((uptr)p),
+                  sizeof(uu16));
   if (__msan_get_track_origins())
     __msan_retval_origin_tls = GetOriginIfPoisoned((uptr)p, sizeof(*p));
   return *p;
 }
 u32 __sanitizer_unaligned_load32(const uu32 *p) {
-  *(uu32 *)&__msan_retval_tls[0] = *(uu32 *)MEM_TO_SHADOW((uptr)p);
+  internal_memcpy(&__msan_retval_tls[0], (void *)MEM_TO_SHADOW((uptr)p),
+                  sizeof(uu32));
   if (__msan_get_track_origins())
     __msan_retval_origin_tls = GetOriginIfPoisoned((uptr)p, sizeof(*p));
   return *p;
 }
 u64 __sanitizer_unaligned_load64(const uu64 *p) {
-  __msan_retval_tls[0] = *(uu64 *)MEM_TO_SHADOW((uptr)p);
+  internal_memcpy(&__msan_retval_tls[0], (void *)MEM_TO_SHADOW((uptr)p),
+                  sizeof(uu64));
   if (__msan_get_track_origins())
     __msan_retval_origin_tls = GetOriginIfPoisoned((uptr)p, sizeof(*p));
   return *p;
 }
 void __sanitizer_unaligned_store16(uu16 *p, u16 x) {
-  u16 s = *(uu16 *)&__msan_param_tls[1];
-  *(uu16 *)MEM_TO_SHADOW((uptr)p) = s;
+  static_assert(sizeof(uu16) == sizeof(u16), "incompatible types");
+  u16 s;
+  internal_memcpy(&s, &__msan_param_tls[1], sizeof(uu16));
+  internal_memcpy((void *)MEM_TO_SHADOW((uptr)p), &s, sizeof(uu16));
   if (s && __msan_get_track_origins())
     if (uu32 o = __msan_param_origin_tls[2])
       SetOriginIfPoisoned((uptr)p, (uptr)&s, sizeof(s), o);
   *p = x;
 }
 void __sanitizer_unaligned_store32(uu32 *p, u32 x) {
-  u32 s = *(uu32 *)&__msan_param_tls[1];
-  *(uu32 *)MEM_TO_SHADOW((uptr)p) = s;
+  static_assert(sizeof(uu32) == sizeof(u32), "incompatible types");
+  u32 s;
+  internal_memcpy(&s, &__msan_param_tls[1], sizeof(uu32));
+  internal_memcpy((void *)MEM_TO_SHADOW((uptr)p), &s, sizeof(uu32));
   if (s && __msan_get_track_origins())
     if (uu32 o = __msan_param_origin_tls[2])
       SetOriginIfPoisoned((uptr)p, (uptr)&s, sizeof(s), o);
