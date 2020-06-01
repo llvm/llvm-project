@@ -48,7 +48,7 @@ namespace {
 
 class FlattenedSpelling {
   std::string V, N, NS;
-  bool K;
+  bool K = false;
 
 public:
   FlattenedSpelling(const std::string &Variety, const std::string &Name,
@@ -61,8 +61,6 @@ public:
            "Given a GCC spelling, which means this hasn't been flattened!");
     if (V == "CXX11" || V == "C2x" || V == "Pragma")
       NS = std::string(Spelling.getValueAsString("Namespace"));
-    bool Unset;
-    K = Spelling.getValueAsBitOrUnset("KnownToGCC", Unset);
   }
 
   const std::string &variety() const { return V; }
@@ -82,9 +80,10 @@ GetFlattenedSpellings(const Record &Attr) {
     StringRef Variety = Spelling->getValueAsString("Variety");
     StringRef Name = Spelling->getValueAsString("Name");
     if (Variety == "GCC") {
-      // Gin up two new spelling objects to add into the list.
       Ret.emplace_back("GNU", std::string(Name), "", true);
       Ret.emplace_back("CXX11", std::string(Name), "gnu", true);
+      if (Spelling->getValueAsBit("AllowInC"))
+        Ret.emplace_back("C2x", std::string(Name), "gnu", true);
     } else if (Variety == "Clang") {
       Ret.emplace_back("GNU", std::string(Name), "", false);
       Ret.emplace_back("CXX11", std::string(Name), "clang", false);
