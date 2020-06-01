@@ -127,16 +127,16 @@
 # PIE-NEXT:    10350: bti    c
 # PIE-NEXT:           stp    x16, x30, [sp, #-16]!
 # PIE-NEXT:           adrp   x16, #131072
-# PIE-NEXT:           ldr    x17, [x16, #1160]
-# PIE-NEXT:           add    x16, x16, #1160
+# PIE-NEXT:           ldr    x17, [x16, #1176]
+# PIE-NEXT:           add    x16, x16, #1176
 # PIE-NEXT:           br     x17
 # PIE-NEXT:           nop
 # PIE-NEXT:           nop
 # PIE: 0000000000010370 <func2@plt>:
 # PIE-NEXT:    10370: bti    c
 # PIE-NEXT:           adrp   x16, #131072
-# PIE-NEXT:           ldr    x17, [x16, #1168]
-# PIE-NEXT:           add    x16, x16, #1168
+# PIE-NEXT:           ldr    x17, [x16, #1184]
+# PIE-NEXT:           add    x16, x16, #1184
 # PIE-NEXT:           br     x17
 # PIE-NEXT:           nop
 
