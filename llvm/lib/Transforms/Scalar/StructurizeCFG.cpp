@@ -361,7 +361,7 @@ bool StructurizeCFG::doInitialization(Region *R, RGPassManager &RGM) {
   return false;
 }
 
-/// Build up the general order of nodes, by performing a topology sort of the
+/// Build up the general order of nodes, by performing a topological sort of the
 /// parent region's nodes, while ensuring that there is no outer cycle node
 /// between any two inner cycle nodes.
 void StructurizeCFG::orderNodes() {
