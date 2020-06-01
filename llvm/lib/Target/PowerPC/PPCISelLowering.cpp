@@ -16053,6 +16053,24 @@ SDValue PPCTargetLowering::combineTRUNCATE(SDNode *N,
   SDLoc dl(N);
   SDValue Op0 = N->getOperand(0);
 
+  // fold (truncate (abs (sub (zext a), (zext b)))) -> (vabsd a, b)
+  if (Subtarget.hasP9Altivec() && Op0.getOpcode() == ISD::ABS) {
+    EVT VT = N->getValueType(0);
+    if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
+      return SDValue();
+    SDValue Sub = Op0.getOperand(0);
+    if (Sub.getOpcode() == ISD::SUB) {
+      SDValue SubOp0 = Sub.getOperand(0);
+      SDValue SubOp1 = Sub.getOperand(1);
+      if ((SubOp0.getOpcode() == ISD::ZERO_EXTEND) &&
+          (SubOp1.getOpcode() == ISD::ZERO_EXTEND)) {
+        return DCI.DAG.getNode(PPCISD::VABSD, dl, VT, SubOp0.getOperand(0),
+                               SubOp1.getOperand(0),
+                               DCI.DAG.getTargetConstant(0, dl, MVT::i32));
+      }
+    }
+  }
+
   // Looking for a truncate of i128 to i64.
   if (Op0.getValueType() != MVT::i128 || N->getValueType(0) != MVT::i64)
     return SDValue();
