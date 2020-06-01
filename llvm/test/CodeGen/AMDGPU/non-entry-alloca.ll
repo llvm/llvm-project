@@ -95,7 +95,7 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_cbranch_scc1 BB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_add_i32 s6, s32, 0x1000
-; GCN-NEXT:    s_andn2_b32 s6, s6, 63
+; GCN-NEXT:    s_and_b32 s6, s6, 0xfffff000
 ; GCN-NEXT:    s_lshl_b32 s7, s7, 2
 ; GCN-NEXT:    s_mov_b32 s32, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
@@ -223,7 +223,7 @@ define void @func_non_entry_block_static_alloca_align64(i32 addrspace(1)* %out, 
 ; GCN-NEXT:    s_cbranch_execz BB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_add_i32 s6, s32, 0x1000
-; GCN-NEXT:    s_andn2_b32 s6, s6, 63
+; GCN-NEXT:    s_and_b32 s6, s6, 0xfffff000
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_mov_b32_e32 v5, s6
 ; GCN-NEXT:    v_mov_b32_e32 v6, 1

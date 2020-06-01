@@ -3126,9 +3126,12 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(
 
   unsigned StackAlign = TFL->getStackAlignment();
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
-  if (Align > StackAlign)
-    Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
-                       DAG.getConstant(-(uint64_t)Align, dl, VT));
+  if (Align > StackAlign) {
+    Tmp1 = DAG.getNode(
+      ISD::AND, dl, VT, Tmp1,
+      DAG.getConstant(-(uint64_t)Align << ST.getWavefrontSizeLog2(), dl, VT));
+  }
+
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1);    // Output chain
   Tmp2 = DAG.getCALLSEQ_END(
       Chain, DAG.getIntPtrConstant(0, dl, true),
