@@ -23,6 +23,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
+extern llvm::cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
 namespace llvm {
 namespace {
 
@@ -42,7 +44,12 @@ protected:
     BPI.reset(new BranchProbabilityInfo(F, *LI));
     return BlockFrequencyInfo(F, *BPI, *LI);
   }
-  std::unique_ptr<Module> makeLLVMModule(const char *ProfKind = nullptr) {
+  std::unique_ptr<Module> makeLLVMModule(const char *ProfKind = nullptr,
+                                         uint64_t NumCounts = 3,
+                                         uint64_t IsPartialProfile = 0,
+                                         double PartialProfileRatio = 0.0,
+                                         uint64_t HotNumCounts = 3,
+                                         uint64_t ColdNumCounts = 10) {
     const char *ModuleString =
         "define i32 @g(i32 %x) !prof !21 {{\n"
         "  ret i32 0\n"
@@ -83,27 +90,32 @@ protected:
         "!22 = !{{!\"function_entry_count\", i64 100}\n"
         "!23 = !{{!\"branch_weights\", i32 64, i32 4}\n"
         "{0}";
-    const char *SummaryString = "!llvm.module.flags = !{{!1}"
-                                "!1 = !{{i32 1, !\"ProfileSummary\", !2}"
-                                "!2 = !{{!3, !4, !5, !6, !7, !8, !9, !10}"
-                                "!3 = !{{!\"ProfileFormat\", !\"{0}\"}"
-                                "!4 = !{{!\"TotalCount\", i64 10000}"
-                                "!5 = !{{!\"MaxCount\", i64 10}"
-                                "!6 = !{{!\"MaxInternalCount\", i64 1}"
-                                "!7 = !{{!\"MaxFunctionCount\", i64 1000}"
-                                "!8 = !{{!\"NumCounts\", i64 3}"
-                                "!9 = !{{!\"NumFunctions\", i64 3}"
-                                "!10 = !{{!\"DetailedSummary\", !11}"
-                                "!11 = !{{!12, !13, !14}"
-                                "!12 = !{{i32 10000, i64 1000, i32 1}"
-                                "!13 = !{{i32 999000, i64 300, i32 3}"
-                                "!14 = !{{i32 999999, i64 5, i32 10}";
+    const char *SummaryString =
+        "!llvm.module.flags = !{{!1}\n"
+        "!1 = !{{i32 1, !\"ProfileSummary\", !2}\n"
+        "!2 = !{{!3, !4, !5, !6, !7, !8, !9, !10, !11, !12}\n"
+        "!3 = !{{!\"ProfileFormat\", !\"{0}\"}\n"
+        "!4 = !{{!\"TotalCount\", i64 10000}\n"
+        "!5 = !{{!\"MaxCount\", i64 10}\n"
+        "!6 = !{{!\"MaxInternalCount\", i64 1}\n"
+        "!7 = !{{!\"MaxFunctionCount\", i64 1000}\n"
+        "!8 = !{{!\"NumCounts\", i64 {1}}\n"
+        "!9 = !{{!\"NumFunctions\", i64 3}\n"
+        "!10 = !{{!\"IsPartialProfile\", i64 {2}}\n"
+        "!11 = !{{!\"PartialProfileRatio\", double {3}}\n"
+        "!12 = !{{!\"DetailedSummary\", !13}\n"
+        "!13 = !{{!14, !15, !16}\n"
+        "!14 = !{{i32 10000, i64 1000, i32 1}\n"
+        "!15 = !{{i32 990000, i64 300, i32 {4}}\n"
+        "!16 = !{{i32 999999, i64 5, i32 {5}}\n";
     SMDiagnostic Err;
-    if (ProfKind)
-      return parseAssemblyString(
-          formatv(ModuleString, formatv(SummaryString, ProfKind).str()).str(),
-          Err, C);
-    else
+    if (ProfKind) {
+      auto Summary =
+          formatv(SummaryString, ProfKind, NumCounts, IsPartialProfile,
+                  PartialProfileRatio, HotNumCounts, ColdNumCounts)
+              .str();
+      return parseAssemblyString(formatv(ModuleString, Summary).str(), Err, C);
+    } else
       return parseAssemblyString(formatv(ModuleString, "").str(), Err, C);
   }
 };
@@ -280,6 +292,7 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   ProfileSummaryInfo PSI = buildPSI(M.get());
   EXPECT_TRUE(PSI.hasProfileSummary());
   EXPECT_TRUE(PSI.hasSampleProfile());
+  EXPECT_FALSE(PSI.hasPartialSampleProfile());
 
   BasicBlock &BB0 = F->getEntryBlock();
   BasicBlock *BB1 = BB0.getTerminator()->getSuccessor(0);
@@ -371,6 +384,48 @@ TEST_F(ProfileSummaryInfoTest, SampleProfNoFuncEntryCount) {
 
   EXPECT_FALSE(PSI.isFunctionHotInCallGraphNthPercentile(990000, F, BFI));
   EXPECT_FALSE(PSI.isFunctionColdInCallGraphNthPercentile(990000, F, BFI));
+}
+
+TEST_F(ProfileSummaryInfoTest, PartialSampleProfWorkingSetSize) {
+  ScalePartialSampleProfileWorkingSetSize.setValue(true);
+
+  // With PartialProfileRatio unset (zero.)
+  auto M1 = makeLLVMModule("SampleProfile", /*NumCounts*/ 3,
+                           /*IsPartialProfile*/ 1,
+                           /*PartialProfileRatio*/ 0.0,
+                           /*HotNumCounts*/ 3, /*ColdNumCounts*/ 10);
+  ProfileSummaryInfo PSI1 = buildPSI(M1.get());
+  EXPECT_TRUE(PSI1.hasProfileSummary());
+  EXPECT_TRUE(PSI1.hasSampleProfile());
+  EXPECT_TRUE(PSI1.hasPartialSampleProfile());
+  EXPECT_FALSE(PSI1.hasHugeWorkingSetSize());
+  EXPECT_FALSE(PSI1.hasLargeWorkingSetSize());
+
+  // With PartialProfileRatio set (non-zero) and a small working set size.
+  auto M2 = makeLLVMModule("SampleProfile", /*NumCounts*/ 27493235,
+                           /*IsPartialProfile*/ 1,
+                           /*PartialProfileRatio*/ 0.00000012,
+                           /*HotNumCounts*/ 3102082,
+                           /*ColdNumCounts*/ 18306149);
+  ProfileSummaryInfo PSI2 = buildPSI(M2.get());
+  EXPECT_TRUE(PSI2.hasProfileSummary());
+  EXPECT_TRUE(PSI2.hasSampleProfile());
+  EXPECT_TRUE(PSI2.hasPartialSampleProfile());
+  EXPECT_FALSE(PSI2.hasHugeWorkingSetSize());
+  EXPECT_FALSE(PSI2.hasLargeWorkingSetSize());
+
+  // With PartialProfileRatio is set (non-zero) and a large working set size.
+  auto M3 = makeLLVMModule("SampleProfile", /*NumCounts*/ 27493235,
+                           /*IsPartialProfile*/ 1,
+                           /*PartialProfileRatio*/ 0.9,
+                           /*HotNumCounts*/ 3102082,
+                           /*ColdNumCounts*/ 18306149);
+  ProfileSummaryInfo PSI3 = buildPSI(M3.get());
+  EXPECT_TRUE(PSI3.hasProfileSummary());
+  EXPECT_TRUE(PSI3.hasSampleProfile());
+  EXPECT_TRUE(PSI3.hasPartialSampleProfile());
+  EXPECT_TRUE(PSI3.hasHugeWorkingSetSize());
+  EXPECT_TRUE(PSI3.hasLargeWorkingSetSize());
 }
 
 } // end anonymous namespace
