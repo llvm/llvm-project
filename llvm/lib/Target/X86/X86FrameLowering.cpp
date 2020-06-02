@@ -275,15 +275,9 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   // allocation is split in smaller chunks anyway.
   if (EmitInlineStackProbe && !InEpilogue) {
 
-    // Delegate stack probing to the `inlineStackProbe` mechanism to avoid
-    // complications.
-    MachineInstr *Stub = emitStackProbeInlineStub(MF, MBB, MBBI, DL, true);
-
-    // Encode the static offset as a metadata attached to the stub.
-    LLVMContext &Context = MF.getFunction().getContext();
-    MachineInstrBuilder(MF, Stub).addMetadata(
-        MDTuple::get(Context, {ConstantAsMetadata::get(ConstantInt::get(
-                                  IntegerType::get(Context, 64), Offset))}));
+    // This pseudo-instruction is going to be expanded, potentially using a
+    // loop, by inlineStackProbe().
+    BuildMI(MBB, MBBI, DL, TII.get(X86::STACKALLOC_W_PROBING)).addImm(Offset);
     return;
   } else if (Offset > Chunk) {
     // Rather than emit a long series of instructions for large offsets,
@@ -521,7 +515,8 @@ void X86FrameLowering::emitStackProbe(MachineFunction &MF,
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   if (STI.isTargetWindowsCoreCLR()) {
     if (InProlog) {
-      emitStackProbeInlineStub(MF, MBB, MBBI, DL, true);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::STACKALLOC_W_PROBING))
+          .addImm(0 /* no explicit stack size */);
     } else {
       emitStackProbeInline(MF, MBB, MBBI, DL, false);
     }
@@ -532,26 +527,13 @@ void X86FrameLowering::emitStackProbe(MachineFunction &MF,
 
 void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
                                         MachineBasicBlock &PrologMBB) const {
-  const StringRef ChkStkStubSymbol = "__chkstk_stub";
-  MachineInstr *ChkStkStub = nullptr;
-
-  for (MachineInstr &MI : PrologMBB) {
-    if (MI.isCall() && MI.getOperand(0).isSymbol() &&
-        ChkStkStubSymbol == MI.getOperand(0).getSymbolName()) {
-      ChkStkStub = &MI;
-      break;
-    }
-  }
-
-  if (ChkStkStub != nullptr) {
-    assert(!ChkStkStub->isBundled() &&
-           "Not expecting bundled instructions here");
-    MachineBasicBlock::iterator MBBI = std::next(ChkStkStub->getIterator());
-    assert(std::prev(MBBI) == ChkStkStub &&
-           "MBBI expected after __chkstk_stub.");
-    DebugLoc DL = PrologMBB.findDebugLoc(MBBI);
-    emitStackProbeInline(MF, PrologMBB, MBBI, DL, true);
-    ChkStkStub->eraseFromParent();
+  auto Where = llvm::find_if(PrologMBB, [](MachineInstr &MI) {
+    return MI.getOpcode() == X86::STACKALLOC_W_PROBING;
+  });
+  if (Where != PrologMBB.end()) {
+    DebugLoc DL = PrologMBB.findDebugLoc(Where);
+    emitStackProbeInline(MF, PrologMBB, Where, DL, true);
+    Where->eraseFromParent();
   }
 }
 
@@ -570,16 +552,8 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
 void X86FrameLowering::emitStackProbeInlineGeneric(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
-  MachineInstr &CallToInline = *std::prev(MBBI);
-  assert(CallToInline.getOperand(1).isMetadata() &&
-         "no metadata attached to that probe");
-  uint64_t Offset =
-      cast<ConstantInt>(
-          cast<ConstantAsMetadata>(
-              cast<MDTuple>(CallToInline.getOperand(1).getMetadata())
-                  ->getOperand(0))
-              ->getValue())
-          ->getZExtValue();
+  MachineInstr &AllocWithProbe = *MBBI;
+  uint64_t Offset = AllocWithProbe.getOperand(0).getImm();
 
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
@@ -1019,16 +993,6 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
     for (++ExpansionMBBI; ExpansionMBBI != MBBI; ++ExpansionMBBI)
       ExpansionMBBI->setFlag(MachineInstr::FrameSetup);
   }
-}
-
-MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
-
-  assert(InProlog && "ChkStkStub called outside prolog!");
-
-  return BuildMI(MBB, MBBI, DL, TII.get(X86::CALLpcrel32))
-      .addExternalSymbol("__chkstk_stub");
 }
 
 static unsigned calculateSetFPREG(uint64_t SPAdjust) {
