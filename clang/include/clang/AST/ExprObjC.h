@@ -1733,15 +1733,24 @@ public:
 /// expressions.
 ///
 class ObjCAvailabilityCheckExpr : public Expr {
+public:
+  struct VersionAsWritten {
+    // Platform version canonicalized for use with availability checks.
+    VersionTuple Version;
+    // Platforms version as written in the source.
+    VersionTuple SourceVersion;
+  };
+
+private:
   friend class ASTStmtReader;
 
-  VersionTuple VersionToCheck;
-  VersionTuple VariantVersionToCheck;
+  VersionAsWritten VersionToCheck;
+  VersionAsWritten VariantVersionToCheck;
   SourceLocation AtLoc, RParen;
 
 public:
-  ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck,
-                            VersionTuple VariantVersionToCheck,
+  ObjCAvailabilityCheckExpr(VersionAsWritten VersionToCheck,
+                            VersionAsWritten VariantVersionToCheck,
                             SourceLocation AtLoc, SourceLocation RParen,
                             QualType Ty)
       : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_PRValue, OK_Ordinary),
@@ -1759,12 +1768,23 @@ public:
   SourceRange getSourceRange() const { return {AtLoc, RParen}; }
 
   /// This may be '*', in which case this should fold to true.
-  bool hasVersion() const { return !VersionToCheck.empty(); }
-  VersionTuple getVersion() const { return VersionToCheck; }
+  bool hasVersion() const { return !VersionToCheck.Version.empty(); }
+  VersionTuple getVersion() const { return VersionToCheck.Version; }
+  VersionTuple getVersionAsWritten() const {
+    return VersionToCheck.SourceVersion;
+  }
 
-  bool hasVariantVersion() const { return !VariantVersionToCheck.empty(); }
+  bool hasVariantVersion() const {
+    return !VariantVersionToCheck.Version.empty();
+  }
 
-  VersionTuple getVariantVersion() const { return VariantVersionToCheck; }
+  VersionTuple getVariantVersion() const {
+    return VariantVersionToCheck.Version;
+  }
+
+  VersionTuple getVariantVersionAsWritten() const {
+    return VariantVersionToCheck.SourceVersion;
+  }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

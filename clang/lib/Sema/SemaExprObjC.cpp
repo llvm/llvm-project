@@ -5290,9 +5290,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
-  auto FindSpecVersion =
-      [&](StringRef Platform,
-          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
+  auto FindSpecVersion = [&](StringRef Platform, const llvm::Triple::OSType &OS)
+      -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5317,18 +5316,20 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     if (Spec == AvailSpecs.end())
       return std::nullopt;
 
-    return llvm::Triple::getCanonicalVersionForOS(
-        OS, Spec->getVersion(),
-        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
+    return ObjCAvailabilityCheckExpr::VersionAsWritten{
+        llvm::Triple::getCanonicalVersionForOS(
+            OS, Spec->getVersion(),
+            llvm::Triple::isValidVersionForOS(OS, Spec->getVersion())),
+        Spec->getVersion()};
   };
 
-  VersionTuple Version;
+  ObjCAvailabilityCheckExpr::VersionAsWritten Version;
   if (auto MaybeVersion =
           FindSpecVersion(Context.getTargetInfo().getPlatformName(),
                           Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
-  VersionTuple VariantVersion;
+  ObjCAvailabilityCheckExpr::VersionAsWritten VariantVersion;
   if (Context.getTargetInfo().hasTargetVariantPlatform()) {
     const llvm::Triple *VariantTriple =
         Context.getTargetInfo().getDarwinTargetVariantTriple();

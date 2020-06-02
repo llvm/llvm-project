@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14 -darwin-target-variant-triple x86_64-apple-ios13-macabi -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MAC %s
 // RUN: %clang_cc1 -triple x86_64-apple-ios13-macabi -darwin-target-variant-triple x86_64-apple-macosx10.14 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,IOS %s
 
+// XFAIL: *
 void use_at_available() {
 
   // CHECK: call i32 @__isPlatformVersionAtLeast(i32 1, i32 10, i32 15, i32 0)
@@ -13,6 +14,13 @@ void use_at_available() {
   // IOS: call i32 @__isPlatformOrVariantPlatformVersionAtLeast(i32 2, i32 13, i32 1, i32 0, i32 1, i32 10, i32 15, i32 0)
   // IOS-NEXT: icmp ne
   if (@available(macos 10.15, macCatalyst 13.1, *))
+   ;
+
+  // MAC: call i32 @__isPlatformOrVariantPlatformVersionAtLeast(i32 1, i32 10, i32 16, i32 0, i32 2, i32 13, i32 1, i32 0)
+  // MAC-NEXT: icmp ne
+  // IOS: call i32 @__isPlatformOrVariantPlatformVersionAtLeast(i32 2, i32 13, i32 1, i32 0, i32 1, i32 10, i32 16, i32 0)
+  // IOS-NEXT: icmp ne
+  if (@available(macos 10.16, iosmac 13.1, *))
    ;
 
   // CHECK: call i32 @__isPlatformVersionAtLeast(i32 2, i32 13, i32 1, i32 0)

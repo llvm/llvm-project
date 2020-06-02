@@ -1716,7 +1716,9 @@ void ASTStmtWriter::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E)
   VisitExpr(E);
   Record.AddSourceRange(E->getSourceRange());
   Record.AddVersionTuple(E->getVersion());
+  Record.AddVersionTuple(E->getVersionAsWritten());
   Record.AddVersionTuple(E->getVariantVersion());
+  Record.AddVersionTuple(E->getVariantVersionAsWritten());
   Code = serialization::EXPR_OBJC_AVAILABILITY_CHECK;
 }
 
