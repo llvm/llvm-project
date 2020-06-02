@@ -177,9 +177,7 @@ void InputFile::parseRelocations(const section_64 &sec,
     Reloc r;
     r.type = rel.r_type;
     r.pcrel = rel.r_pcrel;
-    uint32_t secRelOffset = rel.r_address;
-    uint64_t rawAddend =
-        target->getImplicitAddend(buf + sec.offset + secRelOffset, r.type);
+    uint64_t rawAddend = target->getImplicitAddend(mb, sec, rel);
 
     if (rel.r_extern) {
       r.target = symbols[rel.r_symbolnum];
@@ -202,13 +200,13 @@ void InputFile::parseRelocations(const section_64 &sec,
       // TODO: The offset of 4 is probably not right for ARM64, nor for
       //       relocations with r_length != 2.
       uint32_t targetOffset =
-          sec.addr + secRelOffset + 4 + rawAddend - targetSec.addr;
+          sec.addr + rel.r_address + 4 + rawAddend - targetSec.addr;
       r.target = findContainingSubsection(targetSubsecMap, &targetOffset);
       r.addend = targetOffset;
     }
 
-    InputSection *subsec = findContainingSubsection(subsecMap, &secRelOffset);
-    r.offset = secRelOffset;
+    r.offset = rel.r_address;
+    InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
     subsec->relocs.push_back(r);
   }
 }

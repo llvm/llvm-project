@@ -9,6 +9,9 @@
 #ifndef LLD_MACHO_TARGET_H
 #define LLD_MACHO_TARGET_H
 
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/MemoryBuffer.h"
+
 #include <cstddef>
 #include <cstdint>
 
@@ -16,6 +19,8 @@ namespace lld {
 namespace macho {
 
 class DylibSymbol;
+class InputSection;
+struct Reloc;
 
 enum {
   // We are currently only supporting 64-bit targets since macOS and iOS are
@@ -30,8 +35,10 @@ class TargetInfo {
 public:
   virtual ~TargetInfo() = default;
 
-  virtual uint64_t getImplicitAddend(const uint8_t *loc,
-                                     uint8_t type) const = 0;
+  // Validate the relocation structure and get its addend.
+  virtual uint64_t
+  getImplicitAddend(llvm::MemoryBufferRef, const llvm::MachO::section_64 &,
+                    const llvm::MachO::relocation_info &) const = 0;
   virtual void relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const = 0;
 
   // Write code for lazy binding. See the comments on StubsSection for more
