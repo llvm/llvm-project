@@ -141,11 +141,11 @@ CHECK-NEXT:              (0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RD
 CHECK-NEXT:              (0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4
 
 CHECK: .debug_aranges contents:
-CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT: [0x0000000100000f40, 0x0000000100000f4b)
-CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT: [0x0000000100000f50, 0x0000000100000f89)
-CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x0000013a, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x0000013a, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT: [0x0000000100000f90, 0x0000000100000fb4)
 
 
