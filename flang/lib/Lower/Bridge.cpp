@@ -637,9 +637,8 @@ private:
     auto selectExpr = builder->create<fir::LoadOp>(toLocation(), variable);
     auto iter = symbolLabelMap.find(symbol);
     if (iter == symbolLabelMap.end()) {
-      // This "assert" will fail for a nonconforming program unit that does not
-      // have any ASSIGN statements.  The front end should check for this.
-      // If asserts are inactive, the assigned GOTO statement will be a nop.
+      // Fail for a nonconforming program unit that does not have any ASSIGN
+      // statements.  The front end should check for this.
       llvm_unreachable("no assigned goto targets");
       return;
     }
@@ -653,10 +652,9 @@ private:
     // Add labels from an explicit list.  The list may have duplicates.
     for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       if (labelSet.count(label) == 0) {
-        // This "assert" will fail for a nonconforming program unit that never
-        // ASSIGNs this label to the selector variable.  The front end should
-        // check that there is at least one such ASSIGN statement.  If asserts
-        // are inactive, the label will be ignored.
+        // Fail for a nonconforming program unit that never ASSIGNs this label
+        // to the selector variable.  The front end should check that there is
+        // at least one such ASSIGN statement.
         llvm_unreachable("invalid assigned goto target");
         continue;
       }
