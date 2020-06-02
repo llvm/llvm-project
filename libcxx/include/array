@@ -150,12 +150,12 @@ struct _LIBCPP_TEMPLATE_VIS array
     // No explicit construct/copy/destroy for aggregate type
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     void fill(const value_type& __u) {
-      _VSTD::fill_n(__elems_, _Size, __u);
+        _VSTD::fill_n(data(), _Size, __u);
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     void swap(array& __a) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
-      std::swap_ranges(__elems_, __elems_ + _Size, __a.__elems_);
+        std::swap_ranges(data(), data() + _Size, __a.data());
     }
 
     // iterators:
@@ -192,7 +192,7 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR size_type max_size() const _NOEXCEPT {return _Size;}
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {return false; }
+    _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {return _Size == 0;}
 
     // element access:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
