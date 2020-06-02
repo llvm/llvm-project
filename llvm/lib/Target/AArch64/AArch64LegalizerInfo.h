@@ -43,6 +43,11 @@ private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
+
+  bool legalizeSmallCMGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &MIRBuilder,
+                                  GISelChangeObserver &Observer) const;
+  const AArch64Subtarget *ST;
 };
 } // End llvm namespace.
 #endif
