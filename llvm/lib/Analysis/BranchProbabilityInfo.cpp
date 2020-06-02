@@ -102,7 +102,7 @@ static const uint32_t LBH_UNLIKELY_WEIGHT = 62;
 ///
 /// This is the probability for a branch being taken to a block that terminates
 /// (eventually) in unreachable. These are predicted as unlikely as possible.
-/// All reachable probability will equally share the remaining part.
+/// All reachable probability will proportionally share the remaining part.
 static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 
 /// Weight for a branch taken going into a cold block.
@@ -305,19 +305,19 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
   Weights.reserve(TI->getNumSuccessors());
-  for (unsigned i = 1, e = WeightsNode->getNumOperands(); i != e; ++i) {
+  for (unsigned I = 1, E = WeightsNode->getNumOperands(); I != E; ++I) {
     ConstantInt *Weight =
-        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(i));
+        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(I));
     if (!Weight)
       return false;
     assert(Weight->getValue().getActiveBits() <= 32 &&
            "Too many bits for uint32_t");
     Weights.push_back(Weight->getZExtValue());
     WeightSum += Weights.back();
-    if (PostDominatedByUnreachable.count(TI->getSuccessor(i - 1)))
-      UnreachableIdxs.push_back(i - 1);
+    if (PostDominatedByUnreachable.count(TI->getSuccessor(I - 1)))
+      UnreachableIdxs.push_back(I - 1);
     else
-      ReachableIdxs.push_back(i - 1);
+      ReachableIdxs.push_back(I - 1);
   }
   assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
 
@@ -328,56 +328,90 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 
   if (ScalingFactor > 1) {
     WeightSum = 0;
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      Weights[i] /= ScalingFactor;
-      WeightSum += Weights[i];
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      Weights[I] /= ScalingFactor;
+      WeightSum += Weights[I];
     }
   }
   assert(WeightSum <= UINT32_MAX &&
          "Expected weights to scale down to 32 bits");
 
   if (WeightSum == 0 || ReachableIdxs.size() == 0) {
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      Weights[i] = 1;
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
+      Weights[I] = 1;
     WeightSum = TI->getNumSuccessors();
   }
 
   // Set the probability.
   SmallVector<BranchProbability, 2> BP;
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-    BP.push_back({ Weights[i], static_cast<uint32_t>(WeightSum) });
+  for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
+    BP.push_back({ Weights[I], static_cast<uint32_t>(WeightSum) });
 
   // Examine the metadata against unreachable heuristic.
   // If the unreachable heuristic is more strong then we use it for this edge.
-  if (UnreachableIdxs.size() > 0 && ReachableIdxs.size() > 0) {
-    auto UnreachableProb = UR_TAKEN_PROB;
-    for (auto i : UnreachableIdxs)
-      if (UnreachableProb < BP[i]) {
-        BP[i] = UnreachableProb;
+  if (UnreachableIdxs.size() == 0 || ReachableIdxs.size() == 0) {
+    setEdgeProbability(BB, BP);
+    return true;
+  }
+
+  auto UnreachableProb = UR_TAKEN_PROB;
+  for (auto I : UnreachableIdxs)
+    if (UnreachableProb < BP[I]) {
+      BP[I] = UnreachableProb;
+    }
+
+  // Sum of all edge probabilities must be 1.0. If we modified the probability
+  // of some edges then we must distribute the introduced difference over the
+  // reachable blocks.
+  //
+  // Proportional distribution: the relation between probabilities of the
+  // reachable edges is kept unchanged. That is for any reachable edges i and j:
+  //   newBP[i] / newBP[j] == oldBP[i] / oldBP[j] =>
+  //   newBP[i] / oldBP[i] == newBP[j] / oldBP[j] == K
+  // Where K is independent of i,j.
+  //   newBP[i] == oldBP[i] * K
+  // We need to find K.
+  // Make sum of all reachables of the left and right parts:
+  //   sum_of_reachable(newBP) == K * sum_of_reachable(oldBP)
+  // Sum of newBP must be equal to 1.0:
+  //   sum_of_reachable(newBP) + sum_of_unreachable(newBP) == 1.0 =>
+  //   sum_of_reachable(newBP) = 1.0 - sum_of_unreachable(newBP)
+  // Where sum_of_unreachable(newBP) is what has been just changed.
+  // Finally:
+  //   K == sum_of_reachable(newBP) / sum_of_reachable(oldBP) =>
+  //   K == (1.0 - sum_of_unreachable(newBP)) / sum_of_reachable(oldBP)
+  BranchProbability NewUnreachableSum = BranchProbability::getZero();
+  for (auto I : UnreachableIdxs)
+    NewUnreachableSum += BP[I];
+
+  BranchProbability NewReachableSum =
+      BranchProbability::getOne() - NewUnreachableSum;
+
+  BranchProbability OldReachableSum = BranchProbability::getZero();
+  for (auto I : ReachableIdxs)
+    OldReachableSum += BP[I];
+
+  if (OldReachableSum != NewReachableSum) { // Anything to dsitribute?
+    if (OldReachableSum.isZero()) {
+      // If all oldBP[i] are zeroes then the proportional distribution results
+      // in all zero probabilities and the error stays big. In this case we
+      // evenly spread NewReachableSum over the reachable edges.
+      BranchProbability PerEdge = NewReachableSum / ReachableIdxs.size();
+      for (auto I : ReachableIdxs)
+        BP[I] = PerEdge;
+    } else {
+      for (auto I : ReachableIdxs) {
+        // We use uint64_t to avoid double rounding error of the following
+        // calculation: BP[i] = BP[i] * NewReachableSum / OldReachableSum
+        // The formula is taken from the private constructor
+        // BranchProbability(uint32_t Numerator, uint32_t Denominator)
+        uint64_t Mul = static_cast<uint64_t>(NewReachableSum.getNumerator()) *
+                       BP[I].getNumerator();
+        uint32_t Div = static_cast<uint32_t>(
+            divideNearest(Mul, OldReachableSum.getNumerator()));
+        BP[I] = BranchProbability::getRaw(Div);
       }
-
-    // Because of possible rounding errors and the above fix up for
-    // the unreachable heuristic the sum of probabilities of all edges may be
-    // less than 1.0. Distribute the remaining probability (calculated as
-    // 1.0 - (sum of BP[i])) evenly among all the reachable edges.
-    auto ToDistribute = BranchProbability::getOne();
-    for (auto &P : BP)
-      ToDistribute -= P;
-
-    // If we modified the probability of some edges then we must distribute
-    // the difference between reachable blocks.
-    // TODO: This spreads ToDistribute evenly upon the reachable edges. A better
-    // distribution would be proportional. So the relation between weights of
-    // the reachable edges would be kept unchanged. That is for any reachable
-    // edges i and j:
-    // newBP[i] / newBP[j] == oldBP[i] / oldBP[j]
-    // newBP[i] / oldBP[i] == newBP[j] / oldBP[j] ==
-    //                     == Denominator / (Denominator - ToDistribute)
-    // newBP[i] = oldBP[i] * Denominator / (Denominator - ToDistribute)
-    BranchProbability PerEdge = ToDistribute / ReachableIdxs.size();
-    if (PerEdge > BranchProbability::getZero())
-      for (auto i : ReachableIdxs)
-        BP[i] += PerEdge;
+    }
   }
 
   setEdgeProbability(BB, BP);

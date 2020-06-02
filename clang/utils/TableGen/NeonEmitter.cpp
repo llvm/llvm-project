@@ -303,8 +303,6 @@ public:
 /// The main grunt class. This represents an instantiation of an intrinsic with
 /// a particular typespec and prototype.
 class Intrinsic {
-  friend class DagEmitter;
-
   /// The Record this intrinsic was created from.
   Record *R;
   /// The unmangled name.
