@@ -32,6 +32,7 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 
   OS << format("0x%08" PRIx64, getOffset()) << ": Type Unit:"
      << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
+     << ", format = " << dwarf::FormatString(getFormat())
      << ", version = " << format("0x%04x", getVersion());
   if (getVersion() >= 5)
     OS << ", unit_type = " << dwarf::UnitTypeString(getUnitType());
