@@ -77,7 +77,8 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformMacOSX);
+  PlatformMacOSX(const PlatformMacOSX &) = delete;
+  const PlatformMacOSX &operator=(const PlatformMacOSX &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H

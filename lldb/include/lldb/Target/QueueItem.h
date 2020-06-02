@@ -159,7 +159,8 @@ protected:
   std::string m_target_queue_label;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(QueueItem);
+  QueueItem(const QueueItem &) = delete;
+  const QueueItem &operator=(const QueueItem &) = delete;
 };
 
 } // namespace lldb_private

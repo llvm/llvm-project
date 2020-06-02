@@ -59,7 +59,8 @@ private:
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepUntil);
+  ThreadPlanStepUntil(const ThreadPlanStepUntil &) = delete;
+  const ThreadPlanStepUntil &operator=(const ThreadPlanStepUntil &) = delete;
 };
 
 } // namespace lldb_private

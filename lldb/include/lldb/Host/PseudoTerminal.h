@@ -209,7 +209,8 @@ protected:
   int m_slave_fd;  ///< The file descriptor for the slave.
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PseudoTerminal);
+  PseudoTerminal(const PseudoTerminal &) = delete;
+  const PseudoTerminal &operator=(const PseudoTerminal &) = delete;
 };
 
 } // namespace lldb_private

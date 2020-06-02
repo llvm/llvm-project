@@ -77,7 +77,8 @@ private:
   std::string m_device_id;
   uint32_t m_sdk_version;
 
-  DISALLOW_COPY_AND_ASSIGN(PlatformAndroid);
+  PlatformAndroid(const PlatformAndroid &) = delete;
+  const PlatformAndroid &operator=(const PlatformAndroid &) = delete;
 };
 
 } // namespace platofor_android

@@ -107,7 +107,8 @@ private:
                size_t size, uint32_t permissions, uint8_t alignment,
                AllocationPolicy m_policy);
 
-    DISALLOW_COPY_AND_ASSIGN(Allocation);
+    Allocation(const Allocation &) = delete;
+    const Allocation &operator=(const Allocation &) = delete;
   };
 
   static_assert(sizeof(Allocation) <=

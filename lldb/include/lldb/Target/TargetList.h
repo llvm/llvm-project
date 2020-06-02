@@ -206,7 +206,8 @@ private:
                               lldb::PlatformSP &platform_sp,
                               lldb::TargetSP &target_sp, bool is_dummy_target);
 
-  DISALLOW_COPY_AND_ASSIGN(TargetList);
+  TargetList(const TargetList &) = delete;
+  const TargetList &operator=(const TargetList &) = delete;
 };
 
 } // namespace lldb_private

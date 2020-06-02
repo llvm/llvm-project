@@ -74,7 +74,9 @@ protected:
   PacketResult SendOKResponse();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationServer);
+  GDBRemoteCommunicationServer(const GDBRemoteCommunicationServer &) = delete;
+  const GDBRemoteCommunicationServer &
+  operator=(const GDBRemoteCommunicationServer &) = delete;
 };
 
 class PacketUnimplementedError

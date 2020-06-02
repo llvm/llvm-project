@@ -80,7 +80,9 @@ protected:
   const char *GetSDKDirectoryAsCString();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleTVSimulator);
+  PlatformAppleTVSimulator(const PlatformAppleTVSimulator &) = delete;
+  const PlatformAppleTVSimulator &
+  operator=(const PlatformAppleTVSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLETVSIMULATOR_H

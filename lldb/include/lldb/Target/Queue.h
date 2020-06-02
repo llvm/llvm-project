@@ -144,7 +144,8 @@ private:
                                         // dispatch_queue_t for this Queue
   lldb::QueueKind m_kind;
 
-  DISALLOW_COPY_AND_ASSIGN(Queue);
+  Queue(const Queue &) = delete;
+  const Queue &operator=(const Queue &) = delete;
 };
 
 } // namespace lldb_private

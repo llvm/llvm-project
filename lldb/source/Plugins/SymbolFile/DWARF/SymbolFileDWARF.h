@@ -329,7 +329,8 @@ protected:
       DIEToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
-  DISALLOW_COPY_AND_ASSIGN(SymbolFileDWARF);
+  SymbolFileDWARF(const SymbolFileDWARF &) = delete;
+  const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
 
   virtual void LoadSectionData(lldb::SectionType sect_type,
                                lldb_private::DWARFDataExtractor &data);

@@ -616,7 +616,8 @@ private:
   lldb::ThreadPlanTracerSP m_tracer_sp;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlan);
+  ThreadPlan(const ThreadPlan &) = delete;
+  const ThreadPlan &operator=(const ThreadPlan &) = delete;
 };
 
 // ThreadPlanNull:
@@ -651,7 +652,8 @@ protected:
 
   lldb::StateType GetPlanRunState() override;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanNull);
+  ThreadPlanNull(const ThreadPlanNull &) = delete;
+  const ThreadPlanNull &operator=(const ThreadPlanNull &) = delete;
 };
 
 } // namespace lldb_private

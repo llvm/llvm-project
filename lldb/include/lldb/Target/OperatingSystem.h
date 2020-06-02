@@ -69,7 +69,8 @@ protected:
   Process
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
 private:
-  DISALLOW_COPY_AND_ASSIGN(OperatingSystem);
+  OperatingSystem(const OperatingSystem &) = delete;
+  const OperatingSystem &operator=(const OperatingSystem &) = delete;
 };
 
 } // namespace lldb_private

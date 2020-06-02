@@ -186,7 +186,8 @@ public:
     TaggedPointerVendor() = default;
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendor);
+    TaggedPointerVendor(const TaggedPointerVendor &) = delete;
+    const TaggedPointerVendor &operator=(const TaggedPointerVendor &) = delete;
   };
 
   ~ObjCLanguageRuntime() override;
@@ -417,7 +418,8 @@ protected:
 
   void ReadObjCLibraryIfNeeded(const ModuleList &module_list);
 
-  DISALLOW_COPY_AND_ASSIGN(ObjCLanguageRuntime);
+  ObjCLanguageRuntime(const ObjCLanguageRuntime &) = delete;
+  const ObjCLanguageRuntime &operator=(const ObjCLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

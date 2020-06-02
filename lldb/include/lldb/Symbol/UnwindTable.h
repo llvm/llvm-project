@@ -79,7 +79,8 @@ private:
   std::unique_ptr<CompactUnwindInfo> m_compact_unwind_up;
   std::unique_ptr<ArmUnwindInfo> m_arm_unwind_up;
 
-  DISALLOW_COPY_AND_ASSIGN(UnwindTable);
+  UnwindTable(const UnwindTable &) = delete;
+  const UnwindTable &operator=(const UnwindTable &) = delete;
 };
 
 } // namespace lldb_private
