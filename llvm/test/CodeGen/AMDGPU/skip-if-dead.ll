@@ -486,6 +486,24 @@ latch:
   ret void
 }
 
+; CHECK-LABEL: {{^}}skip_mode_switch:
+; CHECK: s_and_saveexec_b64
+; CHECK-NEXT: s_cbranch_execz
+; CHECK: s_setreg_imm32
+; CHECK: s_or_b64 exec, exec
+define void @skip_mode_switch(i32 %arg) {
+entry:
+  %cmp = icmp eq i32 %arg, 0
+  br i1 %cmp, label %bb.0, label %bb.1
+
+bb.0:
+  call void @llvm.amdgcn.s.setreg(i32 2049, i32 3)
+  br label %bb.1
+
+bb.1:
+  ret void
+}
+
 declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
@@ -493,6 +511,8 @@ declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #2
 declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare void @llvm.amdgcn.kill(i1) #0
+
+declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
