@@ -37,6 +37,7 @@
 ; DWARF-DUMP-NEXT: debug_line[0x00000000]
 ; DWARF-DUMP-NEXT: Line table prologue:
 ; DWARF-DUMP-NEXT:     total_length: 0x0000005f
+; DWARF-DUMP-NEXT:           format: DWARF32
 ; DWARF-DUMP-NEXT:          version: 5
 ; DWARF-DUMP-NEXT:     address_size: 4
 ; DWARF-DUMP-NEXT:  seg_select_size: 0
