@@ -91,6 +91,12 @@ During this release ...
 
 * Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
 
+* Clang now defaults to ``-fomit-frame-pointer`` when targeting non-Android
+  Linux for arm and thumb when optimizations are enabled. Users that were
+  previously not specifying a value and relying on the implicit compiler
+  default may wish to specify ``-fno-omit-frame-pointer`` to get the old
+  behavior. This improves compatibility with GCC.
+
 Changes to the MIPS Target
 --------------------------
 
