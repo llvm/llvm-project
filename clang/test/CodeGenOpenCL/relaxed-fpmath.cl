@@ -11,7 +11,7 @@ float spscalardiv(float a, float b) {
   // NORMAL: fdiv float
   // FAST: fdiv fast float
   // FINITE: fdiv nnan ninf float
-  // UNSAFE: fdiv nnan nsz float
+  // UNSAFE: fdiv reassoc nsz arcp afn float
   // MAD: fdiv float
   // NOSIGNED: fdiv nsz float
   return a / b;
@@ -38,7 +38,7 @@ float spscalardiv(float a, float b) {
 
 // UNSAFE: "less-precise-fpmad"="true"
 // UNSAFE: "no-infs-fp-math"="false"
-// UNSAFE: "no-nans-fp-math"="true"
+// UNSAFE: "no-nans-fp-math"="false"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 // UNSAFE: "unsafe-fp-math"="true"
 
