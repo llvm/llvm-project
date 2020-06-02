@@ -1197,10 +1197,6 @@ void LiveDebugValues::transferRegisterDef(
     SmallVector<uint32_t, 32> UsedRegs;
     getUsedRegs(OpenRanges.getVarLocs(), UsedRegs);
     for (uint32_t Reg : UsedRegs) {
-      // The VarLocs residing in this register are already in the kill set.
-      if (DeadRegs.count(Reg))
-        continue;
-
       // Remove ranges of all clobbered registers. Register masks don't usually
       // list SP as preserved. Assume that call instructions never clobber SP,
       // because some backends (e.g., AArch64) never list SP in the regmask.
