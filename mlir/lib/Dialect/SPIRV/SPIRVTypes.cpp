@@ -335,14 +335,18 @@ void CooperativeMatrixNVType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
-  extensions.push_back(Extension::SPV_NV_cooperative_matrix);
+  static const Extension exts[] = {Extension::SPV_NV_cooperative_matrix};
+  ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
+  extensions.push_back(ref);
 }
 
 void CooperativeMatrixNVType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
-  capabilities.push_back(Capability::CooperativeMatrixNV);
+  static const Capability caps[] = {Capability::CooperativeMatrixNV};
+  ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
+  capabilities.push_back(ref);
 }
 
 //===----------------------------------------------------------------------===//
