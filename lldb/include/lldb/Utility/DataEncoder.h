@@ -243,7 +243,8 @@ private:
   /// be shared among multiple instances
   mutable lldb::DataBufferSP m_data_sp;
 
-  DISALLOW_COPY_AND_ASSIGN(DataEncoder);
+  DataEncoder(const DataEncoder &) = delete;
+  const DataEncoder &operator=(const DataEncoder &) = delete;
 };
 
 } // namespace lldb_private

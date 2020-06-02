@@ -172,7 +172,8 @@ protected:
   std::mutex m_sdk_path_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);
+  PlatformDarwin(const PlatformDarwin &) = delete;
+  const PlatformDarwin &operator=(const PlatformDarwin &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H

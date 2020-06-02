@@ -48,7 +48,8 @@ protected:
   size_t WriteImpl(const void *s, size_t length) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(StreamFile);
+  StreamFile(const StreamFile &) = delete;
+  const StreamFile &operator=(const StreamFile &) = delete;
 };
 
 } // namespace lldb_private

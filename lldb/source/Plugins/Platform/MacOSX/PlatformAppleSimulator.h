@@ -57,7 +57,9 @@ protected:
 #endif
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleSimulator);
+  PlatformAppleSimulator(const PlatformAppleSimulator &) = delete;
+  const PlatformAppleSimulator &
+  operator=(const PlatformAppleSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLESIMULATOR_H

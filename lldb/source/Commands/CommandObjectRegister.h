@@ -24,7 +24,9 @@ public:
 
 private:
   // For CommandObjectRegister only
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectRegister);
+  CommandObjectRegister(const CommandObjectRegister &) = delete;
+  const CommandObjectRegister &
+  operator=(const CommandObjectRegister &) = delete;
 };
 
 } // namespace lldb_private

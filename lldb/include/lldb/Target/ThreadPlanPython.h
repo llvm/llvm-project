@@ -68,7 +68,8 @@ private:
   StructuredData::ObjectSP m_implementation_sp;
   bool m_did_push;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanPython);
+  ThreadPlanPython(const ThreadPlanPython &) = delete;
+  const ThreadPlanPython &operator=(const ThreadPlanPython &) = delete;
 };
 
 } // namespace lldb_private

@@ -69,7 +69,9 @@ protected:
   bool m_exact_match;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverFileLine);
+  BreakpointResolverFileLine(const BreakpointResolverFileLine &) = delete;
+  const BreakpointResolverFileLine &
+  operator=(const BreakpointResolverFileLine &) = delete;
 };
 
 } // namespace lldb_private

@@ -89,7 +89,8 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(DebugMacros);
+  DebugMacros(const DebugMacros &) = delete;
+  const DebugMacros &operator=(const DebugMacros &) = delete;
 
   std::vector<DebugMacroEntry> m_macro_entries;
 };

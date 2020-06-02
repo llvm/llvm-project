@@ -640,7 +640,8 @@ protected:
                                       ///  parsed.
   std::vector<std::unique_ptr<CallEdge>> m_call_edges; ///< Outgoing call edges.
 private:
-  DISALLOW_COPY_AND_ASSIGN(Function);
+  Function(const Function &) = delete;
+  const Function &operator=(const Function &) = delete;
 };
 
 } // namespace lldb_private

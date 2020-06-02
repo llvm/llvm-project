@@ -450,7 +450,8 @@ private:
   llvm::DenseMap<ModuleCacheKey, ModuleSpec, ModuleCacheInfo>
       m_cached_module_specs;
 
-  DISALLOW_COPY_AND_ASSIGN(ProcessGDBRemote);
+  ProcessGDBRemote(const ProcessGDBRemote &) = delete;
+  const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 };
 
 } // namespace process_gdb_remote

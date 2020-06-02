@@ -160,7 +160,8 @@ protected:
   lldb::DebuggerWP m_debugger_wp;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SourceManager);
+  SourceManager(const SourceManager &) = delete;
+  const SourceManager &operator=(const SourceManager &) = delete;
 };
 
 bool operator==(const SourceManager::File &lhs, const SourceManager::File &rhs);

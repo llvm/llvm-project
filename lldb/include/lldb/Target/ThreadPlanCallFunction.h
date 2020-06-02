@@ -146,7 +146,9 @@ protected:
 
 private:
   CompilerType m_return_type;
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallFunction);
+  ThreadPlanCallFunction(const ThreadPlanCallFunction &) = delete;
+  const ThreadPlanCallFunction &
+  operator=(const ThreadPlanCallFunction &) = delete;
 };
 
 } // namespace lldb_private

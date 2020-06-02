@@ -90,7 +90,9 @@ public:
       lldb::StackFrameSP frame) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ScriptedStackFrameRecognizer);
+  ScriptedStackFrameRecognizer(const ScriptedStackFrameRecognizer &) = delete;
+  const ScriptedStackFrameRecognizer &
+  operator=(const ScriptedStackFrameRecognizer &) = delete;
 };
 
 /// \class StackFrameRecognizerManager
