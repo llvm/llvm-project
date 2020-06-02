@@ -1,7 +1,8 @@
 import json
 import os
 
-from typing import Any, Dict, List, NamedTuple, Optional
+from enum import Enum
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 
 JSON = Dict[str, Any]
@@ -10,12 +11,21 @@ JSON = Dict[str, Any]
 DEFAULT_MAP_FILE = "projects.json"
 
 
+class DownloadType(str, Enum):
+    GIT = "git"
+    ZIP = "zip"
+    SCRIPT = "script"
+
+
 class ProjectInfo(NamedTuple):
     """
     Information about a project to analyze.
     """
     name: str
     mode: int
+    source: DownloadType = DownloadType.SCRIPT
+    origin: str = ""
+    commit: str = ""
     enabled: bool = True
 
 
@@ -73,11 +83,28 @@ class ProjectMap:
             name: str = raw_project["name"]
             build_mode: int = raw_project["mode"]
             enabled: bool = raw_project.get("enabled", True)
-            return ProjectInfo(name, build_mode, enabled)
+            source: DownloadType = raw_project.get("source", "zip")
+
+            if source == DownloadType.GIT:
+                origin, commit = ProjectMap._get_git_params(raw_project)
+            else:
+                origin, commit = "", ""
+
+            return ProjectInfo(name, build_mode, source, origin, commit,
+                               enabled)
 
         except KeyError as e:
             raise ValueError(
                 f"Project info is required to have a '{e.args[0]}' field")
+
+    @staticmethod
+    def _get_git_params(raw_project: JSON) -> Tuple[str, str]:
+        try:
+            return raw_project["origin"], raw_project["commit"]
+        except KeyError as e:
+            raise ValueError(
+                f"Profect info is required to have a '{e.args[0]}' field "
+                f"if it has a 'git' source")
 
     @staticmethod
     def _create_empty(path: str):
