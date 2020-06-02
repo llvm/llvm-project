@@ -86874,6 +86874,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eExpressionTimedOut",SWIG_From_int(static_cast< int >(lldb::eExpressionTimedOut)));
   SWIG_Python_SetConstant(d, "eExpressionResultUnavailable",SWIG_From_int(static_cast< int >(lldb::eExpressionResultUnavailable)));
   SWIG_Python_SetConstant(d, "eExpressionStoppedForDebug",SWIG_From_int(static_cast< int >(lldb::eExpressionStoppedForDebug)));
+  SWIG_Python_SetConstant(d, "eExpressionThreadVanished",SWIG_From_int(static_cast< int >(lldb::eExpressionThreadVanished)));
   SWIG_Python_SetConstant(d, "eSearchDepthInvalid",SWIG_From_int(static_cast< int >(lldb::eSearchDepthInvalid)));
   SWIG_Python_SetConstant(d, "eSearchDepthTarget",SWIG_From_int(static_cast< int >(lldb::eSearchDepthTarget)));
   SWIG_Python_SetConstant(d, "eSearchDepthModule",SWIG_From_int(static_cast< int >(lldb::eSearchDepthModule)));
