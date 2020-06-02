@@ -458,6 +458,16 @@ private:
   ///    } flags;
   /// } kmp_depend_info_t;
   QualType KmpDependInfoTy;
+  /// Type typedef struct kmp_task_affinity_info {
+  ///    kmp_intptr_t base_addr;
+  ///    size_t len;
+  ///    struct {
+  ///      bool flag1 : 1;
+  ///      bool flag2 : 1;
+  ///      kmp_int32 reserved : 30;
+  ///   } flags;
+  /// } kmp_task_affinity_info_t;
+  QualType KmpTaskAffinityInfoTy;
   /// struct kmp_dim {  // loop bounds info casted to kmp_int64
   ///  kmp_int64 lo; // lower
   ///  kmp_int64 up; // upper
