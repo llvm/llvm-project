@@ -110,6 +110,7 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
   OS << "Line table prologue:\n"
      << format("    total_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
                TotalLength)
+     << "          format: " << dwarf::FormatString(FormParams.Format) << "\n"
      << format("         version: %u\n", getVersion());
   if (!versionIsSupported(getVersion()))
     return;
