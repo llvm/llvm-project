@@ -249,11 +249,17 @@ private:
 } // namespace
 
 void Writer::scanRelocations() {
-  for (InputSection *sect : inputSections)
-    for (Reloc &r : sect->relocs)
-      if (auto *s = r.target.dyn_cast<Symbol *>())
-        if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
+  for (InputSection *isec : inputSections) {
+    for (Reloc &r : isec->relocs) {
+      if (auto *s = r.target.dyn_cast<Symbol *>()) {
+        if (isa<Undefined>(s))
+          error("undefined symbol " + s->getName() + ", referenced from " +
+                sys::path::filename(isec->file->getName()));
+        else if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
           target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
+      }
+    }
+  }
 }
 
 void Writer::createLoadCommands() {
