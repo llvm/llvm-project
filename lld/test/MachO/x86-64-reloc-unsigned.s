@@ -3,9 +3,9 @@
 # RUN: lld -flavor darwinnew -o %t %t.o
 # RUN: llvm-objdump --full-contents %t | FileCheck %s
 # CHECK: Contents of section foo:
-# CHECK:  2000 08200000 00000000
+# CHECK:  100001000 08100000 01000000
 # CHECK: Contents of section bar:
-# CHECK:  2008 11311111 01000000
+# CHECK:  100001008 11211111 02000000
 
 .globl _main, _foo, _bar
 
