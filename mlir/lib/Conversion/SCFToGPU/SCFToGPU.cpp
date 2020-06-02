@@ -36,8 +36,6 @@
 using namespace mlir;
 using namespace mlir::scf;
 
-using llvm::seq;
-
 // Extract an indexed value from KernelDim3.
 static Value getDim3Value(const gpu::KernelDim3 &dim3, unsigned pos) {
   switch (pos) {
@@ -57,18 +55,10 @@ static Value getDim3Value(const gpu::KernelDim3 &dim3, unsigned pos) {
 static Operation::operand_range getLowerBoundOperands(AffineForOp forOp) {
   return forOp.getLowerBoundOperands();
 }
-static SmallVector<Value, 1> getLowerBoundOperands(ForOp forOp) {
-  SmallVector<Value, 1> bounds(1, forOp.lowerBound());
-  return bounds;
-}
 
 // Get the upper bound-related operands of a loop operation.
 static Operation::operand_range getUpperBoundOperands(AffineForOp forOp) {
   return forOp.getUpperBoundOperands();
-}
-static SmallVector<Value, 1> getUpperBoundOperands(ForOp forOp) {
-  SmallVector<Value, 1> bounds(1, forOp.upperBound());
-  return bounds;
 }
 
 // Get a Value that corresponds to the loop step.  If the step is an attribute,
@@ -76,24 +66,17 @@ static SmallVector<Value, 1> getUpperBoundOperands(ForOp forOp) {
 static Value getOrCreateStep(AffineForOp forOp, OpBuilder &builder) {
   return builder.create<ConstantIndexOp>(forOp.getLoc(), forOp.getStep());
 }
-static Value getOrCreateStep(ForOp forOp, OpBuilder &) { return forOp.step(); }
 
 // Get a Value for the loop lower bound.  If the value requires computation,
 // materialize the instructions using builder.
 static Value getOrEmitLowerBound(AffineForOp forOp, OpBuilder &builder) {
   return lowerAffineLowerBound(forOp, builder);
 }
-static Value getOrEmitLowerBound(ForOp forOp, OpBuilder &) {
-  return forOp.lowerBound();
-}
 
 // Get a Value for the loop upper bound.  If the value requires computation,
 // materialize the instructions using builder.
 static Value getOrEmitUpperBound(AffineForOp forOp, OpBuilder &builder) {
   return lowerAffineUpperBound(forOp, builder);
-}
-static Value getOrEmitUpperBound(ForOp forOp, OpBuilder &) {
-  return forOp.upperBound();
 }
 
 // Check the structure of the loop nest:
@@ -102,8 +85,8 @@ static Value getOrEmitUpperBound(ForOp forOp, OpBuilder &) {
 //   - the loop bounds can be computed above the outermost loop.
 // This roughly corresponds to the "matcher" part of the pattern-based
 // rewriting infrastructure.
-template <typename OpTy>
-static LogicalResult checkLoopNestMappableImpl(OpTy forOp, unsigned numDims) {
+static LogicalResult checkAffineLoopNestMappableImpl(AffineForOp forOp,
+                                                     unsigned numDims) {
   Region &limit = forOp.region();
   for (unsigned i = 0, e = numDims; i < e; ++i) {
     Operation *nested = &forOp.getBody()->front();
@@ -122,15 +105,15 @@ static LogicalResult checkLoopNestMappableImpl(OpTy forOp, unsigned numDims) {
     if (forOp.getBody()->empty() || std::next(begin, 2) != end)
       return forOp.emitError("expected perfectly nested loops in the body");
 
-    if (!(forOp = dyn_cast<OpTy>(nested)))
+    if (!(forOp = dyn_cast<AffineForOp>(nested)))
       return nested->emitError("expected a nested loop");
   }
   return success();
 }
 
-template <typename OpTy>
-static LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
-                                           unsigned numThreadDims) {
+static LogicalResult checkAffineLoopNestMappable(AffineForOp forOp,
+                                                 unsigned numBlockDims,
+                                                 unsigned numThreadDims) {
   if (numBlockDims < 1 || numThreadDims < 1) {
     LLVM_DEBUG(llvm::dbgs() << "nothing to map");
     return success();
@@ -142,69 +125,17 @@ static LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
   if (numThreadDims > 3) {
     return forOp.emitError("cannot map to more than 3 thread dimensions");
   }
-  return checkLoopNestMappableImpl(forOp, numBlockDims + numThreadDims);
-}
-
-template <typename OpTy>
-static LogicalResult checkLoopOpMappable(OpTy forOp, unsigned numBlockDims,
-                                         unsigned numThreadDims) {
-  if (numBlockDims < 1 || numThreadDims < 1) {
-    LLVM_DEBUG(llvm::dbgs() << "nothing to map");
-    return success();
-  }
-
-  if (numBlockDims > 3) {
-    return forOp.emitError("cannot map to more than 3 block dimensions");
-  }
-  if (numThreadDims > 3) {
-    return forOp.emitError("cannot map to more than 3 thread dimensions");
-  }
-  if (numBlockDims != numThreadDims) {
-    // TODO(ravishankarm) : This can probably be relaxed by having a one-trip
-    // loop for the missing dimension, but there is not reason to handle this
-    // case for now.
-    return forOp.emitError(
-        "mismatch in block dimensions and thread dimensions");
-  }
-
-  // Check that the forOp contains perfectly nested loops for numBlockDims
-  if (failed(checkLoopNestMappableImpl(forOp, numBlockDims))) {
-    return failure();
-  }
-
-  // Get to the innermost loop.
-  for (auto i : seq<unsigned>(0, numBlockDims - 1)) {
-    forOp = cast<OpTy>(&forOp.getBody()->front());
-    (void)i;
-  }
-
-  // The forOp now points to the body of the innermost loop mapped to blocks.
-  for (Operation &op : *forOp.getBody()) {
-    // If the operation is a loop, check that it is mappable to workItems.
-    if (auto innerLoop = dyn_cast<OpTy>(&op)) {
-      if (failed(checkLoopNestMappableImpl(innerLoop, numThreadDims))) {
-        return failure();
-      }
-      continue;
-    }
-    // TODO(ravishankarm) : If it is not a loop op, it is assumed that the
-    // statement is executed by all threads. It might be a collective operation,
-    // or some non-side effect instruction. Have to decide on "allowable"
-    // statements and check for those here.
-  }
-  return success();
+  return checkAffineLoopNestMappableImpl(forOp, numBlockDims + numThreadDims);
 }
 
 namespace {
 // Helper structure that holds common state of the loop to GPU kernel
 // conversion.
-struct LoopToGpuConverter {
-  template <typename OpTy>
-  Optional<OpTy> collectBounds(OpTy forOp, unsigned numLoops);
+struct AffineLoopToGpuConverter {
+  Optional<AffineForOp> collectBounds(AffineForOp forOp, unsigned numLoops);
 
-  template <typename OpTy>
-  void createLaunch(OpTy rootForOp, OpTy innermostForOp, unsigned numBlockDims,
-                    unsigned numThreadDims);
+  void createLaunch(AffineForOp rootForOp, AffineForOp innermostForOp,
+                    unsigned numBlockDims, unsigned numThreadDims);
 
   // Ranges of the loops mapped to blocks or threads.
   SmallVector<Value, 6> dims;
@@ -229,15 +160,14 @@ static bool isConstantOne(Value value) {
 // This may fail if the IR for computing loop bounds cannot be constructed, for
 // example if an affine loop uses semi-affine maps. Return the last loop to be
 // mapped on success, llvm::None on failure.
-template <typename OpTy>
-Optional<OpTy> LoopToGpuConverter::collectBounds(OpTy forOp,
-                                                 unsigned numLoops) {
+Optional<AffineForOp>
+AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
   OpBuilder builder(forOp.getOperation());
   dims.reserve(numLoops);
   lbs.reserve(numLoops);
   ivs.reserve(numLoops);
   steps.reserve(numLoops);
-  OpTy currentLoop = forOp;
+  AffineForOp currentLoop = forOp;
   for (unsigned i = 0; i < numLoops; ++i) {
     Value lowerBound = getOrEmitLowerBound(currentLoop, builder);
     Value upperBound = getOrEmitUpperBound(currentLoop, builder);
@@ -257,133 +187,19 @@ Optional<OpTy> LoopToGpuConverter::collectBounds(OpTy forOp,
     steps.push_back(step);
 
     if (i != numLoops - 1)
-      currentLoop = cast<OpTy>(&currentLoop.getBody()->front());
+      currentLoop = cast<AffineForOp>(&currentLoop.getBody()->front());
   }
   return currentLoop;
-}
-
-/// Given `nDims` perfectly nested loops rooted as `rootForOp`, convert them o
-/// be partitioned across workgroups or workitems. The values for the
-/// workgroup/workitem id along each dimension is passed in with `ids`. The
-/// number of workgroups/workitems along each dimension are passed in with
-/// `nids`. The innermost loop is mapped to the x-dimension, followed by the
-/// next innermost loop to y-dimension, followed by z-dimension.
-template <typename OpTy>
-static OpTy createGPULaunchLoops(OpTy rootForOp, ArrayRef<Value> ids,
-                                 ArrayRef<Value> nids) {
-  auto nDims = ids.size();
-  assert(nDims == nids.size());
-  for (auto dim : llvm::seq<unsigned>(0, nDims)) {
-    // TODO(ravishankarm): Don't always need to generate a loop here. If nids >=
-    // number of iterations of the original loop, this becomes a if
-    // condition. Though that does rely on how the workgroup/workitem sizes are
-    // specified to begin with.
-    mapLoopToProcessorIds(rootForOp, ids[dim], nids[dim]);
-    if (dim != nDims - 1) {
-      rootForOp = cast<OpTy>(rootForOp.getBody()->front());
-    }
-  }
-  return rootForOp;
-}
-
-/// Utility method to convert the gpu::KernelDim3 object for representing id of
-/// each workgroup/workitem and number of workgroup/workitems along a dimension
-/// of the launch into a container.
-static void packIdAndNumId(gpu::KernelDim3 kernelIds,
-                           gpu::KernelDim3 kernelNids, unsigned nDims,
-                           SmallVectorImpl<Value> &ids,
-                           SmallVectorImpl<Value> &nids) {
-  assert(nDims <= 3 && "invalid number of launch dimensions");
-  std::array<Value, 3> allIds = {kernelIds.z, kernelIds.y, kernelIds.x};
-  std::array<Value, 3> allNids = {kernelNids.z, kernelNids.y, kernelNids.x};
-  ids.clear();
-  ids.append(std::next(allIds.begin(), allIds.size() - nDims), allIds.end());
-  nids.clear();
-  nids.append(std::next(allNids.begin(), allNids.size() - nDims),
-              allNids.end());
-}
-
-/// Generate the body of the launch operation.
-template <typename OpTy>
-static LogicalResult
-createLaunchBody(OpBuilder &builder, OpTy rootForOp, gpu::LaunchOp launchOp,
-                 unsigned numBlockDims, unsigned numThreadDims) {
-  OpBuilder::InsertionGuard bodyInsertionGuard(builder);
-  builder.setInsertionPointToEnd(&launchOp.body().front());
-  auto terminatorOp = builder.create<gpu::TerminatorOp>(launchOp.getLoc());
-
-  rootForOp.getOperation()->moveBefore(terminatorOp);
-  SmallVector<Value, 3> workgroupID, numWorkGroups;
-  packIdAndNumId(launchOp.getBlockIds(), launchOp.getGridSize(), numBlockDims,
-                 workgroupID, numWorkGroups);
-
-  // Partition the loop for mapping to workgroups.
-  auto loopOp = createGPULaunchLoops(rootForOp, workgroupID, numWorkGroups);
-
-  // Iterate over the body of the loopOp and get the loops to partition for
-  // thread blocks.
-  SmallVector<OpTy, 1> threadRootForOps;
-  for (Operation &op : *loopOp.getBody()) {
-    if (auto threadRootForOp = dyn_cast<OpTy>(&op)) {
-      threadRootForOps.push_back(threadRootForOp);
-    }
-  }
-
-  SmallVector<Value, 3> workItemID, workGroupSize;
-  packIdAndNumId(launchOp.getThreadIds(), launchOp.getBlockSize(),
-                 numThreadDims, workItemID, workGroupSize);
-  for (auto &loopOp : threadRootForOps) {
-    builder.setInsertionPoint(loopOp);
-    createGPULaunchLoops(loopOp, workItemID, workGroupSize);
-  }
-  return success();
-}
-
-// Convert the computation rooted at the `rootForOp`, into a GPU kernel with the
-// given workgroup size and number of workgroups.
-template <typename OpTy>
-static LogicalResult createLaunchFromOp(OpTy rootForOp,
-                                        ArrayRef<Value> numWorkGroups,
-                                        ArrayRef<Value> workGroupSizes) {
-  OpBuilder builder(rootForOp.getOperation());
-  if (numWorkGroups.size() > 3) {
-    return rootForOp.emitError("invalid ")
-           << numWorkGroups.size() << "-D workgroup specification";
-  }
-  auto loc = rootForOp.getLoc();
-  Value one = builder.create<ConstantOp>(
-      loc, builder.getIntegerAttr(builder.getIndexType(), 1));
-  SmallVector<Value, 3> numWorkGroups3D(3, one), workGroupSize3D(3, one);
-  for (auto numWorkGroup : enumerate(numWorkGroups)) {
-    numWorkGroups3D[numWorkGroup.index()] = numWorkGroup.value();
-  }
-  for (auto workGroupSize : enumerate(workGroupSizes)) {
-    workGroupSize3D[workGroupSize.index()] = workGroupSize.value();
-  }
-
-  auto launchOp = builder.create<gpu::LaunchOp>(
-      rootForOp.getLoc(), numWorkGroups3D[0], numWorkGroups3D[1],
-      numWorkGroups3D[2], workGroupSize3D[0], workGroupSize3D[1],
-      workGroupSize3D[2]);
-  if (failed(createLaunchBody(builder, rootForOp, launchOp,
-                              numWorkGroups.size(), workGroupSizes.size()))) {
-    return failure();
-  }
-
-  return success();
 }
 
 // Replace the rooted at "rootForOp" with a GPU launch operation.  This expects
 // "innermostForOp" to point to the last loop to be transformed to the kernel,
 // and to have (numBlockDims + numThreadDims) perfectly nested loops between
 // "rootForOp" and "innermostForOp".
-// TODO(ravishankarm) : This method can be modified to use the
-// createLaunchFromOp method, since that is a strict generalization of this
-// method.
-template <typename OpTy>
-void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
-                                      unsigned numBlockDims,
-                                      unsigned numThreadDims) {
+void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
+                                            AffineForOp innermostForOp,
+                                            unsigned numBlockDims,
+                                            unsigned numThreadDims) {
   OpBuilder builder(rootForOp.getOperation());
   // Prepare the grid and block sizes for the launch operation.  If there is
   // no loop mapped to a specific dimension, use constant "1" as its size.
@@ -444,14 +260,13 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
 }
 
 // Generic loop to GPU kernel conversion function.
-template <typename OpTy>
-static LogicalResult convertLoopNestToGPULaunch(OpTy forOp,
-                                                unsigned numBlockDims,
-                                                unsigned numThreadDims) {
-  if (failed(checkLoopNestMappable(forOp, numBlockDims, numThreadDims)))
+static LogicalResult convertAffineLoopNestToGPULaunch(AffineForOp forOp,
+                                                      unsigned numBlockDims,
+                                                      unsigned numThreadDims) {
+  if (failed(checkAffineLoopNestMappable(forOp, numBlockDims, numThreadDims)))
     return failure();
 
-  LoopToGpuConverter converter;
+  AffineLoopToGpuConverter converter;
   auto maybeInnerLoop =
       converter.collectBounds(forOp, numBlockDims + numThreadDims);
   if (!maybeInnerLoop)
@@ -461,35 +276,10 @@ static LogicalResult convertLoopNestToGPULaunch(OpTy forOp,
   return success();
 }
 
-// Generic loop to GPU kernel conversion function when loop is imperfectly
-// nested. The workgroup size and num workgroups is provided as input
-template <typename OpTy>
-static LogicalResult convertLoopToGPULaunch(OpTy forOp,
-                                            ArrayRef<Value> numWorkGroups,
-                                            ArrayRef<Value> workGroupSize) {
-  if (failed(checkLoopOpMappable(forOp, numWorkGroups.size(),
-                                 workGroupSize.size()))) {
-    return failure();
-  }
-  return createLaunchFromOp(forOp, numWorkGroups, workGroupSize);
-}
-
 LogicalResult mlir::convertAffineLoopNestToGPULaunch(AffineForOp forOp,
                                                      unsigned numBlockDims,
                                                      unsigned numThreadDims) {
-  return ::convertLoopNestToGPULaunch(forOp, numBlockDims, numThreadDims);
-}
-
-LogicalResult mlir::convertLoopNestToGPULaunch(ForOp forOp,
-                                               unsigned numBlockDims,
-                                               unsigned numThreadDims) {
-  return ::convertLoopNestToGPULaunch(forOp, numBlockDims, numThreadDims);
-}
-
-LogicalResult mlir::convertLoopToGPULaunch(scf::ForOp forOp,
-                                           ArrayRef<Value> numWorkGroups,
-                                           ArrayRef<Value> workGroupSizes) {
-  return ::convertLoopToGPULaunch(forOp, numWorkGroups, workGroupSizes);
+  return ::convertAffineLoopNestToGPULaunch(forOp, numBlockDims, numThreadDims);
 }
 
 namespace {
