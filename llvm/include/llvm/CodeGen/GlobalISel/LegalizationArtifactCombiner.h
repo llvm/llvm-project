@@ -332,6 +332,59 @@ public:
     return false;
   }
 
+  bool tryFoldUnmergeCast(MachineInstr &MI, MachineInstr &CastMI,
+                          SmallVectorImpl<MachineInstr *> &DeadInsts,
+                          SmallVectorImpl<Register> &UpdatedDefs) {
+
+    assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+    const unsigned CastOpc = CastMI.getOpcode();
+
+    if (!isArtifactCast(CastOpc))
+      return false;
+
+    const unsigned NumDefs = MI.getNumOperands() - 1;
+
+    const Register CastSrcReg = CastMI.getOperand(1).getReg();
+    const LLT CastSrcTy = MRI.getType(CastSrcReg);
+    const LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
+    const LLT SrcTy = MRI.getType(MI.getOperand(NumDefs).getReg());
+
+    if (CastOpc == TargetOpcode::G_TRUNC) {
+      if (SrcTy.isVector() && SrcTy.getScalarType() == DestTy.getScalarType()) {
+        //  %1:_(<4 x s8>) = G_TRUNC %0(<4 x s32>)
+        //  %2:_(s8), %3:_(s8), %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %1
+        // =>
+        //  %6:_(s32), %7:_(s32), %8:_(s32), %9:_(s32) = G_UNMERGE_VALUES %0
+        //  %2:_(s8) = G_TRUNC %6
+        //  %3:_(s8) = G_TRUNC %7
+        //  %4:_(s8) = G_TRUNC %8
+        //  %5:_(s8) = G_TRUNC %9
+
+        unsigned UnmergeNumElts =
+            DestTy.isVector() ? CastSrcTy.getNumElements() / NumDefs : 1;
+        LLT UnmergeTy = CastSrcTy.changeNumElements(UnmergeNumElts);
+
+        if (isInstUnsupported(
+                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}))
+          return false;
+
+        Builder.setInstr(MI);
+        auto NewUnmerge = Builder.buildUnmerge(UnmergeTy, CastSrcReg);
+
+        SmallVector<Register, 8> Regs(NumDefs);
+        for (unsigned I = 0; I != NumDefs; ++I)
+          Builder.buildTrunc(MI.getOperand(I), NewUnmerge.getReg(I));
+
+        markInstAndDefDead(MI, CastMI, DeadInsts);
+        return true;
+      }
+    }
+
+    // TODO: support combines with other casts as well
+    return false;
+  }
+
   static bool canFoldMergeOpcode(unsigned MergeOp, unsigned ConvertOp,
                                  LLT OpTy, LLT DestTy) {
     // Check if we found a definition that is like G_MERGE_VALUES.
@@ -435,40 +488,9 @@ public:
 
     if (!MergeI || !canFoldMergeOpcode(MergeI->getOpcode(),
                                        ConvertOp, OpTy, DestTy)) {
-      if (ConvertOp == TargetOpcode::G_TRUNC && OpTy.isVector() &&
-          OpTy.getScalarType() == DestTy.getScalarType()) {
-        Register TruncSrc = SrcDef->getOperand(1).getReg();
-        LLT TruncSrcTy = MRI.getType(TruncSrc);
-
-        //  %1:_(<4 x s8>) = G_TRUNC %0(<4 x s32>)
-        //  %2:_(s8), %3:_(s8), %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %1
-        // =>
-        //  %6:_(s32), %7:_(s32), %8:_(s32), %9:_(s32) = G_UNMERGE_VALUES %0
-        //  %2:_(s8) = G_TRUNC %6
-        //  %3:_(s8) = G_TRUNC %7
-        //  %4:_(s8) = G_TRUNC %8
-        //  %5:_(s8) = G_TRUNC %9
-
-        unsigned UnmergeNumElts = DestTy.isVector() ?
-          TruncSrcTy.getNumElements() / NumDefs : 1;
-        LLT UnmergeTy = TruncSrcTy.changeNumElements(UnmergeNumElts);
-
-        if (isInstUnsupported(
-              {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, TruncSrcTy}}))
-          return false;
-
-        Builder.setInstr(MI);
-        auto NewUnmerge = Builder.buildUnmerge(UnmergeTy, TruncSrc);
-
-        SmallVector<Register, 8> Regs(NumDefs);
-        for (unsigned I = 0; I != NumDefs; ++I)
-          Builder.buildTrunc(MI.getOperand(I), NewUnmerge.getReg(I));
-
-        markInstAndDefDead(MI, *SrcDef, DeadInsts);
-        return true;
-      }
-
-      return false;
+      // We might have a chance to combine later by trying to combine
+      // unmerge(cast) first
+      return tryFoldUnmergeCast(MI, *SrcDef, DeadInsts, UpdatedDefs);
     }
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
