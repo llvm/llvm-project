@@ -58,7 +58,7 @@ public:
 };
 
 /// Describes use of address in as a function call argument.
-struct PassAsArgInfo {
+struct CallInfo {
   /// Function being called.
   const GlobalValue *Callee = nullptr;
   /// Index of argument which pass address.
@@ -68,13 +68,13 @@ struct PassAsArgInfo {
   // Range should never set to empty-set, that is an invalid access range
   // that can cause empty-set to be propagated with ConstantRange::add
   ConstantRange Offset;
-  PassAsArgInfo(const GlobalValue *Callee, size_t ParamNo, ConstantRange Offset)
+  CallInfo(const GlobalValue *Callee, size_t ParamNo, ConstantRange Offset)
       : Callee(Callee), ParamNo(ParamNo), Offset(Offset) {}
 
   StringRef getName() const { return Callee->getName(); }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const PassAsArgInfo &P) {
+raw_ostream &operator<<(raw_ostream &OS, const CallInfo &P) {
   return OS << "@" << P.getName() << "(arg" << P.ParamNo << ", " << P.Offset
             << ")";
 }
@@ -86,7 +86,7 @@ struct UseInfo {
   ConstantRange Range;
 
   // List of calls which pass address as an argument.
-  SmallVector<PassAsArgInfo, 4> Calls;
+  SmallVector<CallInfo, 4> Calls;
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
