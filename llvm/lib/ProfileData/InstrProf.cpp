@@ -1111,6 +1111,8 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   return true;
 }
 
+// FIXME: This is to be removed after switching to the new memop value
+// profiling.
 // Parse the value profile options.
 void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
                                  int64_t &RangeLast) {
