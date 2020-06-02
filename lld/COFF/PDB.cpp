@@ -191,7 +191,7 @@ public:
   DebugSHandler(PDBLinker &linker, ObjFile &file, const CVIndexMap *indexMap)
       : linker(linker), file(file), indexMap(indexMap) {}
 
-  void handleDebugS(lld::coff::SectionChunk &debugS);
+  void handleDebugS(ArrayRef<uint8_t> relocatedDebugContents);
 
   void finish();
 };
@@ -620,15 +620,6 @@ void PDBLinker::mergeSymbolRecords(ObjFile *file, const CVIndexMap &indexMap,
   file->moduleDBI->addSymbolsInBulk(bulkSymbols);
 }
 
-// Allocate memory for a .debug$S / .debug$F section and relocate it.
-static ArrayRef<uint8_t> relocateDebugChunk(SectionChunk &debugChunk) {
-  uint8_t *buffer = bAlloc.Allocate<uint8_t>(debugChunk.getSize());
-  assert(debugChunk.getOutputSectionIdx() == 0 &&
-         "debug sections should not be in output sections");
-  debugChunk.writeTo(buffer);
-  return makeArrayRef(buffer, debugChunk.getSize());
-}
-
 static pdb::SectionContrib createSectionContrib(const Chunk *c, uint32_t modi) {
   OutputSection *os = c ? c->getOutputSection() : nullptr;
   pdb::SectionContrib sc;
@@ -666,12 +657,11 @@ translateStringTableIndex(uint32_t objIndex,
   return pdbStrTable.insert(*expectedString);
 }
 
-void DebugSHandler::handleDebugS(lld::coff::SectionChunk &debugS) {
+void DebugSHandler::handleDebugS(ArrayRef<uint8_t> relocatedDebugContents) {
+  relocatedDebugContents =
+      SectionChunk::consumeDebugMagic(relocatedDebugContents, ".debug$S");
+
   DebugSubsectionArray subsections;
-
-  ArrayRef<uint8_t> relocatedDebugContents = SectionChunk::consumeDebugMagic(
-      relocateDebugChunk(debugS), debugS.getSectionName());
-
   BinaryStreamReader reader(relocatedDebugContents, support::little);
   exitOnErr(reader.readArray(subsections, relocatedDebugContents.size()));
 
@@ -861,6 +851,15 @@ const CVIndexMap *PDBLinker::mergeTypeRecords(TpiSource *source,
   return *r;
 }
 
+// Allocate memory for a .debug$S / .debug$F section and relocate it.
+static ArrayRef<uint8_t> relocateDebugChunk(SectionChunk &debugChunk) {
+  uint8_t *buffer = bAlloc.Allocate<uint8_t>(debugChunk.getSize());
+  assert(debugChunk.getOutputSectionIdx() == 0 &&
+         "debug sections should not be in output sections");
+  debugChunk.writeTo(buffer);
+  return makeArrayRef(buffer, debugChunk.getSize());
+}
+
 void PDBLinker::addDebugSymbols(ObjFile *file, const CVIndexMap *indexMap) {
   ScopedTimer t(symbolMergingTimer);
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
@@ -870,15 +869,16 @@ void PDBLinker::addDebugSymbols(ObjFile *file, const CVIndexMap *indexMap) {
     if (!debugChunk->live || debugChunk->getSize() == 0)
       continue;
 
-    if (debugChunk->getSectionName() == ".debug$S") {
-      dsh.handleDebugS(*debugChunk);
+    bool isDebugS = debugChunk->getSectionName() == ".debug$S";
+    bool isDebugF = debugChunk->getSectionName() == ".debug$F";
+    if (!isDebugS && !isDebugF)
       continue;
-    }
 
-    if (debugChunk->getSectionName() == ".debug$F") {
-      ArrayRef<uint8_t> relocatedDebugContents =
-          relocateDebugChunk(*debugChunk);
+    ArrayRef<uint8_t> relocatedDebugContents = relocateDebugChunk(*debugChunk);
 
+    if (isDebugS) {
+      dsh.handleDebugS(relocatedDebugContents);
+    } else if (isDebugF) {
       FixedStreamArray<object::FpoData> fpoRecords;
       BinaryStreamReader reader(relocatedDebugContents, support::little);
       uint32_t count = relocatedDebugContents.size() / sizeof(object::FpoData);
@@ -888,7 +888,6 @@ void PDBLinker::addDebugSymbols(ObjFile *file, const CVIndexMap *indexMap) {
       // can just copy it.
       for (const object::FpoData &fd : fpoRecords)
         dbiBuilder.addOldFpoData(fd);
-      continue;
     }
   }
 
