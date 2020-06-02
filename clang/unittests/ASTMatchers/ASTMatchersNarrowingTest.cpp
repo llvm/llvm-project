@@ -19,7 +19,7 @@ namespace clang {
 namespace ast_matchers {
 
 TEST(IsExpandedFromMacro, ShouldMatchInFile) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
     void Test() { MY_MACRO(4); }
   )cc";
@@ -27,7 +27,7 @@ TEST(IsExpandedFromMacro, ShouldMatchInFile) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchNested) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
 #define WRAPPER(a) MY_MACRO(a)
     void Test() { WRAPPER(4); }
@@ -36,7 +36,7 @@ TEST(IsExpandedFromMacro, ShouldMatchNested) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchIntermediate) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define IMPL(a) (4 + (a))
 #define MY_MACRO(a) IMPL(a)
 #define WRAPPER(a) MY_MACRO(a)
@@ -46,7 +46,7 @@ TEST(IsExpandedFromMacro, ShouldMatchIntermediate) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchTransitive) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
 #define WRAPPER(a) MY_MACRO(a)
     void Test() { WRAPPER(4); }
@@ -55,7 +55,7 @@ TEST(IsExpandedFromMacro, ShouldMatchTransitive) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchArgument) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
     void Test() {
       int x = 5;
@@ -68,7 +68,7 @@ TEST(IsExpandedFromMacro, ShouldMatchArgument) {
 // Like IsExpandedFromMacroShouldMatchArgumentMacro, but the argument is itself
 // a macro.
 TEST(IsExpandedFromMacro, ShouldMatchArgumentMacroExpansion) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
 #define IDENTITY(a) (a)
     void Test() {
@@ -79,7 +79,7 @@ TEST(IsExpandedFromMacro, ShouldMatchArgumentMacroExpansion) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchWhenInArgument) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
 #define IDENTITY(a) (a)
     void Test() {
@@ -90,7 +90,7 @@ TEST(IsExpandedFromMacro, ShouldMatchWhenInArgument) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchObjectMacro) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define PLUS (2 + 2)
     void Test() {
       PLUS;
@@ -100,7 +100,7 @@ TEST(IsExpandedFromMacro, ShouldMatchObjectMacro) {
 }
 
 TEST(IsExpandedFromMacro, ShouldMatchFromCommandLine) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
     void Test() { FOUR_PLUS_FOUR; }
   )cc";
   EXPECT_TRUE(matchesConditionally(input,
@@ -109,7 +109,7 @@ TEST(IsExpandedFromMacro, ShouldMatchFromCommandLine) {
 }
 
 TEST(IsExpandedFromMacro, ShouldNotMatchBeginOnly) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define ONE_PLUS 1+
   void Test() { ONE_PLUS 4; }
   )cc";
@@ -118,7 +118,7 @@ TEST(IsExpandedFromMacro, ShouldNotMatchBeginOnly) {
 }
 
 TEST(IsExpandedFromMacro, ShouldNotMatchEndOnly) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define PLUS_ONE +1
   void Test() { 4 PLUS_ONE; }
   )cc";
@@ -127,7 +127,7 @@ TEST(IsExpandedFromMacro, ShouldNotMatchEndOnly) {
 }
 
 TEST(IsExpandedFromMacro, ShouldNotMatchDifferentMacro) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
     void Test() { MY_MACRO(4); }
   )cc";
@@ -135,7 +135,7 @@ TEST(IsExpandedFromMacro, ShouldNotMatchDifferentMacro) {
 }
 
 TEST(IsExpandedFromMacro, ShouldNotMatchDifferentInstances) {
-  std::string input = R"cc(
+  StringRef input = R"cc(
 #define FOUR 4
     void Test() { FOUR + FOUR; }
   )cc";
@@ -966,8 +966,8 @@ TEST(Matcher, VarDecl_IsStaticLocal) {
 }
 
 TEST(Matcher, VarDecl_StorageDuration) {
-  std::string T =
-    "void f() { int x; static int y; } int a;static int b;extern int c;";
+  StringRef T =
+      "void f() { int x; static int y; } int a;static int b;extern int c;";
 
   EXPECT_TRUE(matches(T, varDecl(hasName("x"), hasAutomaticStorageDuration())));
   EXPECT_TRUE(
@@ -1629,7 +1629,7 @@ TEST(Matcher, HasNameSupportsOuterClasses) {
 }
 
 TEST(Matcher, HasNameSupportsInlinedNamespaces) {
-  std::string code = "namespace a { inline namespace b { class C; } }";
+  StringRef code = "namespace a { inline namespace b { class C; } }";
   EXPECT_TRUE(matches(code, recordDecl(hasName("a::b::C"))));
   EXPECT_TRUE(matches(code, recordDecl(hasName("a::C"))));
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::b::C"))));
@@ -1637,7 +1637,7 @@ TEST(Matcher, HasNameSupportsInlinedNamespaces) {
 }
 
 TEST(Matcher, HasNameSupportsAnonymousNamespaces) {
-  std::string code = "namespace a { namespace { class C; } }";
+  StringRef code = "namespace a { namespace { class C; } }";
   EXPECT_TRUE(
     matches(code, recordDecl(hasName("a::(anonymous namespace)::C"))));
   EXPECT_TRUE(matches(code, recordDecl(hasName("a::C"))));
@@ -1662,8 +1662,8 @@ TEST(Matcher, HasNameSupportsAnonymousOuterClasses) {
 }
 
 TEST(Matcher, HasNameSupportsFunctionScope) {
-  std::string code =
-    "namespace a { void F(int a) { struct S { int m; }; int i; } }";
+  StringRef code =
+      "namespace a { void F(int a) { struct S { int m; }; int i; } }";
   EXPECT_TRUE(matches(code, varDecl(hasName("i"))));
   EXPECT_FALSE(matches(code, varDecl(hasName("F()::i"))));
 
@@ -1676,7 +1676,7 @@ TEST(Matcher, HasNameSupportsFunctionScope) {
 
 TEST(Matcher, HasNameQualifiedSupportsLinkage) {
   // https://bugs.llvm.org/show_bug.cgi?id=42193
-  std::string code = R"cpp(namespace foo { extern "C" void test(); })cpp";
+  StringRef code = R"cpp(namespace foo { extern "C" void test(); })cpp";
   EXPECT_TRUE(matches(code, functionDecl(hasName("test"))));
   EXPECT_TRUE(matches(code, functionDecl(hasName("foo::test"))));
   EXPECT_TRUE(matches(code, functionDecl(hasName("::foo::test"))));
@@ -1690,7 +1690,7 @@ TEST(Matcher, HasNameQualifiedSupportsLinkage) {
 }
 
 TEST(Matcher, HasAnyName) {
-  const std::string Code = "namespace a { namespace b { class C; } }";
+  StringRef Code = "namespace a { namespace b { class C; } }";
 
   EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("XX", "a::b::C"))));
   EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("a::b::C", "XX"))));
@@ -1756,9 +1756,9 @@ TEST(Matcher, HandlesNullQualTypes) {
 }
 
 TEST(ObjCIvarRefExprMatcher, IvarExpr) {
-  std::string ObjCString =
-    "@interface A @end "
-    "@implementation A { A *x; } - (void) func { x = 0; } @end";
+  StringRef ObjCString =
+      "@interface A @end "
+      "@implementation A { A *x; } - (void) func { x = 0; } @end";
   EXPECT_TRUE(matchesObjC(ObjCString, objcIvarRefExpr()));
   EXPECT_TRUE(matchesObjC(ObjCString, objcIvarRefExpr(
         hasDeclaration(namedDecl(hasName("x"))))));
@@ -2044,7 +2044,7 @@ TEST(Optionally, SubmatchersDoNotMatch) {
 
 // Regression test.
 TEST(Optionally, SubmatchersDoNotMatchButPreserveBindings) {
-  std::string Code = "class A { int a; int b; };";
+  StringRef Code = "class A { int a; int b; };";
   auto Matcher = recordDecl(decl().bind("decl"),
                             optionally(has(fieldDecl(hasName("c")).bind("v"))));
   // "decl" is still bound.
@@ -2796,14 +2796,14 @@ TEST(Matcher, isMain) {
 TEST(OMPExecutableDirective, isStandaloneDirective) {
   auto Matcher = ompExecutableDirective(isStandaloneDirective());
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp taskyield
 })";
@@ -2811,7 +2811,7 @@ void x() {
 }
 
 TEST(OMPExecutableDirective, hasStructuredBlock) {
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 #pragma omp parallel
 ;
@@ -2819,7 +2819,7 @@ void x() {
   EXPECT_TRUE(matchesWithOpenMP(
       Source0, ompExecutableDirective(hasStructuredBlock(nullStmt()))));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 {;}
@@ -2829,7 +2829,7 @@ void x() {
   EXPECT_TRUE(matchesWithOpenMP(
       Source1, ompExecutableDirective(hasStructuredBlock(compoundStmt()))));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp taskyield
 {;}
@@ -2841,34 +2841,34 @@ void x() {
 TEST(OMPExecutableDirective, hasClause) {
   auto Matcher = ompExecutableDirective(hasAnyClause(anything()));
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp parallel default(none)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
 
-  const std::string Source3 = R"(
+  StringRef Source3 = R"(
 void x() {
 #pragma omp parallel default(shared)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source3, Matcher));
 
-  const std::string Source4 = R"(
+  StringRef Source4 = R"(
 void x(int x) {
 #pragma omp parallel num_threads(x)
 ;
@@ -2880,34 +2880,34 @@ TEST(OMPDefaultClause, isNoneKind) {
   auto Matcher =
       ompExecutableDirective(hasAnyClause(ompDefaultClause(isNoneKind())));
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp parallel default(none)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
 
-  const std::string Source3 = R"(
+  StringRef Source3 = R"(
 void x() {
 #pragma omp parallel default(shared)
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source3, Matcher));
 
-  const std::string Source4 = R"(
+  StringRef Source4 = R"(
 void x(int x) {
 #pragma omp parallel num_threads(x)
 ;
@@ -2919,34 +2919,34 @@ TEST(OMPDefaultClause, isSharedKind) {
   auto Matcher =
       ompExecutableDirective(hasAnyClause(ompDefaultClause(isSharedKind())));
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp parallel default(shared)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
 
-  const std::string Source3 = R"(
+  StringRef Source3 = R"(
 void x() {
 #pragma omp parallel default(none)
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source3, Matcher));
 
-  const std::string Source4 = R"(
+  StringRef Source4 = R"(
 void x(int x) {
 #pragma omp parallel num_threads(x)
 ;
@@ -2958,47 +2958,47 @@ TEST(OMPExecutableDirective, isAllowedToContainClauseKind) {
   auto Matcher = ompExecutableDirective(
       isAllowedToContainClauseKind(llvm::omp::OMPC_default));
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp parallel default(none)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
 
-  const std::string Source3 = R"(
+  StringRef Source3 = R"(
 void x() {
 #pragma omp parallel default(shared)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source3, Matcher));
 
-  const std::string Source4 = R"(
+  StringRef Source4 = R"(
 void x(int x) {
 #pragma omp parallel num_threads(x)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source4, Matcher));
 
-  const std::string Source5 = R"(
+  StringRef Source5 = R"(
 void x() {
 #pragma omp taskyield
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source5, Matcher));
 
-  const std::string Source6 = R"(
+  StringRef Source6 = R"(
 void x() {
 #pragma omp task
 ;

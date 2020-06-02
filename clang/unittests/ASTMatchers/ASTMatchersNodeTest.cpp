@@ -95,10 +95,10 @@ TEST(DeclarationMatcher, MatchClass) {
 }
 
 TEST(DeclarationMatcher, translationUnitDecl) {
-  const std::string Code = "int MyVar1;\n"
-    "namespace NameSpace {\n"
-    "int MyVar2;\n"
-    "}  // namespace NameSpace\n";
+  StringRef Code = "int MyVar1;\n"
+                   "namespace NameSpace {\n"
+                   "int MyVar2;\n"
+                   "}  // namespace NameSpace\n";
   EXPECT_TRUE(matches(
     Code, varDecl(hasName("MyVar1"), hasDeclContext(translationUnitDecl()))));
   EXPECT_FALSE(matches(
@@ -208,7 +208,7 @@ TEST(Matcher, UnresolvedLookupExpr) {
 TEST(Matcher, ADLCall) {
   StatementMatcher ADLMatch = callExpr(usesADL());
   StatementMatcher ADLMatchOper = cxxOperatorCallExpr(usesADL());
-  auto NS_Str = R"cpp(
+  StringRef NS_Str = R"cpp(
   namespace NS {
     struct X {};
     void f(X);
@@ -219,10 +219,8 @@ TEST(Matcher, ADLCall) {
   void operator+(MyX, MyX);
 )cpp";
 
-  auto MkStr = [&](std::string Body) -> std::string {
-    std::string S = NS_Str;
-    S += "void test_fn() { " + Body + " }";
-    return S;
+  auto MkStr = [&](StringRef Body) {
+    return (NS_Str + "void test_fn() { " + Body + " }").str();
   };
 
   EXPECT_TRUE(matches(MkStr("NS::X x; f(x);"), ADLMatch));
@@ -612,7 +610,7 @@ TEST(Matcher, BindTemporaryExpression) {
   StatementMatcher TempExpression =
       traverse(ast_type_traits::TK_AsIs, cxxBindTemporaryExpr());
 
-  std::string ClassString = "class string { public: string(); ~string(); }; ";
+  StringRef ClassString = "class string { public: string(); ~string(); }; ";
 
   EXPECT_TRUE(
     matches(ClassString +
@@ -641,8 +639,7 @@ TEST(Matcher, BindTemporaryExpression) {
 }
 
 TEST(MaterializeTemporaryExpr, MatchesTemporary) {
-  std::string ClassString =
-    "class string { public: string(); int length(); }; ";
+  StringRef ClassString = "class string { public: string(); int length(); }; ";
   StatementMatcher TempExpression =
       traverse(ast_type_traits::TK_AsIs, materializeTemporaryExpr());
 
@@ -987,13 +984,13 @@ TEST(ReinterpretCast, DoesNotMatchOtherCasts) {
 }
 
 TEST(FunctionalCast, MatchesSimpleCase) {
-  std::string foo_class = "class Foo { public: Foo(const char*); };";
+  StringRef foo_class = "class Foo { public: Foo(const char*); };";
   EXPECT_TRUE(matches(foo_class + "void r() { Foo f = Foo(\"hello world\"); }",
                       cxxFunctionalCastExpr()));
 }
 
 TEST(FunctionalCast, DoesNotMatchOtherCasts) {
-  std::string FooClass = "class Foo { public: Foo(const char*); };";
+  StringRef FooClass = "class Foo { public: Foo(const char*); };";
   EXPECT_TRUE(
     notMatches(FooClass + "void r() { Foo f = (Foo) \"hello world\"; }",
                cxxFunctionalCastExpr()));
@@ -1115,14 +1112,14 @@ TEST(InitListExpression, MatchesInitListExpression) {
 }
 
 TEST(CXXStdInitializerListExpression, MatchesCXXStdInitializerListExpression) {
-  const std::string code = "namespace std {"
-                           "template <typename> class initializer_list {"
-                           "  public: initializer_list() noexcept {}"
-                           "};"
-                           "}"
-                           "struct A {"
-                           "  A(std::initializer_list<int>) {}"
-                           "};";
+  StringRef code = "namespace std {"
+                   "template <typename> class initializer_list {"
+                   "  public: initializer_list() noexcept {}"
+                   "};"
+                   "}"
+                   "struct A {"
+                   "  A(std::initializer_list<int>) {}"
+                   "};";
   EXPECT_TRUE(
       matches(code + "A a{0};",
               traverse(ast_type_traits::TK_AsIs,
@@ -1364,7 +1361,7 @@ TEST(TypeMatching, PointerTypes) {
     "int* b; int* * const a = &b;",
     loc(qualType(isConstQualified(), pointerType()))));
 
-  std::string Fragment = "struct A { int i; }; int A::* ptr = &A::i;";
+  StringRef Fragment = "struct A { int i; }; int A::* ptr = &A::i;";
   EXPECT_TRUE(notMatches(Fragment, varDecl(hasName("ptr"),
                                            hasType(blockPointerType()))));
   EXPECT_TRUE(matches(Fragment, varDecl(hasName("ptr"),
@@ -1418,11 +1415,11 @@ TEST(TypeMatching, PointerTypes) {
 }
 
 TEST(TypeMatching, AutoRefTypes) {
-  std::string Fragment = "auto a = 1;"
-    "auto b = a;"
-    "auto &c = a;"
-    "auto &&d = c;"
-    "auto &&e = 2;";
+  StringRef Fragment = "auto a = 1;"
+                       "auto b = a;"
+                       "auto &c = a;"
+                       "auto &&d = c;"
+                       "auto &&e = 2;";
   EXPECT_TRUE(notMatches(Fragment, varDecl(hasName("a"),
                                            hasType(referenceType()))));
   EXPECT_TRUE(notMatches(Fragment, varDecl(hasName("b"),
@@ -1504,11 +1501,11 @@ TEST(TypeMatching, MatchesElaboratedType) {
 }
 
 TEST(TypeMatching, MatchesSubstTemplateTypeParmType) {
-  const std::string code = "template <typename T>"
-    "int F() {"
-    "  return 1 + T();"
-    "}"
-    "int i = F<int>();";
+  StringRef code = "template <typename T>"
+                   "int F() {"
+                   "  return 1 + T();"
+                   "}"
+                   "int i = F<int>();";
   EXPECT_FALSE(matches(code, binaryOperator(hasLHS(
     expr(hasType(substTemplateTypeParmType()))))));
   EXPECT_TRUE(matches(code, binaryOperator(hasRHS(
@@ -1650,7 +1647,7 @@ TEST(TypedefNameDeclMatcher, Match) {
 }
 
 TEST(TypeAliasTemplateDeclMatcher, Match) {
-  std::string Code = R"(
+  StringRef Code = R"(
     template <typename T>
     class X { T t; };
 
@@ -1669,21 +1666,20 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
   // don't find ObjCMessageExpr where none are present
   EXPECT_TRUE(notMatchesObjC("", objcMessageExpr(anything())));
 
-  std::string Objc1String =
-    "@interface Str "
-      " - (Str *)uppercaseString;"
-      "@end "
-      "@interface foo "
-      "- (void)contents;"
-      "- (void)meth:(Str *)text;"
-      "@end "
-      " "
-      "@implementation foo "
-      "- (void) meth:(Str *)text { "
-      "  [self contents];"
-      "  Str *up = [text uppercaseString];"
-      "} "
-      "@end ";
+  StringRef Objc1String = "@interface Str "
+                          " - (Str *)uppercaseString;"
+                          "@end "
+                          "@interface foo "
+                          "- (void)contents;"
+                          "- (void)meth:(Str *)text;"
+                          "@end "
+                          " "
+                          "@implementation foo "
+                          "- (void) meth:(Str *)text { "
+                          "  [self contents];"
+                          "  Str *up = [text uppercaseString];"
+                          "} "
+                          "@end ";
   EXPECT_TRUE(matchesObjC(
     Objc1String,
     objcMessageExpr(anything())));
@@ -1724,24 +1720,22 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
 }
 
 TEST(ObjCDeclMatcher, CoreDecls) {
-  std::string ObjCString =
-    "@protocol Proto "
-    "- (void)protoDidThing; "
-    "@end "
-    "@interface Thing "
-    "@property int enabled; "
-    "@end "
-    "@interface Thing (ABC) "
-    "- (void)abc_doThing; "
-    "@end "
-    "@implementation Thing "
-    "{ id _ivar; } "
-    "- (void)anything {} "
-    "@end "
-    "@implementation Thing (ABC) "
-    "- (void)abc_doThing {} "
-    "@end "
-    ;
+  StringRef ObjCString = "@protocol Proto "
+                         "- (void)protoDidThing; "
+                         "@end "
+                         "@interface Thing "
+                         "@property int enabled; "
+                         "@end "
+                         "@interface Thing (ABC) "
+                         "- (void)abc_doThing; "
+                         "@end "
+                         "@implementation Thing "
+                         "{ id _ivar; } "
+                         "- (void)anything {} "
+                         "@end "
+                         "@implementation Thing (ABC) "
+                         "- (void)abc_doThing {} "
+                         "@end ";
 
   EXPECT_TRUE(matchesObjC(
     ObjCString,
@@ -1773,13 +1767,12 @@ TEST(ObjCDeclMatcher, CoreDecls) {
 }
 
 TEST(ObjCStmtMatcher, ExceptionStmts) {
-  std::string ObjCString =
-    "void f(id obj) {"
-    "  @try {"
-    "    @throw obj;"
-    "  } @catch (...) {"
-    "  } @finally {}"
-    "}";
+  StringRef ObjCString = "void f(id obj) {"
+                         "  @try {"
+                         "    @throw obj;"
+                         "  } @catch (...) {"
+                         "  } @finally {}"
+                         "}";
 
   EXPECT_TRUE(matchesObjC(
     ObjCString,
@@ -1796,35 +1789,34 @@ TEST(ObjCStmtMatcher, ExceptionStmts) {
 }
 
 TEST(ObjCAutoreleaseMatcher, AutoreleasePool) {
-  std::string ObjCString =
-    "void f() {"
-    "@autoreleasepool {"
-    "  int x = 1;"
-    "}"
-    "}";
+  StringRef ObjCString = "void f() {"
+                         "@autoreleasepool {"
+                         "  int x = 1;"
+                         "}"
+                         "}";
   EXPECT_TRUE(matchesObjC(ObjCString, autoreleasePoolStmt()));
-  std::string ObjCStringNoPool = "void f() { int x = 1; }";
+  StringRef ObjCStringNoPool = "void f() { int x = 1; }";
   EXPECT_FALSE(matchesObjC(ObjCStringNoPool, autoreleasePoolStmt()));
 }
 
 TEST(OMPExecutableDirective, Matches) {
   auto Matcher = stmt(ompExecutableDirective());
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp taskyield
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 ;
 })";
@@ -1834,34 +1826,34 @@ void x() {
 TEST(OMPDefaultClause, Matches) {
   auto Matcher = ompExecutableDirective(hasAnyClause(ompDefaultClause()));
 
-  const std::string Source0 = R"(
+  StringRef Source0 = R"(
 void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 
-  const std::string Source1 = R"(
+  StringRef Source1 = R"(
 void x() {
 #pragma omp parallel
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source1, Matcher));
 
-  const std::string Source2 = R"(
+  StringRef Source2 = R"(
 void x() {
 #pragma omp parallel default(none)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source2, Matcher));
 
-  const std::string Source3 = R"(
+  StringRef Source3 = R"(
 void x() {
 #pragma omp parallel default(shared)
 ;
 })";
   EXPECT_TRUE(matchesWithOpenMP(Source3, Matcher));
 
-  const std::string Source4 = R"(
+  StringRef Source4 = R"(
 void x(int x) {
 #pragma omp parallel num_threads(x)
 ;
@@ -1871,7 +1863,7 @@ void x(int x) {
 
 TEST(MatchFinderAPI, matchesDynamic) {
 
-  std::string SourceCode = "struct A { void f() {} };";
+  StringRef SourceCode = "struct A { void f() {} };";
   auto Matcher = functionDecl(isDefinition()).bind("method");
 
   auto astUnit = tooling::buildASTFromCode(SourceCode);
