@@ -350,6 +350,9 @@ public:
     const LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
     const LLT SrcTy = MRI.getType(MI.getOperand(NumDefs).getReg());
 
+    const unsigned CastSrcSize = CastSrcTy.getSizeInBits();
+    const unsigned DestSize = DestTy.getSizeInBits();
+
     if (CastOpc == TargetOpcode::G_TRUNC) {
       if (SrcTy.isVector() && SrcTy.getScalarType() == DestTy.getScalarType()) {
         //  %1:_(<4 x s8>) = G_TRUNC %0(<4 x s32>)
@@ -376,6 +379,41 @@ public:
         for (unsigned I = 0; I != NumDefs; ++I)
           Builder.buildTrunc(MI.getOperand(I), NewUnmerge.getReg(I));
 
+        markInstAndDefDead(MI, CastMI, DeadInsts);
+        return true;
+      }
+
+      if (CastSrcTy.isScalar() && SrcTy.isScalar() && !DestTy.isVector()) {
+        //  %1:_(s16) = G_TRUNC %0(s32)
+        //  %2:_(s8), %3:_(s8) = G_UNMERGE_VALUES %1
+        // =>
+        //  %2:_(s8), %3:_(s8), %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %0
+
+        // Unmerge(trunc) can be combined if the trunc source size is a multiple
+        // of the unmerge destination size
+        if (CastSrcSize % DestSize != 0)
+          return false;
+
+        // Check if the new unmerge is supported
+        if (isInstUnsupported(
+                {TargetOpcode::G_UNMERGE_VALUES, {DestTy, CastSrcTy}}))
+          return false;
+
+        // Gather the original destination registers and create new ones for the
+        // unused bits
+        const unsigned NewNumDefs = CastSrcSize / DestSize;
+        SmallVector<Register, 2> DstRegs(NewNumDefs);
+        for (unsigned Idx = 0; Idx < NewNumDefs; ++Idx) {
+          if (Idx < NumDefs)
+            DstRegs[Idx] = MI.getOperand(Idx).getReg();
+          else
+            DstRegs[Idx] = MRI.createGenericVirtualRegister(DestTy);
+        }
+
+        // Build new unmerge
+        Builder.setInstr(MI);
+        Builder.buildUnmerge(DstRegs, CastSrcReg);
+        UpdatedDefs.append(DstRegs.begin(), DstRegs.begin() + NumDefs);
         markInstAndDefDead(MI, CastMI, DeadInsts);
         return true;
       }
