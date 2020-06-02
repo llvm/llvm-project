@@ -268,7 +268,7 @@ class TypePromotionTransaction;
     const TargetMachine *TM = nullptr;
     const TargetSubtargetInfo *SubtargetInfo;
     const TargetLowering *TLI = nullptr;
-    const TargetRegisterInfo *TRI = nullptr;
+    const TargetRegisterInfo *TRI;
     const TargetTransformInfo *TTI = nullptr;
     const TargetLibraryInfo *TLInfo;
     const LoopInfo *LI;
