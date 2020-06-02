@@ -82,13 +82,13 @@ TEST(LabelStmt, Range) {
 TEST(ParmVarDecl, KNRLocation) {
   LocationVerifier<ParmVarDecl> Verifier;
   Verifier.expectLocation(1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
 }
 
 TEST(ParmVarDecl, KNRRange) {
   RangeVerifier<ParmVarDecl> Verifier;
   Verifier.expectRange(1, 8, 1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
 }
 
 TEST(CXXNewExpr, ArrayRange) {
@@ -814,7 +814,7 @@ TEST(FunctionDecl, ExceptionSpecifications) {
   std::vector<std::string> Args;
   Args.push_back("-fms-extensions");
   EXPECT_TRUE(Verifier.match("void f() throw(...);\n", loc(functionType()),
-                             Args, Lang_CXX));
+                             Args, Lang_CXX03));
 
   Verifier.expectRange(1, 10, 1, 10);
   EXPECT_TRUE(

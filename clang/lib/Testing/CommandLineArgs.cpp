@@ -15,14 +15,14 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   std::vector<std::string> Args;
   // Test with basic arguments.
   switch (Lang) {
-  case Lang_C:
-    Args = {"-x", "c", "-std=c99"};
-    break;
   case Lang_C89:
     Args = {"-x", "c", "-std=c89"};
     break;
-  case Lang_CXX:
-    Args = {"-std=c++98", "-frtti"};
+  case Lang_C99:
+    Args = {"-x", "c", "-std=c99"};
+    break;
+  case Lang_CXX03:
+    Args = {"-std=c++03", "-frtti"};
     break;
   case Lang_CXX11:
     Args = {"-std=c++11", "-frtti"};
@@ -33,8 +33,8 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   case Lang_CXX17:
     Args = {"-std=c++17", "-frtti"};
     break;
-  case Lang_CXX2a:
-    Args = {"-std=c++2a", "-frtti"};
+  case Lang_CXX20:
+    Args = {"-std=c++20", "-frtti"};
     break;
   case Lang_OBJCXX:
     Args = {"-x", "objective-c++", "-frtti"};
