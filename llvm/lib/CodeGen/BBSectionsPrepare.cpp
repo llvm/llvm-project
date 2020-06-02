@@ -9,15 +9,15 @@
 // BBSectionsPrepare implementation.
 //
 // The purpose of this pass is to assign sections to basic blocks when
-// -fbasicblock-sections= option is used. Further, with profile information only
-// the subset of basic blocks with profiles are placed in separate sections and
-// the rest are grouped in a cold section. The exception handling blocks are
+// -fbasic-block-sections= option is used. Further, with profile information
+// only the subset of basic blocks with profiles are placed in separate sections
+// and the rest are grouped in a cold section. The exception handling blocks are
 // treated specially to ensure they are all in one seciton.
 //
 // Basic Block Sections
 // ====================
 //
-// With option, -fbasicblock-sections=list, every function may be split into
+// With option, -fbasic-block-sections=list, every function may be split into
 // clusters of basic blocks. Every cluster will be emitted into a separate
 // section with its basic blocks sequenced in the given order. To get the
 // optimized performance, the clusters must form an optimal BB layout for the
@@ -48,7 +48,7 @@
 // Basic Block Labels
 // ==================
 //
-// With -fbasicblock-sections=labels, or when a basic block is placed in a
+// With -fbasic-block-sections=labels, or when a basic block is placed in a
 // unique section, it is labelled with a symbol.  This allows easy mapping of
 // virtual addresses from PMU profiles back to the corresponding basic blocks.
 // Since the number of basic blocks is large, the labeling bloats the symbol
