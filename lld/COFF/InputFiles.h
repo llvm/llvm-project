@@ -285,18 +285,18 @@ private:
   std::vector<SectionChunk *> guardFidChunks;
   std::vector<SectionChunk *> guardLJmpChunks;
 
-  // This vector contains the same chunks as Chunks, but they are
-  // indexed such that you can get a SectionChunk by section index.
-  // Nonexistent section indices are filled with null pointers.
-  // (Because section number is 1-based, the first slot is always a
-  // null pointer.)
-  std::vector<SectionChunk *> sparseChunks;
-
   // This vector contains a list of all symbols defined or referenced by this
   // file. They are indexed such that you can get a Symbol by symbol
   // index. Nonexistent indices (which are occupied by auxiliary
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
+
+  // This vector contains the same chunks as Chunks, but they are
+  // indexed such that you can get a SectionChunk by section index.
+  // Nonexistent section indices are filled with null pointers.
+  // (Because section number is 1-based, the first slot is always a
+  // null pointer.) This vector is only valid during initialization.
+  std::vector<SectionChunk *> sparseChunks;
 
   DWARFCache *dwarf = nullptr;
 };
