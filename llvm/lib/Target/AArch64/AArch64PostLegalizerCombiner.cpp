@@ -28,6 +28,21 @@
 
 using namespace llvm;
 
+/// Determines if \p M is a shuffle vector mask for a UZP of \p NumElts.
+/// Whether or not G_UZP1 or G_UZP2 should be used is stored in \p WhichResult.
+static bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
+                      unsigned &WhichResult) {
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    // Skip undef indices.
+    if (M[i] < 0)
+      continue;
+    if (static_cast<unsigned>(M[i]) != 2 * i + WhichResult)
+      return false;
+  }
+  return true;
+}
+
 /// \return true if \p M is a zip mask for a shuffle vector of \p NumElts.
 /// Whether or not G_ZIP1 or G_ZIP2 should be used is stored in \p WhichResult.
 static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
@@ -47,6 +62,23 @@ static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with
+/// a G_UZP1 or G_UZP2 instruction.
+///
+/// \param [in] MI - The shuffle vector instruction.
+/// \param [out] Opc - Either G_UZP1 or G_UZP2 on success.
+static bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     unsigned &Opc) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  unsigned WhichResult;
+  ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
+  unsigned NumElts = MRI.getType(MI.getOperand(0).getReg()).getNumElements();
+  if (!isUZPMask(ShuffleMask, NumElts, WhichResult))
+    return false;
+  Opc = (WhichResult == 0) ? AArch64::G_UZP1 : AArch64::G_UZP2;
+  return true;
+}
+
 static bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
                      unsigned &Opc) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
@@ -59,7 +91,9 @@ static bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool applyZip(MachineInstr &MI, unsigned Opc) {
+/// Replace a G_SHUFFLE_VECTOR instruction with a pseudo.
+/// \p Opc is the opcode to use. \p MI is the G_SHUFFLE_VECTOR.
+static bool applyShuffleVectorPseudo(MachineInstr &MI, unsigned Opc) {
   MachineIRBuilder MIRBuilder(MI);
   MIRBuilder.buildInstr(Opc, {MI.getOperand(0).getReg()},
                         {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
