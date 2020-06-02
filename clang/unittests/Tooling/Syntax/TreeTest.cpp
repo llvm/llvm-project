@@ -52,14 +52,14 @@ struct TestClangConfig {
   std::string Target;
 
   bool isCXX() const {
-    return Language == Lang_CXX || Language == Lang_CXX11 ||
+    return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX2a;
+           Language == Lang_CXX20;
   }
 
   bool isCXX11OrLater() const {
     return Language == Lang_CXX11 || Language == Lang_CXX14 ||
-           Language == Lang_CXX17 || Language == Lang_CXX2a;
+           Language == Lang_CXX17 || Language == Lang_CXX20;
   }
 
   bool hasDelayedTemplateParsing() const {
@@ -88,8 +88,8 @@ struct TestClangConfig {
   static std::vector<TestClangConfig> &allConfigs() {
     static std::vector<TestClangConfig> all_configs = []() {
       std::vector<TestClangConfig> all_configs;
-      for (TestLanguage lang : {Lang_C, Lang_C89, Lang_CXX, Lang_CXX11,
-                                Lang_CXX14, Lang_CXX17, Lang_CXX2a}) {
+      for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
+                                Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
         TestClangConfig config;
         config.Language = lang;
         config.Target = "x86_64-pc-linux-gnu";
