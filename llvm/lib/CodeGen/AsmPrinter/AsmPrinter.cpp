@@ -451,8 +451,13 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
       return;
     }
     LLVM_FALLTHROUGH;
-  case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
+    if (MAI->hasDotExternDirective()) {
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Extern);
+      return;
+    }
+    LLVM_FALLTHROUGH;
+  case GlobalValue::AppendingLinkage:
     llvm_unreachable("Should never emit this");
   }
   llvm_unreachable("Unknown linkage type!");
@@ -475,10 +480,14 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assembler would otherwise be conservative and assume a global default
   // visibility symbol can be interposable, even if the code generator already
   // assumed it.
-  if (TM.getTargetTriple().isOSBinFormatELF() &&
-      GlobalObject::isExternalLinkage(GV.getLinkage()) && GV.isDSOLocal() &&
-      !GV.isDeclaration() && !isa<GlobalIFunc>(GV) && !GV.hasComdat())
-    return getSymbolWithGlobalValueBase(&GV, "$local");
+  if (TM.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
+    const Module &M = *GV.getParent();
+    if (TM.getRelocationModel() != Reloc::Static &&
+        M.getPIELevel() == PIELevel::Default)
+      if (GV.isDSOLocal() || (TM.getTargetTriple().isX86() &&
+                              GV.getParent()->noSemanticInterposition()))
+        return getSymbolWithGlobalValueBase(&GV, "$local");
+  }
   return TM.getSymbol(&GV);
 }
 
@@ -1513,6 +1522,8 @@ bool AsmPrinter::doFinalization(Module &M) {
   // Emit remaining GOT equivalent globals.
   emitGlobalGOTEquivs();
 
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+
   // Emit linkage(XCOFF) and visibility info for declarations
   for (const Function &F : M) {
     if (!F.isDeclarationForLinker())
@@ -1523,8 +1534,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     if (TM.getTargetTriple().isOSBinFormatXCOFF() && !F.isIntrinsic()) {
 
       // Get the function entry point symbol.
-      MCSymbol *FnEntryPointSym = OutContext.getOrCreateSymbol(
-          "." + cast<MCSymbolXCOFF>(Name)->getUnqualifiedName());
+      MCSymbol *FnEntryPointSym = TLOF.getFunctionEntryPointSymbol(&F, TM);
       if (cast<MCSymbolXCOFF>(FnEntryPointSym)->hasRepresentedCsectSet())
         // Emit linkage for the function entry point.
         emitLinkage(&F, FnEntryPointSym);
@@ -1545,8 +1555,6 @@ bool AsmPrinter::doFinalization(Module &M) {
   // not come after debug info.
   if (remarks::RemarkStreamer *RS = M.getContext().getMainRemarkStreamer())
     emitRemarksSection(*RS);
-
-  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
@@ -1796,8 +1804,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
                                " initalized first.");
 
     // Get the function entry point symbol.
-    CurrentFnSym = OutContext.getOrCreateSymbol(
-        "." + cast<MCSymbolXCOFF>(CurrentFnDescSym)->getUnqualifiedName());
+    CurrentFnSym = getObjFileLowering().getFunctionEntryPointSymbol(&F, TM);
   }
 
   CurrentFnSymForSize = CurrentFnSym;

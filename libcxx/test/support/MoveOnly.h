@@ -24,17 +24,19 @@ class MoveOnly
     int data_;
 public:
     constexpr MoveOnly(int data = 1) : data_(data) {}
-    constexpr MoveOnly(MoveOnly&& x)
+    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x)
         : data_(x.data_) {x.data_ = 0;}
-    constexpr MoveOnly& operator=(MoveOnly&& x)
+    TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& x)
         {data_ = x.data_; x.data_ = 0; return *this;}
 
     constexpr int get() const {return data_;}
 
     constexpr bool operator==(const MoveOnly& x) const {return data_ == x.data_;}
     constexpr bool operator< (const MoveOnly& x) const {return data_ <  x.data_;}
-    constexpr MoveOnly operator+(const MoveOnly& x) const { return MoveOnly{data_ + x.data_}; }
-    constexpr MoveOnly operator*(const MoveOnly& x) const { return MoveOnly{data_ * x.data_}; }
+    TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
+        { return MoveOnly{data_ + x.data_}; }
+    TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
+        { return MoveOnly{data_ * x.data_}; }
 };
 
 namespace std {

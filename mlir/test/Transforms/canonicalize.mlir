@@ -971,3 +971,15 @@ func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: i
   // CHECK:  memref_cast{{.*}}: memref<3x4xf32, #[[map0]]> to memref<3x4xf32, #[[map1]]>
   return %1: memref<3x4xf32, offset:?, strides:[?, 1]>
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_element_from_tensor_from_elements
+func @extract_element_from_tensor_from_elements(%element : index) -> index {
+  // CHECK-SAME: ([[ARG:%.*]]: index)
+  %c0 = constant 0 : index
+  %tensor = tensor_from_elements(%element) : tensor<1xindex>
+  %extracted_element = extract_element %tensor[%c0] : tensor<1xindex>
+  // CHECK: [[ARG]] : index
+  return %extracted_element : index
+}

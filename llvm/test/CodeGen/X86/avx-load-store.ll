@@ -220,8 +220,7 @@ define void @f_f() nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm0
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
 ; CHECK-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 ;
@@ -238,13 +237,12 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:    jne .LBB9_3
 ; CHECK_O0-NEXT:    jmp .LBB9_4
 ; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
-; CHECK_O0-NEXT:    movl $-1, %eax
-; CHECK_O0-NEXT:    vmovd %eax, %xmm0
+; CHECK_O0-NEXT:    vmovdqa {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK_O0-NEXT:    vmovdqa %xmm0, %xmm0
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
-; CHECK_O0-NEXT:    # implicit-def: $rcx
+; CHECK_O0-NEXT:    # implicit-def: $rax
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
-; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rcx)
+; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rax)
 ; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed

@@ -86,20 +86,32 @@ public:
     mpfr_init2(value, mpfrPrecision);
     MPFRNumber mpfrInput(rawValue);
     switch (op) {
-    case OP_Abs:
+    case Operation::Abs:
       mpfr_abs(value, mpfrInput.value, MPFR_RNDN);
       break;
-    case OP_Cos:
+    case Operation::Ceil:
+      mpfr_ceil(value, mpfrInput.value);
+      break;
+    case Operation::Cos:
       mpfr_cos(value, mpfrInput.value, MPFR_RNDN);
       break;
-    case OP_Sin:
-      mpfr_sin(value, mpfrInput.value, MPFR_RNDN);
-      break;
-    case OP_Exp:
+    case Operation::Exp:
       mpfr_exp(value, mpfrInput.value, MPFR_RNDN);
       break;
-    case OP_Exp2:
+    case Operation::Exp2:
       mpfr_exp2(value, mpfrInput.value, MPFR_RNDN);
+      break;
+    case Operation::Floor:
+      mpfr_floor(value, mpfrInput.value);
+      break;
+    case Operation::Round:
+      mpfr_round(value, mpfrInput.value);
+      break;
+    case Operation::Sin:
+      mpfr_sin(value, mpfrInput.value, MPFR_RNDN);
+      break;
+    case Operation::Trunc:
+      mpfr_trunc(value, mpfrInput.value);
       break;
     }
   }

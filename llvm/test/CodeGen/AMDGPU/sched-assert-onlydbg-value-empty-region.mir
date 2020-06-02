@@ -33,13 +33,13 @@ body:             |
   ; CHECK:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK:   [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK:   [[COPY1:%[0-9]+]]:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_]]
-  ; CHECK:   undef %6.sub0:vreg_64 = V_ADD_F32_e32 [[DEF]].sub0, [[COPY1]].sub0, implicit $exec
-  ; CHECK:   dead undef %6.sub1:vreg_64 = V_ADD_F32_e32 [[DEF]].sub1, [[COPY1]].sub0, implicit $exec
+  ; CHECK:   undef %6.sub0:vreg_64 = V_ADD_F32_e32 [[DEF]].sub0, [[COPY1]].sub0, implicit $mode, implicit $exec
+  ; CHECK:   dead undef %6.sub1:vreg_64 = V_ADD_F32_e32 [[DEF]].sub1, [[COPY1]].sub0, implicit $mode, implicit $exec
   ; CHECK:   [[DEF6:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, 0, 0, implicit $exec
-  ; CHECK:   undef %19.sub0:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD1]], [[GLOBAL_LOAD_DWORDX2_]].sub0, implicit $exec
+  ; CHECK:   undef %19.sub0:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD1]], [[GLOBAL_LOAD_DWORDX2_]].sub0, implicit $mode, implicit $exec
   ; CHECK:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK:   %19.sub1:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD]], implicit $exec
+  ; CHECK:   %19.sub1:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
   ; CHECK:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK:   %4.sub1:vreg_64 = V_ADD_U32_e32 [[COPY]], [[COPY]], implicit $exec
   ; CHECK:   GLOBAL_STORE_DWORDX2 %19, %4, 32, 0, 0, 0, implicit $exec
@@ -55,11 +55,11 @@ body:             |
   ; CHECK:   GLOBAL_STORE_DWORD [[DEF7]], [[V_MOV_B32_e32_1]], 0, 0, 0, 0, implicit $exec
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   S_SETREG_IMM32_B32 0, 1
+  ; CHECK:   S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
   ; CHECK:   DBG_VALUE
   ; CHECK:   DBG_VALUE
   ; CHECK:   DBG_VALUE
-  ; CHECK:   S_SETREG_IMM32_B32 0, 1
+  ; CHECK:   S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
   ; CHECK: bb.2:
   ; CHECK:   S_NOP 0, implicit [[COPY]]
   ; CHECK:   S_NOP 0, implicit [[DEF8]]
@@ -74,8 +74,8 @@ body:             |
     undef %4.sub1:vreg_64 = V_ADD_U32_e32 %0, %0, implicit $exec
     %4.sub0:vreg_64 = V_MOV_B32_e32 111, implicit $exec
     %5:vreg_64 = COPY %2
-    undef %6.sub0:vreg_64 = V_ADD_F32_e32 %1.sub0, %5.sub0, implicit $exec
-    %6.sub1:vreg_64 = V_ADD_F32_e32 %1.sub1, %5.sub0, implicit $exec
+    undef %6.sub0:vreg_64 = V_ADD_F32_e32 %1.sub0, %5.sub0, implicit $mode, implicit $exec
+    %6.sub1:vreg_64 = V_ADD_F32_e32 %1.sub1, %5.sub0, implicit $mode, implicit $exec
     %7:vgpr_32 = GLOBAL_LOAD_DWORD %5, 0, 0, 0, 0, implicit $exec
     %8:vreg_64 = IMPLICIT_DEF
     %9:vreg_64 = IMPLICIT_DEF
@@ -88,8 +88,8 @@ body:             |
     %16:vgpr_32 = IMPLICIT_DEF
     %17:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %18:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    undef %19.sub0:vreg_64 = V_ADD_F32_e32 %7, %2.sub0, implicit $exec
-    %19.sub1:vreg_64 = V_ADD_F32_e32 %3, %3, implicit $exec
+    undef %19.sub0:vreg_64 = V_ADD_F32_e32 %7, %2.sub0, implicit $mode, implicit $exec
+    %19.sub1:vreg_64 = V_ADD_F32_e32 %3, %3, implicit $mode, implicit $exec
     GLOBAL_STORE_DWORDX2 %19, %4, 32, 0, 0, 0, implicit $exec
     %11.sub0:vreg_64 = GLOBAL_LOAD_DWORD %9, 0, 0, 0, 0, implicit $exec
     %8.sub0:vreg_64 = GLOBAL_LOAD_DWORD %10, 0, 0, 0, 0, implicit $exec
@@ -101,11 +101,11 @@ body:             |
     GLOBAL_STORE_DWORD %15, %18, 0, 0, 0, 0, implicit $exec
 
   bb.1:
-    S_SETREG_IMM32_B32 0, 1
+    S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
     DBG_VALUE
     DBG_VALUE
     DBG_VALUE
-    S_SETREG_IMM32_B32 0, 1
+    S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
 
   bb.2:
     S_NOP 0, implicit %0

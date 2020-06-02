@@ -776,6 +776,9 @@ struct SIModeRegisterDefaults {
   }
 };
 
+LLVM_READNONE
+bool isInlinableIntLiteral(int64_t Literal);
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

@@ -2,6 +2,7 @@
 
 ; CHECK: .debug_frame contents:
 ; CHECK: 00000000 0000001c ffffffff CIE
+; CHECK-NEXT:   Format:                DWARF32
 ; CHECK-NEXT:   Version:               4
 ; CHECK-NEXT:   Augmentation:          "[llvm:v0.0]"
 ; CHECK-NEXT:   Address size:          8

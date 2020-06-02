@@ -14,6 +14,7 @@
 #include <string>
 
 namespace clang {
+class Decl;
 namespace index {
 
 struct IndexingOptions {
@@ -34,6 +35,12 @@ struct IndexingOptions {
   // Has no effect if IndexFunctionLocals are false.
   bool IndexParametersInDeclarations = false;
   bool IndexTemplateParameters = false;
+
+  // If set, skip indexing inside some declarations for performance.
+  // This prevents traversal, so skipping a struct means its declaration an
+  // members won't be indexed, but references elsewhere to that struct will be.
+  // Currently this is only checked for top-level declarations.
+  std::function<bool(const Decl *)> ShouldTraverseDecl;
 };
 
 } // namespace index

@@ -118,8 +118,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       // to simplify things.
       if (SrcEltTy->isFloatingPointTy()) {
         unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-        Type *SrcIVTy =
-          VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
+        auto *SrcIVTy = FixedVectorType::get(
+            IntegerType::get(C->getContext(), FPWidth), NumSrcElts);
         // Ask IR to do the conversion now that #elts line up.
         C = ConstantExpr::getBitCast(C, SrcIVTy);
       }
@@ -175,8 +175,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   if (DstEltTy->isFloatingPointTy()) {
     // Fold to an vector of integers with same size as our FP type.
     unsigned FPWidth = DstEltTy->getPrimitiveSizeInBits();
-    Type *DestIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumDstElt);
+    auto *DestIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumDstElt);
     // Recursively handle this integer conversion, if possible.
     C = FoldBitCast(C, DestIVTy, DL);
 
@@ -188,8 +188,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
     unsigned FPWidth = SrcEltTy->getPrimitiveSizeInBits();
-    Type *SrcIVTy =
-      VectorType::get(IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
+    auto *SrcIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
     // If IR wasn't able to fold it, bail out.
@@ -1428,6 +1428,15 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::bitreverse:
   case Intrinsic::is_constant:
+  case Intrinsic::experimental_vector_reduce_add:
+  case Intrinsic::experimental_vector_reduce_mul:
+  case Intrinsic::experimental_vector_reduce_and:
+  case Intrinsic::experimental_vector_reduce_or:
+  case Intrinsic::experimental_vector_reduce_xor:
+  case Intrinsic::experimental_vector_reduce_smin:
+  case Intrinsic::experimental_vector_reduce_smax:
+  case Intrinsic::experimental_vector_reduce_umin:
+  case Intrinsic::experimental_vector_reduce_umax:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -1493,6 +1502,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::round:
+  case Intrinsic::roundeven:
   case Intrinsic::trunc:
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
@@ -1501,6 +1511,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::experimental_constrained_floor:
   case Intrinsic::experimental_constrained_round:
+  case Intrinsic::experimental_constrained_roundeven:
   case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::experimental_constrained_rint:
@@ -1645,6 +1656,53 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double), double V,
   return GetConstantFoldFPValue(V, Ty);
 }
 
+Constant *ConstantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(Op->getType());
+  if (!VT)
+    return nullptr;
+  ConstantInt *CI = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
+  if (!CI)
+    return nullptr;
+  APInt Acc = CI->getValue();
+
+  for (unsigned I = 1; I < VT->getNumElements(); I++) {
+    if (!(CI = dyn_cast<ConstantInt>(Op->getAggregateElement(I))))
+      return nullptr;
+    const APInt &X = CI->getValue();
+    switch (IID) {
+    case Intrinsic::experimental_vector_reduce_add:
+      Acc = Acc + X;
+      break;
+    case Intrinsic::experimental_vector_reduce_mul:
+      Acc = Acc * X;
+      break;
+    case Intrinsic::experimental_vector_reduce_and:
+      Acc = Acc & X;
+      break;
+    case Intrinsic::experimental_vector_reduce_or:
+      Acc = Acc | X;
+      break;
+    case Intrinsic::experimental_vector_reduce_xor:
+      Acc = Acc ^ X;
+      break;
+    case Intrinsic::experimental_vector_reduce_smin:
+      Acc = APIntOps::smin(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_smax:
+      Acc = APIntOps::smax(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_umin:
+      Acc = APIntOps::umin(Acc, X);
+      break;
+    case Intrinsic::experimental_vector_reduce_umax:
+      Acc = APIntOps::umax(Acc, X);
+      break;
+    }
+  }
+
+  return ConstantInt::get(Op->getContext(), Acc);
+}
+
 /// Attempt to fold an SSE floating point to integer conversion of a constant
 /// floating point. If roundTowardZero is false, the default IEEE rounding is
 /// used (toward nearest, ties to even). This matches the behavior of the
@@ -1782,6 +1840,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     if (IntrinsicID == Intrinsic::round) {
       U.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::roundeven) {
+      U.roundToIntegral(APFloat::rmNearestTiesToEven);
       return ConstantFP::get(Ty->getContext(), U);
     }
 
@@ -2079,12 +2142,40 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
   }
 
+  if (isa<ConstantAggregateZero>(Operands[0])) {
+    switch (IntrinsicID) {
+    default: break;
+    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::experimental_vector_reduce_smin:
+    case Intrinsic::experimental_vector_reduce_smax:
+    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::experimental_vector_reduce_umax:
+      return ConstantInt::get(Ty, 0);
+    }
+  }
+
   // Support ConstantVector in case we have an Undef in the top.
   if (isa<ConstantVector>(Operands[0]) ||
       isa<ConstantDataVector>(Operands[0])) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::experimental_vector_reduce_smin:
+    case Intrinsic::experimental_vector_reduce_smax:
+    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::experimental_vector_reduce_umax:
+      if (Constant *C = ConstantFoldVectorReduce(IntrinsicID, Op))
+        return C;
+      break;
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvtss2si64:
     case Intrinsic::x86_sse2_cvtsd2si:

@@ -561,3 +561,15 @@ namespace IgnoreUnusedArgSideEffects {
   float &x = h();
 #endif
 }
+
+namespace DefaultArgs {
+  void f(int n = __builtin_LINE()) __attribute__((enable_if(n == 12345, "only callable on line 12345"))); // expected-note {{only callable on line 12345}}
+  void g() { f(); } // expected-error {{no matching function}}
+#line 12345
+  void h() { f(); }
+
+  template<typename T> void x(int n = T()) __attribute__((enable_if(n == 0, ""))) {} // expected-note {{candidate}}
+  void y() { x<int>(); }
+  struct Z { constexpr operator int() const { return 1; } };
+  void z() { x<Z>(); } // expected-error {{no matching function}}
+}

@@ -17,20 +17,25 @@ body:             |
     renamable $r3 = COPY $r29
     BLR implicit $lr, implicit $rm, implicit $r3
 
-    ; CHECK-LABEL: fixedStack:
-    ; CHECK:       - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
-    ; CHECK-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '$cr4',
-    ; CHECK-NEXT:      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
-    ; CHECK-NEXT:      debug-info-location: '' }
-    ; CHECK-LABEL: stack:
+    ; CHECK-LABEL:  fixedStack:
+    ; CHECK-NEXT:   - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4, stack-id: default,
+    ; CHECK-NEXT:       callee-saved-register: '$r29', callee-saved-restored: true, debug-info-variable: '',
+    ; CHECK-NEXT:       debug-info-expression: '', debug-info-location: '' }
+    ; CHECK-NEXT:   - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+    ; CHECK-NEXT:       isImmutable: true, isAliased: false, callee-saved-register: '$cr4',
+    ; CHECK-NEXT:       callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+    ; CHECK-NEXT:       debug-info-location: '' }
+    ; CHECK-LABEL:  stack:
 
     ; CHECK:      bb.0.entry:
     ; CHECK-NEXT:  liveins: $r3, $r29, $cr2, $cr4
 
     ; CHECK:      $r12 = MFCR implicit killed $cr2, implicit killed $cr4
     ; CHECK-NEXT: STW killed $r12, 4, $r1
+    ; CHECK-NEXT: STW killed $r29, -12, $r1 :: (store 4 into %fixed-stack.0)
 
-    ; CHECK:      $r12 = LWZ 4, $r1
+    ; CHECK:      $r29 = LWZ -12, $r1 :: (load 4 from %fixed-stack.0)
+    ; CHECK-NEXT: $r12 = LWZ 4, $r1
     ; CHECK-NEXT: $cr2 = MTOCRF $r12
     ; CHECK-NEXT: $cr4 = MTOCRF killed $r12
 
@@ -50,7 +55,10 @@ body:             |
     BLR implicit $lr, implicit $rm, implicit $r3
 
     ; CHECK-LABEL: fixedStack:
-    ; CHECK:       - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+    ; CHECK-NEXT:  - { id: 0, type: spill-slot, offset: -72, size: 4, alignment: 8, stack-id: default,
+    ; CHECK-NEXT:      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '',
+    ; CHECK-NEXT:      debug-info-expression: '', debug-info-location: '' }
+    ; CHECK-NEXT:  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
     ; CHECK-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '$cr3',
     ; CHECK-NEXT:      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
     ; CHECK-NEXT:      debug-info-location: '' }
@@ -61,6 +69,8 @@ body:             |
 
     ; CHECK:      $r12 = MFCR implicit killed $cr3
     ; CHECK-NEXT: STW killed $r12, 4, $r1
+    ; CHECK-NEXT: STW killed $r14, -72, $r1 :: (store 4 into %fixed-stack.0, align 8)
 
-    ; CHECK:      $r12 = LWZ 4, $r1
+    ; CHECK:      $r14 = LWZ -72, $r1 :: (load 4 from %fixed-stack.0, align 8)
+    ; CHECK-NEXT: $r12 = LWZ 4, $r1
     ; CHECK-NEXT: $cr3 = MTOCRF killed $r12

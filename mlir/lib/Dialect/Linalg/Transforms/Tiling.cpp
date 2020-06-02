@@ -376,7 +376,11 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   // 3. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs(loopRanges.size());
-  GenericLoopNestRangeBuilder<LoopTy>(ivs, loopRanges)([&] {
+  SmallVector<Attribute, 4> iteratorTypes =
+      llvm::to_vector<4>(op.iterator_types().cast<ArrayAttr>().getValue());
+  if (!options.interchangeVector.empty())
+    applyPermutationToVector(iteratorTypes, options.interchangeVector);
+  GenerateLoopNest<LoopTy>::doit(ivs, loopRanges, iteratorTypes, [&] {
     auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
@@ -384,8 +388,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
     // If we have to apply a permutation to the tiled loop nest, we have to
     // reorder the induction variables This permutation is the right one
     // assuming that loopRanges have previously been permuted by
-    // (i,j,k)->(k,i,j) So this permutation should be the inversePermutation of
-    // that one: (d0,d1,d2)->(d2,d0,d1)
+    // (i,j,k)->(k,i,j) So this permutation should be the inversePermutation
+    // of that one: (d0,d1,d2)->(d2,d0,d1)
     if (!options.interchangeVector.empty())
       ivValues = applyMapToValues(b, loc, invPermutationMap, ivValues);
 

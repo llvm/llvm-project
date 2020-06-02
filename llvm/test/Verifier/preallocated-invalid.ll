@@ -89,7 +89,7 @@ define void @preallocated_attribute_type_mismatch() {
     ret void
 }
 
-; CHECK: preallocated operand requires a preallocated bundle
+; CHECK: preallocated operand either requires a preallocated bundle or the call to be musttail
 define void @preallocated_require_bundle() {
     %cs = call token @llvm.call.preallocated.setup(i32 1)
     %x = call i8* @llvm.call.preallocated.arg(token %cs, i32 0) preallocated(i32)
@@ -117,9 +117,22 @@ define void @preallocated_arg_token() {
     ret void
 }
 
-; CHECK: musttail and preallocated not yet supported
-define void @musttail() {
+; CHECK: cannot use preallocated intrinsics on a call without preallocated arguments
+define void @preallocated_no_preallocated_args() {
     %cs = call token @llvm.call.preallocated.setup(i32 0)
-    musttail call void @foo0() ["preallocated"(token %cs)]
+    call void @foo0() ["preallocated"(token %cs)]
+    ret void
+}
+
+; CHECK: preallocated operand either requires a preallocated bundle or the call to be musttail
+define void @musttail_and_bundle(i32* preallocated(i32) %a) {
+    %cs = call token @llvm.call.preallocated.setup(i32 0)
+    musttail call void @musttail_and_bundle(i32* preallocated(i32) %a) ["preallocated"(token %cs)]
+    ret void
+}
+
+; CHECK: cannot guarantee tail call due to mismatched ABI impacting function attributes
+define void @musttail_attr_no_match(i32* preallocated(i32) %a) {
+    musttail call void @musttail_and_bundle(i32* %a)
     ret void
 }

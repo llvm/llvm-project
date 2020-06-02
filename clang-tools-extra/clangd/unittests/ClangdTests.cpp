@@ -211,18 +211,18 @@ int b = a;
   FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
-  auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, "");
-  auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, SourceContents);
-  auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
@@ -247,20 +247,20 @@ int b = a;
   FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
-  auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "";
   Server.addDocument(FooCpp, SourceContents);
-  auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "int a;";
   Server.addDocument(FooCpp, SourceContents);
-  auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);

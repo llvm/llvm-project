@@ -1,8 +1,8 @@
-; RUN: opt < %s -pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -S | FileCheck %s --check-prefix=MEMOP_OPT
-; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -S | FileCheck %s --check-prefix=MEMOP_OPT
-; RUN: opt < %s -pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: opt < %s -pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 --pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: opt < %s -pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pgo-memop-optimize-memcmp-bcmp -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
-; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pgo-memop-optimize-memcmp-bcmp -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
 
 
@@ -57,12 +57,6 @@ for.body3:
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
 ; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   br label %for.inc
-; MEMOP_OPT: [[SWITCH_BW]] = !{!"branch_weights", i32 457, i32 99}
-; Should be 457 total left (original total count 556, minus 99 from specialized
-; value 1, which is removed from VP array. Also, we only end up with 5 total
-; values, since the default max number of promotions is 5 and therefore
-; the rest of the values are ignored when extracting the VP metadata.
-; MEMOP_OPT: [[NEWVP]] = !{!"VP", i32 1, i64 457, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66}
 
 for.inc:
   %inc = add nsw i32 %j.0, 1
@@ -78,6 +72,83 @@ for.inc4:
 for.end6:
   ret void
 }
+
+declare void @consume(i32 %v1, i32 %v2)
+
+define void @foo_memcmp_bcmp(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i32* %a, i32 %n) !prof !27 {
+entry:
+  br label %for.cond
+
+for.cond:
+  %i.0 = phi i32 [ 0, %entry ], [ %inc5, %for.inc4 ]
+  %cmp = icmp slt i32 %i.0, %n
+  br i1 %cmp, label %for.body, label %for.end6, !prof !28
+
+for.body:
+  br label %for.cond1
+
+for.cond1:
+  %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.inc ]
+  %idx.ext = sext i32 %i.0 to i64
+  %add.ptr = getelementptr inbounds i32, i32* %a, i64 %idx.ext
+  %0 = load i32, i32* %add.ptr, align 4
+  %cmp2 = icmp slt i32 %j.0, %0
+  br i1 %cmp2, label %for.body3, label %for.end, !prof !29
+
+for.body3:
+  %add = add nsw i32 %i.0, 1
+  %conv = sext i32 %add to i64
+  %memcmp = call i32 @memcmp(i8* %dst, i8* %src, i64 %conv), !prof !30
+  %bcmp = call i32 @bcmp(i8* %dst2, i8* %src2, i64 %conv), !prof !31
+  call void @consume(i32 %memcmp, i32 %bcmp)
+  br label %for.inc
+
+; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
+; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL:.*]]
+; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
+; MEMOP_OPT: [[CASE_1_LABEL]]:
+; MEMOP_OPT:   %[[RV:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 1)
+; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
+; MEMOP_OPT: [[DEFAULT_LABEL]]:
+; MEMOP_OPT:   %[[RVD:.*]] = call i32 @memcmp(i8* %dst, i8* %src, i64 %conv), !prof [[NEWVP:![0-9]+]]
+; MEMOP_OPT:   br label %[[MERGE_LABEL]]
+; MEMOP_OPT: [[MERGE_LABEL]]:
+; MEMOP_OPT:  %[[PHI:.*]] = phi i32 [ %[[RVD]], %[[DEFAULT_LABEL]] ], [ %[[RV]], %[[CASE_1_LABEL]] ]
+; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
+; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL2:.*]]
+; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]]
+; MEMOP_OPT: [[CASE_1_LABEL2]]:
+; MEMOP_OPT:   %[[RV2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 1)
+; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
+; MEMOP_OPT: [[DEFAULT_LABEL2]]:
+; MEMOP_OPT:   %[[RVD2:.*]] = call i32 @bcmp(i8* %dst2, i8* %src2, i64 %conv), !prof [[NEWVP]]
+; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
+; MEMOP_OPT: [[MERGE_LABEL2]]:
+; MEMOP_OPT:   %[[PHI2:.*]] = phi i32 [ %[[RVD2]], %[[DEFAULT_LABEL2]] ], [ %[[RV2]], %[[CASE_1_LABEL2]] ]
+; MEMOP_OPT:   call void @consume(i32 %[[PHI]], i32 %[[PHI2]])
+; MEMOP_OPT:   br label %for.inc
+
+for.inc:
+  %inc = add nsw i32 %j.0, 1
+  br label %for.cond1
+
+for.end:
+  br label %for.inc4
+
+for.inc4:
+  %inc5 = add nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end6:
+  ret void
+}
+
+; MEMOP_OPT: [[SWITCH_BW]] = !{!"branch_weights", i32 457, i32 99}
+; Should be 457 total left (original total count 556, minus 99 from specialized
+; value 1, which is removed from VP array. Also, we only end up with 5 total
+; values, since the default max number of promotions is 5 and therefore
+; the rest of the values are ignored when extracting the VP metadata.
+; MEMOP_OPT: [[NEWVP]] = !{!"VP", i32 1, i64 457, i64 2, i64 88, i64 3, i64 77, i64 9, i64 72, i64 4, i64 66}
 
 !llvm.module.flags = !{!0}
 
@@ -118,6 +189,9 @@ declare void @llvm.lifetime.start(i64, i8* nocapture)
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
 
+declare i32 @memcmp(i8*, i8*, i64)
+declare i32 @bcmp(i8*, i8*, i64)
+
 declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 ; YAML:      --- !Passed
@@ -127,7 +201,7 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 ; YAML-NEXT: Hotness:         0
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'optimized '
-; YAML-NEXT:   - Intrinsic:       memcpy
+; YAML-NEXT:   - Memop:           memcpy
 ; YAML-NEXT:   - String:          ' with count '
 ; YAML-NEXT:   - Count:           '99'
 ; YAML-NEXT:   - String:          ' out of '
@@ -143,7 +217,39 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 ; YAML-NEXT: Hotness:         0
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'optimized '
-; YAML-NEXT:   - Intrinsic:       memcpy
+; YAML-NEXT:   - Memop:           memcpy
+; YAML-NEXT:   - String:          ' with count '
+; YAML-NEXT:   - Count:           '99'
+; YAML-NEXT:   - String:          ' out of '
+; YAML-NEXT:   - Total:           '556'
+; YAML-NEXT:   - String:          ' for '
+; YAML-NEXT:   - Versions:        '1'
+; YAML-NEXT:   - String:          ' versions'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Passed
+; YAML-NEXT: Pass:            pgo-memop-opt
+; YAML-NEXT: Name:            memopt-opt
+; YAML-NEXT: Function:        foo_memcmp_bcmp
+; YAML-NEXT: Hotness:         0
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'optimized '
+; YAML-NEXT:   - Memop:           memcmp
+; YAML-NEXT:   - String:          ' with count '
+; YAML-NEXT:   - Count:           '99'
+; YAML-NEXT:   - String:          ' out of '
+; YAML-NEXT:   - Total:           '556'
+; YAML-NEXT:   - String:          ' for '
+; YAML-NEXT:   - Versions:        '1'
+; YAML-NEXT:   - String:          ' versions'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Passed
+; YAML-NEXT: Pass:            pgo-memop-opt
+; YAML-NEXT: Name:            memopt-opt
+; YAML-NEXT: Function:        foo_memcmp_bcmp
+; YAML-NEXT: Hotness:         0
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'optimized '
+; YAML-NEXT:   - Memop:           bcmp
 ; YAML-NEXT:   - String:          ' with count '
 ; YAML-NEXT:   - Count:           '99'
 ; YAML-NEXT:   - String:          ' out of '

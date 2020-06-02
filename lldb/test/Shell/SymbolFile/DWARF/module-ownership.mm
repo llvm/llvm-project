@@ -46,7 +46,7 @@ SomeClass *obj1;
 // RUN: lldb-test symbols -dump-clang-ast -find type --language=ObjC++ \
 // RUN:   -compiler-context 'Module:A,Struct:SomeClass' %t.o \
 // RUN:   | FileCheck %s --check-prefix=CHECK-OBJC
-// CHECK-OBJC: ObjCInterfaceDecl {{.*}} imported in A SomeClass
+// CHECK-OBJC: ObjCInterfaceDecl {{.*}} imported in A <undeserialized declarations> SomeClass
 // CHECK-OBJC-NEXT: |-ObjCIvarDecl
 // CHECK-OBJC-NEXT: |-ObjCMethodDecl 0x[[NUMBER:[0-9a-f]+]]{{.*}} imported in A
 // CHECK-OBJC-NEXT: `-ObjCPropertyDecl {{.*}} imported in A number 'int' readonly

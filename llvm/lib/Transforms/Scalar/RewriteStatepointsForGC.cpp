@@ -271,7 +271,7 @@ struct PartiallyConstructedSafepointRecord {
 
   /// The *new* gc.statepoint instruction itself.  This produces the token
   /// that normal path gc.relocates and the gc.result are tied to.
-  Instruction *StatepointToken;
+  GCStatepointInst *StatepointToken;
 
   /// Instruction to which exceptional gc relocates are attached
   /// Makes it easier to iterate through them during relocationViaAlloca.
@@ -1490,12 +1490,14 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
   ArrayRef<Use> CallArgs(Call->arg_begin(), Call->arg_end());
-  ArrayRef<Use> DeoptArgs = GetDeoptBundleOperands(Call);
-  ArrayRef<Use> TransitionArgs;
-  if (auto TransitionBundle =
-          Call->getOperandBundle(LLVMContext::OB_gc_transition)) {
+  Optional<ArrayRef<Use>> DeoptArgs;
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deopt))
+    DeoptArgs = Bundle->Inputs;
+  Optional<ArrayRef<Use>> TransitionArgs;
+  if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_gc_transition)) {
+    TransitionArgs = Bundle->Inputs;
+    // TODO: This flag no longer serves a purpose and can be removed later
     Flags |= uint32_t(StatepointFlags::GCTransition);
-    TransitionArgs = TransitionBundle->Inputs;
   }
 
   // Instead of lowering calls to @llvm.experimental.deoptimize as normal calls
@@ -1544,7 +1546,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   }
 
   // Create the statepoint given all the arguments
-  Instruction *Token = nullptr;
+  GCStatepointInst *Token = nullptr;
   if (auto *CI = dyn_cast<CallInst>(Call)) {
     CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
@@ -1560,7 +1562,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     SPCall->setAttributes(
         legalizeCallAttributes(CI->getContext(), CI->getAttributes()));
 
-    Token = SPCall;
+    Token = cast<GCStatepointInst>(SPCall);
 
     // Put the following gc_result and gc_relocate calls immediately after the
     // the old call (which we're about to delete)
@@ -1587,7 +1589,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     SPInvoke->setAttributes(
         legalizeCallAttributes(II->getContext(), II->getAttributes()));
 
-    Token = SPInvoke;
+    Token = cast<GCStatepointInst>(SPInvoke);
 
     // Generate gc relocates in exceptional path
     BasicBlock *UnwindBlock = II->getUnwindDest();
@@ -1602,7 +1604,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     Instruction *ExceptionalToken = UnwindBlock->getLandingPadInst();
     Result.UnwindToken = ExceptionalToken;
 
-    const unsigned LiveStartIdx = Statepoint(Token).gcArgsStartIdx();
+    const unsigned LiveStartIdx = Token->gcArgsStartIdx();
     CreateGCRelocates(LiveVariables, LiveStartIdx, BasePtrs, ExceptionalToken,
                       Builder);
 
@@ -1650,7 +1652,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   Result.StatepointToken = Token;
 
   // Second, create a gc.relocate for every live variable
-  const unsigned LiveStartIdx = Statepoint(Token).gcArgsStartIdx();
+  const unsigned LiveStartIdx = Token->gcArgsStartIdx();
   CreateGCRelocates(LiveVariables, LiveStartIdx, BasePtrs, Token, Builder);
 }
 
@@ -2407,9 +2409,8 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    Statepoint Statepoint(Info.StatepointToken);
-    Live.insert(Live.end(), Statepoint.gc_args_begin(),
-                Statepoint.gc_args_end());
+    Live.insert(Live.end(), Info.StatepointToken->gc_args_begin(),
+                Info.StatepointToken->gc_args_end());
 #ifndef NDEBUG
     // Do some basic sanity checks on our liveness results before performing
     // relocation.  Relocation can and will turn mistakes in liveness results
@@ -2417,7 +2418,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
-    for (Value *V : Statepoint.gc_args()) {
+    for (Value *V : Info.StatepointToken->gc_args()) {
       if (!isa<Instruction>(V))
         // Non-instruction values trivial dominate all possible uses
         continue;
@@ -2586,7 +2587,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
 
   auto NeedsRewrite = [&TLI](Instruction &I) {
     if (const auto *Call = dyn_cast<CallBase>(&I))
-      return !callsGCLeafFunction(Call, TLI) && !isStatepoint(Call);
+      return !callsGCLeafFunction(Call, TLI) && !isa<GCStatepointInst>(Call);
     return false;
   };
 

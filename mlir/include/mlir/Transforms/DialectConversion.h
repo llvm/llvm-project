@@ -113,6 +113,25 @@ public:
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
+  /// Register a materialization function, which must be convertible to the
+  /// following form:
+  ///   `Optional<Value>(PatternRewriter &, T, ValueRange, Location)`,
+  /// where `T` is any subclass of `Type`. This function is responsible for
+  /// creating an operation, using the PatternRewriter and Location provided,
+  /// that "casts" a range of values into a single value of the given type `T`.
+  /// It must return a Value of the converted type on success, an `llvm::None`
+  /// if it failed but other materialization can be attempted, and `nullptr` on
+  /// unrecoverable failure. It will only be called for (sub)types of `T`.
+  /// Materialization functions must be provided when a type conversion
+  /// results in more than one type, or if a type conversion may persist after
+  /// the conversion has finished.
+  template <typename FnT,
+            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  void addMaterialization(FnT &&callback) {
+    registerMaterialization(
+        wrapMaterialization<T>(std::forward<FnT>(callback)));
+  }
+
   /// Convert the given type. This function should return failure if no valid
   /// conversion exists, success otherwise. If the new set of types is empty,
   /// the type is removed and any usages of the existing value are expected to
@@ -148,18 +167,10 @@ public:
   /// valid conversion for the signature on success, None otherwise.
   Optional<SignatureConversion> convertBlockSignature(Block *block);
 
-  /// This hook allows for materializing a conversion from a set of types into
-  /// one result type by generating a cast operation of some kind. The generated
-  /// operation should produce one result, of 'resultType', with the provided
-  /// 'inputs' as operands. This hook must be overridden when a type conversion
-  /// results in more than one type, or if a type conversion may persist after
-  /// the conversion has finished.
-  virtual Operation *materializeConversion(PatternRewriter &rewriter,
-                                           Type resultType,
-                                           ArrayRef<Value> inputs,
-                                           Location loc) {
-    llvm_unreachable("expected 'materializeConversion' to be overridden");
-  }
+  /// Materialize a conversion from a set of types into one result type by
+  /// generating a cast operation of some kind.
+  Value materializeConversion(PatternRewriter &rewriter, Location loc,
+                              Type resultType, ValueRange inputs);
 
 private:
   /// The signature of the callback used to convert a type. If the new set of
@@ -167,6 +178,9 @@ private:
   /// are expected to be removed during conversion.
   using ConversionCallbackFn =
       std::function<Optional<LogicalResult>(Type, SmallVectorImpl<Type> &)>;
+
+  using MaterializationCallbackFn = std::function<Optional<Value>(
+      PatternRewriter &, Type, ValueRange, Location)>;
 
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
@@ -204,8 +218,30 @@ private:
     conversions.emplace_back(std::move(callback));
   }
 
+  /// Generate a wrapper for the given materialization callback. The callback
+  /// may take any subclass of `Type` and the wrapper will check for the target
+  /// type to be of the expected class before calling the callback.
+  template <typename T, typename FnT>
+  MaterializationCallbackFn wrapMaterialization(FnT &&callback) {
+    return [callback = std::forward<FnT>(callback)](
+               PatternRewriter &rewriter, Type resultType, ValueRange inputs,
+               Location loc) -> Optional<Value> {
+      if (T derivedType = resultType.dyn_cast<T>())
+        return callback(rewriter, derivedType, inputs, loc);
+      return llvm::None;
+    };
+  }
+
+  /// Register a materialization.
+  void registerMaterialization(MaterializationCallbackFn &&callback) {
+    materializations.emplace_back(std::move(callback));
+  }
+
   /// The set of registered conversion functions.
   SmallVector<ConversionCallbackFn, 4> conversions;
+
+  /// The list of registered materialization functions.
+  SmallVector<MaterializationCallbackFn, 2> materializations;
 };
 
 //===----------------------------------------------------------------------===//

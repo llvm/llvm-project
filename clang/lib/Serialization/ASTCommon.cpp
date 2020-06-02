@@ -240,6 +240,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
+  case BuiltinType::IncompleteMatrixIdx:
+    ID = PREDEF_TYPE_INCOMPLETE_MATRIX_IDX;
+    break;
   case BuiltinType::OMPArraySection:
     ID = PREDEF_TYPE_OMP_ARRAY_SECTION;
     break;

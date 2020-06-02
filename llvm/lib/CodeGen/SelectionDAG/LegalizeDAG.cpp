@@ -1600,9 +1600,13 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Chain = SP.getValue(1);
   unsigned Align = cast<ConstantSDNode>(Tmp3)->getZExtValue();
-  unsigned StackAlign =
-      DAG.getSubtarget().getFrameLowering()->getStackAlignment();
-  Tmp1 = DAG.getNode(ISD::SUB, dl, VT, SP, Size);       // Value
+  const TargetFrameLowering *TFL = DAG.getSubtarget().getFrameLowering();
+  unsigned Opc =
+    TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ?
+    ISD::ADD : ISD::SUB;
+
+  unsigned StackAlign = TFL->getStackAlignment();
+  Tmp1 = DAG.getNode(Opc, dl, VT, SP, Size);       // Value
   if (Align > StackAlign)
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
                        DAG.getConstant(-(uint64_t)Align, dl, VT));
@@ -4107,6 +4111,14 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::ROUND_F128,
                     RTLIB::ROUND_PPCF128, Results);
     break;
+  case ISD::FROUNDEVEN:
+  case ISD::STRICT_FROUNDEVEN:
+    ExpandFPLibCall(Node, RTLIB::ROUNDEVEN_F32,
+                    RTLIB::ROUNDEVEN_F64,
+                    RTLIB::ROUNDEVEN_F80,
+                    RTLIB::ROUNDEVEN_F128,
+                    RTLIB::ROUNDEVEN_PPCF128, Results);
+    break;
   case ISD::FPOWI:
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC;
@@ -4601,6 +4613,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
   case ISD::FNEG:
   case ISD::FSQRT:

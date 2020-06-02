@@ -21,7 +21,7 @@
 #include "disable_missing_braces_warning.h"
 
 struct NoDefault {
-  NoDefault(int) {}
+    TEST_CONSTEXPR NoDefault(int) { }
 };
 
 #if TEST_STD_VER < 11
@@ -33,7 +33,7 @@ struct natural_alignment {
 };
 #endif
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX17 bool tests()
 {
     {
         typedef double T;
@@ -49,40 +49,44 @@ int main(int, char**)
         typedef std::array<T, 0> C;
         const C c = {};
         const T* p = c.data();
-        (void)p; // to placate scan-build
+        (void)p;
     }
     {
-      typedef NoDefault T;
-      typedef std::array<T, 0> C;
-      const C c = {};
-      const T* p = c.data();
-      LIBCPP_ASSERT(p != nullptr);
+        typedef NoDefault T;
+        typedef std::array<T, 0> C;
+        const C c = {};
+        const T* p = c.data();
+        (void)p;
     }
+    {
+        std::array<int, 5> const c = {0, 1, 2, 3, 4};
+        assert(c.data() == &c[0]);
+        assert(*c.data() == c[0]);
+    }
+
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER >= 17
+    static_assert(tests(), "");
+#endif
+
+    // Test the alignment of data()
     {
 #if TEST_STD_VER < 11
-      typedef natural_alignment T;
+        typedef natural_alignment T;
 #else
-      typedef std::max_align_t T;
+        typedef std::max_align_t T;
 #endif
-      typedef std::array<T, 0> C;
-      const C c = {};
-      const T* p = c.data();
-      LIBCPP_ASSERT(p != nullptr);
-      std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
-      assert(pint % TEST_ALIGNOF(T) == 0);
+        typedef std::array<T, 0> C;
+        const C c = {};
+        const T* p = c.data();
+        std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
+        assert(pint % TEST_ALIGNOF(T) == 0);
     }
-#if TEST_STD_VER > 14
-    {
-        typedef std::array<int, 5> C;
-        constexpr C c1{0,1,2,3,4};
-        constexpr const C c2{0,1,2,3,4};
 
-        static_assert (  c1.data()  == &c1[0], "");
-        static_assert ( *c1.data()  ==  c1[0], "");
-        static_assert (  c2.data()  == &c2[0], "");
-        static_assert ( *c2.data()  ==  c2[0], "");
-    }
-#endif
-
-  return 0;
+    return 0;
 }

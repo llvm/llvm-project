@@ -16513,6 +16513,11 @@ TEST_F(FormatTest, LikelyUnlikely) {
                "  return 42;\n"
                "}\n",
                Style);
+
+  verifyFormat("if (argc > 5) [[gnu::unused]] {\n"
+               "  return 29;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, LLVMDefaultStyle) {

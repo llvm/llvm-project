@@ -45,6 +45,12 @@ public:
   /// or if the first instruction comes before the second in the same basic
   /// block.
   bool dfsBefore(const Instruction *, const Instruction *) const;
+
+  // Return true if the first instruction comes before the second in the
+  // dominator tree BFS traversal based on the level number of nodes in
+  // dominator tree if they are in different basic blocks else if the first
+  // instruction comes before the second in the same basic block.
+  bool domTreeLevelBefore(const Instruction *, const Instruction *) const;
 };
 
 } // end namespace llvm

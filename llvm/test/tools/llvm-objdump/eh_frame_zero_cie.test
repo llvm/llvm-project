@@ -1,10 +1,6 @@
 # RUN: llvm-objdump --dwarf=frames %p/Inputs/eh_frame_zero_cie.o 2>/dev/null | FileCheck %s
 
-# CHECK: .eh_frame contents:
-
-# CHECK: 00000000 00000000 00000000 CIE
-# CHECK:   Version:               0
-# CHECK:   Augmentation:          ""
-# CHECK:   Code alignment factor: 0
-# CHECK:   Data alignment factor: 0
-# CHECK:   Return address column: 0
+# CHECK:       .eh_frame contents:
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000000 ZERO terminator
+# CHECK-NOT:   {{.}}

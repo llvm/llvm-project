@@ -222,9 +222,9 @@ public:
     return false;
   }
 
-  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
-                                        Value *OldV, Value *NewV) const {
-    return false;
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const {
+    return nullptr;
   }
 
   bool isLegalAddImmediate(int64_t imm) {
@@ -294,30 +294,6 @@ public:
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) {
     return BaseT::getGEPCost(PointeeType, Ptr, Operands);
-  }
-
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<const Value *> Arguments, const User *U,
-                            TTI::TargetCostKind CostKind) {
-    return BaseT::getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
-  }
-
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> ParamTys, const User *U,
-                            TTI::TargetCostKind CostKind) {
-    if (IID == Intrinsic::cttz) {
-      if (getTLI()->isCheapToSpeculateCttz())
-        return TargetTransformInfo::TCC_Basic;
-      return TargetTransformInfo::TCC_Expensive;
-    }
-
-    if (IID == Intrinsic::ctlz) {
-      if (getTLI()->isCheapToSpeculateCtlz())
-        return TargetTransformInfo::TCC_Basic;
-      return TargetTransformInfo::TCC_Expensive;
-    }
-
-    return BaseT::getIntrinsicCost(IID, RetTy, ParamTys, U, CostKind);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
@@ -484,6 +460,11 @@ public:
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) {
     return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+  }
+
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFold) {
+    return BaseT::emitGetActiveLaneMask(L, LI, SE, TailFold);
   }
 
   int getInstructionLatency(const Instruction *I) {
@@ -1090,22 +1071,44 @@ public:
   /// Get intrinsic cost based on arguments.
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  TTI::TargetCostKind CostKind) {
+    Intrinsic::ID IID = ICA.getID();
+    auto *ConcreteTTI = static_cast<T *>(this);
+
+    // Special case some scalar intrinsics.
+    if (CostKind != TTI::TCK_RecipThroughput) {
+      switch (IID) {
+      default:
+        break;
+      case Intrinsic::cttz:
+        if (getTLI()->isCheapToSpeculateCttz())
+          return TargetTransformInfo::TCC_Basic;
+        break;
+      case Intrinsic::ctlz:
+        if (getTLI()->isCheapToSpeculateCtlz())
+          return TargetTransformInfo::TCC_Basic;
+        break;
+      case Intrinsic::memcpy:
+        return ConcreteTTI->getMemcpyCost(ICA.getInst());
+      // TODO: other libc intrinsics.
+      }
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+    }
+
+    if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
+      return 0;
 
     // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
-    Intrinsic::ID IID = ICA.getID();
-    const IntrinsicInst *I = ICA.getInst();
     Type *RetTy = ICA.getReturnType();
-    const SmallVectorImpl<Value *> &Args = ICA.getArgs();
     unsigned VF = ICA.getVectorFactor();
-    FastMathFlags FMF = ICA.getFlags();
-
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<VectorType>(RetTy)->getNumElements() : 1);
     assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
-    auto *ConcreteTTI = static_cast<T *>(this);
+    const IntrinsicInst *I = ICA.getInst();
+    const SmallVectorImpl<Value *> &Args = ICA.getArgs();
+    FastMathFlags FMF = ICA.getFlags();
 
     switch (IID) {
     default: {
@@ -1329,6 +1332,9 @@ public:
       break;
     case Intrinsic::round:
       ISDs.push_back(ISD::FROUND);
+      break;
+    case Intrinsic::roundeven:
+      ISDs.push_back(ISD::FROUNDEVEN);
       break;
     case Intrinsic::pow:
       ISDs.push_back(ISD::FPOW);
@@ -1592,13 +1598,14 @@ public:
                                                  CostKind) +
              ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
                                                  CostKind);
-    if (IID == Intrinsic::experimental_constrained_fmuladd)
-      return ConcreteTTI->getIntrinsicCost(
-                 Intrinsic::experimental_constrained_fmul, RetTy, Tys, nullptr,
-                 CostKind) +
-             ConcreteTTI->getIntrinsicCost(
-                 Intrinsic::experimental_constrained_fadd, RetTy, Tys, nullptr,
-                 CostKind);
+    if (IID == Intrinsic::experimental_constrained_fmuladd) {
+      IntrinsicCostAttributes FMulAttrs(
+        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
+      IntrinsicCostAttributes FAddAttrs(
+        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
+      return ConcreteTTI->getIntrinsicInstrCost(FMulAttrs, CostKind) +
+             ConcreteTTI->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    }
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it

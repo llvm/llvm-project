@@ -287,14 +287,16 @@ typically bytes but this may vary between targets.
   There are currently no in-tree targets that use this with addressable units
   not equal to 8 bit.
 
-G_PTR_MASK
+G_PTRMASK
 ^^^^^^^^^^
 
-Zero the least significant N bits of a pointer.
+Zero out an arbitrary mask of bits of a pointer. The mask type must be
+an integer, and the number of vector elements must match for all
+operands. This corresponds to :ref:`i_intr_llvm_ptrmask`.
 
 .. code-block:: none
 
-  %1:_(p0) = G_PTR_MASK %0, 3
+  %2:_(p0) = G_PTRMASK %0, %1
 
 G_SMIN, G_SMAX, G_UMIN, G_UMAX
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -565,7 +567,11 @@ Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with
 G_STORE
 ^^^^^^^
 
-Generic store. Expects a MachineMemOperand in addition to explicit operands.
+Generic store. Expects a MachineMemOperand in addition to explicit
+operands. If the stored value size is greater than the memory size,
+the high bits are implicitly truncated. If this is a vector store, the
+high elements are discarded (i.e. this does not function as a per-lane
+vector, truncating store)
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^

@@ -830,6 +830,14 @@ PluginManager::GetProcessCreateCallbackForPluginName(ConstString name) {
   return GetProcessInstances().GetCallbackForName(name);
 }
 
+void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
+                                            CompletionRequest &request) {
+  for (const auto &instance : GetProcessInstances().GetInstances()) {
+    if (instance.name.GetStringRef().startswith(name))
+      request.AddCompletion(instance.name.GetCString(), instance.description);
+  }
+}
+
 #pragma mark ScriptInterpreter
 
 struct ScriptInterpreterInstance

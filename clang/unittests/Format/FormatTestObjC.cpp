@@ -1434,6 +1434,25 @@ TEST_F(FormatTestObjC, BreakLineBeforeNestedBlockParam) {
       "           }]");
 }
 
+TEST_F(FormatTestObjC, IfNotUnlikely) {
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
+
+  verifyFormat("if (argc < 5) [obj func:arg];");
+  verifyFormat("if (argc < 5) [[obj1 method1:arg1] method2:arg2];");
+  verifyFormat("if (argc < 5) [[foo bar] baz:i[0]];");
+  verifyFormat("if (argc < 5) [[foo bar] baz:i[0]][1];");
+
+  verifyFormat("if (argc < 5)\n"
+               "  [obj func:arg];\n"
+               "else\n"
+               "  [obj func:arg2];");
+
+  verifyFormat("if (argc < 5) [[unlikely]]\n"
+               "  [obj func:arg];\n"
+               "else [[likely]]\n"
+               "  [obj func:arg2];");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

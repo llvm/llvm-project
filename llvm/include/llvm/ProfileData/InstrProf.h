@@ -979,6 +979,9 @@ enum ProfVersion {
   Version4 = 4,
   // In this version, the frontend PGO stable hash algorithm defaults to V2.
   Version5 = 5,
+  // In this version, the frontend PGO stable hash algorithm got fixed and
+  // may produce hashes different from Version5.
+  Version6 = 6,
   // The current version is 5.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };

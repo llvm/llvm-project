@@ -40,6 +40,9 @@ enum class NodeKind : uint16_t {
 
   // Expressions.
   UnknownExpression,
+  PrefixUnaryOperatorExpression,
+  PostfixUnaryOperatorExpression,
+  BinaryOperatorExpression,
 
   // Statements.
   UnknownStatement,
@@ -104,6 +107,11 @@ enum class NodeRole : uint8_t {
   BodyStatement,
 
   // Roles specific to particular node kinds.
+  UnaryOperatorExpression_operatorToken,
+  UnaryOperatorExpression_operand,
+  BinaryOperatorExpression_leftHandSide,
+  BinaryOperatorExpression_operatorToken,
+  BinaryOperatorExpression_rightHandSide,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -156,6 +164,68 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// An abstract class for prefix and postfix unary operators.
+class UnaryOperatorExpression : public Expression {
+public:
+  UnaryOperatorExpression(NodeKind K) : Expression(K) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PrefixUnaryOperatorExpression ||
+           N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+  }
+  syntax::Leaf *operatorToken();
+  syntax::Expression *operand();
+};
+
+/// <operator> <operand>
+///
+/// For example:
+///   +a          -b
+///   !c          not c
+///   ~d          compl d
+///   *e          &f
+///   ++h         --h
+///   __real i    __imag i
+class PrefixUnaryOperatorExpression final : public UnaryOperatorExpression {
+public:
+  PrefixUnaryOperatorExpression()
+      : UnaryOperatorExpression(NodeKind::PrefixUnaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PrefixUnaryOperatorExpression;
+  }
+};
+
+/// <operand> <operator>
+///
+/// For example:
+///   a++
+///   b--
+class PostfixUnaryOperatorExpression final : public UnaryOperatorExpression {
+public:
+  PostfixUnaryOperatorExpression()
+      : UnaryOperatorExpression(NodeKind::PostfixUnaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+  }
+};
+
+/// <lhs> <operator> <rhs>
+///
+/// For example:
+///   a + b
+///   a bitor 1
+///   a |= b
+///   a and_eq b
+class BinaryOperatorExpression final : public Expression {
+public:
+  BinaryOperatorExpression() : Expression(NodeKind::BinaryOperatorExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::BinaryOperatorExpression;
+  }
+  syntax::Expression *lhs();
+  syntax::Leaf *operatorToken();
+  syntax::Expression *rhs();
 };
 
 /// An abstract node for C++ statements, e.g. 'while', 'if', etc.

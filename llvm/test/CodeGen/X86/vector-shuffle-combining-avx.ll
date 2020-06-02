@@ -145,8 +145,7 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 define <4 x double> @combine_vperm2f128_vpermilvar_as_vpblendpd(<4 x double> %a0) {
 ; CHECK-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; CHECK-NEXT:    vmovapd %xmm0, %xmm0
+; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)

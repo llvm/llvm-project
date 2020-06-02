@@ -71,26 +71,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
 
-  llvm::FastMathFlags FMF;
-  if (CGM.getLangOpts().FastMath)
-    FMF.setFast();
-  if (CGM.getLangOpts().FiniteMathOnly) {
-    FMF.setNoNaNs();
-    FMF.setNoInfs();
-  }
-  if (CGM.getCodeGenOpts().NoNaNsFPMath) {
-    FMF.setNoNaNs();
-  }
-  if (CGM.getCodeGenOpts().NoSignedZeros) {
-    FMF.setNoSignedZeros();
-  }
-  if (CGM.getCodeGenOpts().ReciprocalMath) {
-    FMF.setAllowReciprocal();
-  }
-  if (CGM.getCodeGenOpts().Reassociate) {
-    FMF.setAllowReassoc();
-  }
-  Builder.setFastMathFlags(FMF);
+  SetFastMathFlags(FPOptions(CGM.getLangOpts()));
   SetFPModel();
 }
 
@@ -137,6 +118,18 @@ void CodeGenFunction::SetFPModel() {
   Builder.setDefaultConstrainedExcept(fpExceptionBehavior);
   Builder.setIsFPConstrained(fpExceptionBehavior != llvm::fp::ebIgnore ||
                              RM != llvm::RoundingMode::NearestTiesToEven);
+}
+
+void CodeGenFunction::SetFastMathFlags(FPOptions FPFeatures) {
+  llvm::FastMathFlags FMF;
+  FMF.setAllowReassoc(FPFeatures.allowAssociativeMath());
+  FMF.setNoNaNs(FPFeatures.noHonorNaNs());
+  FMF.setNoInfs(FPFeatures.noHonorInfs());
+  FMF.setNoSignedZeros(FPFeatures.noSignedZeros());
+  FMF.setAllowReciprocal(FPFeatures.allowReciprocalMath());
+  FMF.setApproxFunc(FPFeatures.allowApproximateFunctions());
+  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement());
+  Builder.setFastMathFlags(FMF);
 }
 
 LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {

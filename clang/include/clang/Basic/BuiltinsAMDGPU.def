@@ -44,6 +44,7 @@ BUILTIN(__builtin_amdgcn_mbcnt_lo, "UiUiUi", "nc")
 // Instruction builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_s_getreg, "UiIi", "n")
+BUILTIN(__builtin_amdgcn_s_setreg, "vIiUi", "n")
 BUILTIN(__builtin_amdgcn_s_getpc, "LUi", "n")
 BUILTIN(__builtin_amdgcn_s_waitcnt, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_sendmsg, "vIiUi", "n")

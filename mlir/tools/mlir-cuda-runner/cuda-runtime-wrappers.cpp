@@ -83,10 +83,10 @@ extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
 // Allows to register a MemRef with the CUDA runtime. Initializes array with
 // value. Helpful until we have transfer functions implemented.
 template <typename T>
-void mcuMemHostRegisterMemRef(T *pointer, llvm::ArrayRef<int64_t> sizes,
-                              llvm::ArrayRef<int64_t> strides, T value) {
-  assert(sizes.size() == strides.size());
-  llvm::SmallVector<int64_t, 4> denseStrides(strides.size());
+void mcuMemHostRegisterMemRef(const DynamicMemRefType<T> &mem_ref, T value) {
+  llvm::SmallVector<int64_t, 4> denseStrides(mem_ref.rank);
+  llvm::ArrayRef<int64_t> sizes(mem_ref.sizes, mem_ref.rank);
+  llvm::ArrayRef<int64_t> strides(mem_ref.strides, mem_ref.rank);
 
   std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
                    std::multiplies<int64_t>());
@@ -98,20 +98,17 @@ void mcuMemHostRegisterMemRef(T *pointer, llvm::ArrayRef<int64_t> sizes,
   denseStrides.back() = 1;
   assert(strides == llvm::makeArrayRef(denseStrides));
 
+  auto *pointer = mem_ref.data + mem_ref.offset;
   std::fill_n(pointer, count, value);
   mgpuMemHostRegister(pointer, count * sizeof(T));
 }
 
 extern "C" void mcuMemHostRegisterFloat(int64_t rank, void *ptr) {
-  auto *desc = static_cast<StridedMemRefType<float, 1> *>(ptr);
-  auto sizes = llvm::ArrayRef<int64_t>(desc->sizes, rank);
-  auto strides = llvm::ArrayRef<int64_t>(desc->sizes + rank, rank);
-  mcuMemHostRegisterMemRef(desc->data + desc->offset, sizes, strides, 1.23f);
+  UnrankedMemRefType<float> mem_ref = {rank, ptr};
+  mcuMemHostRegisterMemRef(DynamicMemRefType<float>(mem_ref), 1.23f);
 }
 
 extern "C" void mcuMemHostRegisterInt32(int64_t rank, void *ptr) {
-  auto *desc = static_cast<StridedMemRefType<int32_t, 1> *>(ptr);
-  auto sizes = llvm::ArrayRef<int64_t>(desc->sizes, rank);
-  auto strides = llvm::ArrayRef<int64_t>(desc->sizes + rank, rank);
-  mcuMemHostRegisterMemRef(desc->data + desc->offset, sizes, strides, 123);
+  UnrankedMemRefType<int32_t> mem_ref = {rank, ptr};
+  mcuMemHostRegisterMemRef(DynamicMemRefType<int32_t>(mem_ref), 123);
 }

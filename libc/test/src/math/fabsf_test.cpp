@@ -61,6 +61,7 @@ TEST(FabsfTest, InFloatRange) {
     double x = valueFromBits(v);
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::OP_Abs, x, __llvm_libc::fabsf(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, __llvm_libc::fabsf(x),
+                      tolerance);
   }
 }

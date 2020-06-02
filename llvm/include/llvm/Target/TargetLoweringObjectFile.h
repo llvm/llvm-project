@@ -245,6 +245,13 @@ public:
     return nullptr;
   }
 
+  /// If supported, return the function entry point symbol.
+  /// Otherwise, returns nulltpr.
+  virtual MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+                                                const TargetMachine &TM) const {
+    return nullptr;
+  }
+
 protected:
   virtual MCSection *SelectSectionForGlobal(const GlobalObject *GO,
                                             SectionKind Kind,

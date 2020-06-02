@@ -61,8 +61,10 @@ Symbols:
   DataExtractor::Cursor C(0);
   EXPECT_EQ(0x42u, Data.getRelocatedAddress(C));
   EXPECT_EQ(0u, Data.getRelocatedAddress(C));
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0x4"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x6 while reading [0x4, 0x8)"));
 }
 
 TEST(DWARFDataExtractorTest, getInitialLength) {
@@ -94,13 +96,15 @@ TEST(DWARFDataExtractorTest, getInitialLength) {
   // Empty data.
   EXPECT_THAT_EXPECTED(
       GetWithError({}),
-      FailedWithMessage("unexpected end of data at offset 0x0"));
+      FailedWithMessage(
+          "unexpected end of data at offset 0x0 while reading [0x0, 0x4)"));
   EXPECT_EQ(GetWithoutError({}), ErrorResult);
 
   // Not long enough for the U32 field.
   EXPECT_THAT_EXPECTED(
       GetWithError({0x00, 0x01, 0x02}),
-      FailedWithMessage("unexpected end of data at offset 0x0"));
+      FailedWithMessage(
+          "unexpected end of data at offset 0x3 while reading [0x0, 0x4)"));
   EXPECT_EQ(GetWithoutError({0x00, 0x01, 0x02}), ErrorResult);
 
   EXPECT_THAT_EXPECTED(
@@ -127,13 +131,15 @@ TEST(DWARFDataExtractorTest, getInitialLength) {
   // DWARF64 marker without the subsequent length field.
   EXPECT_THAT_EXPECTED(
       GetWithError({0xff, 0xff, 0xff, 0xff}),
-      FailedWithMessage("unexpected end of data at offset 0x4"));
+      FailedWithMessage(
+          "unexpected end of data at offset 0x4 while reading [0x4, 0xc)"));
   EXPECT_EQ(GetWithoutError({0xff, 0xff, 0xff, 0xff}), ErrorResult);
 
   // Not enough data for the U64 length.
   EXPECT_THAT_EXPECTED(
       GetWithError({0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03}),
-      FailedWithMessage("unexpected end of data at offset 0x4"));
+      FailedWithMessage(
+          "unexpected end of data at offset 0x8 while reading [0x4, 0xc)"));
   EXPECT_EQ(GetWithoutError({0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03}),
             ErrorResult);
 
@@ -195,21 +201,27 @@ Symbols:
   EXPECT_EQ(0x64636261u, Truncated8.getRelocatedAddress(C));
   EXPECT_EQ(0x42u, Truncated8.getRelocatedAddress(C));
   EXPECT_EQ(0x0u, Truncated8.getRelocatedAddress(C));
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0x8"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x8 while reading [0x8, 0xc)"));
 
   C = DataExtractor::Cursor{0};
   DWARFDataExtractor Truncated6(Data, 6);
   EXPECT_EQ(0x64636261u, Truncated6.getRelocatedAddress(C));
   EXPECT_EQ(0x0u, Truncated6.getRelocatedAddress(C));
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0x4"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x6 while reading [0x4, 0x8)"));
 
   C = DataExtractor::Cursor{0};
   DWARFDataExtractor Truncated2(Data, 2);
   EXPECT_EQ(0x0u, Truncated2.getRelocatedAddress(C));
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0x0"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x2 while reading [0x0, 0x4)"));
 }
 
 } // namespace

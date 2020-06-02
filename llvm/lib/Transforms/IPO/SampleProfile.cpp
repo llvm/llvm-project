@@ -1843,15 +1843,16 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI, CallGraph *CG) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
   if (!ProfileIsValid)
     return false;
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   PSI = _PSI;
-  if (M.getProfileSummary(/* IsCS */ false) == nullptr)
+  if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
                         ProfileSummary::PSK_Sample);
-
+    PSI->refresh();
+  }
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();

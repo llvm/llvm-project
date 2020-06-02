@@ -47,7 +47,6 @@ class LoadInst;
 class PHINode;
 class PointerType;
 class SelectInst;
-class TargetLibraryInfo;
 class Type;
 class UndefValue;
 class Value;

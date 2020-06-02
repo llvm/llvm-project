@@ -76,7 +76,7 @@ void error_fread() {
     }
     if (ferror(F)) {
       clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-      fread(Buf, 1, 10, F);           // no warning
+      fread(Buf, 1, 10, F);           // expected-warning {{might be 'indeterminate'}}
     }
   }
   fclose(F);
@@ -94,7 +94,7 @@ void error_fwrite() {
   } else {
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
-    fwrite(0, 1, 10, F);            // no warning
+    fwrite(0, 1, 10, F);            // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
   Ret = fwrite(0, 1, 10, F); // expected-warning {{Stream might be already closed}}
@@ -163,6 +163,73 @@ void error_fseek() {
     // Error flags should not change.
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  }
+  fclose(F);
+}
+
+void error_indeterminate() {
+  FILE *F = fopen("file", "r+");
+  if (!F)
+    return;
+  const char *Buf = "123456789";
+  int rc = fseek(F, 0, SEEK_SET);
+  if (rc) {
+    if (feof(F)) {
+      fwrite(Buf, 1, 10, F); // no warning
+    } else if (ferror(F)) {
+      fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
+    } else {
+      fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+}
+
+void error_indeterminate_clearerr() {
+  FILE *F = fopen("file", "r+");
+  if (!F)
+    return;
+  const char *Buf = "123456789";
+  int rc = fseek(F, 0, SEEK_SET);
+  if (rc) {
+    if (feof(F)) {
+      clearerr(F);
+      fwrite(Buf, 1, 10, F); // no warning
+    } else if (ferror(F)) {
+      clearerr(F);
+      fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
+    } else {
+      clearerr(F);
+      fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+}
+
+void error_indeterminate_feof1() {
+  FILE *F = fopen("file", "r+");
+  if (!F)
+    return;
+  char Buf[10];
+  if (fread(Buf, 1, 10, F) < 10) {
+    if (feof(F)) {
+      // error is feof, should be non-indeterminate
+      fwrite("1", 1, 1, F); // no warning
+    }
+  }
+  fclose(F);
+}
+
+void error_indeterminate_feof2() {
+  FILE *F = fopen("file", "r+");
+  if (!F)
+    return;
+  char Buf[10];
+  if (fread(Buf, 1, 10, F) < 10) {
+    if (ferror(F) == 0) {
+      // error is feof, should be non-indeterminate
+      fwrite("1", 1, 1, F); // no warning
+    }
   }
   fclose(F);
 }

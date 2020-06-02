@@ -64,6 +64,17 @@ std::string getSecIndexForError(const ELFFile<ELFT> *Obj,
   return "[unknown index]";
 }
 
+template <class ELFT>
+std::string getPhdrIndexForError(const ELFFile<ELFT> *Obj,
+                                 const typename ELFT::Phdr *Phdr) {
+  auto Headers = Obj->program_headers();
+  if (Headers)
+    return ("[index " + Twine(Phdr - &Headers->front()) + "]").str();
+  // See comment in the getSecIndexForError() above.
+  llvm::consumeError(Headers.takeError());
+  return "[unknown index]";
+}
+
 static inline Error defaultWarningHandler(const Twine &Msg) {
   return createError(Msg);
 }
@@ -299,6 +310,7 @@ public:
   template <typename T>
   Expected<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr *Sec) const;
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr *Sec) const;
+  Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr *Phdr) const;
 };
 
 using ELF32LEFile = ELFFile<ELF32LE>;
@@ -420,6 +432,26 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr *Sec) const {
 
   const T *Start = reinterpret_cast<const T *>(base() + Offset);
   return makeArrayRef(Start, Size / sizeof(T));
+}
+
+template <class ELFT>
+Expected<ArrayRef<uint8_t>>
+ELFFile<ELFT>::getSegmentContents(const Elf_Phdr *Phdr) const {
+  uintX_t Offset = Phdr->p_offset;
+  uintX_t Size = Phdr->p_filesz;
+
+  if (std::numeric_limits<uintX_t>::max() - Offset < Size)
+    return createError("program header " + getPhdrIndexForError(this, Phdr) +
+                       " has a p_offset (0x" + Twine::utohexstr(Offset) +
+                       ") + p_filesz (0x" + Twine::utohexstr(Size) +
+                       ") that cannot be represented");
+  if (Offset + Size > Buf.size())
+    return createError("program header  " + getPhdrIndexForError(this, Phdr) +
+                       " has a p_offset (0x" + Twine::utohexstr(Offset) +
+                       ") + p_filesz (0x" + Twine::utohexstr(Size) +
+                       ") that is greater than the file size (0x" +
+                       Twine::utohexstr(Buf.size()) + ")");
+  return makeArrayRef(base() + Offset, Size);
 }
 
 template <class ELFT>

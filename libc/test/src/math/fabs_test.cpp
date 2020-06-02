@@ -59,6 +59,6 @@ TEST(FabsTest, InDoubleRange) {
     double x = valueFromBits(v);
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::OP_Abs, x, __llvm_libc::fabs(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, __llvm_libc::fabs(x), tolerance);
   }
 }

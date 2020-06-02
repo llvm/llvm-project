@@ -10,6 +10,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include <algorithm>
 #include <mutex>

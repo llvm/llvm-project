@@ -107,7 +107,7 @@ CU_4_version:
         .byte 0 # NULL
 CU_4_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x00000015 version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000019)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000015, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000019)
 # CHECK: 0x0000000b: DW_TAG_compile_unit
 
 # DWARF v5 normal CU header.
@@ -125,7 +125,7 @@ CU_5_version:
         .byte 0 # NULL
 CU_5_end:
 
-# CHECK: 0x00000019: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000033)
+# CHECK: 0x00000019: Compile Unit: length = 0x00000016, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000033)
 # CHECK: 0x00000025: DW_TAG_compile_unit
 
         .section .debug_info.dwo,"e",@progbits
@@ -147,7 +147,7 @@ CU_split_5_version:
         .byte 0 # NULL
 CU_split_5_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x0000001e version = 0x0005 unit_type = DW_UT_split_compile abbr_offset = 0x0000 addr_size = 0x08 DWO_id = 0x000000000000005a (next unit at 0x00000022)
+# CHECK: 0x00000000: Compile Unit: length = 0x0000001e, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x000000000000005a (next unit at 0x00000022)
 # CHECK: 0x00000014: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWO producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_dwo_compile_unit"
@@ -181,7 +181,7 @@ TU_split_5_type:
         .byte 0 # NULL
 TU_split_5_end:
 
-# CHECK: 0x00000000: Type Unit: length = 0x00000020 version = 0x0005 unit_type = DW_UT_split_type abbr_offset = 0x0000 addr_size = 0x08 name = 'V5_split_type_unit' type_signature = 0x8899aabbccddeeff type_offset = 0x001d (next unit at 0x00000024)
+# CHECK: 0x00000000: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = 'V5_split_type_unit', type_signature = 0x8899aabbccddeeff, type_offset = 0x001d (next unit at 0x00000024)
 # CHECK: 0x00000018: DW_TAG_type_unit
 
         .section .debug_types,"",@progbits
@@ -207,7 +207,7 @@ TU_4_type:
         .byte 0 # NULL
 TU_4_end:
 
-# CHECK: 0x00000000: Type Unit: length = 0x0000001f version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 name = 'V4_type_unit' type_signature = 0x0011223344556677 type_offset = 0x001c (next unit at 0x00000023)
+# CHECK: 0x00000000: Type Unit: length = 0x0000001f, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08, name = 'V4_type_unit', type_signature = 0x0011223344556677, type_offset = 0x001c (next unit at 0x00000023)
 # CHECK: 0x00000017: DW_TAG_type_unit
 
         .section .debug_line,"",@progbits

@@ -1037,8 +1037,19 @@ uptr PointsIntoChunk(void* p) {
   return 0;
 }
 
+// Debug code. Delete once issue #1193 is chased down.
+extern "C" SANITIZER_WEAK_ATTRIBUTE const char *__lsan_current_stage;
+
 uptr GetUserBegin(uptr chunk) {
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(chunk);
+  if (!m)
+    Printf(
+        "ASAN is about to crash with a CHECK failure.\n"
+        "The ASAN developers are trying to chase down this bug,\n"
+        "so if you've encountered this bug please let us know.\n"
+        "See also: https://github.com/google/sanitizers/issues/1193\n"
+        "chunk: %p caller %p __lsan_current_stage %s\n",
+        chunk, GET_CALLER_PC(), __lsan_current_stage);
   CHECK(m);
   return m->Beg();
 }

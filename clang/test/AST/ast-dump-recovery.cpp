@@ -10,6 +10,25 @@ int some_func(int *);
 // CHECK-NEXT:    `-IntegerLiteral {{.*}} 123
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int invalid_call = some_func(123);
+void test_invalid_call(int s) {
+  // CHECK:      CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} 'some_func'
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} <<invalid sloc>>
+  // CHECK-NEXT: `-BinaryOperator {{.*}} <<invalid sloc>, col:28>
+  // CHECK-NEXT:   |-RecoveryExpr {{.*}} <<invalid sloc>>
+  // CHECK-NEXT:   `-IntegerLiteral {{.*}} <col:28> 'int' 1
+  some_func(undef1, undef2+1);
+
+  // CHECK:      BinaryOperator {{.*}} '<dependent type>' contains-errors '='
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 's'
+  // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   |-UnresolvedLookupExpr {{.*}} 'some_func'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
+  s = some_func(undef1);
+  // CHECK: `-VarDecl {{.*}} invalid var 'int'
+  // FIXME: preserve the broken call.
+  int var = some_func(undef1);
+}
 
 int ambig_func(double);
 int ambig_func(float);
@@ -178,10 +197,17 @@ void InitializerForAuto() {
   auto unresolved_typo = gned.*[] {};
 }
 
-// CHECK:      `-TypeAliasDecl {{.*}} Escape 'decltype([] {
-// CHECK-NEXT:   return <recovery-expr>(undef);
-// CHECK-NEXT: }())'
-// CHECK-NEXT:   `-DecltypeType {{.*}} 'decltype([] {
-// CHECK-NEXT:     return <recovery-expr>(undef);
-// CHECK-NEXT:   }())' dependent
+// Verified that the generated call operator is invalid.
+// CHECK: |-CXXMethodDecl {{.*}} invalid operator() 'auto () const -> auto'
 using Escape = decltype([] { return undef(); }());
+
+// CHECK:      VarDecl {{.*}} NoCrashOnInvalidInitList
+// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+// CHECK-NEXT:   `-InitListExpr
+// CHECK-NEXT:     `-DesignatedInitExpr {{.*}} 'void'
+// CHECK-NEXT:       `-CXXNullPtrLiteralExpr {{.*}} 'nullptr_t'
+struct {
+  int& abc;
+} NoCrashOnInvalidInitList = {
+  .abc = nullptr,
+};

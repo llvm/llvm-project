@@ -293,7 +293,7 @@ bool checkDebugifyMetadata(Module &M,
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
   if (!NMD) {
-    dbg() << Banner << "Skipping module without debugify metadata\n";
+    dbg() << Banner << ": Skipping module without debugify metadata\n";
     return false;
   }
 

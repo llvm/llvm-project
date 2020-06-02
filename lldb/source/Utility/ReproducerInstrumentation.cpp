@@ -179,6 +179,15 @@ unsigned ObjectToIndex::GetIndexForObjectImpl(const void *object) {
   return m_mapping[object];
 }
 
+Recorder::Recorder()
+    : m_serializer(nullptr), m_pretty_func(), m_pretty_args(),
+      m_local_boundary(false), m_result_recorded(true) {
+  if (!g_global_boundary) {
+    g_global_boundary = true;
+    m_local_boundary = true;
+  }
+}
+
 Recorder::Recorder(llvm::StringRef pretty_func, std::string &&pretty_args)
     : m_serializer(nullptr), m_pretty_func(pretty_func),
       m_pretty_args(pretty_args), m_local_boundary(false),

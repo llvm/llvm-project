@@ -19,6 +19,7 @@
     __cpp_lib_any                                  201606L [C++17]
     __cpp_lib_apply                                201603L [C++17]
     __cpp_lib_array_constexpr                      201603L [C++17]
+                                                   201811L [C++2a]
     __cpp_lib_as_const                             201510L [C++17]
     __cpp_lib_atomic_is_always_lock_free           201603L [C++17]
     __cpp_lib_atomic_ref                           201806L [C++2a]
@@ -1537,8 +1538,8 @@
 # ifndef __cpp_lib_array_constexpr
 #   error "__cpp_lib_array_constexpr should be defined in c++2a"
 # endif
-# if __cpp_lib_array_constexpr != 201603L
-#   error "__cpp_lib_array_constexpr should have the value 201603L in c++2a"
+# if __cpp_lib_array_constexpr != 201811L
+#   error "__cpp_lib_array_constexpr should have the value 201811L in c++2a"
 # endif
 
 # ifndef __cpp_lib_as_const

@@ -11,4 +11,4 @@ process launch
 
 target modules show-unwind -n main
 # CHECK: eh_frame UnwindPlan:
-# CHECK: row[0]:    0: CFA=DW_OP_breg7 +0, DW_OP_const1u 0x00, DW_OP_plus  => rip=DW_OP_const1s -8, DW_OP_plus , DW_OP_deref
+# CHECK: row[0]:    0: CFA=DW_OP_breg7 +0, DW_OP_const1u 0x0, DW_OP_plus => rip=DW_OP_const1s -8, DW_OP_plus, DW_OP_deref

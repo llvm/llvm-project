@@ -422,11 +422,11 @@ static bool isKnownZFlag(StringRef s) {
          s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
          s == "nognustack" || s == "nokeep-text-section-prefix" ||
          s == "norelro" || s == "noseparate-code" || s == "notext" ||
-         s == "now" || s == "origin" || s == "pac-plt" || s == "relro" ||
-         s == "retpolineplt" || s == "rodynamic" || s == "shstk" ||
-         s == "text" || s == "undefs" || s == "wxneeded" ||
-         s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
-         s.startswith("stack-size=");
+         s == "now" || s == "origin" || s == "pac-plt" || s == "rel" ||
+         s == "rela" || s == "relro" || s == "retpolineplt" ||
+         s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
+         s == "wxneeded" || s.startswith("common-page-size=") ||
+         s.startswith("max-page-size=") || s.startswith("stack-size=");
 }
 
 // Report an error for an unknown -z option.
@@ -842,6 +842,22 @@ static std::vector<StringRef> getSymbolOrderingFile(MemoryBufferRef mb) {
   return names.takeVector();
 }
 
+static bool getIsRela(opt::InputArgList &args) {
+  // If -z rel or -z rela is specified, use the last option.
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    StringRef s(arg->getValue());
+    if (s == "rel")
+      return false;
+    if (s == "rela")
+      return true;
+  }
+
+  // Otherwise use the psABI defined relocation entry format.
+  uint16_t m = config->emachine;
+  return m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON || m == EM_PPC ||
+         m == EM_PPC64 || m == EM_RISCV || m == EM_X86_64;
+}
+
 static void parseClangOption(StringRef opt, const Twine &msg) {
   std::string err;
   raw_string_ostream os(err);
@@ -929,7 +945,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->ltoBasicBlockSections =
       args.getLastArgValue(OPT_lto_basicblock_sections);
-  config->ltoUniqueBBSectionNames =
+  config->ltoUniqueBasicBlockSectionNames =
       args.hasFlag(OPT_lto_unique_bb_section_names,
                    OPT_no_lto_unique_bb_section_names, false);
   config->mapFile = args.getLastArgValue(OPT_Map);
@@ -1156,25 +1172,21 @@ static void readConfigs(opt::InputArgList &args) {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
   }
 
-  // Parses -dynamic-list and -export-dynamic-symbol. They make some
-  // symbols private. Note that -export-dynamic takes precedence over them
-  // as it says all symbols should be exported.
-  if (!config->exportDynamic) {
-    for (auto *arg : args.filtered(OPT_dynamic_list))
-      if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
-        readDynamicList(*buffer);
+  // When producing an executable, --dynamic-list specifies non-local defined
+  // symbols whith are required to be exported. When producing a shared object,
+  // symbols not specified by --dynamic-list are non-preemptible.
+  config->symbolic =
+      args.hasArg(OPT_Bsymbolic) || args.hasArg(OPT_dynamic_list);
+  for (auto *arg : args.filtered(OPT_dynamic_list))
+    if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
+      readDynamicList(*buffer);
 
-    for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
-      config->dynamicList.push_back(
-          {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/false});
-  }
-
-  // If --export-dynamic-symbol=foo is given and symbol foo is defined in
-  // an object file in an archive file, that object file should be pulled
-  // out and linked. (It doesn't have to behave like that from technical
-  // point of view, but this is needed for compatibility with GNU.)
+  // --export-dynamic-symbol specifies additional --dynamic-list symbols if any
+  // other option expresses a symbolic intention: -no-pie, -pie, -Bsymbolic,
+  // -Bsymbolic-functions (if STT_FUNC), --dynamic-list.
   for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
-    config->undefined.push_back(arg->getValue());
+    config->dynamicList.push_back(
+        {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/true});
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (Optional<std::string> path = searchScript(arg->getValue())) {
@@ -1204,20 +1216,19 @@ static void setConfigs(opt::InputArgList &args) {
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
-  //  Rel:  Addends are stored to the location where relocations are applied.
+  //  Rel: Addends are stored to the location where relocations are applied. It
+  //  cannot pack the full range of addend values for all relocation types, but
+  //  this only affects relocation types that we don't support emitting as
+  //  dynamic relocations (see getDynRel).
   //  Rela: Addends are stored as part of relocation entry.
   //
   // In other words, Rela makes it easy to read addends at the price of extra
-  // 4 or 8 byte for each relocation entry. We don't know why ELF defined two
-  // different mechanisms in the first place, but this is how the spec is
-  // defined.
+  // 4 or 8 byte for each relocation entry.
   //
-  // You cannot choose which one, Rel or Rela, you want to use. Instead each
-  // ABI defines which one you need to use. The following expression expresses
-  // that.
-  config->isRela = m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON ||
-                   m == EM_PPC || m == EM_PPC64 || m == EM_RISCV ||
-                   m == EM_X86_64;
+  // We pick the format for dynamic relocations according to the psABI for each
+  // processor, but a contrary choice can be made if the dynamic loader
+  // supports.
+  config->isRela = getIsRela(args);
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations

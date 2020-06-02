@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
-
 #include "llvm/ADT/BitVector.h"
-
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
@@ -23,6 +21,7 @@
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 

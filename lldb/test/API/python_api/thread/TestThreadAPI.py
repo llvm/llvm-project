@@ -100,7 +100,7 @@ class ThreadAPITestCase(TestBase):
         self.runCmd("process status")
 
         proc_of_thread = thread.GetProcess()
-        #print("proc_of_thread:", proc_of_thread)
+        self.trace("proc_of_thread:", proc_of_thread)
         self.assertTrue(proc_of_thread.GetProcessID()
                         == process.GetProcessID())
 

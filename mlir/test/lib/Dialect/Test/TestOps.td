@@ -454,6 +454,10 @@ def I32ElementsAttrOp : TEST_Op<"i32ElementsAttr"> {
   let arguments = (ins I32ElementsAttr:$attr);
 }
 
+def IndexElementsAttrOp : TEST_Op<"indexElementsAttr"> {
+  let arguments = (ins IndexElementsAttr:$attr);
+}
+
 def OpWithInferTypeInterfaceOp : TEST_Op<"op_with_infer_type_if", [
     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let arguments = (ins AnyTensor, AnyTensor);
@@ -756,15 +760,6 @@ def OpSymbolBindingA : TEST_Op<"symbol_binding_a", []> {
 def OpSymbolBindingB : TEST_Op<"symbol_binding_b", []> {
   let arguments = (ins I32:$operand);
   let results = (outs I32);
-
-  let builders = [
-    OpBuilder<
-      "OpBuilder &builder, OperationState &state, Value operand",
-      [{
-        state.types.assign({builder.getIntegerType(32)});
-        state.addOperands({operand});
-      }]>
-  ];
 }
 def OpSymbolBindingC : TEST_Op<"symbol_binding_c", []> {
   let arguments = (ins I32:$operand);
@@ -868,17 +863,6 @@ def AnotherThreeResultOp : TEST_Op<"another_three_result"> {
 def TwoResultOp : TEST_Op<"two_result"> {
   let arguments = (ins MultiResultOpEnum:$kind);
   let results = (outs I32:$result1, F32:$result2);
-
-  let builders = [
-    OpBuilder<
-      "OpBuilder &builder, OperationState &state, IntegerAttr kind",
-      [{
-        auto i32 = builder.getIntegerType(32);
-        auto f32 = builder.getF32Type();
-        state.types.assign({i32, f32});
-        state.addAttribute("kind", kind);
-      }]>
-  ];
 }
 
 def AnotherTwoResultOp : TEST_Op<"another_two_result"> {

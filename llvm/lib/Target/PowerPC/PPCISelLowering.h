@@ -979,12 +979,13 @@ namespace llvm {
       const bool IsPatchPoint : 1;
       const bool IsIndirect : 1;
       const bool HasNest : 1;
+      const bool NoMerge : 1;
 
       CallFlags(CallingConv::ID CC, bool IsTailCall, bool IsVarArg,
-                bool IsPatchPoint, bool IsIndirect, bool HasNest)
+                bool IsPatchPoint, bool IsIndirect, bool HasNest, bool NoMerge)
           : CallConv(CC), IsTailCall(IsTailCall), IsVarArg(IsVarArg),
             IsPatchPoint(IsPatchPoint), IsIndirect(IsIndirect),
-            HasNest(HasNest) {}
+            HasNest(HasNest), NoMerge(NoMerge) {}
     };
 
   private:

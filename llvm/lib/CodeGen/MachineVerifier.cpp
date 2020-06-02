@@ -1102,6 +1102,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     // TODO: Is the offset allowed to be a scalar with a vector?
     break;
   }
+  case TargetOpcode::G_PTRMASK: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT MaskTy = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
+      break;
+
+    if (!DstTy.getScalarType().isPointer())
+      report("ptrmask result type must be a pointer", MI);
+
+    if (!MaskTy.getScalarType().isScalar())
+      report("ptrmask mask type must be an integer", MI);
+
+    verifyVectorElementMatch(DstTy, MaskTy, MI);
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
@@ -1471,6 +1487,13 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   // Check the tied operands.
   if (MI->isInlineAsm())
     verifyInlineAsm(MI);
+
+  // A fully-formed DBG_VALUE must have a location. Ignore partially formed
+  // DBG_VALUEs: these are convenient to use in tests, but should never get
+  // generated.
+  if (MI->isDebugValue() && MI->getNumOperands() == 4)
+    if (!MI->getDebugLoc())
+      report("Missing DebugLoc for debug instruction", MI);
 
   // Check the MachineMemOperands for basic consistency.
   for (MachineMemOperand *Op : MI->memoperands()) {

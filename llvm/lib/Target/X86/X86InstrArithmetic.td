@@ -1313,7 +1313,17 @@ let hasSideEffects = 0 in {
   let mayLoad = 1 in
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
+
              []>, T8XD, VEX_4V, Sched<[sched.Folded, WriteIMulH]>;
+
+  // Pseudo instructions to be used when the low result isn't used. The
+  // instruction is defined to keep the high if both destinations are the same.
+  def Hrr : PseudoI<(outs RC:$dst), (ins RC:$src),
+                    []>, Sched<[sched]>;
+
+  let mayLoad = 1 in
+  def Hrm : PseudoI<(outs RC:$dst), (ins x86memop:$src),
+                    []>, Sched<[sched.Folded]>;
 }
 }
 

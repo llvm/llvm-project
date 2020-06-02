@@ -82,7 +82,7 @@ class targetCommandTestCase(TestBase):
                 if match:
                     # We will start from (index + 1) ....
                     base = int(match.group(1), 10) + 1
-                    #print("base is:", base)
+                    self.trace("base is:", base)
                     break
 
         self.runCmd("target create " + exe_a, CURRENT_EXECUTABLE_SET)

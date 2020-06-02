@@ -421,6 +421,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     ReplaceFPIntrinsicWithCall(CI, "roundf", "round", "roundl");
     break;
   }
+  case Intrinsic::roundeven: {
+    ReplaceFPIntrinsicWithCall(CI, "roundevenf", "roundeven", "roundevenl");
+    break;
+  }
   case Intrinsic::copysign: {
     ReplaceFPIntrinsicWithCall(CI, "copysignf", "copysign", "copysignl");
     break;

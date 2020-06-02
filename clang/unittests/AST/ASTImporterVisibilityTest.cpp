@@ -96,8 +96,8 @@ const auto *AnonCT = "namespace { template <class> class X; }";
 
 // First value in tuple: Compile options.
 // Second value in tuple: Source code to be used in the test.
-using ImportVisibilityChainParams =
-    ::testing::WithParamInterface<std::tuple<ArgVector, const char *>>;
+using ImportVisibilityChainParams = ::testing::WithParamInterface<
+    std::tuple<std::vector<std::string>, const char *>>;
 // Fixture to test the redecl chain of Decls with the same visibility. Gtest
 // makes it possible to have either value-parameterized or type-parameterized
 // fixtures. However, we cannot have both value- and type-parameterized test
@@ -109,7 +109,9 @@ class ImportVisibilityChain
     : public ASTImporterTestBase, public ImportVisibilityChainParams {
 protected:
   using DeclTy = typename PatternFactory::DeclTy;
-  ArgVector getExtraArgs() const override { return std::get<0>(GetParam()); }
+  std::vector<std::string> getExtraArgs() const override {
+    return std::get<0>(GetParam());
+  }
   std::string getCode() const { return std::get<1>(GetParam()); }
   BindableMatcher<Decl> getPattern() const { return PatternFactory()(); }
 
@@ -222,8 +224,8 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportClassTemplatesVisibilityChain,
 // functions are expected to be linked in a declaration chain.
 // One value of this tuple is combined with every value of compile options.
 // The test can have a single tuple as parameter only.
-using ImportVisibilityParams = ::testing::WithParamInterface<
-    std::tuple<ArgVector, std::tuple<const char *, const char *, bool>>>;
+using ImportVisibilityParams = ::testing::WithParamInterface<std::tuple<
+    std::vector<std::string>, std::tuple<const char *, const char *, bool>>>;
 
 template <typename PatternFactory>
 class ImportVisibility
@@ -231,7 +233,9 @@ class ImportVisibility
       public ImportVisibilityParams {
 protected:
   using DeclTy = typename PatternFactory::DeclTy;
-  ArgVector getExtraArgs() const override { return std::get<0>(GetParam()); }
+  std::vector<std::string> getExtraArgs() const override {
+    return std::get<0>(GetParam());
+  }
   std::string getCode0() const { return std::get<0>(std::get<1>(GetParam())); }
   std::string getCode1() const { return std::get<1>(std::get<1>(GetParam())); }
   bool shouldBeLinked() const { return std::get<2>(std::get<1>(GetParam())); }

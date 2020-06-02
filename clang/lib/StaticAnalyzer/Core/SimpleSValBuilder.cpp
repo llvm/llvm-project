@@ -13,8 +13,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 
 using namespace clang;
@@ -652,6 +652,11 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         if (LHSValue == 0)
           return evalCastFromNonLoc(lhs, resultTy);
         return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      case BO_Rem:
+        // 0 % x == 0
+        if (LHSValue == 0)
+          return makeZeroVal(resultTy);
+        LLVM_FALLTHROUGH;
       default:
         return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       }

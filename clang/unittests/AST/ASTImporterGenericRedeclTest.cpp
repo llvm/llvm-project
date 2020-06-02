@@ -180,11 +180,11 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
 
   void
   TypedTest_PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition() {
-    Decl *FromTU = getTuDecl(getPrototype(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getPrototype(), Lang_CXX03);
     auto *FromD = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_FALSE(FromD->isThisDeclarationADefinition());
 
-    Decl *ImportedD = Import(FromD, Lang_CXX);
+    Decl *ImportedD = Import(FromD, Lang_CXX03);
     Decl *ToTU = ImportedD->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 1u);
@@ -197,11 +197,11 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_DefinitionShouldBeImportedAsADefinition() {
-    Decl *FromTU = getTuDecl(getDefinition(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getDefinition(), Lang_CXX03);
     auto *FromD = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_TRUE(FromD->isThisDeclarationADefinition());
 
-    Decl *ImportedD = Import(FromD, Lang_CXX);
+    Decl *ImportedD = Import(FromD, Lang_CXX03);
     Decl *ToTU = ImportedD->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 1u);
@@ -213,14 +213,14 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportPrototypeAfterImportedPrototype() {
-    Decl *FromTU = getTuDecl(getPrototype() + getPrototype(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getPrototype() + getPrototype(), Lang_CXX03);
     auto *From0 = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
     auto *From1 = LastDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_FALSE(From0->isThisDeclarationADefinition());
     ASSERT_FALSE(From1->isThisDeclarationADefinition());
 
-    Decl *Imported0 = Import(From0, Lang_CXX);
-    Decl *Imported1 = Import(From1, Lang_CXX);
+    Decl *Imported0 = Import(From0, Lang_CXX03);
+    Decl *Imported1 = Import(From1, Lang_CXX03);
     Decl *ToTU = Imported0->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 2u);
@@ -235,14 +235,14 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportDefinitionAfterImportedPrototype() {
-    Decl *FromTU = getTuDecl(getPrototype() + getDefinition(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getPrototype() + getDefinition(), Lang_CXX03);
     auto *FromProto = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
     auto *FromDef = LastDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_FALSE(FromProto->isThisDeclarationADefinition());
     ASSERT_TRUE(FromDef->isThisDeclarationADefinition());
 
-    Decl *ImportedProto = Import(FromProto, Lang_CXX);
-    Decl *ImportedDef = Import(FromDef, Lang_CXX);
+    Decl *ImportedProto = Import(FromProto, Lang_CXX03);
+    Decl *ImportedDef = Import(FromDef, Lang_CXX03);
     Decl *ToTU = ImportedProto->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 2u);
@@ -257,14 +257,14 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportPrototypeAfterImportedDefinition() {
-    Decl *FromTU = getTuDecl(getDefinition() + getPrototype(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getDefinition() + getPrototype(), Lang_CXX03);
     auto *FromDef = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
     auto *FromProto = LastDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_TRUE(FromDef->isThisDeclarationADefinition());
     ASSERT_FALSE(FromProto->isThisDeclarationADefinition());
 
-    Decl *ImportedDef = Import(FromDef, Lang_CXX);
-    Decl *ImportedProto = Import(FromProto, Lang_CXX);
+    Decl *ImportedDef = Import(FromDef, Lang_CXX03);
+    Decl *ImportedProto = Import(FromProto, Lang_CXX03);
     Decl *ToTU = ImportedDef->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 2u);
@@ -279,15 +279,15 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportPrototypes() {
-    Decl *FromTU0 = getTuDecl(getPrototype(), Lang_CXX, "input0.cc");
-    Decl *FromTU1 = getTuDecl(getPrototype(), Lang_CXX, "input1.cc");
+    Decl *FromTU0 = getTuDecl(getPrototype(), Lang_CXX03, "input0.cc");
+    Decl *FromTU1 = getTuDecl(getPrototype(), Lang_CXX03, "input1.cc");
     auto *From0 = FirstDeclMatcher<DeclTy>().match(FromTU0, getPattern());
     auto *From1 = FirstDeclMatcher<DeclTy>().match(FromTU1, getPattern());
     ASSERT_FALSE(From0->isThisDeclarationADefinition());
     ASSERT_FALSE(From1->isThisDeclarationADefinition());
 
-    Decl *Imported0 = Import(From0, Lang_CXX);
-    Decl *Imported1 = Import(From1, Lang_CXX);
+    Decl *Imported0 = Import(From0, Lang_CXX03);
+    Decl *Imported1 = Import(From1, Lang_CXX03);
     Decl *ToTU = Imported0->getTranslationUnitDecl();
 
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 2u);
@@ -302,15 +302,15 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportDefinitions() {
-    Decl *FromTU0 = getTuDecl(getDefinition(), Lang_CXX, "input0.cc");
-    Decl *FromTU1 = getTuDecl(getDefinition(), Lang_CXX, "input1.cc");
+    Decl *FromTU0 = getTuDecl(getDefinition(), Lang_CXX03, "input0.cc");
+    Decl *FromTU1 = getTuDecl(getDefinition(), Lang_CXX03, "input1.cc");
     auto *From0 = FirstDeclMatcher<DeclTy>().match(FromTU0, getPattern());
     auto *From1 = FirstDeclMatcher<DeclTy>().match(FromTU1, getPattern());
     ASSERT_TRUE(From0->isThisDeclarationADefinition());
     ASSERT_TRUE(From1->isThisDeclarationADefinition());
 
-    Decl *Imported0 = Import(From0, Lang_CXX);
-    Decl *Imported1 = Import(From1, Lang_CXX);
+    Decl *Imported0 = Import(From0, Lang_CXX03);
+    Decl *Imported1 = Import(From1, Lang_CXX03);
     Decl *ToTU = Imported0->getTranslationUnitDecl();
 
     EXPECT_EQ(Imported0, Imported1);
@@ -324,16 +324,16 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportDefinitionThenPrototype() {
-    Decl *FromTUDef = getTuDecl(getDefinition(), Lang_CXX, "input0.cc");
-    Decl *FromTUProto = getTuDecl(getPrototype(), Lang_CXX, "input1.cc");
+    Decl *FromTUDef = getTuDecl(getDefinition(), Lang_CXX03, "input0.cc");
+    Decl *FromTUProto = getTuDecl(getPrototype(), Lang_CXX03, "input1.cc");
     auto *FromDef = FirstDeclMatcher<DeclTy>().match(FromTUDef, getPattern());
     auto *FromProto =
         FirstDeclMatcher<DeclTy>().match(FromTUProto, getPattern());
     ASSERT_TRUE(FromDef->isThisDeclarationADefinition());
     ASSERT_FALSE(FromProto->isThisDeclarationADefinition());
 
-    Decl *ImportedDef = Import(FromDef, Lang_CXX);
-    Decl *ImportedProto = Import(FromProto, Lang_CXX);
+    Decl *ImportedDef = Import(FromDef, Lang_CXX03);
+    Decl *ImportedProto = Import(FromProto, Lang_CXX03);
     Decl *ToTU = ImportedDef->getTranslationUnitDecl();
 
     EXPECT_NE(ImportedDef, ImportedProto);
@@ -349,16 +349,16 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_ImportPrototypeThenDefinition() {
-    Decl *FromTUProto = getTuDecl(getPrototype(), Lang_CXX, "input0.cc");
-    Decl *FromTUDef = getTuDecl(getDefinition(), Lang_CXX, "input1.cc");
+    Decl *FromTUProto = getTuDecl(getPrototype(), Lang_CXX03, "input0.cc");
+    Decl *FromTUDef = getTuDecl(getDefinition(), Lang_CXX03, "input1.cc");
     auto *FromProto =
         FirstDeclMatcher<DeclTy>().match(FromTUProto, getPattern());
     auto *FromDef = FirstDeclMatcher<DeclTy>().match(FromTUDef, getPattern());
     ASSERT_TRUE(FromDef->isThisDeclarationADefinition());
     ASSERT_FALSE(FromProto->isThisDeclarationADefinition());
 
-    Decl *ImportedProto = Import(FromProto, Lang_CXX);
-    Decl *ImportedDef = Import(FromDef, Lang_CXX);
+    Decl *ImportedProto = Import(FromProto, Lang_CXX03);
+    Decl *ImportedDef = Import(FromDef, Lang_CXX03);
     Decl *ToTU = ImportedDef->getTranslationUnitDecl();
 
     EXPECT_NE(ImportedDef, ImportedProto);
@@ -374,12 +374,12 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
   }
 
   void TypedTest_WholeRedeclChainIsImportedAtOnce() {
-    Decl *FromTU = getTuDecl(getPrototype() + getDefinition(), Lang_CXX);
+    Decl *FromTU = getTuDecl(getPrototype() + getDefinition(), Lang_CXX03);
     auto *FromD = // Definition
         LastDeclMatcher<DeclTy>().match(FromTU, getPattern());
     ASSERT_TRUE(FromD->isThisDeclarationADefinition());
 
-    Decl *ImportedD = Import(FromD, Lang_CXX);
+    Decl *ImportedD = Import(FromD, Lang_CXX03);
     Decl *ToTU = ImportedD->getTranslationUnitDecl();
 
     // The whole redecl chain is imported at once.
@@ -389,15 +389,15 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
 
   void TypedTest_ImportPrototypeThenProtoAndDefinition() {
     {
-      Decl *FromTU = getTuDecl(getPrototype(), Lang_CXX, "input0.cc");
+      Decl *FromTU = getTuDecl(getPrototype(), Lang_CXX03, "input0.cc");
       auto *FromD = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
-      Import(FromD, Lang_CXX);
+      Import(FromD, Lang_CXX03);
     }
     {
       Decl *FromTU =
-          getTuDecl(getPrototype() + getDefinition(), Lang_CXX, "input1.cc");
+          getTuDecl(getPrototype() + getDefinition(), Lang_CXX03, "input1.cc");
       auto *FromD = FirstDeclMatcher<DeclTy>().match(FromTU, getPattern());
-      Import(FromD, Lang_CXX);
+      Import(FromD, Lang_CXX03);
     }
 
     Decl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();

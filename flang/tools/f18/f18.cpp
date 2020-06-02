@@ -315,8 +315,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     return {};
   }
   if (driver.dumpPreFirTree) {
-    if (auto ast{Fortran::lower::createPFT(parseTree)}) {
-      Fortran::lower::annotateControl(*ast);
+    if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
     } else {
       llvm::errs() << "Pre FIR Tree is NULL.\n";

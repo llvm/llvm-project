@@ -30,6 +30,10 @@ public:
       : std::pair<const llvm::APSInt *, const llvm::APSInt *>(&from, &to) {
     assert(from <= to);
   }
+
+  Range(const llvm::APSInt &point)
+      : std::pair<const llvm::APSInt *, const llvm::APSInt *>(&point, &point) {}
+
   bool Includes(const llvm::APSInt &v) const {
     return *first <= v && v <= *second;
   }
@@ -89,6 +93,9 @@ public:
   RangeSet(Factory &F, const llvm::APSInt &from, const llvm::APSInt &to)
       : ranges(F.add(F.getEmptySet(), Range(from, to))) {}
 
+  /// Construct a new RangeSet representing the given point as a range.
+  RangeSet(Factory &F, const llvm::APSInt &point) : RangeSet(F, point, point) {}
+
   /// Profile - Generates a hash profile of this RangeSet for use
   ///  by FoldingSet.
   void Profile(llvm::FoldingSetNodeID &ID) const { ranges.Profile(ID); }
@@ -100,13 +107,16 @@ public:
     return ranges.isSingleton() ? ranges.begin()->getConcreteValue() : nullptr;
   }
 
+  /// Get a minimal value covered by the ranges in the set
+  const llvm::APSInt &getMinValue() const;
+  /// Get a maximal value covered by the ranges in the set
+  const llvm::APSInt &getMaxValue() const;
+
 private:
   void IntersectInRange(BasicValueFactory &BV, Factory &F,
                         const llvm::APSInt &Lower, const llvm::APSInt &Upper,
                         PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
                         PrimRangeSet::iterator &e) const;
-
-  const llvm::APSInt &getMinValue() const;
 
   bool pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const;
 
@@ -124,7 +134,6 @@ public:
   }
 };
 
-
 class ConstraintRange {};
 using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
 
@@ -137,8 +146,8 @@ struct ProgramStateTrait<ConstraintRange>
 
 class RangedConstraintManager : public SimpleConstraintManager {
 public:
-  RangedConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB) {}
+  RangedConstraintManager(ExprEngine *EE, SValBuilder &SB)
+      : SimpleConstraintManager(EE, SB) {}
 
   ~RangedConstraintManager() override;
 

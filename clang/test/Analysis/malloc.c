@@ -1848,6 +1848,13 @@ variable 'buf', which is not memory allocated by malloc() [unix.Malloc]}}
 crash_b() { crash_a(); } // no-crash
 // expected-warning@-1{{type specifier missing}} expected-warning@-1{{non-void}}
 
+long *global_a;
+void realloc_crash() {
+  long *c = global_a;
+  c--;
+  realloc(c, 8); // no-crash
+} // expected-warning{{Potential memory leak [unix.Malloc]}}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 

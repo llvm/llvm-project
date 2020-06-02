@@ -42,7 +42,6 @@ class DIExpression;
 class DILocalVariable;
 class MachineBasicBlock;
 class MachineFunction;
-class MachineMemOperand;
 class MachineRegisterInfo;
 class ModuleSlotTracker;
 class raw_ostream;
@@ -106,6 +105,9 @@ public:
                                         // known to be exact.
     NoFPExcept   = 1 << 14,             // Instruction does not raise
                                         // floatint-point exceptions.
+    NoMerge      = 1 << 15,             // Passes that drop source location info
+                                        // (e.g. branch folding) should skip
+                                        // this instruction.
   };
 
 private:

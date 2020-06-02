@@ -121,6 +121,12 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
+
+  Call = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::roundeven);
+  EXPECT_FALSE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
 }
 
 TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
@@ -305,6 +311,25 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
 
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M));
+}
+
+TEST_F(IRBuilderTest, ConstrainedFPIntrinsics) {
+  IRBuilder<> Builder(BB);
+  Value *V;
+  Value *VDouble;
+  ConstrainedFPIntrinsic *CII;
+  GlobalVariable *GVDouble = new GlobalVariable(
+      *M, Type::getDoubleTy(Ctx), true, GlobalValue::ExternalLinkage, nullptr);
+  VDouble = Builder.CreateLoad(GVDouble->getValueType(), GVDouble);
+
+  Builder.setDefaultConstrainedExcept(fp::ebStrict);
+  Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
+  Function *Fn = Intrinsic::getDeclaration(M.get(),
+      Intrinsic::experimental_constrained_roundeven, { Type::getDoubleTy(Ctx) });
+  V = Builder.CreateConstrainedFPCall(Fn, { VDouble });
+  CII = cast<ConstrainedFPIntrinsic>(V);
+  EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, CII->getIntrinsicID());
+  EXPECT_EQ(fp::ebStrict, CII->getExceptionBehavior());
 }
 
 TEST_F(IRBuilderTest, Lifetime) {

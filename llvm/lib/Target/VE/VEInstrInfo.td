@@ -264,20 +264,6 @@ def fcond2ccSwap : SDNodeXForm<cond, [{
 }]>;
 
 // Addressing modes.
-def ADDRri : ComplexPattern<iPTR, 2, "selectADDRri", [frameindex], []>;
-
-def MEMri : Operand<iPTR> {
-  let PrintMethod = "printMemASOperandASX";
-  let MIOperandInfo = (ops ptr_rc, i64imm);
-}
-
-// AS format of memory address
-def MEMASri : Operand<iPTR> {
-  let PrintMethod = "printMemASOperand";
-  let MIOperandInfo = (ops ptr_rc, i64imm);
-}
-
-// Addressing modes.
 // SX-Aurora has following fields.
 //    sz: register or 0
 //    sy: register or immediate (-64 to 63)
@@ -307,8 +293,10 @@ def ADDRrri : ComplexPattern<iPTR, 3, "selectADDRrri", [frameindex], []>;
 def ADDRrii : ComplexPattern<iPTR, 3, "selectADDRrii", [frameindex], []>;
 def ADDRzri : ComplexPattern<iPTR, 3, "selectADDRzri", [], []>;
 def ADDRzii : ComplexPattern<iPTR, 3, "selectADDRzii", [], []>;
+// AS format:
+def ADDRri : ComplexPattern<iPTR, 2, "selectADDRri", [frameindex], []>;
 //
-// ASX assembly instrcution format:
+// ASX assembly instruction format:
 def VEMEMrriAsmOperand : AsmOperandClass {
   let Name = "MEMrri";
   let ParserMethod = "parseMEMOperand";
@@ -345,14 +333,12 @@ def MEMzii : Operand<iPTR> {
   let MIOperandInfo = (ops i32imm /* = 0 */, i32imm, i32imm);
   let ParserMatchClass = VEMEMziiAsmOperand;
 }
-// AS assembly instrcution format:
+// AS assembly instruction format:
 def VEMEMriAsmOperand : AsmOperandClass {
   let Name = "MEMri";
-  let ParserMethod = "parseMEMAsOperand";
 }
 def VEMEMziAsmOperand : AsmOperandClass {
   let Name = "MEMzi";
-  let ParserMethod = "parseMEMAsOperand";
 }
 // AS generic assembly instruction format:
 def MEMriASX : Operand<iPTR> {
@@ -364,6 +350,11 @@ def MEMziASX : Operand<iPTR> {
   let PrintMethod = "printMemASOperandASX";
   let MIOperandInfo = (ops i32imm /* = 0 */, i32imm);
   let ParserMatchClass = VEMEMziAsmOperand;
+}
+def MEMASri : Operand<iPTR> {
+  let PrintMethod = "printMemASOperand";
+  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let ParserMatchClass = VEMEMriAsmOperand;
 }
 
 // Branch targets have OtherVT type.
@@ -414,6 +405,9 @@ def GetTLSAddr : SDNode<"VEISD::GETTLSADDR", SDT_SPCall,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                          SDNPVariadic]>;
 
+// GETSTACKTOP
+def GetStackTop : SDNode<"VEISD::GETSTACKTOP", SDTNone,
+                        [SDNPHasChain, SDNPSideEffect]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -1398,6 +1392,14 @@ def EXTEND_STACK_GUARD : Pseudo<(outs), (ins),
                                 "# EXTEND STACK GUARD",
                                 []>;
 
+// Dynamic stack allocation yields a __llvm_grow_stack for VE targets.
+// These calls are needed to probe the stack when allocating more over
+// %s8 (%sl - stack limit).
+
+let Uses = [SX11], hasSideEffects = 1 in
+def GETSTACKTOP : Pseudo<(outs I64:$dst), (ins),
+                         "# GET STACK TOP",
+                         [(set iPTR:$dst, (GetStackTop))]>;
 // SETCC pattern matches
 //
 //   CMP  %tmp, lhs, rhs     ; compare lhs and rhs

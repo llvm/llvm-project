@@ -159,13 +159,12 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-SSE-NEXT:    psllq $63, %xmm1
 ; X86-SSE-NEXT:    psllq $63, %xmm0
 ; X86-SSE-NEXT:    psrlq $63, %xmm0
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = <1,0,u,u>
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,0,0]
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
-; X86-SSE-NEXT:    pcmpeqd %xmm3, %xmm3
-; X86-SSE-NEXT:    paddq %xmm3, %xmm0
+; X86-SSE-NEXT:    psubq %xmm2, %xmm0
 ; X86-SSE-NEXT:    psrlq $63, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm1
-; X86-SSE-NEXT:    paddq %xmm3, %xmm1
+; X86-SSE-NEXT:    psubq %xmm2, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE-NEXT:    packssdw %xmm1, %xmm0

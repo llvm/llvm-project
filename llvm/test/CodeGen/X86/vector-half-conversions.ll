@@ -222,7 +222,7 @@ define <4 x float> @load_cvt_4i16_to_4f32_constrained(<4 x i16>* %a0) nounwind s
   ret <4 x float> %3
 }
 
-define <4 x float> @load_cvt_8i16_to_4f32_constrained(<8 x i16>* %a0) nounwind {
+define <4 x float> @load_cvt_8i16_to_4f32_constrained(<8 x i16>* %a0) nounwind strictfp {
 ; ALL-LABEL: load_cvt_8i16_to_4f32_constrained:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0

@@ -18,7 +18,7 @@ body:             |
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
-    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
 ...
@@ -42,7 +42,7 @@ body:             |
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
 ...
@@ -66,7 +66,7 @@ body:             |
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
-    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $exec
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
 ...
@@ -173,7 +173,7 @@ body:             |
   bb.1:
     %0 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
-    %1 = V_ADD_F32_e64 0, killed %0, 0, 1, 0, 0, implicit $exec
+    %1 = V_ADD_F32_e64 0, killed %0, 0, 1, 0, 0, implicit $mode, implicit $exec
     %3 = S_ADD_U32 %2, 1, implicit-def $scc
     S_ENDPGM 0
 ...

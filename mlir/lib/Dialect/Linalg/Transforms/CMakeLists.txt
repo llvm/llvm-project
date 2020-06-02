@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
+  DropUnitDims.cpp
   Fusion.cpp
   Interchange.cpp
   Loops.cpp

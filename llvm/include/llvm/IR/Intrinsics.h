@@ -106,6 +106,7 @@ namespace Intrinsic {
       Token,
       Metadata,
       Half,
+      BFloat,
       Float,
       Double,
       Quad,

@@ -126,8 +126,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   }
 
   // Don't crash on invalid devices.
-  if (WavefrontSize == 0)
-    WavefrontSize = 64;
+  if (WavefrontSizeLog2 == 0)
+    WavefrontSizeLog2 = 5;
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
@@ -153,7 +153,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   TargetTriple(TT),
   Has16BitInsts(false),
   HasMadMixInsts(false),
-  FPExceptions(false),
   HasSDWA(false),
   HasVOP3PInsts(false),
   HasMulI24(true),
@@ -164,7 +163,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   HasTrigReducedRange(false),
   MaxWavesPerEU(10),
   LocalMemorySize(0),
-  WavefrontSize(0)
+  WavefrontSizeLog2(0)
   { }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -270,6 +269,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
+  InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
   Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
   InstSelector.reset(new AMDGPUInstructionSelector(

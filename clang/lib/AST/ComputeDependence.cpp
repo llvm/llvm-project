@@ -83,6 +83,12 @@ ExprDependence clang::computeDependence(ArraySubscriptExpr *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
 }
 
+ExprDependence clang::computeDependence(MatrixSubscriptExpr *E) {
+  return E->getBase()->getDependence() | E->getRowIdx()->getDependence() |
+         (E->getColumnIdx() ? E->getColumnIdx()->getDependence()
+                            : ExprDependence::None);
+}
+
 ExprDependence clang::computeDependence(CompoundLiteralExpr *E) {
   return toExprDependence(E->getTypeSourceInfo()->getType()->getDependence()) |
          turnTypeToValueDependence(E->getInitializer()->getDependence());

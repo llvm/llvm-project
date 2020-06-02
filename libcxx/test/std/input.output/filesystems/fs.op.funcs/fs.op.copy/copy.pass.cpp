@@ -63,6 +63,7 @@ TEST_CASE(test_error_reporting)
 #endif
     };
 
+    static_test_env static_env;
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path dir = env.create_dir("dir");
@@ -74,7 +75,7 @@ TEST_CASE(test_error_reporting)
     // !exists(f)
     {
         std::error_code ec = test_ec;
-        const path f = StaticEnv::DNE;
+        const path f = static_env.DNE;
         const path t = env.test_root;
         fs::copy(f, t, ec);
         TEST_REQUIRE(ec);

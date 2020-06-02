@@ -251,7 +251,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
       !Config.SetSectionAlignment.empty() || Config.ExtractDWO ||
       Config.LocalizeHidden || Config.PreserveDates || Config.StripDWO ||
-      Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
+      Config.StripNonAlloc || Config.StripSections ||
+      Config.StripSwiftSymbols || Config.Weaken ||
       Config.DecompressDebugSections ||
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {

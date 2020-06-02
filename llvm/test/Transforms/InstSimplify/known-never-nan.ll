@@ -147,6 +147,16 @@ define i1 @round_nnan_src(double %arg) {
   ret i1 %tmp
 }
 
+define i1 @roundeven_nnan_src(double %arg) {
+; CHECK-LABEL: @roundeven_nnan_src(
+; CHECK-NEXT:    ret i1 false
+;
+  %nnan = fadd nnan double %arg, 1.0
+  %op = call double @llvm.roundeven.f64(double %nnan)
+  %tmp = fcmp uno double %op, %op
+  ret i1 %tmp
+}
+
 define i1 @known_nan_select(i1 %cond, double %arg0, double %arg1) {
 ; CHECK-LABEL: @known_nan_select(
 ; CHECK-NEXT:    ret i1 true
@@ -416,3 +426,4 @@ declare double @llvm.trunc.f64(double)
 declare double @llvm.rint.f64(double)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.round.f64(double)
+declare double @llvm.roundeven.f64(double)

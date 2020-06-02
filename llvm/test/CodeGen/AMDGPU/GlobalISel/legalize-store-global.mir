@@ -86,16 +86,17 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C]](s32)
+    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; SI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C2]](s32)
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
-    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[C]](s32)
-    ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; SI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
-    ; SI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; SI: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; SI: G_STORE [[COPY4]](s32), [[PTR_ADD]](p1) :: (store 1 + 1, addrspace 1)
+    ; SI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
+    ; SI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; SI: G_STORE [[COPY3]](s32), [[PTR_ADD]](p1) :: (store 1 + 1, addrspace 1)
     ; CI-LABEL: name: test_store_global_s16_align1
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
@@ -104,15 +105,18 @@ body: |
     ; VI-LABEL: name: test_store_global_s16_align1
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; VI: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[C]](s16)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C]](s32)
+    ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; VI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; VI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C2]](s32)
     ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; VI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
-    ; VI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR]](s16)
-    ; VI: G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p1) :: (store 1 + 1, addrspace 1)
+    ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C3]](s64)
+    ; VI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; VI: G_STORE [[COPY3]](s32), [[PTR_ADD]](p1) :: (store 1 + 1, addrspace 1)
     ; GFX9-LABEL: name: test_store_global_s16_align1
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2

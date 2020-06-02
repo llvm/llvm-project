@@ -26,11 +26,11 @@ for.body:                                         ; preds = %for.cond
   %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %i.0
   store i32 %i.0, i32 addrspace(1)* %arrayidx, align 4
   %cmp1 = icmp ugt i32 %i.0, %cond_b
-; CHECK: br i1 %{{[0-9a-zA-Z_]+}}, label %for.inc, label %[[FLOW1:[0-9a-zA-Z_]+]]
+; CHECK: br i1 %{{[0-9a-zA-Z_.]+}}, label %for.inc, label %[[FLOW1:[0-9a-zA-Z_]+]]
   br i1 %cmp1, label %for.end, label %for.inc
 
 ; CHECK: [[FLOW:[0-9a-zA-Z]+]]:
-; CHECK: br i1 %{{[0-9a-zA-Z_]+}}, label %for.end, label %for.cond
+; CHECK: br i1 %{{[0-9a-zA-Z_.]+}}, label %for.end, label %for.cond
 
 ; CHECK: for.inc:
 ; CHECK: br label %[[FLOW1]]

@@ -18,14 +18,14 @@ class StepScriptedTestCase(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.runCmd("command script import Steps.py")
 
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_standard_step_out(self):
         """Tests stepping with the scripted thread plan laying over a standard 
         thread plan for stepping out."""
         self.build()
         self.step_out_with_scripted_plan("Steps.StepOut")
 
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_scripted_step_out(self):
         """Tests stepping with the scripted thread plan laying over an another 
         scripted thread plan for stepping out."""
@@ -65,12 +65,12 @@ class StepScriptedTestCase(TestBase):
         # Make sure we didn't let the process run:
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")
         
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_checking_variable(self):
         """Test that we can call SBValue API's from a scripted thread plan - using SBAPI's to step"""
         self.do_test_checking_variable(False)
         
-    @skipIfReproducer # Unexpected packet during replay
+    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_checking_variable_cli(self):
         """Test that we can call SBValue API's from a scripted thread plan - using cli to step"""
         self.do_test_checking_variable(True)

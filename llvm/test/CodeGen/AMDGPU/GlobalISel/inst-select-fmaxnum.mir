@@ -22,15 +22,15 @@ body: |
     ; GFX7: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F32_e64_2:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_2:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: [[V_MAX_F64_:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F64_1:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F64_2:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $exec
+    ; GFX7: [[V_MAX_F64_:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F64_1:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F64_2:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit [[V_MAX_F64_]], implicit [[V_MAX_F64_1]], implicit [[V_MAX_F64_2]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -88,15 +88,15 @@ body: |
     ; GFX7: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F32_e64_2:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F32_e64_2:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], [[V_MAX_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: [[V_MAX_F64_:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F64_1:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $exec
-    ; GFX7: [[V_MAX_F64_2:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $exec
+    ; GFX7: [[V_MAX_F64_:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F64_1:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: [[V_MAX_F64_2:%[0-9]+]]:vreg_64 = V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit [[V_MAX_F64_]], implicit [[V_MAX_F64_1]], implicit [[V_MAX_F64_2]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0

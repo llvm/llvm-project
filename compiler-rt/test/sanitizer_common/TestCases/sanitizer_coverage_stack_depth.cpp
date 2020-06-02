@@ -1,7 +1,5 @@
 // Tests -fsanitize-coverage=stack-depth
 //
-// XFAIL: tsan
-//
 // RUN: %clangxx -O0 -std=c++11 -fsanitize-coverage=stack-depth %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not Assertion{{.*}}failed
 // RUN: %clangxx -O0 -std=c++11 -fsanitize-coverage=trace-pc-guard,stack-depth \

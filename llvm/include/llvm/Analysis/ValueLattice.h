@@ -113,10 +113,16 @@ public:
     /// number of steps.
     bool CheckWiden;
 
+    /// The number of allowed widening steps (including setting the range
+    /// initially).
+    unsigned MaxWidenSteps;
+
     MergeOptions() : MergeOptions(false, false) {}
 
-    MergeOptions(bool MayIncludeUndef, bool CheckWiden)
-        : MayIncludeUndef(MayIncludeUndef), CheckWiden(CheckWiden) {}
+    MergeOptions(bool MayIncludeUndef, bool CheckWiden,
+                 unsigned MaxWidenSteps = 1)
+        : MayIncludeUndef(MayIncludeUndef), CheckWiden(CheckWiden),
+          MaxWidenSteps(MaxWidenSteps) {}
 
     MergeOptions &setMayIncludeUndef(bool V = true) {
       MayIncludeUndef = V;
@@ -127,14 +133,21 @@ public:
       CheckWiden = V;
       return *this;
     }
+
+    MergeOptions &setMaxWidenSteps(unsigned Steps = 1) {
+      CheckWiden = true;
+      MaxWidenSteps = Steps;
+      return *this;
+    }
   };
 
   // ConstVal and Range are initialized on-demand.
-  ValueLatticeElement() : Tag(unknown) {}
+  ValueLatticeElement() : Tag(unknown), NumRangeExtensions(0) {}
 
   ~ValueLatticeElement() { destroy(); }
 
-  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(Other.Tag) {
+  ValueLatticeElement(const ValueLatticeElement &Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -152,7 +165,8 @@ public:
     }
   }
 
-  ValueLatticeElement(ValueLatticeElement &&Other) : Tag(Other.Tag) {
+  ValueLatticeElement(ValueLatticeElement &&Other)
+      : Tag(Other.Tag), NumRangeExtensions(0) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -349,7 +363,7 @@ public:
 
       // Simple form of widening. If a range is extended multiple times, go to
       // overdefined.
-      if (Opts.CheckWiden && ++NumRangeExtensions == 1)
+      if (Opts.CheckWiden && ++NumRangeExtensions > Opts.MaxWidenSteps)
         return markOverdefined();
 
       assert(NewR.contains(getConstantRange()) &&
@@ -458,6 +472,9 @@ public:
 
     return nullptr;
   }
+
+  unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
+  void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
 };
 
 static_assert(sizeof(ValueLatticeElement) <= 40,

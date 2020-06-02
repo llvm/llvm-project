@@ -11,12 +11,12 @@
 ; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02, debug_line_offset = 0x0000
 ; CHECK-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
 ; CHECK-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 1
-; CHECK-NEXT:     DW_MACRO_define_strp - lineno: 1 macro: FOO 5
+; CHECK-NEXT:     DW_MACRO_define_strx - lineno: 1 macro: FOO 5
 ; CHECK-NEXT:   DW_MACRO_end_file
 ; CHECK-NEXT:   DW_MACRO_start_file - lineno: 2 filenum: 2
-; CHECK-NEXT:     DW_MACRO_undef_strp - lineno: 14 macro: YEA
+; CHECK-NEXT:     DW_MACRO_undef_strx - lineno: 14 macro: YEA
 ; CHECK-NEXT:   DW_MACRO_end_file
-; CHECK-NEXT:   DW_MACRO_undef_strp - lineno: 14 macro: YEA
+; CHECK-NEXT:   DW_MACRO_undef_strx - lineno: 14 macro: YEA
 ; CHECK-NEXT: DW_MACRO_end_file
 
 ; ModuleID = 'test.c'

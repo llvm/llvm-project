@@ -38,7 +38,7 @@ body: |
     ; GCN-LABEL: name: fceil_s16_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CEIL_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
@@ -60,7 +60,7 @@ body: |
     ; GCN-LABEL: name: fceil_s16_vs
     ; GCN: liveins: $sgpr0
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CEIL_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -82,7 +82,7 @@ body: |
     ; GCN-LABEL: name: fceil_fneg_s16_vv
     ; GCN: liveins: $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 1, [[COPY]], 0, 0, implicit $exec
+    ; GCN: [[V_CEIL_F16_e64_:%[0-9]+]]:vgpr_32 = V_CEIL_F16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CEIL_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0

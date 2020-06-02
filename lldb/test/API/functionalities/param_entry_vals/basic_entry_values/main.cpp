@@ -18,8 +18,10 @@ __attribute__((noinline)) void func1(int &sink) {
   use<int &>(dummy);
 
   ++global;
-  //% self.filecheck("image lookup -v -a $pc", "main.cpp", "-check-prefix=FUNC1-DESC")
-  // FUNC1-DESC: name = "sink", type = "int &", location = DW_OP_entry_value
+  //% prefix = "FUNC1-GNU" if "GNU" in self.name else "FUNC1-V5"
+  //% self.filecheck("image lookup -v -a $pc", "main.cpp", "-check-prefix="+prefix)
+  // FUNC1-GNU: name = "sink", type = "int &", location = DW_OP_GNU_entry_value
+  // FUNC1-V5: name = "sink", type = "int &", location = DW_OP_entry_value
 }
 
 __attribute__((noinline)) void func2(int &sink, int x) {
@@ -137,6 +139,30 @@ func14(int &sink, void (*target_no_tailcall)(int &, int)) {
   target_no_tailcall(sink, 123);
 }
 
+/// A structure that is guaranteed -- when passed to a callee by value -- to be
+/// passed via a pointer to a temporary copy in the caller. On x86_64 & aarch64
+/// only.
+struct StructPassedViaPointerToTemporaryCopy {
+  // Under the 64-bit AAPCS, a struct larger than 16 bytes is not SROA'd, and
+  // is instead passed via pointer to a temporary copy.
+  long a, b, c;
+  StructPassedViaPointerToTemporaryCopy() : a(1), b(2), c(3) {}
+
+  // Failing that, a virtual method forces passing via pointer to a temporary
+  // copy under the common calling conventions (e.g. 32/64-bit x86, Linux/Win,
+  // according to https://www.agner.org/optimize/calling_conventions.pdf).
+  virtual void add_vtable() {}
+};
+
+__attribute__((noinline)) void func15(StructPassedViaPointerToTemporaryCopy S) {
+  use<StructPassedViaPointerToTemporaryCopy &>(S);
+  use<int &>(dummy);
+
+  ++global;
+  //% self.filecheck("expr S", "main.cpp", "-check-prefix=FUNC15-EXPR")
+  // FUNC15-EXPR: (a = 1, b = 2, c = 3)
+}
+
 __attribute__((disable_tail_calls)) int main() {
   int sink = 0;
   S1 s1;
@@ -168,6 +194,10 @@ __attribute__((disable_tail_calls)) int main() {
 
   // Test that evaluation can "see through" an indirect tail call.
   func14(sink, func13);
+
+  // Test evaluation of an entry value that dereferences a temporary stack
+  // slot set up by the caller for a StructPassedViaPointerToTemporaryCopy.
+  func15(StructPassedViaPointerToTemporaryCopy());
 
   return 0;
 }

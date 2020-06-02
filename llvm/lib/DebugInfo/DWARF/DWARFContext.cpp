@@ -190,7 +190,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     // version field and the padding, a total of 4 bytes). Add them back in
     // for reporting.
     OS << "Contribution size = " << (Contribution->Size + (Version < 5 ? 0 : 4))
-       << ", Format = " << (Format == DWARF32 ? "DWARF32" : "DWARF64")
+       << ", Format = " << dwarf::FormatString(Format)
        << ", Version = " << Version << "\n";
 
     Offset = Contribution->Base;
@@ -264,9 +264,13 @@ std::unique_ptr<DWARFDebugMacro>
 DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
   auto Macro = std::make_unique<DWARFDebugMacro>();
   auto ParseAndDump = [&](DWARFDataExtractor &Data, bool IsMacro) {
-    // FIXME: Add support for debug_macro.dwo section.
-    if (Error Err = IsMacro ? Macro->parseMacro(compile_units(),
-                                                getStringExtractor(), Data)
+    if (Error Err = IsMacro ? Macro->parseMacro(SectionType == MacroSection
+                                                    ? compile_units()
+                                                    : dwo_compile_units(),
+                                                SectionType == MacroSection
+                                                    ? getStringExtractor()
+                                                    : getStringDWOExtractor(),
+                                                Data)
                             : Macro->parseMacinfo(Data)) {
       RecoverableErrorHandler(std::move(Err));
       Macro = nullptr;
@@ -286,6 +290,11 @@ DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
   case MacroSection: {
     DWARFDataExtractor Data(*DObj, DObj->getMacroSection(), isLittleEndian(),
                             0);
+    ParseAndDump(Data, /*IsMacro=*/true);
+    break;
+  }
+  case MacroDwoSection: {
+    DWARFDataExtractor Data(DObj->getMacroDWOSection(), isLittleEndian(), 0);
     ParseAndDump(Data, /*IsMacro=*/true);
     break;
   }
@@ -459,6 +468,12 @@ void DWARFContext::dump(
                  DObj->getMacroSection().Data)) {
     if (auto Macro = getDebugMacro())
       Macro->dump(OS);
+  }
+
+  if (shouldDump(Explicit, ".debug_macro.dwo", DIDT_ID_DebugMacro,
+                 DObj->getMacroDWOSection())) {
+    if (auto MacroDWO = getDebugMacroDWO())
+      MacroDWO->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_macinfo", DIDT_ID_DebugMacro,
@@ -843,6 +858,12 @@ const DWARFDebugMacro *DWARFContext::getDebugMacro() {
   if (!Macro)
     Macro = parseMacroOrMacinfo(MacroSection);
   return Macro.get();
+}
+
+const DWARFDebugMacro *DWARFContext::getDebugMacroDWO() {
+  if (!MacroDWO)
+    MacroDWO = parseMacroOrMacinfo(MacroDwoSection);
+  return MacroDWO.get();
 }
 
 const DWARFDebugMacro *DWARFContext::getDebugMacinfo() {
@@ -1534,6 +1555,7 @@ class DWARFObjInMemory final : public DWARFObject {
   StringRef StrSection;
   StringRef MacinfoSection;
   StringRef MacinfoDWOSection;
+  StringRef MacroDWOSection;
   StringRef AbbrevDWOSection;
   StringRef StrDWOSection;
   StringRef CUIndexSection;
@@ -1554,6 +1576,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_str", &StrSection)
         .Case("debug_macinfo", &MacinfoSection)
         .Case("debug_macinfo.dwo", &MacinfoDWOSection)
+        .Case("debug_macro.dwo", &MacroDWOSection)
         .Case("debug_abbrev.dwo", &AbbrevDWOSection)
         .Case("debug_str.dwo", &StrDWOSection)
         .Case("debug_cu_index", &CUIndexSection)
@@ -1872,6 +1895,7 @@ public:
     return RnglistsSection;
   }
   const DWARFSection &getMacroSection() const override { return MacroSection; }
+  StringRef getMacroDWOSection() const override { return MacroDWOSection; }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
   StringRef getMacinfoDWOSection() const override { return MacinfoDWOSection; }
   const DWARFSection &getPubnamesSection() const override { return PubnamesSection; }

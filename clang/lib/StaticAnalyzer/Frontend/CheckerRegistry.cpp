@@ -27,6 +27,10 @@ using namespace clang;
 using namespace ento;
 using llvm::sys::DynamicLibrary;
 
+//===----------------------------------------------------------------------===//
+// Utilities.
+//===----------------------------------------------------------------------===//
+
 using RegisterCheckersFn = void (*)(CheckerRegistry &);
 
 static bool isCompatibleAPIVersion(const char *VersionString) {
@@ -85,6 +89,63 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &Checker,
 
   return false;
 }
+
+//===----------------------------------------------------------------------===//
+// Methods of CmdLineOption, PackageInfo and CheckerInfo.
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void
+CheckerRegistry::CmdLineOption::dumpToStream(llvm::raw_ostream &Out) const {
+  // The description can be just checked in Checkers.inc, the point here is to
+  // debug whether we succeeded in parsing it.
+  Out << OptionName << " (" << OptionType << ", "
+      << (IsHidden ? "hidden, " : "") << DevelopmentStatus << ") default: \""
+      << DefaultValStr;
+}
+
+static StringRef toString(CheckerRegistry::StateFromCmdLine Kind) {
+  switch (Kind) {
+  case CheckerRegistry::StateFromCmdLine::State_Disabled:
+    return "Disabled";
+  case CheckerRegistry::StateFromCmdLine::State_Enabled:
+    return "Enabled";
+  case CheckerRegistry::StateFromCmdLine::State_Unspecified:
+    return "Unspecified";
+  }
+}
+
+LLVM_DUMP_METHOD void
+CheckerRegistry::CheckerInfo::dumpToStream(llvm::raw_ostream &Out) const {
+  // The description can be just checked in Checkers.inc, the point here is to
+  // debug whether we succeeded in parsing it. Same with documentation uri.
+  Out << FullName << " (" << toString(State) << (IsHidden ? ", hidden" : "")
+      << ")\n";
+  Out << "  Options:\n";
+  for (const CmdLineOption &Option : CmdLineOptions) {
+    Out << "    ";
+    Option.dumpToStream(Out);
+    Out << '\n';
+  }
+  Out << "  Dependencies:\n";
+  for (const CheckerInfo *Dependency : Dependencies) {
+    Out << "  " << Dependency->FullName << '\n';
+  }
+}
+
+LLVM_DUMP_METHOD void
+CheckerRegistry::PackageInfo::dumpToStream(llvm::raw_ostream &Out) const {
+  Out << FullName << "\n";
+  Out << "  Options:\n";
+  for (const CmdLineOption &Option : CmdLineOptions) {
+    Out << "    ";
+    Option.dumpToStream(Out);
+    Out << '\n';
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Methods of CheckerRegistry.
+//===----------------------------------------------------------------------===//
 
 CheckerRegistry::CheckerInfoListRange
 CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {

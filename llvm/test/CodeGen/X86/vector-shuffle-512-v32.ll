@@ -201,16 +201,14 @@ define <32 x i16> @shuffle_v32i16_03_00_01_02_07_04_05_06_11_08_09_10_15_12_13_1
 define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a) {
 ; KNL-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movl $65535, %eax ## imm = 0xFFFF
-; KNL-NEXT:    vmovd %eax, %xmm1
-; KNL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vmovaps {{.*#+}} xmm1 = [65535,0,0,0]
+; KNL-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movl $65535, %eax ## imm = 0xFFFF
-; SKX-NEXT:    vmovd %eax, %xmm1
-; SKX-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vmovaps {{.*#+}} xmm1 = [65535,0,0,0]
+; SKX-NEXT:    vandps %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
   %shuffle = shufflevector <32 x i16> %a, <32 x i16> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i16> %shuffle

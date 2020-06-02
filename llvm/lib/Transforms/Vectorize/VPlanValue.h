@@ -23,16 +23,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
 // Forward declarations.
-class VPUser;
-
+class raw_ostream;
+class Value;
 class VPSlotTracker;
+class VPUser;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins

@@ -25,7 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
-#define DEBUG_TYPE "ve"
+#define DEBUG_TYPE "ve-instr-info"
 
 using namespace llvm;
 
@@ -457,6 +457,9 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent(); // The pseudo instruction is gone now.
     return true;
   }
+  case VE::GETSTACKTOP: {
+    return expandGetStackTopPseudo(MI);
+  }
   }
   return false;
 }
@@ -464,8 +467,8 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
-  const VEInstrInfo &TII =
-      *static_cast<const VEInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const VESubtarget &STI = MF.getSubtarget<VESubtarget>();
+  const VEInstrInfo &TII = *STI.getInstrInfo();
   DebugLoc dl = MBB.findDebugLoc(MI);
 
   // Create following instructions and multiple basic blocks.
@@ -540,6 +543,38 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   BuildMI(BB, dl, TII.get(VE::ORri), VE::SX0)
       .addReg(VE::SX62)
       .addImm(0);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return true;
+}
+
+bool VEInstrInfo::expandGetStackTopPseudo(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction &MF = *MBB->getParent();
+  const VESubtarget &STI = MF.getSubtarget<VESubtarget>();
+  const VEInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB->findDebugLoc(MI);
+
+  // Create following instruction
+  //
+  //   dst = %sp + target specific frame + the size of parameter area
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const VEFrameLowering &TFL = *STI.getFrameLowering();
+
+  // The VE ABI requires a reserved 176 bytes area at the top
+  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  unsigned NumBytes = STI.getAdjustedFrameSize(0);
+
+  // Also adds the size of parameter area.
+  if (MFI.adjustsStack() && TFL.hasReservedCallFrame(MF))
+    NumBytes += MFI.getMaxCallFrameSize();
+
+  BuildMI(*MBB, MI, DL, TII.get(VE::LEArii))
+      .addDef(MI.getOperand(0).getReg())
+      .addReg(VE::SX11)
+      .addImm(0)
+      .addImm(NumBytes);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return true;

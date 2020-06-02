@@ -741,6 +741,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(name);
   KEYWORD(summaries);
   KEYWORD(flags);
+  KEYWORD(blockcount);
   KEYWORD(linkage);
   KEYWORD(notEligibleToImport);
   KEYWORD(live);

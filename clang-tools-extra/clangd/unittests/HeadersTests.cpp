@@ -306,7 +306,7 @@ TEST(Headers, NoHeaderSearchInfo) {
 }
 
 TEST_F(HeadersTest, PresumedLocations) {
-  std::string HeaderFile = "implicit_include.h";
+  std::string HeaderFile = "__preamble_patch__.h";
 
   // Line map inclusion back to main file.
   std::string HeaderContents =
@@ -317,7 +317,7 @@ TEST_F(HeadersTest, PresumedLocations) {
   FS.Files[HeaderFile] = HeaderContents;
 
   // Including through non-builtin file has no effects.
-  FS.Files[MainFile] = "#include \"implicit_include.h\"\n\n";
+  FS.Files[MainFile] = "#include \"__preamble_patch__.h\"\n\n";
   EXPECT_THAT(collectIncludes().MainFileIncludes,
               Not(Contains(Written("<a.h>"))));
 

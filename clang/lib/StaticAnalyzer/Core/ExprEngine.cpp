@@ -1515,6 +1515,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
 
+    case Stmt::MatrixSubscriptExprClass:
+      llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
+      break;
+
     case Stmt::GCCAsmStmtClass:
       Bldr.takeNodes(Pred);
       VisitGCCAsmStmt(cast<GCCAsmStmt>(S), Pred, Dst);
@@ -3206,3 +3210,5 @@ void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
   static int index = 0;
   return &index;
 }
+
+void ExprEngine::anchor() { }

@@ -70,7 +70,7 @@ define void @StoreInBounds4() {
 ; CHECK-LABEL: @StoreInBounds4 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [2,-1){{$}}
+; CHECK-NEXT: x[4]: [-9223372036854775808,9223372036854775807){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -177,7 +177,8 @@ define void @NonConstantOffset(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [0,4){{$}}
+; FIXME: SCEV can't look through selects.
+; CHECK-NEXT: x[4]: [-4,4){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -188,12 +189,39 @@ entry:
   ret void
 }
 
+define void @NegativeOffset() {
+; CHECK-LABEL: @NegativeOffset dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[40]: [-1600000000000,-1599999999996){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i32, i32 10, align 4
+  %x2 = getelementptr i32, i32* %x, i64 -400000000000
+  store i32 0, i32* %x2, align 1
+  ret void
+}
+
+define void @PossiblyNegativeOffset(i16 %z) {
+; CHECK-LABEL: @PossiblyNegativeOffset dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: z[]: full-set
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[40]: [-131072,131072){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i32, i32 10, align 4
+  %x2 = getelementptr i32, i32* %x, i16 %z
+  store i32 0, i32* %x2, align 1
+  ret void
+}
+
 define void @NonConstantOffsetOOB(i1 zeroext %z) {
 ; CHECK-LABEL: @NonConstantOffsetOOB dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [0,6){{$}}
+; CHECK-NEXT: x[4]: [-8,8){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -250,7 +278,7 @@ entry:
 define void @DynamicAlloca(i64 %size) {
 ; CHECK-LABEL: @DynamicAlloca dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: [0,-12){{$}}
+; CHECK-NEXT: size[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
@@ -265,7 +293,7 @@ entry:
 define void @DynamicAllocaFiniteSizeRange(i1 zeroext %z) {
 ; CHECK-LABEL: @DynamicAllocaFiniteSizeRange dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: [0,-12){{$}}
+; CHECK-NEXT: z[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
@@ -328,13 +356,12 @@ for.cond.cleanup:
   ret i8 %add
 }
 
-; FIXME: we don't understand that %sz in the memset call is limited to 128 by the preceding check.
 define dso_local void @SizeCheck(i32 %sz) {
 ; CHECK-LABEL: @SizeCheck{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: sz[]: [0,1){{$}}
+; CHECK-NEXT: sz[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x1[128]: full-set{{$}}
+; CHECK-NEXT: x1[128]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x1 = alloca [128 x i8], align 16
@@ -383,5 +410,17 @@ entry:
   store %zerosize_type undef, %zerosize_type* %x, align 4
   store %zerosize_type undef, %zerosize_type* undef, align 4
   %val = load %zerosize_type, %zerosize_type* %p, align 4
+  ret void
+}
+
+define void @OperandBundle() {
+; CHECK-LABEL: @OperandBundle dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   a[4]: full-set
+; CHECK-NOT: ]:
+entry:
+  %a = alloca i32, align 4
+  call void @LeakAddress() ["unknown"(i32* %a)]
   ret void
 }

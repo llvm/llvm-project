@@ -9,11 +9,11 @@
 
 # CHECK:      DW_AT_name        ("x1")
 # CHECK-NEXT: DW_AT_location    (0xdeadbeef: )
-# ERR:    error: unexpected end of data at offset 0xdeadbeef
+# ERR:    error: offset 0xdeadbeef is beyond the end of data at 0x48
 
 # CHECK:      DW_AT_name        ("x2")
 # CHECK-NEXT: DW_AT_location    (0x00000036: )
-# ERR:    error: unexpected end of data at offset 0x48
+# ERR:    error: unexpected end of data at offset 0x48 while reading [0x48, 0xdef5)
 
 
         .type   f,@function

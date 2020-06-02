@@ -149,8 +149,8 @@ TEST_CASE(test_with_ec_dne) {
   using fs::directory_entry;
   using fs::file_status;
   using fs::path;
-
-  for (auto p : {StaticEnv::DNE, StaticEnv::BadSymlink}) {
+  static_test_env static_env;
+  for (auto p : {static_env.DNE, static_env.BadSymlink}) {
 
     directory_entry e(p);
     std::error_code status_ec = GetTestEC();

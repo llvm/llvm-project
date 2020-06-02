@@ -298,6 +298,7 @@ static bool __kmp_task_is_allowed(int gtid, const kmp_int32 is_constrained,
 static void __kmp_realloc_task_deque(kmp_info_t *thread,
                                      kmp_thread_data_t *thread_data) {
   kmp_int32 size = TASK_DEQUE_SIZE(thread_data->td);
+  KMP_DEBUG_ASSERT(TCR_4(thread_data->td.td_deque_ntasks) == size);
   kmp_int32 new_size = 2 * size;
 
   KE_TRACE(10, ("__kmp_realloc_task_deque: T#%d reallocating deque[from %d to "
@@ -381,8 +382,11 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
     } else {
       __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
       locked = 1;
-      // expand deque to push the task which is not allowed to execute
-      __kmp_realloc_task_deque(thread, thread_data);
+      if (TCR_4(thread_data->td.td_deque_ntasks) >=
+          TASK_DEQUE_SIZE(thread_data->td)) {
+        // expand deque to push the task which is not allowed to execute
+        __kmp_realloc_task_deque(thread, thread_data);
+      }
     }
   }
   // Lock the deque for the task push operation
@@ -573,24 +577,20 @@ static inline void __ompt_task_start(kmp_task_t *task,
 
 // __ompt_task_finish:
 //   Build and trigger final task-schedule event
-static inline void
-__ompt_task_finish(kmp_task_t *task, kmp_taskdata_t *resumed_task,
-                   ompt_task_status_t status = ompt_task_complete) {
-  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
-  if (__kmp_omp_cancellation && taskdata->td_taskgroup &&
-      taskdata->td_taskgroup->cancel_request == cancel_taskgroup) {
-    status = ompt_task_cancel;
-  }
-
-  /* let OMPT know that we're returning to the callee task */
+static inline void __ompt_task_finish(kmp_task_t *task,
+                                      kmp_taskdata_t *resumed_task,
+                                      ompt_task_status_t status) {
   if (ompt_enabled.ompt_callback_task_schedule) {
+    kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+    if (__kmp_omp_cancellation && taskdata->td_taskgroup &&
+        taskdata->td_taskgroup->cancel_request == cancel_taskgroup) {
+      status = ompt_task_cancel;
+    }
+
+    /* let OMPT know that we're returning to the callee task */
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
         &(taskdata->ompt_task_info.task_data), status,
-        &((resumed_task ? resumed_task
-                        : (taskdata->ompt_task_info.scheduling_parent
-                               ? taskdata->ompt_task_info.scheduling_parent
-                               : taskdata->td_parent))
-              ->ompt_task_info.task_data));
+        (resumed_task ? &(resumed_task->ompt_task_info.task_data) : NULL));
   }
 }
 #endif
@@ -799,6 +799,10 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
 // gtid: global thread ID for calling thread
 // task: task to be finished
 // resumed_task: task to be resumed.  (may be NULL if task is serialized)
+//
+// template<ompt>: effectively ompt_enabled.enabled!=0
+// the version with ompt=false is inlined, allowing to optimize away all ompt
+// code in this case
 template <bool ompt>
 static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
                               kmp_taskdata_t *resumed_task) {
@@ -845,10 +849,6 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
       return;
     }
   }
-#if OMPT_SUPPORT
-  if (ompt)
-    __ompt_task_finish(task, resumed_task);
-#endif
 
   // Check mutexinoutset dependencies, release locks
   kmp_depnode_t *node = taskdata->td_depnode;
@@ -903,8 +903,18 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
         // task finished execution
         KMP_DEBUG_ASSERT(taskdata->td_flags.executing == 1);
         taskdata->td_flags.executing = 0; // suspend the finishing task
+
+#if OMPT_SUPPORT
+        // For a detached task, which is not completed, we switch back
+        // the omp_fulfill_event signals completion
+        // locking is necessary to avoid a race with ompt_task_late_fulfill
+        if (ompt)
+          __ompt_task_finish(task, resumed_task, ompt_task_detach);
+#endif
+
         // no access to taskdata after this point!
         // __kmp_fulfill_event might free taskdata at any time from now
+
         taskdata->td_flags.proxy = TASK_PROXY; // proxify!
         detach = true;
       }
@@ -914,6 +924,12 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
 
   if (!detach) {
     taskdata->td_flags.complete = 1; // mark the task as completed
+
+#if OMPT_SUPPORT
+    // This is not a detached task, we are done here
+    if (ompt)
+      __ompt_task_finish(task, resumed_task, ompt_task_complete);
+#endif
 
     // Only need to keep track of count if team parallel and tasking not
     // serialized, or task is detachable and event has already been fulfilled 
@@ -3659,7 +3675,11 @@ static bool __kmp_give_task(kmp_info_t *thread, kmp_int32 tid, kmp_task_t *task,
       return result;
 
     __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
-    __kmp_realloc_task_deque(thread, thread_data);
+    if (TCR_4(thread_data->td.td_deque_ntasks) >=
+        TASK_DEQUE_SIZE(thread_data->td)) {
+      // expand deque to push the task which is not allowed to execute
+      __kmp_realloc_task_deque(thread, thread_data);
+    }
 
   } else {
 
@@ -3859,12 +3879,26 @@ void __kmp_fulfill_event(kmp_event_t *event) {
     // point.
     // We need to take the lock to avoid races
     __kmp_acquire_tas_lock(&event->lock, gtid);
-    if (taskdata->td_flags.proxy == TASK_PROXY)
+    if (taskdata->td_flags.proxy == TASK_PROXY) {
       detached = true;
+    } else {
+#if OMPT_SUPPORT
+      // The OMPT event must occur under mutual exclusion,
+      // otherwise the tool might access ptask after free
+      if (UNLIKELY(ompt_enabled.enabled))
+        __ompt_task_finish(ptask, NULL, ompt_task_early_fulfill);
+#endif
+    }
     event->type = KMP_EVENT_UNINITIALIZED;
     __kmp_release_tas_lock(&event->lock, gtid);
 
     if (detached) {
+#if OMPT_SUPPORT
+      // We free ptask afterwards and know the task is finished,
+      // so locking is not necessary
+      if (UNLIKELY(ompt_enabled.enabled))
+        __ompt_task_finish(ptask, NULL, ompt_task_late_fulfill);
+#endif
       // If the task detached complete the proxy task
       if (gtid >= 0) {
         kmp_team_t *team = taskdata->td_team;
@@ -3890,14 +3924,13 @@ void __kmp_fulfill_event(kmp_event_t *event) {
 kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
   kmp_task_t *task;
   kmp_taskdata_t *taskdata;
-  kmp_taskdata_t *taskdata_src;
-  kmp_taskdata_t *parent_task = thread->th.th_current_task;
+  kmp_taskdata_t *taskdata_src = KMP_TASK_TO_TASKDATA(task_src);
+  kmp_taskdata_t *parent_task = taskdata_src->td_parent; // same parent task
   size_t shareds_offset;
   size_t task_size;
 
   KA_TRACE(10, ("__kmp_task_dup_alloc(enter): Th %p, source task %p\n", thread,
                 task_src));
-  taskdata_src = KMP_TASK_TO_TASKDATA(task_src);
   KMP_DEBUG_ASSERT(taskdata_src->td_flags.proxy ==
                    TASK_FULL); // it should not be proxy task
   KMP_DEBUG_ASSERT(taskdata_src->td_flags.tasktype == TASK_EXPLICIT);
@@ -4272,7 +4305,6 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
                           void *codeptr_ra,
 #endif
                           void *task_dup) {
-#if KMP_DEBUG
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   KMP_DEBUG_ASSERT(task != NULL);
   KMP_DEBUG_ASSERT(num_tasks > num_t_min);
@@ -4280,7 +4312,6 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
                 " %lld, extras %lld, i=%lld,%lld(%d), dup %p\n",
                 gtid, taskdata, num_tasks, grainsize, extras, *lb, *ub, st,
                 task_dup));
-#endif
   p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
   kmp_uint64 lower = *lb;
   kmp_info_t *thread = __kmp_threads[gtid];
@@ -4324,9 +4355,14 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   *ub = ub0; // adjust upper bound for the 1st half
 
   // create auxiliary task for 2nd half of the loop
+  // make sure new task has same parent task as the pattern task
+  kmp_taskdata_t *current_task = thread->th.th_current_task;
+  thread->th.th_current_task = taskdata->td_parent;
   kmp_task_t *new_task =
       __kmpc_omp_task_alloc(loc, gtid, 1, 3 * sizeof(void *),
                             sizeof(__taskloop_params_t), &__kmp_taskloop_task);
+  // restore current task
+  thread->th.th_current_task = current_task;
   __taskloop_params_t *p = (__taskloop_params_t *)new_task->shareds;
   p->task = next_task;
   p->lb = (kmp_uint64 *)((char *)next_task + lower_offset);

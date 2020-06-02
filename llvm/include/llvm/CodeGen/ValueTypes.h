@@ -97,8 +97,7 @@ namespace llvm {
       MVT EltTy = getSimpleVT().getVectorElementType();
       unsigned BitWidth = EltTy.getSizeInBits();
       MVT IntTy = MVT::getIntegerVT(BitWidth);
-      MVT VecTy = MVT::getVectorVT(IntTy, getVectorNumElements(),
-                                   isScalableVector());
+      MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
       return VecTy;
@@ -290,6 +289,11 @@ namespace llvm {
         return V.getVectorElementCount();
 
       return {getExtendedVectorNumElements(), isExtendedScalableVector()};
+    }
+
+    /// Given a vector type, return the minimum number of elements it contains.
+    unsigned getVectorMinNumElements() const {
+      return getVectorElementCount().Min;
     }
 
     /// Return the size of the specified value type in bits.

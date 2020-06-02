@@ -362,16 +362,6 @@ const DeclTypeSpec *Scope::FindInstantiatedDerivedType(
   }
 }
 
-const Symbol *Scope::GetSymbol() const {
-  if (symbol_) {
-    return symbol_;
-  }
-  if (derivedTypeSpec_) {
-    return &derivedTypeSpec_->typeSymbol();
-  }
-  return nullptr;
-}
-
 const Scope *Scope::GetDerivedTypeParent() const {
   if (const Symbol * symbol{GetSymbol()}) {
     if (const DerivedTypeSpec * parent{symbol->GetParentTypeSpec(this)}) {

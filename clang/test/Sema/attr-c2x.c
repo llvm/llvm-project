@@ -27,3 +27,15 @@ void bar(void) {
 
 [[nodiscard]] int without_underscores(void);
 [[__nodiscard__]] int underscores(void);
+
+// Match GCC's behavior for C attributes as well.
+[[gnu::constructor]] void ctor_func(void);
+[[gnu::destructor]] void dtor_func(void);
+[[gnu::hot]] void hot_func(void);
+[[__gnu__::hot]] void hot_func2(void);
+[[gnu::__hot__]] void hot_func3(void);
+[[__gnu__::__hot__]] void hot_func4(void);
+
+// Note how not all GCC attributes are supported in C.
+[[gnu::abi_tag("")]] void abi_func(void); // expected-warning {{unknown attribute 'abi_tag' ignored}}
+struct S s [[gnu::init_priority(1)]]; // expected-warning {{unknown attribute 'init_priority' ignored}}

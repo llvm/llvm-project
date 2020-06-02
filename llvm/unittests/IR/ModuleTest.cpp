@@ -9,6 +9,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "gtest/gtest.h"
@@ -119,6 +120,42 @@ TEST(ModuleTest, setProfileSummary) {
   EXPECT_NE(nullptr, PS);
   EXPECT_EQ(true, PS->isPartialProfile());
   delete PS;
+}
+
+TEST(ModuleTest, setPartialSampleProfileRatio) {
+  const char *IRString = R"IR(
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 1, !"ProfileSummary", !1}
+  !1 = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
+  !2 = !{!"ProfileFormat", !"SampleProfile"}
+  !3 = !{!"TotalCount", i64 10000}
+  !4 = !{!"MaxCount", i64 10}
+  !5 = !{!"MaxInternalCount", i64 1}
+  !6 = !{!"MaxFunctionCount", i64 1000}
+  !7 = !{!"NumCounts", i64 200}
+  !8 = !{!"NumFunctions", i64 3}
+  !9 = !{!"IsPartialProfile", i64 1}
+  !10 = !{!"PartialProfileRatio", double 0.0}
+  !11 = !{!"DetailedSummary", !12}
+  !12 = !{!13, !14, !15}
+  !13 = !{i32 10000, i64 1000, i32 1}
+  !14 = !{i32 990000, i64 300, i32 10}
+  !15 = !{i32 999999, i64 5, i32 100}
+  )IR";
+
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(IRString, Err, Context);
+  ModuleSummaryIndex Index(/*HaveGVs*/ false);
+  const unsigned BlockCount = 100;
+  const unsigned NumCounts = 200;
+  Index.setBlockCount(BlockCount);
+  M->setPartialSampleProfileRatio(Index);
+  double Ratio = (double)BlockCount / NumCounts;
+  std::unique_ptr<ProfileSummary> ProfileSummary(
+      ProfileSummary::getFromMD(M->getProfileSummary(/*IsCS*/ false)));
+  EXPECT_EQ(Ratio, ProfileSummary->getPartialProfileRatio());
 }
 
 } // end namespace

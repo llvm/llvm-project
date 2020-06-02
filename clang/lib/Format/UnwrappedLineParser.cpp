@@ -1962,7 +1962,7 @@ void UnwrappedLineParser::parseIfThenElse() {
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
   // handle [[likely]] / [[unlikely]]
-  if (FormatTok->is(tok::l_square))
+  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
     parseSquare();
   bool NeedsUnwrappedLine = false;
   if (FormatTok->Tok.is(tok::l_brace)) {
@@ -1981,7 +1981,7 @@ void UnwrappedLineParser::parseIfThenElse() {
   if (FormatTok->Tok.is(tok::kw_else)) {
     nextToken();
     // handle [[likely]] / [[unlikely]]
-    if (FormatTok->is(tok::l_square))
+    if (FormatTok->Tok.is(tok::l_square) && tryToParseSimpleAttribute())
       parseSquare();
     if (FormatTok->Tok.is(tok::l_brace)) {
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -2341,6 +2341,51 @@ bool UnwrappedLineParser::parseEnum() {
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "enum A {} n, m;",
   // "} n, m;" will end up in one unwrapped line.
+}
+
+namespace {
+// A class used to set and restore the Token position when peeking
+// ahead in the token source.
+class ScopedTokenPosition {
+  unsigned StoredPosition;
+  FormatTokenSource *Tokens;
+
+public:
+  ScopedTokenPosition(FormatTokenSource *Tokens) : Tokens(Tokens) {
+    assert(Tokens && "Tokens expected to not be null");
+    StoredPosition = Tokens->getPosition();
+  }
+
+  ~ScopedTokenPosition() { Tokens->setPosition(StoredPosition); }
+};
+} // namespace
+
+// Look to see if we have [[ by looking ahead, if
+// its not then rewind to the original position.
+bool UnwrappedLineParser::tryToParseSimpleAttribute() {
+  ScopedTokenPosition AutoPosition(Tokens);
+  FormatToken *Tok = Tokens->getNextToken();
+  // We already read the first [ check for the second.
+  if (Tok && !Tok->is(tok::l_square)) {
+    return false;
+  }
+  // Double check that the attribute is just something
+  // fairly simple.
+  while (Tok) {
+    if (Tok->is(tok::r_square)) {
+      break;
+    }
+    Tok = Tokens->getNextToken();
+  }
+  Tok = Tokens->getNextToken();
+  if (Tok && !Tok->is(tok::r_square)) {
+    return false;
+  }
+  Tok = Tokens->getNextToken();
+  if (Tok && Tok->is(tok::semi)) {
+    return false;
+  }
+  return true;
 }
 
 void UnwrappedLineParser::parseJavaEnumBody() {

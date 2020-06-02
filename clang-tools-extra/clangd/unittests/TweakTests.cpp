@@ -2059,21 +2059,57 @@ TEST_F(DefineOutlineTest, ApplyTest) {
           "void foo(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) ;",
           "void foo(int x, int y , int , int (*foo)(int) ) {}",
       },
-      // Ctor initializers.
+      // Constructors
+      {
+          R"cpp(
+            class Foo {public: Foo(); Foo(int);};
+            class Bar {
+              Ba^r() {}
+              Bar(int x) : f1(x) {}
+              Foo f1;
+              Foo f2 = 2;
+            };)cpp",
+          R"cpp(
+            class Foo {public: Foo(); Foo(int);};
+            class Bar {
+              Bar() ;
+              Bar(int x) : f1(x) {}
+              Foo f1;
+              Foo f2 = 2;
+            };)cpp",
+          "Bar::Bar() {}\n",
+      },
+      // Ctor with initializer.
+      {
+          R"cpp(
+            class Foo {public: Foo(); Foo(int);};
+            class Bar {
+              Bar() {}
+              B^ar(int x) : f1(x), f2(3) {}
+              Foo f1;
+              Foo f2 = 2;
+            };)cpp",
+          R"cpp(
+            class Foo {public: Foo(); Foo(int);};
+            class Bar {
+              Bar() {}
+              Bar(int x) ;
+              Foo f1;
+              Foo f2 = 2;
+            };)cpp",
+          "Bar::Bar(int x) : f1(x), f2(3) {}\n",
+      },
+      // Ctor initializer with attribute.
       {
           R"cpp(
               class Foo {
-                int y = 2;
                 F^oo(int z) __attribute__((weak)) : bar(2){}
                 int bar;
-                int z = 2;
               };)cpp",
           R"cpp(
               class Foo {
-                int y = 2;
                 Foo(int z) __attribute__((weak)) ;
                 int bar;
-                int z = 2;
               };)cpp",
           "Foo::Foo(int z) __attribute__((weak)) : bar(2){}\n",
       },

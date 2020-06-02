@@ -13,6 +13,8 @@
 #include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+
+#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
@@ -29,6 +31,8 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::edsc;
@@ -235,39 +239,38 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       SmallVector<Type, 1> resultType;
       if (options.unroll)
         resultType.push_back(vectorType);
-      auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
-          ScopedContext::getLocation(), resultType, inBoundsCondition,
-          /*withElseRegion=*/true);
 
-      // 3.a. If in-bounds, progressively lower to a 1-D transfer read.
-      BlockBuilder(&ifOp.thenRegion().front(), Append())([&] {
-        Value vector = load1DVector(majorIvsPlusOffsets);
-        // 3.a.i. If `options.unroll` is true, insert the 1-D vector in the
-        // aggregate. We must yield and merge with the `else` branch.
-        if (options.unroll) {
-          vector = vector_insert(vector, result, majorIvs);
-          (loop_yield(vector));
-          return;
-        }
-        // 3.a.ii. Otherwise, just go through the temporary `alloc`.
-        std_store(vector, alloc, majorIvs);
-      });
+      // 3. If in-bounds, progressively lower to a 1-D transfer read, otherwise
+      // splat a 1-D vector.
+      ValueRange ifResults = conditionBuilder(
+          resultType, inBoundsCondition,
+          [&]() -> scf::ValueVector {
+            Value vector = load1DVector(majorIvsPlusOffsets);
+            // 3.a. If `options.unroll` is true, insert the 1-D vector in the
+            // aggregate. We must yield and merge with the `else` branch.
+            if (options.unroll) {
+              vector = vector_insert(vector, result, majorIvs);
+              return {vector};
+            }
+            // 3.b. Otherwise, just go through the temporary `alloc`.
+            std_store(vector, alloc, majorIvs);
+            return {};
+          },
+          [&]() -> scf::ValueVector {
+            Value vector = std_splat(minorVectorType, xferOp.padding());
+            // 3.c. If `options.unroll` is true, insert the 1-D vector in the
+            // aggregate. We must yield and merge with the `then` branch.
+            if (options.unroll) {
+              vector = vector_insert(vector, result, majorIvs);
+              return {vector};
+            }
+            // 3.d. Otherwise, just go through the temporary `alloc`.
+            std_store(vector, alloc, majorIvs);
+            return {};
+          });
 
-      // 3.b. If not in-bounds, splat a 1-D vector.
-      BlockBuilder(&ifOp.elseRegion().front(), Append())([&] {
-        Value vector = std_splat(minorVectorType, xferOp.padding());
-        // 3.a.i. If `options.unroll` is true, insert the 1-D vector in the
-        // aggregate. We must yield and merge with the `then` branch.
-        if (options.unroll) {
-          vector = vector_insert(vector, result, majorIvs);
-          (loop_yield(vector));
-          return;
-        }
-        // 3.b.ii. Otherwise, just go through the temporary `alloc`.
-        std_store(vector, alloc, majorIvs);
-      });
       if (!resultType.empty())
-        result = *ifOp.results().begin();
+        result = *ifResults.begin();
     } else {
       // 4. Guaranteed in-bounds, progressively lower to a 1-D transfer read.
       Value loaded1D = load1DVector(majorIvsPlusOffsets);
@@ -281,7 +284,8 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
     }
   });
 
-  assert((!options.unroll ^ result) && "Expected resulting Value iff unroll");
+  assert((!options.unroll ^ (bool)result) &&
+         "Expected resulting Value iff unroll");
   if (!result)
     result = std_load(vector_type_cast(MemRefType::get({}, vectorType), alloc));
   rewriter.replaceOp(op, result);
@@ -335,11 +339,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
     if (inBoundsCondition) {
       // 2.a. If the condition is not null, we need an IfOp, to write
       // conditionally. Progressively lower to a 1-D transfer write.
-      auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
-          ScopedContext::getLocation(), TypeRange{}, inBoundsCondition,
-          /*withElseRegion=*/false);
-      BlockBuilder(&ifOp.thenRegion().front(),
-                   Append())([&] { emitTransferWrite(majorIvsPlusOffsets); });
+      conditionBuilder(inBoundsCondition,
+                       [&] { emitTransferWrite(majorIvsPlusOffsets); });
     } else {
       // 2.b. Guaranteed in-bounds. Progressively lower to a 1-D transfer write.
       emitTransferWrite(majorIvsPlusOffsets);
@@ -352,7 +353,7 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
 }
 
 } // namespace
-  
+
 /// Analyzes the `transfer` to find an access dimension along the fastest remote
 /// MemRef dimension. If such a dimension with coalescing properties is found,
 /// `pivs` and `vectorBoundsCapture` are swapped so that the invocation of
@@ -438,7 +439,7 @@ clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
 }
 
 namespace mlir {
-  
+
 template <typename TransferOpTy>
 VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
@@ -634,3 +635,28 @@ void populateVectorToSCFConversionPatterns(
 
 } // namespace mlir
 
+namespace {
+
+struct ConvertVectorToSCFPass
+    : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
+  ConvertVectorToSCFPass() = default;
+  ConvertVectorToSCFPass(const ConvertVectorToSCFPass &pass) {}
+  ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
+    this->fullUnroll = options.unroll;
+  }
+
+  void runOnFunction() override {
+    OwningRewritePatternList patterns;
+    auto *context = getFunction().getContext();
+    populateVectorToSCFConversionPatterns(
+        patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
+} // namespace
+
+std::unique_ptr<Pass>
+mlir::createConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
+  return std::make_unique<ConvertVectorToSCFPass>(options);
+}

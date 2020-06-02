@@ -74,7 +74,7 @@ static Expected<Symbol &> getMachOStubTarget(LinkGraph &G, Block &B) {
 
 namespace llvm {
 
-Error registerMachOStubsAndGOT(Session &S, LinkGraph &G) {
+Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
   auto FileName = sys::path::filename(G.getName());
   if (S.FileInfos.count(FileName)) {
     return make_error<StringError>("When -check is passed, file names must be "
@@ -90,7 +90,8 @@ Error registerMachOStubsAndGOT(Session &S, LinkGraph &G) {
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "
-             << (llvm::empty(Sec.symbols()) ? "empty. skipping." : "processing...")
+             << (llvm::empty(Sec.symbols()) ? "empty. skipping."
+                                            : "processing...")
              << "\n";
     });
 

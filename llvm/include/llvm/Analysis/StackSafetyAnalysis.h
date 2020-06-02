@@ -18,25 +18,53 @@
 
 namespace llvm {
 
+class AllocaInst;
+class ScalarEvolution;
+
 /// Interface to access stack safety analysis results for single function.
 class StackSafetyInfo {
 public:
-  struct FunctionInfo;
+  struct InfoTy;
 
 private:
-  std::unique_ptr<FunctionInfo> Info;
+  Function *F = nullptr;
+  std::function<ScalarEvolution &()> GetSE;
+  mutable std::unique_ptr<InfoTy> Info;
 
 public:
   StackSafetyInfo();
-  StackSafetyInfo(FunctionInfo &&Info);
+  StackSafetyInfo(Function *F, std::function<ScalarEvolution &()> GetSE);
   StackSafetyInfo(StackSafetyInfo &&);
   StackSafetyInfo &operator=(StackSafetyInfo &&);
   ~StackSafetyInfo();
 
-  FunctionInfo *getInfo() const { return Info.get(); }
+  const InfoTy &getInfo() const;
 
   // TODO: Add useful for client methods.
   void print(raw_ostream &O) const;
+};
+
+class StackSafetyGlobalInfo {
+public:
+  struct InfoTy;
+
+private:
+  Module *M = nullptr;
+  std::function<const StackSafetyInfo &(Function &F)> GetSSI;
+  mutable std::unique_ptr<InfoTy> Info;
+  const InfoTy &getInfo() const;
+
+public:
+  StackSafetyGlobalInfo();
+  StackSafetyGlobalInfo(
+      Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI);
+  StackSafetyGlobalInfo(StackSafetyGlobalInfo &&);
+  StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
+  ~StackSafetyGlobalInfo();
+
+  bool setMetadata(Module &M) const;
+  void print(raw_ostream &O) const;
+  void dump() const;
 };
 
 /// StackSafetyInfo wrapper for the new pass manager.
@@ -74,8 +102,6 @@ public:
   bool runOnFunction(Function &F) override;
 };
 
-using StackSafetyGlobalInfo = std::map<const GlobalValue *, StackSafetyInfo>;
-
 /// This pass performs the global (interprocedural) stack safety analysis (new
 /// pass manager).
 class StackSafetyGlobalAnalysis
@@ -110,12 +136,12 @@ public:
 /// (legacy pass manager).
 class StackSafetyGlobalInfoWrapperPass : public ModulePass {
   StackSafetyGlobalInfo SSGI;
-  bool SetMetadata;
 
 public:
   static char ID;
 
-  StackSafetyGlobalInfoWrapperPass(bool SetMetadata = false);
+  StackSafetyGlobalInfoWrapperPass();
+  ~StackSafetyGlobalInfoWrapperPass();
 
   const StackSafetyGlobalInfo &getResult() const { return SSGI; }
 
@@ -125,7 +151,7 @@ public:
   bool runOnModule(Module &M) override;
 };
 
-ModulePass *createStackSafetyGlobalInfoWrapperPass(bool SetMetadata);
+ModulePass *createStackSafetyGlobalInfoWrapperPass();
 
 } // end namespace llvm
 

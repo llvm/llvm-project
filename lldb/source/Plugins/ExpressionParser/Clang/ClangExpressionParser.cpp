@@ -666,10 +666,32 @@ class CodeComplete : public CodeCompleteConsumer {
 
   std::string m_expr;
   unsigned m_position = 0;
-  CompletionRequest &m_request;
   /// The printing policy we use when printing declarations for our completion
   /// descriptions.
   clang::PrintingPolicy m_desc_policy;
+
+  struct CompletionWithPriority {
+    CompletionResult::Completion completion;
+    /// See CodeCompletionResult::Priority;
+    unsigned Priority;
+
+    /// Establishes a deterministic order in a list of CompletionWithPriority.
+    /// The order returned here is the order in which the completions are
+    /// displayed to the user.
+    bool operator<(const CompletionWithPriority &o) const {
+      // High priority results should come first.
+      if (Priority != o.Priority)
+        return Priority > o.Priority;
+
+      // Identical priority, so just make sure it's a deterministic order.
+      return completion.GetUniqueKey() < o.completion.GetUniqueKey();
+    }
+  };
+
+  /// The stored completions.
+  /// Warning: These are in a non-deterministic order until they are sorted
+  /// and returned back to the caller.
+  std::vector<CompletionWithPriority> m_completions;
 
   /// Returns true if the given character can be used in an identifier.
   /// This also returns true for numbers because for completion we usually
@@ -687,7 +709,7 @@ class CodeComplete : public CodeCompleteConsumer {
   /// Drops all tokens in front of the expression that are unrelated for
   /// the completion of the cmd line. 'unrelated' means here that the token
   /// is not interested for the lldb completion API result.
-  StringRef dropUnrelatedFrontTokens(StringRef cmd) {
+  StringRef dropUnrelatedFrontTokens(StringRef cmd) const {
     if (cmd.empty())
       return cmd;
 
@@ -708,7 +730,7 @@ class CodeComplete : public CodeCompleteConsumer {
   }
 
   /// Removes the last identifier token from the given cmd line.
-  StringRef removeLastToken(StringRef cmd) {
+  StringRef removeLastToken(StringRef cmd) const {
     while (!cmd.empty() && IsIdChar(cmd.back())) {
       cmd = cmd.drop_back();
     }
@@ -719,7 +741,7 @@ class CodeComplete : public CodeCompleteConsumer {
   /// existing command. Returns the completion string that can be returned to
   /// the lldb completion API.
   std::string mergeCompletion(StringRef existing, unsigned pos,
-                              StringRef completion) {
+                              StringRef completion) const {
     StringRef existing_command = existing.substr(0, pos);
     // We rewrite the last token with the completion, so let's drop that
     // token from the command.
@@ -741,11 +763,10 @@ public:
   /// \param[out] position
   ///    The character position of the user cursor in the `expr` parameter.
   ///
-  CodeComplete(CompletionRequest &request, clang::LangOptions ops,
-               std::string expr, unsigned position)
+  CodeComplete(clang::LangOptions ops, std::string expr, unsigned position)
       : CodeCompleteConsumer(CodeCompleteOptions()),
         m_info(std::make_shared<GlobalCodeCompletionAllocator>()), m_expr(expr),
-        m_position(position), m_request(request), m_desc_policy(ops) {
+        m_position(position), m_desc_policy(ops) {
 
     // Ensure that the printing policy is producing a description that is as
     // short as possible.
@@ -757,9 +778,6 @@ public:
     m_desc_policy.UseVoidForZeroParams = false;
     m_desc_policy.Bool = true;
   }
-
-  /// Deregisters and destroys this code-completion consumer.
-  ~CodeComplete() override {}
 
   /// \name Code-completion filtering
   /// Check if the result should be filtered out.
@@ -788,6 +806,85 @@ public:
     return true;
   }
 
+private:
+  /// Generate the completion strings for the given CodeCompletionResult.
+  /// Note that this function has to process results that could come in
+  /// non-deterministic order, so this function should have no side effects.
+  /// To make this easier to enforce, this function and all its parameters
+  /// should always be const-qualified.
+  /// \return Returns llvm::None if no completion should be provided for the
+  ///         given CodeCompletionResult.
+  llvm::Optional<CompletionWithPriority>
+  getCompletionForResult(const CodeCompletionResult &R) const {
+    std::string ToInsert;
+    std::string Description;
+    // Handle the different completion kinds that come from the Sema.
+    switch (R.Kind) {
+    case CodeCompletionResult::RK_Declaration: {
+      const NamedDecl *D = R.Declaration;
+      ToInsert = R.Declaration->getNameAsString();
+      // If we have a function decl that has no arguments we want to
+      // complete the empty parantheses for the user. If the function has
+      // arguments, we at least complete the opening bracket.
+      if (const FunctionDecl *F = dyn_cast<FunctionDecl>(D)) {
+        if (F->getNumParams() == 0)
+          ToInsert += "()";
+        else
+          ToInsert += "(";
+        raw_string_ostream OS(Description);
+        F->print(OS, m_desc_policy, false);
+        OS.flush();
+      } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
+        Description = V->getType().getAsString(m_desc_policy);
+      } else if (const FieldDecl *F = dyn_cast<FieldDecl>(D)) {
+        Description = F->getType().getAsString(m_desc_policy);
+      } else if (const NamespaceDecl *N = dyn_cast<NamespaceDecl>(D)) {
+        // If we try to complete a namespace, then we can directly append
+        // the '::'.
+        if (!N->isAnonymousNamespace())
+          ToInsert += "::";
+      }
+      break;
+    }
+    case CodeCompletionResult::RK_Keyword:
+      ToInsert = R.Keyword;
+      break;
+    case CodeCompletionResult::RK_Macro:
+      ToInsert = R.Macro->getName().str();
+      break;
+    case CodeCompletionResult::RK_Pattern:
+      ToInsert = R.Pattern->getTypedText();
+      break;
+    }
+    // We also filter some internal lldb identifiers here. The user
+    // shouldn't see these.
+    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
+      return llvm::None;
+    if (ToInsert.empty())
+      return llvm::None;
+    // Merge the suggested Token into the existing command line to comply
+    // with the kind of result the lldb API expects.
+    std::string CompletionSuggestion =
+        mergeCompletion(m_expr, m_position, ToInsert);
+
+    CompletionResult::Completion completion(CompletionSuggestion, Description,
+                                            CompletionMode::Normal);
+    return {{completion, R.Priority}};
+  }
+
+public:
+  /// Adds the completions to the given CompletionRequest.
+  void GetCompletions(CompletionRequest &request) {
+    // Bring m_completions into a deterministic order and pass it on to the
+    // CompletionRequest.
+    llvm::sort(m_completions);
+
+    for (const CompletionWithPriority &C : m_completions)
+      request.AddCompletion(C.completion.GetCompletion(),
+                            C.completion.GetDescription(),
+                            C.completion.GetMode());
+  }
+
   /// \name Code-completion callbacks
   /// Process the finalized code-completion results.
   void ProcessCodeCompleteResults(Sema &SemaRef, CodeCompletionContext Context,
@@ -806,59 +903,11 @@ public:
         continue;
 
       CodeCompletionResult &R = Results[I];
-      std::string ToInsert;
-      std::string Description;
-      // Handle the different completion kinds that come from the Sema.
-      switch (R.Kind) {
-      case CodeCompletionResult::RK_Declaration: {
-        const NamedDecl *D = R.Declaration;
-        ToInsert = R.Declaration->getNameAsString();
-        // If we have a function decl that has no arguments we want to
-        // complete the empty parantheses for the user. If the function has
-        // arguments, we at least complete the opening bracket.
-        if (const FunctionDecl *F = dyn_cast<FunctionDecl>(D)) {
-          if (F->getNumParams() == 0)
-            ToInsert += "()";
-          else
-            ToInsert += "(";
-          raw_string_ostream OS(Description);
-          F->print(OS, m_desc_policy, false);
-          OS.flush();
-        } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
-          Description = V->getType().getAsString(m_desc_policy);
-        } else if (const FieldDecl *F = dyn_cast<FieldDecl>(D)) {
-          Description = F->getType().getAsString(m_desc_policy);
-        } else if (const NamespaceDecl *N = dyn_cast<NamespaceDecl>(D)) {
-          // If we try to complete a namespace, then we can directly append
-          // the '::'.
-          if (!N->isAnonymousNamespace())
-            ToInsert += "::";
-        }
-        break;
-      }
-      case CodeCompletionResult::RK_Keyword:
-        ToInsert = R.Keyword;
-        break;
-      case CodeCompletionResult::RK_Macro:
-        ToInsert = R.Macro->getName().str();
-        break;
-      case CodeCompletionResult::RK_Pattern:
-        ToInsert = R.Pattern->getTypedText();
-        break;
-      }
-      // At this point all information is in the ToInsert string.
-
-      // We also filter some internal lldb identifiers here. The user
-      // shouldn't see these.
-      if (StringRef(ToInsert).startswith("$__lldb_"))
+      llvm::Optional<CompletionWithPriority> CompletionAndPriority =
+          getCompletionForResult(R);
+      if (!CompletionAndPriority)
         continue;
-      if (!ToInsert.empty()) {
-        // Merge the suggested Token into the existing command line to comply
-        // with the kind of result the lldb API expects.
-        std::string CompletionSuggestion =
-            mergeCompletion(m_expr, m_position, ToInsert);
-        m_request.AddCompletion(CompletionSuggestion, Description);
-      }
+      m_completions.push_back(*CompletionAndPriority);
     }
   }
 
@@ -895,12 +944,13 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
   // the LLVMUserExpression which exposes the right API. This should never fail
   // as we always have a ClangUserExpression whenever we call this.
   ClangUserExpression *llvm_expr = cast<ClangUserExpression>(&m_expr);
-  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr->GetUserText(),
+  CodeComplete CC(m_compiler->getLangOpts(), llvm_expr->GetUserText(),
                   typed_pos);
   // We don't need a code generator for parsing.
   m_code_generator.reset();
   // Start parsing the expression with our custom code completion consumer.
   ParseInternal(mgr, &CC, line, pos);
+  CC.GetCompletions(request);
   return true;
 }
 

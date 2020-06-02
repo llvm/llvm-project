@@ -68,7 +68,7 @@ hidden_func:
 # CHECK-NEXT:         Table:
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x00000000
+# CHECK-NEXT:             Initial:         0x00000001
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           default_func
 # CHECK-NEXT:         Kind:            FUNCTION
@@ -85,6 +85,12 @@ hidden_func:
 # CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
+# CHECK-NEXT:   - Type:            ELEM
+# CHECK-NEXT:     Segments:
+# CHECK-NEXT:        Offset:
+# CHECK-NEXT:          Opcode:          I32_CONST
+# CHECK-NEXT:          Value:           1
+# CHECK-NEXT:        Functions:       [ 5 ]
 # CHECK-NEXT:   - Type:            DATACOUNT
 # CHECK-NEXT:     Count:           1
 # CHECK-NEXT:   - Type:            CODE

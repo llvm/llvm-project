@@ -187,9 +187,8 @@ define <8 x float> @shuffle_v8f32_70000000(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX2OR512VL-LABEL: shuffle_v8f32_70000000:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    movl $7, %eax
-; AVX2OR512VL-NEXT:    vmovd %eax, %xmm1
-; AVX2OR512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [7,0,0,0]
+; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x float> %shuffle
@@ -1510,9 +1509,8 @@ define <8 x i32> @shuffle_v8i32_70000000(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX2OR512VL-LABEL: shuffle_v8i32_70000000:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    movl $7, %eax
-; AVX2OR512VL-NEXT:    vmovd %eax, %xmm1
-; AVX2OR512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2OR512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [7,0,0,0]
+; AVX2OR512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX2OR512VL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i32> %shuffle

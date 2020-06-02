@@ -39,7 +39,17 @@ struct Tolerance {
   uint32_t bits;
 };
 
-enum Operation { OP_Abs, OP_Cos, OP_Sin, OP_Exp, OP_Exp2 };
+enum class Operation : int {
+  Abs,
+  Ceil,
+  Cos,
+  Exp,
+  Exp2,
+  Floor,
+  Round,
+  Sin,
+  Trunc
+};
 
 namespace internal {
 

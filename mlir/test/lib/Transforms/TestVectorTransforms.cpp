@@ -51,11 +51,26 @@ struct TestVectorContractionConversion
       *this, "vector-lower-matrix-intrinsics",
       llvm::cl::desc("Lower vector.contract to llvm.intr.matrix.multiply"),
       llvm::cl::init(false)};
+  Option<bool> lowerToOuterProduct{
+      *this, "vector-outerproduct",
+      llvm::cl::desc("Lower vector.contract to vector.outerproduct"),
+      llvm::cl::init(false)};
 
   void runOnFunction() override {
     OwningRewritePatternList patterns;
-    VectorTransformsOptions options{
-        /*lowerToLLVMMatrixIntrinsics=*/lowerToLLVMMatrixIntrinsics};
+    if (lowerToOuterProduct) {
+      VectorContractLowering lowering = VectorContractLowering::OuterProduct;
+      VectorTransformsOptions options{lowering};
+      patterns.insert<ContractionOpToOuterProductOpLowering>(options,
+                                                             &getContext());
+      applyPatternsAndFoldGreedily(getFunction(), patterns);
+      return;
+    }
+
+    VectorContractLowering lowering = VectorContractLowering::FMA;
+    if (lowerToLLVMMatrixIntrinsics)
+      lowering = VectorContractLowering::Matmul;
+    VectorTransformsOptions options{lowering};
     populateVectorContractLoweringPatterns(patterns, &getContext(), options);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }

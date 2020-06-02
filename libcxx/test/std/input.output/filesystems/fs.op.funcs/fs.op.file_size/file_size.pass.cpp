@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -38,7 +37,8 @@ TEST_CASE(signature_test)
 
 TEST_CASE(file_size_empty_test)
 {
-    const path p = StaticEnv::EmptyFile;
+    static_test_env static_env;
+    const path p = static_env.EmptyFile;
     TEST_CHECK(file_size(p) == 0);
     std::error_code ec;
     TEST_CHECK(file_size(p, ec) == 0);
@@ -55,21 +55,23 @@ TEST_CASE(file_size_non_empty)
 
 TEST_CASE(symlink_test_case)
 {
-    const path p = StaticEnv::File;
-    const path p2 = StaticEnv::SymlinkToFile;
+    static_test_env static_env;
+    const path p = static_env.File;
+    const path p2 = static_env.SymlinkToFile;
     TEST_CHECK(file_size(p) == file_size(p2));
 }
 
 TEST_CASE(file_size_error_cases)
 {
+  static_test_env static_env;
   struct {
     path p;
     std::errc expected_err;
   } TestCases[] = {
-      {StaticEnv::Dir, std::errc::is_a_directory},
-      {StaticEnv::SymlinkToDir, std::errc::is_a_directory},
-      {StaticEnv::BadSymlink, std::errc::no_such_file_or_directory},
-      {StaticEnv::DNE, std::errc::no_such_file_or_directory},
+      {static_env.Dir, std::errc::is_a_directory},
+      {static_env.SymlinkToDir, std::errc::is_a_directory},
+      {static_env.BadSymlink, std::errc::no_such_file_or_directory},
+      {static_env.DNE, std::errc::no_such_file_or_directory},
       {"", std::errc::no_such_file_or_directory}};
     const uintmax_t expect = static_cast<uintmax_t>(-1);
     for (auto& TC : TestCases) {

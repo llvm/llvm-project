@@ -145,7 +145,12 @@ def discard_none: F<"discard-none">,
 
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
-defm dynamic_list: Eq<"dynamic-list", "Read a list of dynamic symbols">;
+defm dynamic_list : Eq<"dynamic-list",
+   "Read a list of dynamic symbols. (executable) Put matched non-local defined"
+   "symbols to the dynamic symbol table. (shared object) References to matched"
+   "non-local STV_DEFAULT symbols shouldn't be bound to definitions within the "
+   "shared object. Implies -Bsymbolic but does not set DF_SYMBOLIC">,
+   MetaVarName<"<file>">;
 
 defm eh_frame_hdr: B<"eh-frame-hdr",
     "Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header",
@@ -181,8 +186,12 @@ defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
     "Do not put symbols in the dynamic symbol table (default)">;
 
-defm export_dynamic_symbol:
-  Eq<"export-dynamic-symbol", "Put a symbol in the dynamic symbol table">;
+defm export_dynamic_symbol : EEq<"export-dynamic-symbol",
+    "(executable) Put matched symbols in the dynamic symbol table. "
+    "(shared object) References to matched non-local STV_DEFAULT symbols "
+    "shouldn't be bound to definitions within the shared object. "
+    "Does not imply -Bsymbolic.">,
+    MetaVarName<"glob">;
 
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",

@@ -5,6 +5,7 @@ add_mlir_library(MLIRTestTransforms
   TestCallGraph.cpp
   TestConstantFold.cpp
   TestConvertGPUKernelToCubin.cpp
+  TestConvertGPUKernelToHsaco.cpp
   TestDominance.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
@@ -19,7 +20,7 @@ add_mlir_library(MLIRTestTransforms
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestVectorToSCFConversion.cpp
+  TestSCFUtils.cpp
   TestVectorTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
@@ -36,13 +37,18 @@ add_mlir_library(MLIRTestTransforms
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
-  MLIRGPUtoCUDATransforms
+  MLIRGPUtoGPURuntimeTransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
+  MLIRNVVMIR
   MLIRSCF
+  MLIRSCFTransforms
   MLIRGPU
   MLIRPass
+  MLIRROCDLIR
   MLIRStandardOpsTransforms
+  MLIRTargetNVVMIR
+  MLIRTargetROCDLIR
   MLIRTestDialect
   MLIRTransformUtils
   MLIRVectorToSCF

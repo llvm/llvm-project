@@ -505,7 +505,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
   unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + (Size / 32);
+  Result.second = Result.first + ((Size + 16) / 32);
 
   return Result;
 }

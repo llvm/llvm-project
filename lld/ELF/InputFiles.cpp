@@ -1224,14 +1224,12 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   ArrayRef<uint8_t> data = CHECK(obj.getSectionContents(sec), this);
   const uint8_t *verneedBuf = data.begin();
   for (unsigned i = 0; i != sec->sh_info; ++i) {
-    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end() ||
-        uintptr_t(verneedBuf) % sizeof(uint32_t) != 0)
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
       fatal(toString(this) + " has an invalid Verneed");
     auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
     const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
     for (unsigned j = 0; j != vn->vn_cnt; ++j) {
-      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end() ||
-          uintptr_t(vernauxBuf) % sizeof(uint32_t) != 0)
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
         fatal(toString(this) + " has an invalid Vernaux");
       auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
       if (aux->vna_name >= this->stringTable.size())

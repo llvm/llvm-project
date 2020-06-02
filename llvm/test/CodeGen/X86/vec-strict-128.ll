@@ -199,7 +199,7 @@ define <4 x float> @f11(<2 x double> %a0, <4 x float> %a1) #0 {
   %ext = extractelement <2 x double> %a0, i32 0
   %cvt = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %ext,
                                                                    metadata !"round.dynamic",
-                                                                   metadata !"fpexcept.strict")
+                                                                   metadata !"fpexcept.strict") #0
   %res = insertelement <4 x float> %a1, float %cvt, i32 0
   ret <4 x float> %res
 }

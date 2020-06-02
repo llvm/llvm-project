@@ -17,6 +17,7 @@ add_llvm_unittest(AnalysisTests
   CaptureTrackingTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
+  DDGTest.cpp
   DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
@@ -40,3 +41,5 @@ add_llvm_unittest(AnalysisTests
   ValueTrackingTest.cpp
   VectorUtilsTest.cpp
   )
+
+add_subdirectory(ML)

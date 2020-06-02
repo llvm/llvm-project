@@ -497,6 +497,13 @@ static_library("builtins") {
     ]
   }
 
+  if (current_cpu == "ve") {
+    sources += [
+      "ve/grow_stack.S",
+      "ve/grow_stack_align.S",
+    ]
+  }
+
   if (!compiler_rt_exclude_atomic_builtin) {
     sources += [
       # This comment prevents `gn format` from putting the file on the same line

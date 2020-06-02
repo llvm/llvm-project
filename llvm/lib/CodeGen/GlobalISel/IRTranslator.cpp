@@ -1281,6 +1281,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_INTRINSIC_TRUNC;
     case Intrinsic::readcyclecounter:
       return TargetOpcode::G_READCYCLECOUNTER;
+    case Intrinsic::ptrmask:
+      return TargetOpcode::G_PTRMASK;
   }
   return Intrinsic::not_intrinsic;
 }

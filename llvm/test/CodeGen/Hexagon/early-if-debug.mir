@@ -18,7 +18,6 @@
   define void @foo() {
     ret void
   }
-  !1 = !DIExpression()
 ...
 ---
 name: foo
@@ -40,11 +39,11 @@ body:             |
     J2_jump %bb.1, implicit-def dead $pc
 
   bb.1:
-    DBG_VALUE %0, $noreg, !1, !1
-    DBG_VALUE %0, $noreg, !1, !1
-    DBG_VALUE %0, $noreg, !1, !1
-    DBG_VALUE %0, $noreg, !1, !1
-    DBG_VALUE %0, $noreg, !1, !1
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
     %3 = A2_tfrsi 321
 
   bb.2:

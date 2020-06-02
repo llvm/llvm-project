@@ -3,7 +3,8 @@
 
 #include "filesystem_include.h"
 
-#include <unistd.h> // for ftruncate
+#include <sys/stat.h> // for mkdir, mkfifo
+#include <unistd.h> // for ftruncate, link, symlink, getcwd, chdir
 
 #include <cassert>
 #include <cstdio> // for printf
@@ -23,89 +24,6 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
-
-// static test helpers
-
-namespace StaticEnv {
-
-// Tests that use these utilities should add '<...>/Inputs/static_test_env'
-// to their FILE_DEPENDENCIES, to make sure the directory is made available
-// to the test. Assuming that, the 'static_test_env' will be available in the
-// directory where the test is run.
-static const fs::path Root = fs::current_path() / "static_test_env";
-
-inline fs::path makePath(fs::path const& p) {
-    // env_path is expected not to contain symlinks.
-    fs::path const& env_path = Root;
-    return env_path / p;
-}
-
-static const fs::path TestFileList[] = {
-        makePath("empty_file"),
-        makePath("non_empty_file"),
-        makePath("dir1/file1"),
-        makePath("dir1/file2")
-};
-const std::size_t TestFileListSize = sizeof(TestFileList) / sizeof(fs::path);
-
-static const fs::path TestDirList[] = {
-        makePath("dir1"),
-        makePath("dir1/dir2"),
-        makePath("dir1/dir2/dir3")
-};
-const std::size_t TestDirListSize = sizeof(TestDirList) / sizeof(fs::path);
-
-static const fs::path File          = TestFileList[0];
-static const fs::path Dir           = TestDirList[0];
-static const fs::path Dir2          = TestDirList[1];
-static const fs::path Dir3          = TestDirList[2];
-static const fs::path SymlinkToFile = makePath("symlink_to_empty_file");
-static const fs::path SymlinkToDir  = makePath("symlink_to_dir");
-static const fs::path BadSymlink    = makePath("bad_symlink");
-static const fs::path DNE           = makePath("DNE");
-static const fs::path EmptyFile     = TestFileList[0];
-static const fs::path NonEmptyFile  = TestFileList[1];
-static const fs::path CharFile      = "/dev/null"; // Hopefully this exists
-
-static const fs::path DirIterationList[] = {
-    makePath("dir1/dir2"),
-    makePath("dir1/file1"),
-    makePath("dir1/file2")
-};
-const std::size_t DirIterationListSize = sizeof(DirIterationList)
-                                        / sizeof(fs::path);
-
-static const fs::path DirIterationListDepth1[] = {
-    makePath("dir1/dir2/afile3"),
-    makePath("dir1/dir2/dir3"),
-    makePath("dir1/dir2/symlink_to_dir3"),
-    makePath("dir1/dir2/file4"),
-};
-
-static const fs::path RecDirIterationList[] = {
-    makePath("dir1/dir2"),
-    makePath("dir1/file1"),
-    makePath("dir1/file2"),
-    makePath("dir1/dir2/afile3"),
-    makePath("dir1/dir2/dir3"),
-    makePath("dir1/dir2/symlink_to_dir3"),
-    makePath("dir1/dir2/file4"),
-    makePath("dir1/dir2/dir3/file5")
-};
-
-static const fs::path RecDirFollowSymlinksIterationList[] = {
-    makePath("dir1/dir2"),
-    makePath("dir1/file1"),
-    makePath("dir1/file2"),
-    makePath("dir1/dir2/afile3"),
-    makePath("dir1/dir2/dir3"),
-    makePath("dir1/dir2/file4"),
-    makePath("dir1/dir2/dir3/file5"),
-    makePath("dir1/dir2/symlink_to_dir3"),
-    makePath("dir1/dir2/symlink_to_dir3/file5"),
-};
-
-} // namespace StaticEnv
 
 namespace random_utils {
 inline char to_hex(int ch) {
@@ -207,17 +125,18 @@ struct scoped_test_env
 
     std::string create_dir(std::string filename) {
         filename = sanitize_path(std::move(filename));
-        std::string cmd = "mkdir " + filename;
-        int ret = std::system(cmd.c_str());
+        int ret = ::mkdir(filename.c_str(), 0777); // rwxrwxrwx mode
         assert(ret == 0);
         return filename;
     }
 
-    std::string create_symlink(std::string source, std::string to) {
-        source = sanitize_path(std::move(source));
+    std::string create_symlink(std::string source,
+                               std::string to,
+                               bool sanitize_source = true) {
+        if (sanitize_source)
+            source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        std::string cmd = "ln -s " + source + ' ' + to;
-        int ret = std::system(cmd.c_str());
+        int ret = ::symlink(source.c_str(), to.c_str());
         assert(ret == 0);
         return to;
     }
@@ -225,16 +144,14 @@ struct scoped_test_env
     std::string create_hardlink(std::string source, std::string to) {
         source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        std::string cmd = "ln " + source + ' ' + to;
-        int ret = std::system(cmd.c_str());
+        int ret = ::link(source.c_str(), to.c_str());
         assert(ret == 0);
         return to;
     }
 
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
-        std::string cmd = "mkfifo " + file;
-        int ret = std::system(cmd.c_str());
+        int ret = ::mkfifo(file.c_str(), 0666); // rw-rw-rw- mode
         assert(ret == 0);
         return file;
     }
@@ -274,6 +191,131 @@ private:
         fs::path p = fs::path(tmp) / unique_path_suffix();
         return p;
     }
+};
+
+/// This class generates the following tree:
+///
+///     static_test_env
+///     ├── bad_symlink -> dne
+///     ├── dir1
+///     │   ├── dir2
+///     │   │   ├── afile3
+///     │   │   ├── dir3
+///     │   │   │   └── file5
+///     │   │   ├── file4
+///     │   │   └── symlink_to_dir3 -> dir3
+///     │   ├── file1
+///     │   └── file2
+///     ├── empty_file
+///     ├── non_empty_file
+///     ├── symlink_to_dir -> dir1
+///     └── symlink_to_empty_file -> empty_file
+///
+class static_test_env {
+    scoped_test_env env_;
+public:
+    static_test_env() {
+        env_.create_symlink("dne", "bad_symlink", false);
+        env_.create_dir("dir1");
+        env_.create_dir("dir1/dir2");
+        env_.create_file("dir1/dir2/afile3");
+        env_.create_dir("dir1/dir2/dir3");
+        env_.create_file("dir1/dir2/dir3/file5");
+        env_.create_file("dir1/dir2/file4");
+        env_.create_symlink("dir3", "dir1/dir2/symlink_to_dir3", false);
+        env_.create_file("dir1/file1");
+        env_.create_file("dir1/file2", 42);
+        env_.create_file("empty_file");
+        env_.create_file("non_empty_file", 42);
+        env_.create_symlink("dir1", "symlink_to_dir", false);
+        env_.create_symlink("empty_file", "symlink_to_empty_file", false);
+    }
+
+    const fs::path Root = env_.test_root;
+
+    fs::path makePath(fs::path const& p) const {
+        // env_path is expected not to contain symlinks.
+        fs::path const& env_path = Root;
+        return env_path / p;
+    }
+
+    const std::vector<fs::path> TestFileList = {
+        makePath("empty_file"),
+        makePath("non_empty_file"),
+        makePath("dir1/file1"),
+        makePath("dir1/file2")
+    };
+
+    const std::vector<fs::path> TestDirList = {
+        makePath("dir1"),
+        makePath("dir1/dir2"),
+        makePath("dir1/dir2/dir3")
+    };
+
+    const fs::path File          = TestFileList[0];
+    const fs::path Dir           = TestDirList[0];
+    const fs::path Dir2          = TestDirList[1];
+    const fs::path Dir3          = TestDirList[2];
+    const fs::path SymlinkToFile = makePath("symlink_to_empty_file");
+    const fs::path SymlinkToDir  = makePath("symlink_to_dir");
+    const fs::path BadSymlink    = makePath("bad_symlink");
+    const fs::path DNE           = makePath("DNE");
+    const fs::path EmptyFile     = TestFileList[0];
+    const fs::path NonEmptyFile  = TestFileList[1];
+    const fs::path CharFile      = "/dev/null"; // Hopefully this exists
+
+    const std::vector<fs::path> DirIterationList = {
+        makePath("dir1/dir2"),
+        makePath("dir1/file1"),
+        makePath("dir1/file2")
+    };
+
+    const std::vector<fs::path> DirIterationListDepth1 = {
+        makePath("dir1/dir2/afile3"),
+        makePath("dir1/dir2/dir3"),
+        makePath("dir1/dir2/symlink_to_dir3"),
+        makePath("dir1/dir2/file4"),
+    };
+
+    const std::vector<fs::path> RecDirIterationList = {
+        makePath("dir1/dir2"),
+        makePath("dir1/file1"),
+        makePath("dir1/file2"),
+        makePath("dir1/dir2/afile3"),
+        makePath("dir1/dir2/dir3"),
+        makePath("dir1/dir2/symlink_to_dir3"),
+        makePath("dir1/dir2/file4"),
+        makePath("dir1/dir2/dir3/file5")
+    };
+
+    const std::vector<fs::path> RecDirFollowSymlinksIterationList = {
+        makePath("dir1/dir2"),
+        makePath("dir1/file1"),
+        makePath("dir1/file2"),
+        makePath("dir1/dir2/afile3"),
+        makePath("dir1/dir2/dir3"),
+        makePath("dir1/dir2/file4"),
+        makePath("dir1/dir2/dir3/file5"),
+        makePath("dir1/dir2/symlink_to_dir3"),
+        makePath("dir1/dir2/symlink_to_dir3/file5"),
+    };
+};
+
+struct CWDGuard {
+  // Assume that path lengths are not greater than this.
+  // This should be fine for testing purposes.
+  char OldCWD[4096];
+  CWDGuard() {
+    char* ret = ::getcwd(OldCWD, sizeof(OldCWD));
+    assert(ret && "getcwd failed");
+  }
+  ~CWDGuard() { 
+    int ret = ::chdir(OldCWD);
+    assert(ret == 0 && "chdir failed");
+  }
+
+  CWDGuard(CWDGuard const&) = delete;
+  CWDGuard& operator=(CWDGuard const&) = delete;
 };
 
 // Misc test types

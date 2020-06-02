@@ -338,7 +338,9 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
      << "\t\t<key>CFBundleDevelopmentRegion</key>\n"
      << "\t\t<string>English</string>\n"
      << "\t\t<key>CFBundleIdentifier</key>\n"
-     << "\t\t<string>com.apple.xcode.dsym." << BI.IDStr << "</string>\n"
+     << "\t\t<string>com.apple.xcode.dsym.";
+  printHTMLEscaped(BI.IDStr, PL);
+  PL << "</string>\n"
      << "\t\t<key>CFBundleInfoDictionaryVersion</key>\n"
      << "\t\t<string>6.0</string>\n"
      << "\t\t<key>CFBundlePackageType</key>\n"

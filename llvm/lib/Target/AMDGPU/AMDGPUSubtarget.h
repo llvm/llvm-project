@@ -25,6 +25,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
@@ -66,7 +67,6 @@ private:
 protected:
   bool Has16BitInsts;
   bool HasMadMixInsts;
-  bool FPExceptions;
   bool HasSDWA;
   bool HasVOP3PInsts;
   bool HasMulI24;
@@ -77,7 +77,7 @@ protected:
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
   int LocalMemorySize;
-  unsigned WavefrontSize;
+  char WavefrontSizeLog2;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
@@ -148,10 +148,6 @@ public:
     return HasMadMixInsts;
   }
 
-  bool hasFPExceptions() const {
-    return FPExceptions;
-  }
-
   bool hasSDWA() const {
     return HasSDWA;
   }
@@ -185,7 +181,11 @@ public:
   }
 
   unsigned getWavefrontSize() const {
-    return WavefrontSize;
+    return 1 << WavefrontSizeLog2;
+  }
+
+  unsigned getWavefrontSizeLog2() const {
+    return WavefrontSizeLog2;
   }
 
   int getLocalMemorySize() const {
@@ -241,8 +241,8 @@ public:
   /// \returns Corresponsing DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const {
-    return WavefrontSize == 32 ? AMDGPUDwarfFlavour::Wave32
-                               : AMDGPUDwarfFlavour::Wave64;
+    return getWavefrontSize() == 32 ? AMDGPUDwarfFlavour::Wave32
+                                    : AMDGPUDwarfFlavour::Wave64;
   }
 
   virtual ~AMDGPUSubtarget() {}
@@ -277,6 +277,7 @@ public:
 private:
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
+  std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
@@ -426,6 +427,10 @@ public:
     return CallLoweringInfo.get();
   }
 
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmLoweringInfo.get();
+  }
+
   InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
@@ -451,10 +456,6 @@ public:
 
   Generation getGeneration() const {
     return (Generation)Gen;
-  }
-
-  unsigned getWavefrontSizeLog2() const {
-    return Log2_32(WavefrontSize);
   }
 
   /// Return the number of high bits known to be zero fror a frame index.
@@ -1159,7 +1160,7 @@ public:
       const override;
 
   bool isWave32() const {
-    return WavefrontSize == 32;
+    return getWavefrontSize() == 32;
   }
 
   const TargetRegisterClass *getBoolRC() const {

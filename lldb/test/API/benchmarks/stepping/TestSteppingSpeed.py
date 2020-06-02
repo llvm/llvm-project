@@ -22,8 +22,8 @@ class SteppingSpeedBench(BenchBase):
         self.break_spec = '-n main'
         self.count = 50
 
-        #print("self.exe=%s" % self.exe)
-        #print("self.break_spec=%s" % self.break_spec)
+        self.trace("self.exe=%s" % self.exe)
+        self.trace("self.break_spec=%s" % self.break_spec)
 
     @benchmarks_test
     @no_debug_info_test

@@ -110,6 +110,7 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
   OS << "Line table prologue:\n"
      << format("    total_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
                TotalLength)
+     << "          format: " << dwarf::FormatString(FormParams.Format) << "\n"
      << format("         version: %u\n", getVersion());
   if (!versionIsSupported(getVersion()))
     return;
@@ -721,14 +722,17 @@ Error DWARFDebugLine::LineTable::parse(
     ProgramLength = BytesRemaining;
   }
 
+  // Create a DataExtractor which can only see the data up to the end of the
+  // table, to prevent reading past the end.
   const uint64_t EndOffset = DebugLineOffset + ProgramLength;
+  DWARFDataExtractor TableData(DebugLineData, EndOffset);
 
   // See if we should tell the data extractor the address size.
-  if (DebugLineData.getAddressSize() == 0)
-    DebugLineData.setAddressSize(Prologue.getAddressSize());
+  if (TableData.getAddressSize() == 0)
+    TableData.setAddressSize(Prologue.getAddressSize());
   else
     assert(Prologue.getAddressSize() == 0 ||
-           Prologue.getAddressSize() == DebugLineData.getAddressSize());
+           Prologue.getAddressSize() == TableData.getAddressSize());
 
   ParsingState State(this, DebugLineOffset, RecoverableErrorHandler);
 
@@ -738,7 +742,7 @@ Error DWARFDebugLine::LineTable::parse(
       *OS << format("0x%08.08" PRIx64 ": ", *OffsetPtr);
 
     uint64_t OpcodeOffset = *OffsetPtr;
-    uint8_t Opcode = DebugLineData.getU8(OffsetPtr);
+    uint8_t Opcode = TableData.getU8(OffsetPtr);
 
     if (OS)
       *OS << format("%02.02" PRIx8 " ", Opcode);
@@ -746,7 +750,7 @@ Error DWARFDebugLine::LineTable::parse(
     if (Opcode == 0) {
       // Extended Opcodes always start with a zero opcode followed by
       // a uleb128 length so you can skip ones you don't know about
-      uint64_t Len = DebugLineData.getULEB128(OffsetPtr);
+      uint64_t Len = TableData.getULEB128(OffsetPtr);
       uint64_t ExtOffset = *OffsetPtr;
 
       // Tolerate zero-length; assume length is correct and soldier on.
@@ -756,7 +760,7 @@ Error DWARFDebugLine::LineTable::parse(
         continue;
       }
 
-      uint8_t SubOpcode = DebugLineData.getU8(OffsetPtr);
+      uint8_t SubOpcode = TableData.getU8(OffsetPtr);
       if (OS)
         *OS << LNExtendedString(SubOpcode);
       switch (SubOpcode) {
@@ -789,7 +793,7 @@ Error DWARFDebugLine::LineTable::parse(
         // Make sure the extractor knows the address size.  If not, infer it
         // from the size of the operand.
         {
-          uint8_t ExtractorAddressSize = DebugLineData.getAddressSize();
+          uint8_t ExtractorAddressSize = TableData.getAddressSize();
           uint64_t OpcodeAddressSize = Len - 1;
           if (ExtractorAddressSize != OpcodeAddressSize &&
               ExtractorAddressSize != 0)
@@ -812,13 +816,13 @@ Error DWARFDebugLine::LineTable::parse(
                 OpcodeAddressSize, ExtOffset));
             *OffsetPtr += OpcodeAddressSize;
           } else {
-            DebugLineData.setAddressSize(OpcodeAddressSize);
-            State.Row.Address.Address = DebugLineData.getRelocatedAddress(
+            TableData.setAddressSize(OpcodeAddressSize);
+            State.Row.Address.Address = TableData.getRelocatedAddress(
                 OffsetPtr, &State.Row.Address.SectionIndex);
 
             // Restore the address size if the extractor already had it.
             if (ExtractorAddressSize != 0)
-              DebugLineData.setAddressSize(ExtractorAddressSize);
+              TableData.setAddressSize(ExtractorAddressSize);
           }
 
           if (OS)
@@ -849,12 +853,12 @@ Error DWARFDebugLine::LineTable::parse(
         // the file register of the state machine.
         {
           FileNameEntry FileEntry;
-          const char *Name = DebugLineData.getCStr(OffsetPtr);
+          const char *Name = TableData.getCStr(OffsetPtr);
           FileEntry.Name =
               DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name);
-          FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
-          FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
-          FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
+          FileEntry.DirIdx = TableData.getULEB128(OffsetPtr);
+          FileEntry.ModTime = TableData.getULEB128(OffsetPtr);
+          FileEntry.Length = TableData.getULEB128(OffsetPtr);
           Prologue.FileNames.push_back(FileEntry);
           if (OS)
             *OS << " (" << Name << ", dir=" << FileEntry.DirIdx << ", mod_time="
@@ -864,7 +868,7 @@ Error DWARFDebugLine::LineTable::parse(
         break;
 
       case DW_LNE_set_discriminator:
-        State.Row.Discriminator = DebugLineData.getULEB128(OffsetPtr);
+        State.Row.Discriminator = TableData.getULEB128(OffsetPtr);
         if (OS)
           *OS << " (" << State.Row.Discriminator << ")";
         break;
@@ -913,7 +917,7 @@ Error DWARFDebugLine::LineTable::parse(
         // result to the address register of the state machine.
         {
           uint64_t AddrOffset = State.advanceAddr(
-              DebugLineData.getULEB128(OffsetPtr), Opcode, OpcodeOffset);
+              TableData.getULEB128(OffsetPtr), Opcode, OpcodeOffset);
           if (OS)
             *OS << " (" << AddrOffset << ")";
         }
@@ -922,7 +926,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_advance_line:
         // Takes a single signed LEB128 operand and adds that value to
         // the line register of the state machine.
-        State.Row.Line += DebugLineData.getSLEB128(OffsetPtr);
+        State.Row.Line += TableData.getSLEB128(OffsetPtr);
         if (OS)
           *OS << " (" << State.Row.Line << ")";
         break;
@@ -930,7 +934,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_file:
         // Takes a single unsigned LEB128 operand and stores it in the file
         // register of the state machine.
-        State.Row.File = DebugLineData.getULEB128(OffsetPtr);
+        State.Row.File = TableData.getULEB128(OffsetPtr);
         if (OS)
           *OS << " (" << State.Row.File << ")";
         break;
@@ -938,7 +942,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_column:
         // Takes a single unsigned LEB128 operand and stores it in the
         // column register of the state machine.
-        State.Row.Column = DebugLineData.getULEB128(OffsetPtr);
+        State.Row.Column = TableData.getULEB128(OffsetPtr);
         if (OS)
           *OS << " (" << State.Row.Column << ")";
         break;
@@ -986,7 +990,7 @@ Error DWARFDebugLine::LineTable::parse(
         // requires the use of DW_LNS_advance_pc. Such assemblers, however,
         // can use DW_LNS_fixed_advance_pc instead, sacrificing compression.
         {
-          uint16_t PCOffset = DebugLineData.getRelocatedValue(2, OffsetPtr);
+          uint16_t PCOffset = TableData.getRelocatedValue(2, OffsetPtr);
           State.Row.Address.Address += PCOffset;
           if (OS)
             *OS
@@ -1009,7 +1013,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_isa:
         // Takes a single unsigned LEB128 operand and stores it in the
         // column register of the state machine.
-        State.Row.Isa = DebugLineData.getULEB128(OffsetPtr);
+        State.Row.Isa = TableData.getULEB128(OffsetPtr);
         if (OS)
           *OS << " (" << (uint64_t)State.Row.Isa << ")";
         break;
@@ -1022,7 +1026,7 @@ Error DWARFDebugLine::LineTable::parse(
           assert(Opcode - 1U < Prologue.StandardOpcodeLengths.size());
           uint8_t OpcodeLength = Prologue.StandardOpcodeLengths[Opcode - 1];
           for (uint8_t I = 0; I < OpcodeLength; ++I) {
-            uint64_t Value = DebugLineData.getULEB128(OffsetPtr);
+            uint64_t Value = TableData.getULEB128(OffsetPtr);
             if (OS)
               *OS << format("Skipping ULEB128 value: 0x%16.16" PRIx64 ")\n",
                             Value);
@@ -1227,13 +1231,17 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   StringRef IncludeDir;
   // Be defensive about the contents of Entry.
   if (getVersion() >= 5) {
-    if (Entry.DirIdx < IncludeDirectories.size())
+    // DirIdx 0 is the compilation directory, so don't include it for
+    // relative names.
+    if ((Entry.DirIdx != 0 || Kind != FileLineInfoKind::RelativeFilePath) &&
+        Entry.DirIdx < IncludeDirectories.size())
       IncludeDir = IncludeDirectories[Entry.DirIdx].getAsCString().getValue();
   } else {
     if (0 < Entry.DirIdx && Entry.DirIdx <= IncludeDirectories.size())
       IncludeDir =
           IncludeDirectories[Entry.DirIdx - 1].getAsCString().getValue();
   }
+
   // For absolute paths only, include the compilation directory of compile unit.
   // We know that FileName is not absolute, the only way to have an absolute
   // path at this point would be if IncludeDir is absolute.

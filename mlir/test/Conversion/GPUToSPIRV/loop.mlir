@@ -28,13 +28,17 @@ module attributes {
       // CHECK:        %[[CMP:.*]] = spv.SLessThan %[[INDVAR]], %[[UB]] : i32
       // CHECK:        spv.BranchConditional %[[CMP]], ^[[BODY:.*]], ^[[MERGE:.*]]
       // CHECK:      ^[[BODY]]:
-      // CHECK:        %[[STRIDE1:.*]] = spv.constant 1 : i32
-      // CHECK:        %[[INDEX1:.*]] = spv.IMul %[[STRIDE1]], %[[INDVAR]] : i32
       // CHECK:        %[[ZERO1:.*]] = spv.constant 0 : i32
+      // CHECK:        %[[OFFSET1:.*]] = spv.constant 0 : i32
+      // CHECK:        %[[STRIDE1:.*]] = spv.constant 1 : i32
+      // CHECK:        %[[UPDATE1:.*]] = spv.IMul %[[STRIDE1]], %[[INDVAR]] : i32
+      // CHECK:        %[[INDEX1:.*]] = spv.IAdd %[[OFFSET1]], %[[UPDATE1]] : i32
       // CHECK:        spv.AccessChain {{%.*}}{{\[}}%[[ZERO1]], %[[INDEX1]]{{\]}}
-      // CHECK:        %[[STRIDE2:.*]] = spv.constant 1 : i32
-      // CHECK:        %[[INDEX2:.*]] = spv.IMul %[[STRIDE2]], %[[INDVAR]] : i32
       // CHECK:        %[[ZERO2:.*]] = spv.constant 0 : i32
+      // CHECK:        %[[OFFSET2:.*]] = spv.constant 0 : i32
+      // CHECK:        %[[STRIDE2:.*]] = spv.constant 1 : i32
+      // CHECK:        %[[UPDATE2:.*]] = spv.IMul %[[STRIDE2]], %[[INDVAR]] : i32
+      // CHECK:        %[[INDEX2:.*]] = spv.IAdd %[[OFFSET2]], %[[UPDATE2]] : i32
       // CHECK:        spv.AccessChain {{%.*}}[%[[ZERO2]], %[[INDEX2]]]
       // CHECK:        %[[INCREMENT:.*]] = spv.IAdd %[[INDVAR]], %[[STEP]] : i32
       // CHECK:        spv.Branch ^[[HEADER]](%[[INCREMENT]] : i32)

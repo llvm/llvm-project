@@ -273,11 +273,13 @@ namespace detail {
 /// supports mixing matchers of different kinds.
 ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
 
-/// Builds a set of matchers that cover the rule (one for each distinct node
-/// matcher base kind: Stmt, Decl, etc.). Node-matchers for `QualType` and
-/// `Type` are not permitted, since such nodes carry no source location
-/// information and are therefore not relevant for rewriting. If any such
-/// matchers are included, will return an empty vector.
+/// Builds a set of matchers that cover the rule.
+///
+/// One matcher is built for each distinct node matcher base kind: Stmt, Decl,
+/// etc. Node-matchers for `QualType` and `Type` are not permitted, since such
+/// nodes carry no source location information and are therefore not relevant
+/// for rewriting. If any such matchers are included, will return an empty
+/// vector.
 std::vector<ast_matchers::internal::DynTypedMatcher>
 buildMatchers(const RewriteRule &Rule);
 

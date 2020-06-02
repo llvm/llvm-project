@@ -212,7 +212,7 @@ auto ComputeOffsetsHelper::GetElementSize(
   if (IsDescriptor(symbol) || IsProcedure(symbol)) {
     int lenParams{0};
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-      lenParams = derived->NumLengthParameters();
+      lenParams = CountLenParameters(*derived);
     }
     std::size_t size{
         runtime::Descriptor::SizeInBytes(symbol.Rank(), false, lenParams)};

@@ -32,7 +32,7 @@ namespace clang {
 namespace ento {
 
 class ProgramStateManager;
-class SubEngine;
+class ExprEngine;
 class SymbolReaper;
 
 class ConditionTruthVal {
@@ -193,10 +193,11 @@ protected:
 
 std::unique_ptr<ConstraintManager>
 CreateRangeConstraintManager(ProgramStateManager &statemgr,
-                             SubEngine *subengine);
+                             ExprEngine *exprengine);
 
 std::unique_ptr<ConstraintManager>
-CreateZ3ConstraintManager(ProgramStateManager &statemgr, SubEngine *subengine);
+CreateZ3ConstraintManager(ProgramStateManager &statemgr,
+                          ExprEngine *exprengine);
 
 } // namespace ento
 } // namespace clang

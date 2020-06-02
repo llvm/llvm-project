@@ -2032,6 +2032,8 @@ def err_reference_bind_to_bitfield : Error<
   "bit-field%select{| %1}2">;
 def err_reference_bind_to_vector_element : Error<
   "%select{non-const|volatile}0 reference cannot bind to vector element">;
+def err_reference_bind_to_matrix_element : Error<
+  "%select{non-const|volatile}0 reference cannot bind to matrix element">;
 def err_reference_var_requires_init : Error<
   "declaration of reference variable %0 requires an initializer">;
 def err_reference_without_init : Error<
@@ -6375,7 +6377,7 @@ def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<
   "function declared in block scope cannot have 'static' storage class">;
 def err_typecheck_address_of : Error<"address of %select{bit-field"
-  "|vector element|property expression|register variable}0 requested">;
+  "|vector element|property expression|register variable|matrix element}0 requested">;
 def ext_typecheck_addrof_void : Extension<
   "ISO C forbids taking the address of an expression of type 'void'">;
 def err_unqualified_pointer_member_function : Error<
@@ -10204,8 +10206,8 @@ def err_omp_invariant_or_linear_dependency : Error<
   "expected loop invariant expression or '<invariant1> * %0 + <invariant2>' kind of expression">;
 def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
-def err_omp_unsupported_type : Error <
-  "host requires %0 bit size %1 type support, but device '%2' does not support it">;
+def err_device_unsupported_type : Error <
+  "%0 requires %1 bit size %2 type support, but device '%3' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<
@@ -10751,6 +10753,16 @@ def err_builtin_launder_invalid_arg : Error<
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
+def err_matrix_index_not_integer: Error<
+  "matrix %select{row|column}0 index is not an integer">;
+def err_matrix_index_outside_range: Error<
+  "matrix %select{row|column}0 index is outside the allowed range [0, %1)">;
+def err_matrix_incomplete_index: Error<
+  "single subscript expressions are not allowed for matrix values">;
+def err_matrix_separate_incomplete_index: Error<
+  "matrix row and column subscripts cannot be separated by any expression">;
+def err_matrix_subscript_comma: Error<
+  "comma expressions are not allowed as indices in matrix subscript expressions">;
 
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;

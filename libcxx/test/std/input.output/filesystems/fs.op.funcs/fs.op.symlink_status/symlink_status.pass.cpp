@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -34,10 +33,11 @@ TEST_CASE(signature_test)
 
 TEST_CASE(test_symlink_status_not_found)
 {
+    static_test_env static_env;
     const std::error_code expect_ec =
         std::make_error_code(std::errc::no_such_file_or_directory);
     const path cases[] {
-        StaticEnv::DNE
+        static_env.DNE
     };
     for (auto& p : cases) {
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
@@ -110,18 +110,19 @@ TEST_CASE(test_symlink_status_cannot_resolve)
 
 TEST_CASE(symlink_status_file_types_test)
 {
+    static_test_env static_env;
     scoped_test_env env;
     struct TestCase {
       path p;
       file_type expect_type;
     } cases[] = {
-        {StaticEnv::BadSymlink, file_type::symlink},
-        {StaticEnv::File, file_type::regular},
-        {StaticEnv::SymlinkToFile, file_type::symlink},
-        {StaticEnv::Dir, file_type::directory},
-        {StaticEnv::SymlinkToDir, file_type::symlink},
+        {static_env.BadSymlink, file_type::symlink},
+        {static_env.File, file_type::regular},
+        {static_env.SymlinkToFile, file_type::symlink},
+        {static_env.Dir, file_type::directory},
+        {static_env.SymlinkToDir, file_type::symlink},
         // Block files tested elsewhere
-        {StaticEnv::CharFile, file_type::character},
+        {static_env.CharFile, file_type::character},
 #if !defined(__APPLE__) && !defined(__FreeBSD__) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif

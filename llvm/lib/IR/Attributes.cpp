@@ -1175,6 +1175,17 @@ AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
 }
 
 AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
+                                 ArrayRef<Attribute::AttrKind> Kinds,
+                                 ArrayRef<uint64_t> Values) {
+  assert(Kinds.size() == Values.size() && "Mismatched attribute values.");
+  SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
+  auto VI = Values.begin();
+  for (const auto K : Kinds)
+    Attrs.emplace_back(Index, Attribute::get(C, K, *VI++));
+  return get(C, Attrs);
+}
+
+AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
                                  ArrayRef<StringRef> Kinds) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
   for (const auto &K : Kinds)

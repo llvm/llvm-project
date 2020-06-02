@@ -30,21 +30,20 @@ namespace serialization {
 }
 
 namespace index {
-  class IndexDataConsumer;
+class IndexDataConsumer;
 
 /// Creates an ASTConsumer that indexes all symbols (macros and AST decls).
+std::unique_ptr<ASTConsumer>
+createIndexingASTConsumer(std::shared_ptr<IndexDataConsumer> DataConsumer,
+                          const IndexingOptions &Opts,
+                          std::shared_ptr<Preprocessor> PP);
+
 std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
     std::shared_ptr<IndexDataConsumer> DataConsumer,
     const IndexingOptions &Opts, std::shared_ptr<Preprocessor> PP,
+    // Prefer to set Opts.ShouldTraverseDecl and use the above overload.
+    // This version is only needed if used to *track* function body parsing.
     std::function<bool(const Decl *)> ShouldSkipFunctionBody);
-
-inline std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
-    std::shared_ptr<IndexDataConsumer> DataConsumer,
-    const IndexingOptions &Opts, std::shared_ptr<Preprocessor> PP) {
-  return createIndexingASTConsumer(
-      std::move(DataConsumer), Opts, std::move(PP),
-      /*ShouldSkipFunctionBody=*/[](const Decl *) { return false; });
-}
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).
 std::unique_ptr<FrontendAction>

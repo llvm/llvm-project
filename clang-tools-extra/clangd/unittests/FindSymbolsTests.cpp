@@ -666,7 +666,8 @@ TEST_F(DocumentSymbolsTest, UsingDirectives) {
 }
 
 TEST_F(DocumentSymbolsTest, TempSpecs) {
-  addFile("foo.cpp", R"cpp(
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"cpp(
       template <typename T, typename U, int X = 5> class Foo {};
       template <typename T> class Foo<int, T> {};
       template <> class Foo<bool, int> {};
@@ -674,7 +675,7 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
       )cpp");
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(
-      getSymbols("foo.cpp"),
+      getSymbols(FilePath),
       UnorderedElementsAre(
           AllOf(WithName("Foo"), WithKind(SymbolKind::Class)),
           AllOf(WithName("Foo<int, T>"), WithKind(SymbolKind::Class)),
@@ -683,7 +684,8 @@ TEST_F(DocumentSymbolsTest, TempSpecs) {
 }
 
 TEST_F(DocumentSymbolsTest, Qualifiers) {
-  addFile("foo.cpp", R"cpp(
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"cpp(
     namespace foo { namespace bar {
       struct Cls;
 
@@ -706,7 +708,7 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
   )cpp");
 
   // All the qualifiers should be preserved exactly as written.
-  EXPECT_THAT(getSymbols("foo.cpp"),
+  EXPECT_THAT(getSymbols(FilePath),
               UnorderedElementsAre(
                   WithName("foo"), WithName("foo::bar::Cls"),
                   WithName("foo::bar::func1"), WithName("::foo::bar::func2"),
@@ -715,7 +717,8 @@ TEST_F(DocumentSymbolsTest, Qualifiers) {
 }
 
 TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
-  addFile("foo.cpp", R"cpp(
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"cpp(
       template <typename T, typename U = double> class Foo;
 
       template <>
@@ -738,7 +741,7 @@ TEST_F(DocumentSymbolsTest, QualifiersWithTemplateArgs) {
       int Foo_type::method3() { return 30; }
       )cpp");
   EXPECT_THAT(
-      getSymbols("foo.cpp"),
+      getSymbols(FilePath),
       UnorderedElementsAre(WithName("Foo"), WithName("Foo<int, double>"),
                            WithName("int_type"),
                            WithName("Foo<int_type, double>::method1"),

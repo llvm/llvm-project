@@ -564,7 +564,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     return RuntimeDefinition(Decl);
   }
 
-  SubEngine &Engine = getState()->getStateManager().getOwningEngine();
+  ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
   AnalyzerOptions &Opts = Engine.getAnalysisManager().options;
 
   // Try to get CTU definition only if CTUDir is provided.

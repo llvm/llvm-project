@@ -13,13 +13,13 @@ image show-unwind -n call_many
 # CHECK: This UnwindPlan is sourced from the compiler: yes.
 # CHECK: This UnwindPlan is valid at all instruction locations: no.
 # CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 4112-0x0000107d)
-# CHECK: row[0]:    0: CFA=RaSearch@SP+0 => esp=DW_OP_pick 0x00, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x00, DW_OP_deref
+# CHECK: row[0]:    0: CFA=RaSearch@SP+0 => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x0, DW_OP_deref
 
 image show-unwind -n nonzero_frame_size
 # CHECK-LABEL: image show-unwind -n nonzero_frame_size
 # CHECK: UNWIND PLANS for unwind-via-stack-win.exe`nonzero_frame_size
 # CHECK: Symbol file UnwindPlan:
-# CHECK: row[0]:    0: CFA=RaSearch@SP+12 => esp=DW_OP_pick 0x00, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x00, DW_OP_deref
+# CHECK: row[0]:    0: CFA=RaSearch@SP+12 => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x0, DW_OP_deref
 
 # Then, some invalid rules.
 image show-unwind -n complex_rasearch

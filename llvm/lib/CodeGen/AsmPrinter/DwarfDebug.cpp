@@ -641,27 +641,17 @@ static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
   }
 }
 
-/// Try to interpret values loaded into registers that forward parameters
-/// for \p CallMI. Store parameters with interpreted value into \p Params.
-static void collectCallSiteParameters(const MachineInstr *CallMI,
-                                      ParamSet &Params) {
-  auto *MF = CallMI->getMF();
-  auto CalleesMap = MF->getCallSitesInfo();
-  auto CallFwdRegsInfo = CalleesMap.find(CallMI);
+/// Interpret values loaded into registers by \p CurMI.
+static void interpretValues(const MachineInstr *CurMI,
+                            FwdRegWorklist &ForwardedRegWorklist,
+                            ParamSet &Params) {
 
-  // There is no information for the call instruction.
-  if (CallFwdRegsInfo == CalleesMap.end())
-    return;
-
-  auto *MBB = CallMI->getParent();
+  const MachineFunction *MF = CurMI->getMF();
+  const DIExpression *EmptyExpr =
+      DIExpression::get(MF->getFunction().getContext(), {});
   const auto &TRI = *MF->getSubtarget().getRegisterInfo();
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
-
-  // Skip the call instruction.
-  auto I = std::next(CallMI->getReverseIterator());
-
-  FwdRegWorklist ForwardedRegWorklist;
 
   // If an instruction defines more than one item in the worklist, we may run
   // into situations where a worklist register's value is (potentially)
@@ -682,7 +672,111 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // entry values, we simply postpone adding new parameter registers to the
   // worklist, by first keeping them in this temporary container until the
   // instruction has been handled.
-  FwdRegWorklist NewWorklistItems;
+  FwdRegWorklist TmpWorklistItems;
+
+  // If the MI is an instruction defining one or more parameters' forwarding
+  // registers, add those defines.
+  auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
+                                          SmallSetVector<unsigned, 4> &Defs) {
+    if (MI.isDebugInstr())
+      return;
+
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isDef() &&
+          Register::isPhysicalRegister(MO.getReg())) {
+        for (auto FwdReg : ForwardedRegWorklist)
+          if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
+            Defs.insert(FwdReg.first);
+      }
+    }
+  };
+
+  // Set of worklist registers that are defined by this instruction.
+  SmallSetVector<unsigned, 4> FwdRegDefs;
+
+  getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
+  if (FwdRegDefs.empty())
+    return;
+
+  for (auto ParamFwdReg : FwdRegDefs) {
+    if (auto ParamValue = TII.describeLoadedValue(*CurMI, ParamFwdReg)) {
+      if (ParamValue->first.isImm()) {
+        int64_t Val = ParamValue->first.getImm();
+        finishCallSiteParams(Val, ParamValue->second,
+                             ForwardedRegWorklist[ParamFwdReg], Params);
+      } else if (ParamValue->first.isReg()) {
+        Register RegLoc = ParamValue->first.getReg();
+        unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+        Register FP = TRI.getFrameRegister(*MF);
+        bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
+        if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+          MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
+          finishCallSiteParams(MLoc, ParamValue->second,
+                               ForwardedRegWorklist[ParamFwdReg], Params);
+        } else {
+          // ParamFwdReg was described by the non-callee saved register
+          // RegLoc. Mark that the call site values for the parameters are
+          // dependent on that register instead of ParamFwdReg. Since RegLoc
+          // may be a register that will be handled in this iteration, we
+          // postpone adding the items to the worklist, and instead keep them
+          // in a temporary container.
+          addToFwdRegWorklist(TmpWorklistItems, RegLoc, ParamValue->second,
+                              ForwardedRegWorklist[ParamFwdReg]);
+        }
+      }
+    }
+  }
+
+  // Remove all registers that this instruction defines from the worklist.
+  for (auto ParamFwdReg : FwdRegDefs)
+    ForwardedRegWorklist.erase(ParamFwdReg);
+
+  // Now that we are done handling this instruction, add items from the
+  // temporary worklist to the real one.
+  for (auto New : TmpWorklistItems)
+    addToFwdRegWorklist(ForwardedRegWorklist, New.first, EmptyExpr, New.second);
+  TmpWorklistItems.clear();
+}
+
+static bool interpretNextInstr(const MachineInstr *CurMI,
+                               FwdRegWorklist &ForwardedRegWorklist,
+                               ParamSet &Params) {
+  // Skip bundle headers.
+  if (CurMI->isBundle())
+    return true;
+
+  // If the next instruction is a call we can not interpret parameter's
+  // forwarding registers or we finished the interpretation of all
+  // parameters.
+  if (CurMI->isCall())
+    return false;
+
+  if (ForwardedRegWorklist.empty())
+    return false;
+
+  interpretValues(CurMI, ForwardedRegWorklist, Params);
+
+  return true;
+}
+
+/// Try to interpret values loaded into registers that forward parameters
+/// for \p CallMI. Store parameters with interpreted value into \p Params.
+static void collectCallSiteParameters(const MachineInstr *CallMI,
+                                      ParamSet &Params) {
+  const MachineFunction *MF = CallMI->getMF();
+  auto CalleesMap = MF->getCallSitesInfo();
+  auto CallFwdRegsInfo = CalleesMap.find(CallMI);
+
+  // There is no information for the call instruction.
+  if (CallFwdRegsInfo == CalleesMap.end())
+    return;
+
+  const MachineBasicBlock *MBB = CallMI->getParent();
+
+  // Skip the call instruction.
+  auto I = std::next(CallMI->getReverseIterator());
+
+  FwdRegWorklist ForwardedRegWorklist;
 
   const DIExpression *EmptyExpr =
       DIExpression::get(MF->getFunction().getContext(), {});
@@ -706,83 +800,11 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // as the entry value within basic blocks other than the first one.
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
 
-  // If the MI is an instruction defining one or more parameters' forwarding
-  // registers, add those defines.
-  auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
-                                          SmallSetVector<unsigned, 4> &Defs) {
-    if (MI.isDebugInstr())
-      return;
-
-    for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isDef() &&
-          Register::isPhysicalRegister(MO.getReg())) {
-        for (auto FwdReg : ForwardedRegWorklist)
-          if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
-            Defs.insert(FwdReg.first);
-      }
-    }
-  };
-
   // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
-    // Skip bundle headers.
-    if (I->isBundle())
-      continue;
-
-    // If the next instruction is a call we can not interpret parameter's
-    // forwarding registers or we finished the interpretation of all parameters.
-    if (I->isCall())
+    // Try to interpret values loaded by instruction.
+    if (!interpretNextInstr(&*I, ForwardedRegWorklist, Params))
       return;
-
-    if (ForwardedRegWorklist.empty())
-      return;
-
-    // Set of worklist registers that are defined by this instruction.
-    SmallSetVector<unsigned, 4> FwdRegDefs;
-
-    getForwardingRegsDefinedByMI(*I, FwdRegDefs);
-    if (FwdRegDefs.empty())
-      continue;
-
-    for (auto ParamFwdReg : FwdRegDefs) {
-      if (auto ParamValue = TII.describeLoadedValue(*I, ParamFwdReg)) {
-        if (ParamValue->first.isImm()) {
-          int64_t Val = ParamValue->first.getImm();
-          finishCallSiteParams(Val, ParamValue->second,
-                               ForwardedRegWorklist[ParamFwdReg], Params);
-        } else if (ParamValue->first.isReg()) {
-          Register RegLoc = ParamValue->first.getReg();
-          unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
-          Register FP = TRI.getFrameRegister(*MF);
-          bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
-          if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
-            MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
-            finishCallSiteParams(MLoc, ParamValue->second,
-                                 ForwardedRegWorklist[ParamFwdReg], Params);
-          } else {
-            // ParamFwdReg was described by the non-callee saved register
-            // RegLoc. Mark that the call site values for the parameters are
-            // dependent on that register instead of ParamFwdReg. Since RegLoc
-            // may be a register that will be handled in this iteration, we
-            // postpone adding the items to the worklist, and instead keep them
-            // in a temporary container.
-            addToFwdRegWorklist(NewWorklistItems, RegLoc, ParamValue->second,
-                                ForwardedRegWorklist[ParamFwdReg]);
-          }
-        }
-      }
-    }
-
-    // Remove all registers that this instruction defines from the worklist.
-    for (auto ParamFwdReg : FwdRegDefs)
-      ForwardedRegWorklist.erase(ParamFwdReg);
-
-    // Now that we are done handling this instruction, add items from the
-    // temporary worklist to the real one.
-    for (auto New : NewWorklistItems)
-      addToFwdRegWorklist(ForwardedRegWorklist, New.first, EmptyExpr,
-                          New.second);
-    NewWorklistItems.clear();
   }
 
   // Emit the call site parameter's value as an entry value.
@@ -1297,9 +1319,11 @@ void DwarfDebug::finalizeModuleInfo() {
     // attribute.
     if (CUNode->getMacros()) {
       if (getDwarfVersion() >= 5) {
-        // FIXME: Add support for DWARFv5 DW_AT_macros attribute for split
-        // case.
-        if (!useSplitDwarf())
+        if (useSplitDwarf())
+          TheCU.addSectionDelta(
+              TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
+              TLOF.getDwarfMacroDWOSection()->getBeginSymbol());
+        else
           U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macros,
                             U.getMacroLabelBegin(),
                             TLOF.getDwarfMacroSection()->getBeginSymbol());
@@ -2405,14 +2429,11 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
     MachineLocation Location = Value.getLoc();
-    if (Location.isIndirect())
-      DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.setLocation(Location, DIExpr);
     DIExpressionCursor Cursor(DIExpr);
 
-    if (DIExpr->isEntryValue()) {
-      DwarfExpr.setEntryValueFlag();
+    if (DIExpr->isEntryValue())
       DwarfExpr.beginEntryValueExpression(Cursor);
-    }
 
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
@@ -2933,26 +2954,23 @@ void DwarfDebug::emitMacro(DIMacro &M) {
 
   if (UseMacro) {
     unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
-                        ? dwarf::DW_MACRO_define_strp
-                        : dwarf::DW_MACRO_undef_strp;
+                        ? dwarf::DW_MACRO_define_strx
+                        : dwarf::DW_MACRO_undef_strx;
     Asm->OutStreamer->AddComment(dwarf::MacroString(Type));
     Asm->emitULEB128(Type);
     Asm->OutStreamer->AddComment("Line Number");
     Asm->emitULEB128(M.getLine());
     Asm->OutStreamer->AddComment("Macro String");
     if (!Value.empty())
-      Asm->OutStreamer->emitSymbolValue(
-          this->InfoHolder.getStringPool()
-              .getEntry(*Asm, (Name + " " + Value).str())
-              .getSymbol(),
-          4);
+      Asm->emitULEB128(this->InfoHolder.getStringPool()
+                           .getIndexedEntry(*Asm, (Name + " " + Value).str())
+                           .getIndex());
     else
-      // DW_MACRO_undef_strp doesn't have a value, so just emit the macro
+      // DW_MACRO_undef_strx doesn't have a value, so just emit the macro
       // string.
-      Asm->OutStreamer->emitSymbolValue(this->InfoHolder.getStringPool()
-                                            .getEntry(*Asm, (Name).str())
-                                            .getSymbol(),
-                                        4);
+      Asm->emitULEB128(this->InfoHolder.getStringPool()
+                           .getIndexedEntry(*Asm, (Name).str())
+                           .getIndex());
   } else {
     Asm->OutStreamer->AddComment(dwarf::MacinfoString(M.getMacinfoType()));
     Asm->emitULEB128(M.getMacinfoType());
@@ -3026,10 +3044,10 @@ void DwarfDebug::emitDebugMacinfo() {
 }
 
 void DwarfDebug::emitDebugMacinfoDWO() {
-  // FIXME: Add support for macro.dwo section.
-  if (getDwarfVersion() >= 5)
-    return;
-  emitDebugMacinfoImpl(Asm->getObjFileLowering().getDwarfMacinfoDWOSection());
+  auto &ObjLower = Asm->getObjFileLowering();
+  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+                           ? ObjLower.getDwarfMacroDWOSection()
+                           : ObjLower.getDwarfMacinfoDWOSection());
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.

@@ -38,6 +38,7 @@ class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
+class CallBase;
 class Function;
 class GlobalValue;
 class IntrinsicInst;
@@ -120,10 +121,12 @@ class IntrinsicCostAttributes {
 public:
   IntrinsicCostAttributes(const IntrinsicInst &I);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor, unsigned ScalarCost);
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -141,7 +144,7 @@ public:
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<Type *> Tys);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<Value *> Args);
 
   Intrinsic::ID getID() const { return IID; }
@@ -288,18 +291,6 @@ public:
   /// scientific. A target may has no bonus on vector instructions.
   int getInlinerVectorBonusPercent() const;
 
-  /// Estimate the cost of an intrinsic when lowered.
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
-
-  /// Estimate the cost of an intrinsic when lowered.
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
-
   /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
   int getMemcpyCost(const Instruction *I) const;
@@ -388,9 +379,10 @@ public:
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
   /// NewV, which has a different address space. This should happen for every
   /// operand index that collectFlatAddressOperands returned for the intrinsic.
-  /// \returns true if the intrinsic /// was handled.
-  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
-                                        Value *NewV) const;
+  /// \returns nullptr if the intrinsic was not handled. Otherwise, returns the
+  /// new value (which may be the original \p II with modified operands).
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const;
 
   /// Test whether calls to a function lower to actual program function
   /// calls.
@@ -531,6 +523,11 @@ public:
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) const;
+
+  /// Query the target whether lowering of the llvm.get.active.lane.mask
+  /// intrinsic is supported and if emitting it is desired for this loop.
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFolded) const;
 
   /// @}
 
@@ -1231,13 +1228,6 @@ public:
                          TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
-  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<Type *> ParamTys, const User *U,
-                               enum TargetCostKind CostKind) = 0;
-  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<const Value *> Arguments,
-                               const User *U,
-                               enum TargetCostKind CostKind) = 0;
   virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
@@ -1252,8 +1242,9 @@ public:
   virtual unsigned getFlatAddressSpace() = 0;
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const = 0;
-  virtual bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
-                                                Value *NewV) const = 0;
+  virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                                  Value *OldV,
+                                                  Value *NewV) const = 0;
   virtual bool isLoweredToCall(const Function *F) = 0;
   virtual void getUnrollingPreferences(Loop *L, ScalarEvolution &,
                                        UnrollingPreferences &UP) = 0;
@@ -1265,6 +1256,8 @@ public:
   preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                               AssumptionCache &AC, TargetLibraryInfo *TLI,
                               DominatorTree *DT, const LoopAccessInfo *LAI) = 0;
+  virtual bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                                     bool TailFolded) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1495,18 +1488,6 @@ public:
   int getInlinerVectorBonusPercent() override {
     return Impl.getInlinerVectorBonusPercent();
   }
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
-    return Impl.getIntrinsicCost(IID, RetTy, ParamTys, U, CostKind);
-  }
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
-    return Impl.getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
-  }
   int getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
@@ -1533,8 +1514,8 @@ public:
     return Impl.collectFlatAddressOperands(OpIndexes, IID);
   }
 
-  bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
-                                        Value *NewV) const override {
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const override {
     return Impl.rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
   }
 
@@ -1555,6 +1536,10 @@ public:
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI) override {
     return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+  }
+  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                             bool TailFolded) override {
+    return Impl.emitGetActiveLaneMask(L, LI, SE, TailFolded);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);

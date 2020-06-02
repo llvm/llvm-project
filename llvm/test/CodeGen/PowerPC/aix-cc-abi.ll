@@ -2337,7 +2337,7 @@ define void @caller_mix() {
 
 ; ASM64PWR4:      mflr 0
 ; ASM64PWR4-DAG:  std 0, 16(1)
-; ASM64PWR4-DAG:  stdu 1, -240(1)
+; ASM64PWR4-DAG:  stdu 1, -256(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 112(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 120(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 128(1)

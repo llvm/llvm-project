@@ -571,6 +571,59 @@ TEST_F(TransformerTest, OrderedRuleMultipleKinds) {
   testRule(Rule, Input, Expected);
 }
 
+// Verifies that a rule with a top-level matcher for an implicit node (like
+// `implicitCastExpr`) does not change the code, when the AST traversal skips
+// implicit nodes. In this test, only the rule with the explicit-node matcher
+// will fire.
+TEST_F(TransformerTest, OrderedRuleImplicitIgnored) {
+  std::string Input = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { f1(); }
+    float call_f2() { return f2(); }
+  )cc";
+  std::string Expected = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { REPLACE_F1; }
+    float call_f2() { return f2(); }
+  )cc";
+
+  RewriteRule ReplaceF1 =
+      makeRule(callExpr(callee(functionDecl(hasName("f1")))),
+               changeTo(cat("REPLACE_F1")));
+  RewriteRule ReplaceF2 =
+      makeRule(implicitCastExpr(hasSourceExpression(callExpr())),
+               changeTo(cat("REPLACE_F2")));
+  testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
+}
+
+// Verifies that explicitly setting the traversal kind fixes the problem in the
+// previous test.
+TEST_F(TransformerTest, OrderedRuleImplicitMatched) {
+  std::string Input = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { f1(); }
+    float call_f2() { return f2(); }
+  )cc";
+  std::string Expected = R"cc(
+    void f1();
+    int f2();
+    void call_f1() { REPLACE_F1; }
+    float call_f2() { return REPLACE_F2; }
+  )cc";
+
+  RewriteRule ReplaceF1 = makeRule(
+      traverse(clang::TK_AsIs, callExpr(callee(functionDecl(hasName("f1"))))),
+      changeTo(cat("REPLACE_F1")));
+  RewriteRule ReplaceF2 =
+      makeRule(traverse(clang::TK_AsIs,
+                        implicitCastExpr(hasSourceExpression(callExpr()))),
+               changeTo(cat("REPLACE_F2")));
+  testRule(applyFirst({ReplaceF1, ReplaceF2}), Input, Expected);
+}
+
 //
 // Negative tests (where we expect no transformation to occur).
 //
@@ -817,4 +870,46 @@ TEST(TransformerDeathTest, OrderedRuleTypes) {
                "Matcher must be.*node matcher");
 }
 #endif
+
+// Edits are able to span multiple files; in this case, a header and an
+// implementation file.
+TEST_F(TransformerTest, MultipleFiles) {
+  std::string Header = R"cc(void RemoveThisFunction();)cc";
+  std::string Source = R"cc(#include "input.h"
+                            void RemoveThisFunction();)cc";
+  Transformer T(
+      makeRule(functionDecl(hasName("RemoveThisFunction")), changeTo(cat(""))),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Source, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      {{"input.h", Header}}));
+
+  std::sort(Changes.begin(), Changes.end(),
+            [](const AtomicChange &L, const AtomicChange &R) {
+              return L.getFilePath() < R.getFilePath();
+            });
+
+  ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
+  EXPECT_THAT(Changes[0].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[0].getRemovedHeaders(), IsEmpty());
+  llvm::Expected<std::string> UpdatedCode =
+      clang::tooling::applyAllReplacements(Header,
+                                           Changes[0].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(;)cc"));
+
+  ASSERT_EQ(Changes[1].getFilePath(), "input.cc");
+  EXPECT_THAT(Changes[1].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[1].getRemovedHeaders(), IsEmpty());
+  UpdatedCode = clang::tooling::applyAllReplacements(
+      Source, Changes[1].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(#include "input.h"
+                        ;)cc"));
+}
 } // namespace

@@ -147,6 +147,7 @@ std::string EVT::getEVTString() const {
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
+  case MVT::bf16:    return "bf16";
   case MVT::ppcf128: return "ppcf128";
   case MVT::isVoid:  return "isVoid";
   case MVT::Other:   return "ch";
@@ -174,6 +175,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::i64:     return Type::getInt64Ty(Context);
   case MVT::i128:    return IntegerType::get(Context, 128);
   case MVT::f16:     return Type::getHalfTy(Context);
+  case MVT::bf16:     return Type::getBFloatTy(Context);
   case MVT::f32:     return Type::getFloatTy(Context);
   case MVT::f64:     return Type::getDoubleTy(Context);
   case MVT::f80:     return Type::getX86_FP80Ty(Context);
@@ -236,6 +238,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v8f16:   return VectorType::get(Type::getHalfTy(Context), 8);
   case MVT::v16f16:  return VectorType::get(Type::getHalfTy(Context), 16);
   case MVT::v32f16:  return VectorType::get(Type::getHalfTy(Context), 32);
+  case MVT::v2bf16:  return VectorType::get(Type::getBFloatTy(Context), 2);
+  case MVT::v3bf16:  return VectorType::get(Type::getBFloatTy(Context), 3);
+  case MVT::v4bf16:  return VectorType::get(Type::getBFloatTy(Context), 4);
+  case MVT::v8bf16:  return VectorType::get(Type::getBFloatTy(Context), 8);
+  case MVT::v16bf16: return VectorType::get(Type::getBFloatTy(Context), 16);
+  case MVT::v32bf16: return VectorType::get(Type::getBFloatTy(Context), 32);
   case MVT::v1f32:   return VectorType::get(Type::getFloatTy(Context), 1);
   case MVT::v2f32:   return VectorType::get(Type::getFloatTy(Context), 2);
   case MVT::v3f32:   return VectorType::get(Type::getFloatTy(Context), 3);
@@ -321,6 +329,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return VectorType::get(Type::getHalfTy(Context), 4, /*Scalable=*/ true);
   case MVT::nxv8f16:
     return VectorType::get(Type::getHalfTy(Context), 8, /*Scalable=*/ true);
+  case MVT::nxv2bf16:
+    return VectorType::get(Type::getBFloatTy(Context), 2, /*Scalable=*/ true);
+  case MVT::nxv4bf16:
+    return VectorType::get(Type::getBFloatTy(Context), 4, /*Scalable=*/ true);
+  case MVT::nxv8bf16:
+    return VectorType::get(Type::getBFloatTy(Context), 8, /*Scalable=*/ true);
   case MVT::nxv1f32:
     return VectorType::get(Type::getFloatTy(Context), 1, /*Scalable=*/ true);
   case MVT::nxv2f32:
@@ -356,6 +370,7 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::IntegerTyID:
     return getIntegerVT(cast<IntegerType>(Ty)->getBitWidth());
   case Type::HalfTyID:      return MVT(MVT::f16);
+  case Type::BFloatTyID:    return MVT(MVT::bf16);
   case Type::FloatTyID:     return MVT(MVT::f32);
   case Type::DoubleTyID:    return MVT(MVT::f64);
   case Type::X86_FP80TyID:  return MVT(MVT::f80);

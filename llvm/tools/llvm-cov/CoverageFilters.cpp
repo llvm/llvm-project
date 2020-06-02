@@ -13,6 +13,7 @@
 #include "CoverageFilters.h"
 #include "CoverageSummaryInfo.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/SpecialCaseList.h"
 
 using namespace llvm;
 

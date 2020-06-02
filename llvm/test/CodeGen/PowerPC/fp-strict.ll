@@ -33,7 +33,7 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 declare <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double>, metadata, metadata)
 
-define float @fadd_f32(float %f1, float %f2) {
+define float @fadd_f32(float %f1, float %f2) #0 {
 ; CHECK-LABEL: fadd_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsaddsp f1, f1, f2
@@ -46,11 +46,11 @@ define float @fadd_f32(float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fadd.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
-define double @fadd_f64(double %f1, double %f2) {
+define double @fadd_f64(double %f1, double %f2) #0 {
 ; CHECK-LABEL: fadd_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsadddp f1, f1, f2
@@ -63,11 +63,11 @@ define double @fadd_f64(double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvaddsp v2, v2, v3
@@ -101,11 +101,11 @@ define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
   %res = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fadd_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fadd_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvadddp v2, v2, v3
@@ -119,11 +119,11 @@ define <2 x double> @fadd_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
   %res = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(
                         <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
 
-define float @fsub_f32(float %f1, float %f2) {
+define float @fsub_f32(float %f1, float %f2) #0 {
 ; CHECK-LABEL: fsub_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xssubsp f1, f1, f2
@@ -137,11 +137,11 @@ define float @fsub_f32(float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fsub.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res;
 }
 
-define double @fsub_f64(double %f1, double %f2) {
+define double @fsub_f64(double %f1, double %f2) #0 {
 ; CHECK-LABEL: fsub_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xssubdp f1, f1, f2
@@ -155,11 +155,11 @@ define double @fsub_f64(double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fsub.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res;
 }
 
-define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fsub_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsubsp v2, v2, v3
@@ -193,11 +193,11 @@ define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
   %res = call <4 x float> @llvm.experimental.constrained.fsub.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res;
 }
 
-define <2 x double> @fsub_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fsub_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fsub_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsubdp v2, v2, v3
@@ -211,11 +211,11 @@ define <2 x double> @fsub_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
   %res = call <2 x double> @llvm.experimental.constrained.fsub.v2f64(
                         <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res;
 }
 
-define float @fmul_f32(float %f1, float %f2) {
+define float @fmul_f32(float %f1, float %f2) #0 {
 ; CHECK-LABEL: fmul_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmulsp f1, f1, f2
@@ -229,11 +229,11 @@ define float @fmul_f32(float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fmul.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res;
 }
 
-define double @fmul_f64(double %f1, double %f2) {
+define double @fmul_f64(double %f1, double %f2) #0 {
 ; CHECK-LABEL: fmul_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp f1, f1, f2
@@ -247,11 +247,11 @@ define double @fmul_f64(double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res;
 }
 
-define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fmul_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmulsp v2, v2, v3
@@ -285,11 +285,11 @@ define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
   %res = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res;
 }
 
-define <2 x double> @fmul_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fmul_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fmul_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmuldp v2, v2, v3
@@ -303,11 +303,11 @@ define <2 x double> @fmul_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
   %res = call <2 x double> @llvm.experimental.constrained.fmul.v2f64(
                         <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res;
 }
 
-define float @fdiv_f32(float %f1, float %f2) {
+define float @fdiv_f32(float %f1, float %f2) #0 {
 ; CHECK-LABEL: fdiv_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsdivsp f1, f1, f2
@@ -321,11 +321,11 @@ define float @fdiv_f32(float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fdiv.f32(
                         float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res;
 }
 
-define double @fdiv_f64(double %f1, double %f2) {
+define double @fdiv_f64(double %f1, double %f2) #0 {
 ; CHECK-LABEL: fdiv_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsdivdp f1, f1, f2
@@ -339,11 +339,11 @@ define double @fdiv_f64(double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fdiv.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res;
 }
 
-define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fdiv_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvdivsp v2, v2, v3
@@ -377,11 +377,11 @@ define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
   %res = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fdiv_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fdiv_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fdiv_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvdivdp v2, v2, v3
@@ -395,11 +395,11 @@ define <2 x double> @fdiv_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
   %res = call <2 x double> @llvm.experimental.constrained.fdiv.v2f64(
                         <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
 
-define double @no_fma_fold(double %f1, double %f2, double %f3) {
+define double @no_fma_fold(double %f1, double %f2, double %f3) #0 {
 ; CHECK-LABEL: no_fma_fold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp f0, f1, f2
@@ -414,15 +414,15 @@ define double @no_fma_fold(double %f1, double %f2, double %f3) {
   %mul = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %add = call double @llvm.experimental.constrained.fadd.f64(
                         double %mul, double %f3,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %add
 }
 
-define float @fmadd_f32(float %f0, float %f1, float %f2) {
+define float @fmadd_f32(float %f0, float %f1, float %f2) #0 {
 ; CHECK-LABEL: fmadd_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmaddasp f3, f1, f2
@@ -436,11 +436,11 @@ define float @fmadd_f32(float %f0, float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fma.f32(
                         float %f0, float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
-define double @fmadd_f64(double %f0, double %f1, double %f2) {
+define double @fmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; CHECK-LABEL: fmadd_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmaddadp f3, f1, f2
@@ -454,11 +454,11 @@ define double @fmadd_f64(double %f0, double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fma.f64(
                         double %f0, double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fmadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmaddasp v4, v2, v3
@@ -499,11 +499,11 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
   %res = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fmadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmaddadp v4, v2, v3
@@ -518,11 +518,11 @@ define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
   %res = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
 
-define float @fmsub_f32(float %f0, float %f1, float %f2) {
+define float @fmsub_f32(float %f0, float %f1, float %f2) #0 {
 ; CHECK-LABEL: fmsub_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmsubasp f3, f1, f2
@@ -537,11 +537,11 @@ define float @fmsub_f32(float %f0, float %f1, float %f2) {
   %res = call float @llvm.experimental.constrained.fma.f32(
                         float %f0, float %f1, float %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
-define double @fmsub_f64(double %f0, double %f1, double %f2) {
+define double @fmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; CHECK-LABEL: fmsub_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmsubadp f3, f1, f2
@@ -556,11 +556,11 @@ define double @fmsub_f64(double %f0, double %f1, double %f2) {
   %res = call double @llvm.experimental.constrained.fma.f64(
                         double %f0, double %f1, double %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fmsub_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmsubasp v4, v2, v3
@@ -605,11 +605,11 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
   %res = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1, <4 x float> %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fmsub_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmsubadp v4, v2, v3
@@ -625,11 +625,11 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
   %res = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1, <2 x double> %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
 
-define float @fnmadd_f32(float %f0, float %f1, float %f2) {
+define float @fnmadd_f32(float %f0, float %f1, float %f2) #0 {
 ; CHECK-LABEL: fnmadd_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsnmaddasp f3, f1, f2
@@ -643,12 +643,12 @@ define float @fnmadd_f32(float %f0, float %f1, float %f2) {
   %fma = call float @llvm.experimental.constrained.fma.f32(
                         float %f0, float %f1, float %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg float %fma
   ret float %res
 }
 
-define double @fnmadd_f64(double %f0, double %f1, double %f2) {
+define double @fnmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; CHECK-LABEL: fnmadd_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsnmaddadp f3, f1, f2
@@ -662,12 +662,12 @@ define double @fnmadd_f64(double %f0, double %f1, double %f2) {
   %fma = call double @llvm.experimental.constrained.fma.f64(
                         double %f0, double %f1, double %f2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg double %fma
   ret double %res
 }
 
-define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fnmadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmaddasp v4, v2, v3
@@ -711,12 +711,12 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
   %fma = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg <4 x float> %fma
   ret <4 x float> %res
 }
 
-define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fnmadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvnmaddadp v4, v2, v3
@@ -731,12 +731,12 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
   %fma = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg <2 x double> %fma
   ret <2 x double> %res
 }
 
-define float @fnmsub_f32(float %f0, float %f1, float %f2) {
+define float @fnmsub_f32(float %f0, float %f1, float %f2) #0 {
 ; CHECK-LABEL: fnmsub_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsnmsubasp f3, f1, f2
@@ -751,12 +751,12 @@ define float @fnmsub_f32(float %f0, float %f1, float %f2) {
   %fma = call float @llvm.experimental.constrained.fma.f32(
                         float %f0, float %f1, float %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg float %fma
   ret float %res
 }
 
-define double @fnmsub_f64(double %f0, double %f1, double %f2) {
+define double @fnmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; CHECK-LABEL: fnmsub_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsnmsubadp f3, f1, f2
@@ -771,12 +771,12 @@ define double @fnmsub_f64(double %f0, double %f1, double %f2) {
   %fma = call double @llvm.experimental.constrained.fma.f64(
                         double %f0, double %f1, double %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg double %fma
   ret double %res
 }
 
-define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) {
+define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fnmsub_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvnmsubasp v4, v2, v3
@@ -822,12 +822,12 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
   %fma = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
                         <4 x float> %vf0, <4 x float> %vf1, <4 x float> %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg <4 x float> %fma
   ret <4 x float> %res
 }
 
-define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) {
+define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x double> %vf2) #0 {
 ; CHECK-LABEL: fnmsub_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvnmsubadp v4, v2, v3
@@ -843,12 +843,12 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
   %fma = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
                         <2 x double> %vf0, <2 x double> %vf1, <2 x double> %neg,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   %res = fneg <2 x double> %fma
   ret <2 x double> %res
 }
 
-define float @fsqrt_f32(float %f1) {
+define float @fsqrt_f32(float %f1) #0 {
 ; CHECK-LABEL: fsqrt_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xssqrtsp f1, f1
@@ -861,11 +861,11 @@ define float @fsqrt_f32(float %f1) {
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret float %res
 }
 
-define double @fsqrt_f64(double %f1) {
+define double @fsqrt_f64(double %f1) #0 {
 ; CHECK-LABEL: fsqrt_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xssqrtdp f1, f1
@@ -878,11 +878,11 @@ define double @fsqrt_f64(double %f1) {
   %res = call double @llvm.experimental.constrained.sqrt.f64(
                         double %f1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret double %res
 }
 
-define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) {
+define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) #0 {
 ; CHECK-LABEL: fsqrt_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsqrtsp v2, v2
@@ -910,11 +910,11 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) {
   %res = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(
                         <4 x float> %vf1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <4 x float> %res
 }
 
-define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) {
+define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) #0 {
 ; CHECK-LABEL: fsqrt_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsqrtdp v2, v2
@@ -928,6 +928,8 @@ define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) {
   %res = call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(
                         <2 x double> %vf1,
                         metadata !"round.dynamic",
-                        metadata !"fpexcept.strict")
+                        metadata !"fpexcept.strict") #0
   ret <2 x double> %res
 }
+
+attributes #0 = { strictfp }

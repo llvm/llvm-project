@@ -23,9 +23,9 @@ body: |
     %6 : vreg_64 = COPY killed %4
 
   bb.2:
-    %2 : vgpr_32 = V_CVT_F32_I32_e32 killed %5.sub1, implicit $exec
+    %2 : vgpr_32 = V_CVT_F32_I32_e32 killed %5.sub1, implicit $mode, implicit $exec
 
   bb.3:
-    %3 : vgpr_32 = V_CVT_F32_I32_e32 killed %6.sub1, implicit $exec
+    %3 : vgpr_32 = V_CVT_F32_I32_e32 killed %6.sub1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...

@@ -694,7 +694,7 @@ swiftcall::splitLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
   // Try to split the vector type in half.
   if (numElts >= 4 && isPowerOf2(numElts)) {
     if (isLegalVectorType(CGM, vectorSize / 2, eltTy, numElts / 2))
-      return {llvm::VectorType::get(eltTy, numElts / 2), 2};
+      return {llvm::FixedVectorType::get(eltTy, numElts / 2), 2};
   }
 
   return {eltTy, numElts};
@@ -747,7 +747,8 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
 
     // Add the right number of vectors of this size.
     auto numVecs = numElts >> logCandidateNumElts;
-    components.append(numVecs, llvm::VectorType::get(eltTy, candidateNumElts));
+    components.append(numVecs,
+                      llvm::FixedVectorType::get(eltTy, candidateNumElts));
     numElts -= (numVecs << logCandidateNumElts);
 
     if (numElts == 0) return;
@@ -757,7 +758,7 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
     // This only needs to be separately checked if it's not a power of 2.
     if (numElts > 2 && !isPowerOf2(numElts) &&
         isLegalVectorType(CGM, eltSize * numElts, eltTy, numElts)) {
-      components.push_back(llvm::VectorType::get(eltTy, numElts));
+      components.push_back(llvm::FixedVectorType::get(eltTy, numElts));
       return;
     }
 

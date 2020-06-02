@@ -391,7 +391,7 @@ template <> struct MappingTraits<lldb_private::Args::ArgEntry> {
       return lldb_private::Args::ArgEntry(value, quote);
     }
     StringRef value;
-    char quote;
+    uint8_t quote;
   };
   static void mapping(IO &io, lldb_private::Args::ArgEntry &v);
 };

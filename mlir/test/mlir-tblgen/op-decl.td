@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -44,20 +45,18 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
   }];
 }
 
-// CHECK: class AOp;
-
 // CHECK-LABEL: NS::AOp declarations
 
 // CHECK: class AOpOperandAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ArrayRef<Value> values
-// CHECK:   ArrayRef<Value> getODSOperands(unsigned index);
+// CHECK:   AOpOperandAdaptor(ValueRange values
+// CHECK:   ValueRange getODSOperands(unsigned index);
 // CHECK:   Value a();
-// CHECK:   ArrayRef<Value> b();
+// CHECK:   ValueRange b();
 // CHECK:   IntegerAttr attr1();
 // CHECL:   FloatAttr attr2();
 // CHECK: private:
-// CHECK:   ArrayRef<Value> odsOperands;
+// CHECK:   ValueRange odsOperands;
 // CHECK: };
 
 // CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNRegions<1>::Impl, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
@@ -107,12 +106,12 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
 }
 
 // CHECK-LABEL: AttrSizedOperandOpOperandAdaptor(
-// CHECK-SAME:    ArrayRef<Value> values
+// CHECK-SAME:    ValueRange values
 // CHECK-SAME:    DictionaryAttr attrs
-// CHECK:  ArrayRef<Value> a();
-// CHECK:  ArrayRef<Value> b();
+// CHECK:  ValueRange a();
+// CHECK:  ValueRange b();
 // CHECK:  Value c();
-// CHECK:  ArrayRef<Value> d();
+// CHECK:  ValueRange d();
 // CHECK:  DenseIntElementsAttr operand_segment_sizes();
 
 // Check op trait for different number of operands
@@ -149,6 +148,26 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 // CHECK:   ::mlir::MutableOperandRange aMutable();
 // CHECK:   Value b();
 // CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+
+// Check that all types match constraint results in generating builder.
+// ---
+
+def NS_FOp : NS_Op<"op_with_all_types_constraint",
+    [AllTypesMatch<["a", "b"]>]> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs AnyType:$b);
+}
+
+// CHECK-LABEL: class FOp :
+// CHECK: static LogicalResult inferReturnTypes
+
+def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs I32:$b);
+}
+
+// CHECK-LABEL: class GOp :
+// CHECK: static LogicalResult inferReturnTypes
 
 // Check that default builders can be suppressed.
 // ---

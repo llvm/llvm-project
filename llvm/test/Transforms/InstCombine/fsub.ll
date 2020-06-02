@@ -785,11 +785,13 @@ define float @fneg_fsub_constant(float %x) {
   ret float %sub
 }
 
+; ((w-x) + y) - z --> (w+y) - (x+z)
+
 define float @fsub_fadd_fsub_reassoc(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_reassoc(
-; CHECK-NEXT:    [[S1:%.*]] = fsub reassoc nsz float [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz float [[S1]], [[Y:%.*]]
-; CHECK-NEXT:    [[S2:%.*]] = fsub reassoc nsz float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[W:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub reassoc nsz float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[S2]]
 ;
   %s1 = fsub reassoc nsz float %w, %x
@@ -798,12 +800,14 @@ define float @fsub_fadd_fsub_reassoc(float %w, float %x, float %y, float %z) {
   ret float %s2
 }
 
+; FMF on the last op is enough to do the transform; vectors work too.
+
 define <2 x float> @fsub_fadd_fsub_reassoc_commute(<2 x float> %w, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_reassoc_commute(
 ; CHECK-NEXT:    [[D:%.*]] = fdiv <2 x float> [[Y:%.*]], <float 4.200000e+01, float -4.200000e+01>
-; CHECK-NEXT:    [[S1:%.*]] = fsub <2 x float> [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = fadd <2 x float> [[D]], [[S1]]
-; CHECK-NEXT:    [[S2:%.*]] = fsub fast <2 x float> [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[D]], [[W:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = fsub fast <2 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x float> [[S2]]
 ;
   %d = fdiv <2 x float> %y, <float 42.0, float -42.0> ; thwart complexity-based canonicalization
@@ -813,12 +817,14 @@ define <2 x float> @fsub_fadd_fsub_reassoc_commute(<2 x float> %w, <2 x float> %
   ret <2 x float> %s2
 }
 
+; (v-w) + (x-y) - z --> (v+x) - (w+y+z)
+
 define float @fsub_fadd_fsub_reassoc_twice(float %v, float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_reassoc_twice(
-; CHECK-NEXT:    [[S1:%.*]] = fsub reassoc nsz float [[V:%.*]], [[W:%.*]]
-; CHECK-NEXT:    [[S2:%.*]] = fsub reassoc nsz float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz float [[S1]], [[S2]]
-; CHECK-NEXT:    [[S3:%.*]] = fsub reassoc nsz float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[X:%.*]], [[V:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz float [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[S3:%.*]] = fsub reassoc nsz float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret float [[S3]]
 ;
   %s1 = fsub reassoc nsz float %v, %w
@@ -827,6 +833,8 @@ define float @fsub_fadd_fsub_reassoc_twice(float %v, float %w, float %x, float %
   %s3 = fsub reassoc nsz float %a, %z
   ret float %s3
 }
+
+; negative test - FMF
 
 define float @fsub_fadd_fsub_not_reassoc(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_not_reassoc(
@@ -840,6 +848,8 @@ define float @fsub_fadd_fsub_not_reassoc(float %w, float %x, float %y, float %z)
   %s2 = fsub nsz float %a, %z
   ret float %s2
 }
+
+; negative test - uses
 
 define float @fsub_fadd_fsub_reassoc_use1(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_reassoc_use1(
@@ -855,6 +865,8 @@ define float @fsub_fadd_fsub_reassoc_use1(float %w, float %x, float %y, float %z
   %s2 = fsub fast float %a, %z
   ret float %s2
 }
+
+; negative test - uses
 
 define float @fsub_fadd_fsub_reassoc_use2(float %w, float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fadd_fsub_reassoc_use2(

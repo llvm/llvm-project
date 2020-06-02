@@ -17,6 +17,7 @@
 #include "clang/AST/LocInfoType.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 
 using namespace clang;
 
@@ -161,6 +162,9 @@ void TextNodeDumper::Visit(const Stmt *Node) {
         break;
       case OK_VectorComponent:
         OS << " vectorcomponent";
+        break;
+      case OK_MatrixComponent:
+        OS << " matrixcomponent";
         break;
       }
     }
@@ -436,19 +440,10 @@ void TextNodeDumper::dumpName(const NamedDecl *ND) {
 }
 
 void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
-  switch (AS) {
-  case AS_none:
-    break;
-  case AS_public:
-    OS << "public";
-    break;
-  case AS_protected:
-    OS << "protected";
-    break;
-  case AS_private:
-    OS << "private";
-    break;
-  }
+  const auto AccessSpelling = getAccessSpelling(AS);
+  if (AccessSpelling.empty())
+    return;
+  OS << AccessSpelling;
 }
 
 void TextNodeDumper::dumpCleanupObject(

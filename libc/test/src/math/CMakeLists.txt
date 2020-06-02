@@ -98,6 +98,84 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  trunc_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    trunc_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.trunc
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  truncf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    truncf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.truncf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  ceil_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    ceil_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.ceil
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  ceilf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    ceilf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.ceilf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  floor_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    floor_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.floor
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  floorf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    floorf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.floorf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   expf_test
   NEED_MPFR
   SUITE

@@ -389,7 +389,13 @@ struct BufferPlacementPass
 
       // If there is an existing dealloc, move it to the right place.
       Operation *nextOp = positions.getDeallocPosition()->getNextNode();
-      assert(nextOp && "Invalid Dealloc operation position");
+      // If the Dealloc position is at the terminator operation of the block,
+      // then the value should escape from a deallocation.
+      if (!nextOp) {
+        assert(deallocs.empty() &&
+               "There should be no dealloc for the returned buffer");
+        continue;
+      }
       if (deallocs.size()) {
         (*deallocs.begin())->moveBefore(nextOp);
       } else {
@@ -431,11 +437,6 @@ LogicalResult FunctionAndBlockSignatureConverter::matchAndRewrite(
     return failure();
   }
   auto funcType = funcOp.getType();
-  TypeRange resultTypes = funcType.getResults();
-  if (llvm::any_of(resultTypes,
-                   [](Type type) { return type.isa<MemRefType>(); }))
-    return funcOp.emitError("BufferAssignmentPlacer doesn't currently support "
-                            "functions which return memref typed values");
 
   // Convert function arguments using the provided TypeConverter.
   TypeConverter::SignatureConversion conversion(funcType.getNumInputs());
@@ -443,17 +444,16 @@ LogicalResult FunctionAndBlockSignatureConverter::matchAndRewrite(
     conversion.addInputs(argType.index(),
                          converter->convertType(argType.value()));
 
-  // Adding a function argument for each function result which is going to be a
-  // memref type after type conversion.
+  // If a function result type is not a memref but it would be a memref after
+  // type conversion, a new argument should be appended to the function
+  // arguments list for this result. Otherwise, it remains unchanged as a
+  // function result.
   SmallVector<Type, 2> newResultTypes;
   newResultTypes.reserve(funcOp.getNumResults());
-  for (Type resType : resultTypes) {
+  for (Type resType : funcType.getResults()) {
     Type convertedType = converter->convertType(resType);
-
-    // If the result type is memref after the type conversion, a new argument
-    // should be appended to the function arguments list for this result.
-    // Otherwise, it remains unchanged as a function result.
-    if (convertedType.isa<MemRefType>())
+    if (BufferAssignmentTypeConverter::isConvertedMemref(convertedType,
+                                                         resType))
       conversion.addInputs(convertedType);
     else
       newResultTypes.push_back(convertedType);
@@ -469,6 +469,57 @@ LogicalResult FunctionAndBlockSignatureConverter::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// BufferAssignmentCallOpConverter
+//===----------------------------------------------------------------------===//
+
+// Performs `CallOp` conversion to match its operands and results with the
+// signature of the callee after rewriting the callee with
+// FunctionAndBlockSignatureConverter.
+LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
+    CallOp callOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+
+  Location loc = callOp.getLoc();
+  SmallVector<Value, 2> newOperands, replacingValues;
+  SmallVector<Type, 2> newResultTypes;
+  unsigned numResults = callOp.getNumResults();
+  newOperands.reserve(numResults + operands.size());
+  newOperands.append(operands.begin(), operands.end());
+  newResultTypes.reserve(numResults);
+  replacingValues.reserve(numResults);
+
+  // For each memref result of `CallOp` which has not been a memref before type
+  // conversion, a new buffer is allocated and passed to the operands list of
+  // the new `CallOp`. Otherwise, it remains as a caller result.
+  for (Value result : callOp.getResults()) {
+    Type currType = result.getType();
+    Type newType = converter->convertType(result.getType());
+    if (BufferAssignmentTypeConverter::isConvertedMemref(newType, currType)) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.restoreInsertionPoint(
+          bufferAssignment->computeAllocPosition(result.dyn_cast<OpResult>()));
+      Value alloc =
+          rewriter.create<AllocOp>(loc, newType.dyn_cast<MemRefType>());
+      newOperands.push_back(alloc);
+      replacingValues.push_back(alloc);
+    } else {
+      newResultTypes.push_back(currType);
+
+      // No replacing is required.
+      replacingValues.push_back(nullptr);
+    }
+  }
+
+  // Creating the new `CallOp`.
+  rewriter.create<CallOp>(loc, callOp.getCallee(), newResultTypes, newOperands);
+
+  // Replacing the results of the old `CallOp`.
+  rewriter.replaceOp(callOp, replacingValues);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BufferAssignmentTypeConverter
 //===----------------------------------------------------------------------===//
 
@@ -480,6 +531,11 @@ BufferAssignmentTypeConverter::BufferAssignmentTypeConverter() {
   addConversion([](RankedTensorType type) {
     return (Type)MemRefType::get(type.getShape(), type.getElementType());
   });
+}
+
+/// Checks if `type` has been converted from non-memref type to memref.
+bool BufferAssignmentTypeConverter::isConvertedMemref(Type type, Type before) {
+  return type.isa<MemRefType>() && !before.isa<MemRefType>();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1240,7 +1240,7 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
-    return LowerFLOG(Op, DAG, 1.0F / numbers::log2ef);
+    return LowerFLOG(Op, DAG, numbers::ln2f);
   case ISD::FLOG10:
     return LowerFLOG(Op, DAG, numbers::ln2f / numbers::ln10f);
   case ISD::FEXP:
@@ -2920,7 +2920,7 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
     return SDValue();
 
   LoadSDNode *LN = cast<LoadSDNode>(N);
-  if (LN->isVolatile() || !ISD::isNormalLoad(LN) || hasVolatileUser(LN))
+  if (!LN->isSimple() || !ISD::isNormalLoad(LN) || hasVolatileUser(LN))
     return SDValue();
 
   SDLoc SL(N);
@@ -2974,7 +2974,7 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
     return SDValue();
 
   StoreSDNode *SN = cast<StoreSDNode>(N);
-  if (SN->isVolatile() || !ISD::isNormalStore(SN))
+  if (!SN->isSimple() || !ISD::isNormalStore(SN))
     return SDValue();
 
   EVT VT = SN->getMemoryVT();

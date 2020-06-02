@@ -898,25 +898,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                           Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.LimitFloatPrecision =
       std::string(Args.getLastArgValue(OPT_mlimit_float_precision));
-  Opts.NoInfsFPMath = (Args.hasArg(OPT_menable_no_infinities) ||
-                       Args.hasArg(OPT_cl_finite_math_only) ||
-                       Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.NoNaNsFPMath = (Args.hasArg(OPT_menable_no_nans) ||
-                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                       Args.hasArg(OPT_cl_finite_math_only) ||
-                       Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.NoSignedZeros = (Args.hasArg(OPT_fno_signed_zeros) ||
-                        Args.hasArg(OPT_cl_no_signed_zeros) ||
-                        Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                        Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.Reassociate = Args.hasArg(OPT_mreassociate);
   Opts.CorrectlyRoundedDivSqrt =
       Args.hasArg(OPT_cl_fp32_correctly_rounded_divide_sqrt);
   Opts.UniformWGSize =
       Args.hasArg(OPT_cl_uniform_work_group_size);
   Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
-  Opts.ReciprocalMath = Args.hasArg(OPT_freciprocal_math);
-  Opts.NoTrappingMath = Args.hasArg(OPT_fno_trapping_math);
   Opts.StrictFloatCastOverflow =
       !Args.hasArg(OPT_fno_strict_float_cast_overflow);
 
@@ -941,9 +927,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.StrictReturn = !Args.hasArg(OPT_fno_strict_return);
   Opts.StrictVTablePointers = Args.hasArg(OPT_fstrict_vtable_pointers);
   Opts.ForceEmitVTables = Args.hasArg(OPT_fforce_emit_vtables);
-  Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
-                      Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                      Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.UnwindTables = Args.hasArg(OPT_munwind_tables);
   Opts.RelocationModel = getRelocModel(Args, Diags);
   Opts.ThreadModel =
@@ -955,10 +938,19 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.TrapFuncName = std::string(Args.getLastArgValue(OPT_ftrap_function_EQ));
   Opts.UseInitArray = !Args.hasArg(OPT_fno_use_init_array);
 
-  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
+  Opts.BBSections =
+      std::string(Args.getLastArgValue(OPT_fbasic_block_sections_EQ, "none"));
+
+  // Basic Block Sections implies Function Sections.
+  Opts.FunctionSections =
+      Args.hasArg(OPT_ffunction_sections) ||
+      (Opts.BBSections != "none" && Opts.BBSections != "labels");
+
   Opts.DataSections = Args.hasArg(OPT_fdata_sections);
   Opts.StackSizeSection = Args.hasArg(OPT_fstack_size_section);
   Opts.UniqueSectionNames = !Args.hasArg(OPT_fno_unique_section_names);
+  Opts.UniqueBasicBlockSectionNames =
+      Args.hasArg(OPT_funique_basic_block_section_names);
   Opts.UniqueInternalLinkageNames =
       Args.hasArg(OPT_funique_internal_linkage_names);
 
@@ -3044,6 +3036,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.SemanticInterposition = Args.hasArg(OPT_fsemantic_interposition);
+  // An explicit -fno-semantic-interposition infers dso_local.
+  Opts.ExplicitNoSemanticInterposition =
+      Args.hasArg(OPT_fno_semantic_interposition);
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
@@ -3101,8 +3096,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   // Set the flag to prevent the implementation from emitting device exception
   // handling code for those requiring so.
-  if (((T.isNVPTX() || T.isAMDGCN()) &&
-       Opts.OpenMPIsDevice) ||
+  if ((Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN())) ||
       Opts.OpenCLCPlusPlus) {
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
@@ -3155,15 +3149,13 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << Opts.OMPHostIRFile;
   }
 
-  // Set CUDA mode for OpenMP target NVPTX if specified in options
-  Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice &&
-                        (T.isNVPTX() || T.isAMDGCN()) &&
+  // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
+  Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
-  // Set CUDA mode for OpenMP target NVPTX if specified in options
+  // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
   Opts.OpenMPCUDAForceFullRuntime =
-      Opts.OpenMPIsDevice &&
-      (T.isNVPTX() || T.isAMDGCN()) &&
+      Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
       Args.hasArg(options::OPT_fopenmp_cuda_force_full_runtime);
 
   // Record whether the __DEPRECATED define was requested.
@@ -3187,23 +3179,46 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (InlineArg->getOption().matches(options::OPT_fno_inline))
       Opts.NoInlineDefine = true;
 
-  Opts.FastMath = Args.hasArg(OPT_ffast_math) ||
-      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.FastMath =
+      Args.hasArg(OPT_ffast_math) || Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.FiniteMathOnly = Args.hasArg(OPT_ffinite_math_only) ||
-      Args.hasArg(OPT_cl_finite_math_only) ||
-      Args.hasArg(OPT_cl_fast_relaxed_math);
+                        Args.hasArg(OPT_ffast_math) ||
+                        Args.hasArg(OPT_cl_finite_math_only) ||
+                        Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                      Args.hasArg(OPT_ffast_math) ||
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                       Args.hasArg(OPT_cl_fast_relaxed_math);
-  Opts.AllowFPReassoc = Opts.FastMath || CGOpts.Reassociate;
+  Opts.AllowFPReassoc = Args.hasArg(OPT_mreassociate) ||
+                        Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                        Args.hasArg(OPT_ffast_math) ||
+                        Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                        Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.NoHonorNaNs =
-      Opts.FastMath || CGOpts.NoNaNsFPMath || Opts.FiniteMathOnly;
-  Opts.NoHonorInfs =
-      Opts.FastMath || CGOpts.NoInfsFPMath || Opts.FiniteMathOnly;
-  Opts.NoSignedZero = Opts.FastMath || CGOpts.NoSignedZeros;
-  Opts.AllowRecip = Opts.FastMath || CGOpts.ReciprocalMath;
+      Args.hasArg(OPT_menable_no_nans) || Args.hasArg(OPT_ffinite_math_only) ||
+      Args.hasArg(OPT_ffast_math) || Args.hasArg(OPT_cl_finite_math_only) ||
+      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.NoHonorInfs = Args.hasArg(OPT_menable_no_infinities) ||
+                     Args.hasArg(OPT_ffinite_math_only) ||
+                     Args.hasArg(OPT_ffast_math) ||
+                     Args.hasArg(OPT_cl_finite_math_only) ||
+                     Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.NoSignedZero = Args.hasArg(OPT_fno_signed_zeros) ||
+                      Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                      Args.hasArg(OPT_ffast_math) ||
+                      Args.hasArg(OPT_cl_no_signed_zeros) ||
+                      Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.AllowRecip = Args.hasArg(OPT_freciprocal_math) ||
+                    Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                    Args.hasArg(OPT_ffast_math) ||
+                    Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                    Args.hasArg(OPT_cl_fast_relaxed_math);
   // Currently there's no clang option to enable this individually
-  Opts.ApproxFunc = Opts.FastMath;
+  Opts.ApproxFunc = Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                    Args.hasArg(OPT_ffast_math) ||
+                    Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                    Args.hasArg(OPT_cl_fast_relaxed_math);
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();

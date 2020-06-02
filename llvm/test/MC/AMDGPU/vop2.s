@@ -435,15 +435,30 @@ v_madak_f16 v1, v2, v3, 64.0
 // VI:     v_add_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x4c]
 v_add_u16_e32 v1, v2, v3
 
+// NOSICI: error: invalid operand for instruction
+// NOSICI: v_add_u16 v1, v2, v3 clamp
+// VI:     v_add_u16_e64 v1, v2, v3 clamp  ; encoding: [0x01,0x80,0x26,0xd1,0x02,0x07,0x02,0x00]
+v_add_u16 v1, v2, v3 clamp
+
 // NOSICI: error: instruction not supported on this GPU
 // NOSICI: v_sub_u16_e32 v1, v2, v3
 // VI:     v_sub_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x4e]
 v_sub_u16_e32 v1, v2, v3
 
+// NOSICI: error: invalid operand for instruction
+// NOSICI: v_sub_u16 v1, v2, v3 clamp
+// VI:     v_sub_u16_e64 v1, v2, v3 clamp  ; encoding: [0x01,0x80,0x27,0xd1,0x02,0x07,0x02,0x00]
+v_sub_u16 v1, v2, v3 clamp
+
 // NOSICI: error: instruction not supported on this GPU
 // NOSICI: v_subrev_u16_e32 v1, v2, v3
 // VI:     v_subrev_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x50]
 v_subrev_u16_e32 v1, v2, v3
+
+// NOSICI: error: invalid operand for instruction
+// NOSICI: v_subrev_u16 v1, v2, v3 clamp
+// VI:     v_subrev_u16_e64 v1, v2, v3 clamp ; encoding: [0x01,0x80,0x28,0xd1,0x02,0x07,0x02,0x00]
+v_subrev_u16 v1, v2, v3 clamp
 
 // NOSICI: error: instruction not supported on this GPU
 // NOSICI: v_mul_lo_u16_e32 v1, v2, v3

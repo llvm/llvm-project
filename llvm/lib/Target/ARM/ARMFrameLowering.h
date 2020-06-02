@@ -9,9 +9,7 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMFRAMELOWERING_H
 #define LLVM_LIB_TARGET_ARM_ARMFRAMELOWERING_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include <vector>
 
 namespace llvm {
 

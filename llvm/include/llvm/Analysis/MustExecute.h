@@ -24,11 +24,9 @@
 #define LLVM_ANALYSIS_MUSTEXECUTE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instruction.h"
 
 namespace llvm {
@@ -37,15 +35,17 @@ namespace {
 template <typename T> using GetterTy = std::function<T *(const Function &F)>;
 }
 
-class Instruction;
+class BasicBlock;
 class DominatorTree;
-class PostDominatorTree;
+class Instruction;
 class Loop;
+class LoopInfo;
+class PostDominatorTree;
 
 /// Captures loop safety information.
 /// It keep information for loop blocks may throw exception or otherwise
-/// exit abnormaly on any iteration of the loop which might actually execute
-/// at runtime.  The primary way to consume this infromation is via
+/// exit abnormally on any iteration of the loop which might actually execute
+/// at runtime.  The primary way to consume this information is via
 /// isGuaranteedToExecute below, but some callers bailout or fallback to
 /// alternate reasoning if a loop contains any implicit control flow.
 /// NOTE: LoopSafetyInfo contains cached information regarding loops and their

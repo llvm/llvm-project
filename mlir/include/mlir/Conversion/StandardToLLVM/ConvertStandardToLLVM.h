@@ -122,11 +122,6 @@ public:
   /// pointers to memref descriptors for arguments.
   LLVM::LLVMType convertFunctionTypeCWrapper(FunctionType type);
 
-  /// Creates descriptor structs from individual values constituting them.
-  Operation *materializeConversion(PatternRewriter &rewriter, Type type,
-                                   ArrayRef<Value> values,
-                                   Location loc) override;
-
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
   LLVM::LLVMType getIndexType();
@@ -438,12 +433,12 @@ public:
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
   Value getStridedElementPtr(Location loc, Type elementTypePtr,
-                             Value descriptor, ArrayRef<Value> indices,
+                             Value descriptor, ValueRange indices,
                              ArrayRef<int64_t> strides, int64_t offset,
                              ConversionPatternRewriter &rewriter) const;
 
   Value getDataPtr(Location loc, MemRefType type, Value memRefDesc,
-                   ArrayRef<Value> indices, ConversionPatternRewriter &rewriter,
+                   ValueRange indices, ConversionPatternRewriter &rewriter,
                    llvm::Module &module) const;
 
 protected:

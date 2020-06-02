@@ -15,7 +15,7 @@ body: |
     ; CHECK-LABEL: name: rcp_s32_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = V_RCP_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = V_RCP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_RCP_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %0
@@ -35,7 +35,7 @@ body: |
     ; CHECK-LABEL: name: rcp_s32_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = V_RCP_F32_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = V_RCP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_RCP_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %0
@@ -55,7 +55,7 @@ body: |
     ; CHECK-LABEL: name: rcp_s64_vs
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[V_RCP_F64_e64_:%[0-9]+]]:vreg_64 = V_RCP_F64_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_RCP_F64_e64_:%[0-9]+]]:vreg_64 = V_RCP_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_RCP_F64_e64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %0
@@ -75,7 +75,7 @@ body: |
     ; CHECK-LABEL: name: rcp_s64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[V_RCP_F64_e64_:%[0-9]+]]:vreg_64 = V_RCP_F64_e64 0, [[COPY]], 0, 0, implicit $exec
+    ; CHECK: [[V_RCP_F64_e64_:%[0-9]+]]:vreg_64 = V_RCP_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_RCP_F64_e64_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %0

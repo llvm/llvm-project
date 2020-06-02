@@ -660,12 +660,11 @@ static void computeDirectionVector(
 void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
   // Get affine map from AffineLoad/Store.
   AffineMap map;
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(opInst)) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(opInst))
     map = loadOp.getAffineMap();
-  } else {
-    auto storeOp = cast<AffineWriteOpInterface>(opInst);
-    map = storeOp.getAffineMap();
-  }
+  else
+    map = cast<AffineWriteOpInterface>(opInst).getAffineMap();
+
   SmallVector<Value, 8> operands(indices.begin(), indices.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);

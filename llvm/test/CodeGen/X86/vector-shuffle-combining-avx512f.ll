@@ -899,12 +899,10 @@ define <8 x double> @combine_vpermi2var_vpermt2var_8f64_as_vperm2(<8 x double> %
 define <8 x double> @combine_vpermi2var_8f64_as_permpd(<8 x double> %x0, <8 x double> %x1, i64 %a2) {
 ; X86-LABEL: combine_vpermi2var_8f64_as_permpd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $2, %eax
-; X86-NEXT:    vmovd %eax, %xmm2
-; X86-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; X86-NEXT:    vinserti128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-NEXT:    vinserti64x4 $1, {{\.LCPI.*}}, %zmm2, %zmm2
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; X86-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-NEXT:    vinsertf64x4 $1, {{\.LCPI.*}}, %zmm2, %zmm2
 ; X86-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm2
 ; X86-NEXT:    vpermpd {{.*#+}} zmm0 = zmm2[2,3,1,1,6,7,5,5]
 ; X86-NEXT:    retl

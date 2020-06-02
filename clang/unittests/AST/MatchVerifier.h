@@ -21,8 +21,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "Language.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -36,22 +36,20 @@ public:
   testing::AssertionResult match(const std::string &Code,
                                  const MatcherType &AMatcher) {
     std::vector<std::string> Args;
-    return match(Code, AMatcher, Args, Lang_CXX);
+    return match(Code, AMatcher, Args, Lang_CXX03);
   }
 
   template <typename MatcherType>
   testing::AssertionResult match(const std::string &Code,
-                                 const MatcherType &AMatcher,
-                                 Language L) {
+                                 const MatcherType &AMatcher, TestLanguage L) {
     std::vector<std::string> Args;
     return match(Code, AMatcher, Args, L);
   }
 
   template <typename MatcherType>
-  testing::AssertionResult match(const std::string &Code,
-                                 const MatcherType &AMatcher,
-                                 std::vector<std::string>& Args,
-                                 Language L);
+  testing::AssertionResult
+  match(const std::string &Code, const MatcherType &AMatcher,
+        std::vector<std::string> &Args, TestLanguage L);
 
   template <typename MatcherType>
   testing::AssertionResult match(const Decl *D, const MatcherType &AMatcher);
@@ -77,10 +75,12 @@ private:
 
 /// \brief Runs a matcher over some code, and returns the result of the
 /// verifier for the matched node.
-template <typename NodeType> template <typename MatcherType>
-testing::AssertionResult MatchVerifier<NodeType>::match(
-    const std::string &Code, const MatcherType &AMatcher,
-    std::vector<std::string>& Args, Language L) {
+template <typename NodeType>
+template <typename MatcherType>
+testing::AssertionResult
+MatchVerifier<NodeType>::match(const std::string &Code,
+                               const MatcherType &AMatcher,
+                               std::vector<std::string> &Args, TestLanguage L) {
   MatchFinder Finder;
   Finder.addMatcher(AMatcher.bind(""), this);
   std::unique_ptr<tooling::FrontendActionFactory> Factory(
@@ -88,16 +88,16 @@ testing::AssertionResult MatchVerifier<NodeType>::match(
 
   StringRef FileName;
   switch (L) {
-  case Lang_C:
-    Args.push_back("-std=c99");
-    FileName = "input.c";
-    break;
   case Lang_C89:
     Args.push_back("-std=c89");
     FileName = "input.c";
     break;
-  case Lang_CXX:
-    Args.push_back("-std=c++98");
+  case Lang_C99:
+    Args.push_back("-std=c99");
+    FileName = "input.c";
+    break;
+  case Lang_CXX03:
+    Args.push_back("-std=c++03");
     FileName = "input.cc";
     break;
   case Lang_CXX11:
@@ -112,8 +112,8 @@ testing::AssertionResult MatchVerifier<NodeType>::match(
     Args.push_back("-std=c++17");
     FileName = "input.cc";
     break;
-  case Lang_CXX2a:
-    Args.push_back("-std=c++2a");
+  case Lang_CXX20:
+    Args.push_back("-std=c++20");
     FileName = "input.cc";
     break;
   case Lang_OpenCL:

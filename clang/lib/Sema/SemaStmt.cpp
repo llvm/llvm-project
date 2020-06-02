@@ -3309,6 +3309,7 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
     assert(AT && "lost auto type from lambda return type");
     if (DeduceFunctionTypeFromReturnExpr(FD, ReturnLoc, RetValExp, AT)) {
       FD->setInvalidDecl();
+      // FIXME: preserve the ill-formed return expression.
       return StmtError();
     }
     CurCap->ReturnType = FnRetType = FD->getReturnType();

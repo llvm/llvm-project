@@ -35,29 +35,35 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
-template <typename StreamType, typename T, int N>
-void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &V) {
-  static_assert(N > 0, "Expected N > 0");
-  os << "Memref base@ = " << reinterpret_cast<void *>(V.data) << " rank = " << N
-     << " offset = " << V.offset << " sizes = [" << V.sizes[0];
-  for (unsigned i = 1; i < N; ++i)
-    os << ", " << V.sizes[i];
-  os << "] strides = [" << V.strides[0];
-  for (unsigned i = 1; i < N; ++i)
-    os << ", " << V.strides[i];
+template <typename T, typename StreamType>
+void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &V) {
+  os << "base@ = " << reinterpret_cast<void *>(V.data) << " rank = " << V.rank
+     << " offset = " << V.offset;
+  auto print = [&](const int64_t *ptr) {
+    if (V.rank == 0)
+      return;
+    os << ptr[0];
+    for (int64_t i = 1; i < V.rank; ++i)
+      os << ", " << ptr[i];
+  };
+  os << " sizes = [";
+  print(V.sizes);
+  os << "] strides = [";
+  print(V.strides);
   os << "]";
 }
 
-template <typename StreamType, typename T>
-void printMemRefMetaData(StreamType &os, StridedMemRefType<T, 0> &V) {
-  os << "Memref base@ = " << reinterpret_cast<void *>(V.data) << " rank = 0"
-     << " offset = " << V.offset;
+template <typename StreamType, typename T, int N>
+void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &V) {
+  static_assert(N >= 0, "Expected N > 0");
+  os << "MemRef ";
+  printMemRefMetaData(os, DynamicMemRefType<T>(V));
 }
 
-template <typename T, typename StreamType>
+template <typename StreamType, typename T>
 void printUnrankedMemRefMetaData(StreamType &os, UnrankedMemRefType<T> &V) {
-  os << "Unranked Memref rank = " << V.rank << " "
-     << "descriptor@ = " << reinterpret_cast<void *>(V.descriptor) << "\n";
+  os << "Unranked MemRef ";
+  printMemRefMetaData(os, DynamicMemRefType<T>(V));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,88 +124,92 @@ std::ostream &operator<<(std::ostream &os, const Vector<T, M, Dims...> &v) {
   return os;
 }
 
-template <typename T, int N> struct MemRefDataPrinter {
-  static void print(std::ostream &os, T *base, int64_t rank, int64_t offset,
-                    int64_t *sizes, int64_t *strides);
-  static void printFirst(std::ostream &os, T *base, int64_t rank,
-                         int64_t offset, int64_t *sizes, int64_t *strides);
-  static void printLast(std::ostream &os, T *base, int64_t rank, int64_t offset,
-                        int64_t *sizes, int64_t *strides);
+template <typename T>
+struct MemRefDataPrinter {
+  static void print(std::ostream &os, T *base, int64_t dim, int64_t rank,
+                    int64_t offset, const int64_t *sizes,
+                    const int64_t *strides);
+  static void printFirst(std::ostream &os, T *base, int64_t dim, int64_t rank,
+                         int64_t offset, const int64_t *sizes,
+                         const int64_t *strides);
+  static void printLast(std::ostream &os, T *base, int64_t dim, int64_t rank,
+                        int64_t offset, const int64_t *sizes,
+                        const int64_t *strides);
 };
 
-template <typename T> struct MemRefDataPrinter<T, 0> {
-  static void print(std::ostream &os, T *base, int64_t rank, int64_t offset,
-                    int64_t *sizes = nullptr, int64_t *strides = nullptr);
-};
-
-template <typename T, int N>
-void MemRefDataPrinter<T, N>::printFirst(std::ostream &os, T *base,
-                                         int64_t rank, int64_t offset,
-                                         int64_t *sizes, int64_t *strides) {
+template <typename T>
+void MemRefDataPrinter<T>::printFirst(std::ostream &os, T *base, int64_t dim,
+                                      int64_t rank, int64_t offset,
+                                      const int64_t *sizes,
+                                      const int64_t *strides) {
   os << "[";
-  MemRefDataPrinter<T, N - 1>::print(os, base, rank, offset, sizes + 1,
-                                     strides + 1);
+  print(os, base, dim - 1, rank, offset, sizes + 1, strides + 1);
   // If single element, close square bracket and return early.
   if (sizes[0] <= 1) {
     os << "]";
     return;
   }
   os << ", ";
-  if (N > 1)
+  if (dim > 1)
     os << "\n";
 }
 
-template <typename T, int N>
-void MemRefDataPrinter<T, N>::print(std::ostream &os, T *base, int64_t rank,
-                                    int64_t offset, int64_t *sizes,
-                                    int64_t *strides) {
-  printFirst(os, base, rank, offset, sizes, strides);
+template <typename T>
+void MemRefDataPrinter<T>::print(std::ostream &os, T *base, int64_t dim,
+                                 int64_t rank, int64_t offset,
+                                 const int64_t *sizes, const int64_t *strides) {
+  if (dim == 0) {
+    os << base[offset];
+    return;
+  }
+  printFirst(os, base, dim, rank, offset, sizes, strides);
   for (unsigned i = 1; i + 1 < sizes[0]; ++i) {
-    printSpace(os, rank - N + 1);
-    MemRefDataPrinter<T, N - 1>::print(os, base, rank, offset + i * strides[0],
-                                       sizes + 1, strides + 1);
+    printSpace(os, rank - dim + 1);
+    print(os, base, dim - 1, rank, offset + i * strides[0], sizes + 1,
+          strides + 1);
     os << ", ";
-    if (N > 1)
+    if (dim > 1)
       os << "\n";
   }
   if (sizes[0] <= 1)
     return;
-  printLast(os, base, rank, offset, sizes, strides);
+  printLast(os, base, dim, rank, offset, sizes, strides);
 }
 
-template <typename T, int N>
-void MemRefDataPrinter<T, N>::printLast(std::ostream &os, T *base, int64_t rank,
-                                        int64_t offset, int64_t *sizes,
-                                        int64_t *strides) {
-  printSpace(os, rank - N + 1);
-  MemRefDataPrinter<T, N - 1>::print(os, base, rank,
-                                     offset + (sizes[0] - 1) * (*strides),
-                                     sizes + 1, strides + 1);
+template <typename T>
+void MemRefDataPrinter<T>::printLast(std::ostream &os, T *base, int64_t dim,
+                                     int64_t rank, int64_t offset,
+                                     const int64_t *sizes,
+                                     const int64_t *strides) {
+  printSpace(os, rank - dim + 1);
+  print(os, base, dim - 1, rank, offset + (sizes[0] - 1) * (*strides),
+        sizes + 1, strides + 1);
   os << "]";
 }
 
 template <typename T>
-void MemRefDataPrinter<T, 0>::print(std::ostream &os, T *base, int64_t rank,
-                                    int64_t offset, int64_t *sizes,
-                                    int64_t *strides) {
-  os << base[offset];
-}
-
-template <typename T, int N> void printMemRef(StridedMemRefType<T, N> &M) {
-  static_assert(N > 0, "Expected N > 0");
+void printMemRef(const DynamicMemRefType<T> &M) {
   printMemRefMetaData(std::cout, M);
   std::cout << " data = " << std::endl;
-  MemRefDataPrinter<T, N>::print(std::cout, M.data, N, M.offset, M.sizes,
-                                 M.strides);
+  if (M.rank == 0)
+    std::cout << "[";
+  MemRefDataPrinter<T>::print(std::cout, M.data, M.rank, M.rank, M.offset,
+                              M.sizes, M.strides);
+  if (M.rank == 0)
+    std::cout << "]";
   std::cout << std::endl;
 }
 
-template <typename T> void printMemRef(StridedMemRefType<T, 0> &M) {
-  printMemRefMetaData(std::cout, M);
-  std::cout << " data = " << std::endl;
-  std::cout << "[";
-  MemRefDataPrinter<T, 0>::print(std::cout, M.data, 0, M.offset);
-  std::cout << "]" << std::endl;
+template <typename T, int N>
+void printMemRef(StridedMemRefType<T, N> &M) {
+  std::cout << "Memref ";
+  printMemRef(DynamicMemRefType<T>(M));
+}
+
+template <typename T>
+void printMemRef(UnrankedMemRefType<T> &M) {
+  std::cout << "Unranked Memref ";
+  printMemRef(DynamicMemRefType<T>(M));
 }
 } // namespace impl
 

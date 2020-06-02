@@ -23,6 +23,22 @@ define void @asm_simple_register_clobber() {
   ret void
 }
 
+define i64 @asm_register_early_clobber() {
+  ; CHECK-LABEL: name: asm_register_early_clobber
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   INLINEASM &"mov $0, 7; mov $1, 7", 1 /* sideeffect attdialect */, 1441803 /* regdef-ec:GPR64common */, def early-clobber %0, 1441803 /* regdef-ec:GPR64common */, def early-clobber %1, !0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY %0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY %1
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY1]]
+  ; CHECK:   $x0 = COPY [[ADD]](s64)
+  ; CHECK:   RET_ReallyLR implicit $x0
+  call { i64, i64 } asm sideeffect "mov $0, 7; mov $1, 7", "=&r,=&r"(), !srcloc !0
+  %asmresult = extractvalue { i64, i64 } %1, 0
+  %asmresult1 = extractvalue { i64, i64 } %1, 1
+  %add = add i64 %asmresult, %asmresult1
+  ret i64 %add
+}
+
 define i32 @test_specific_register_output() nounwind ssp {
   ; CHECK-LABEL: name: test_specific_register_output
   ; CHECK: bb.1.entry:

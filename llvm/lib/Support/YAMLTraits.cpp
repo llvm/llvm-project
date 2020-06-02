@@ -864,17 +864,6 @@ StringRef ScalarTraits<bool>::input(StringRef Scalar, void *, bool &Val) {
   return "invalid boolean";
 }
 
-void ScalarTraits<char>::output(const char &Val, void *, raw_ostream &Out) {
-  Out << Val;
-}
-
-StringRef ScalarTraits<char>::input(StringRef Scalar, void *, char &Val) {
-  if (Scalar.size() != 1)
-    return "invalid character";
-  Val = Scalar[0];
-  return StringRef();
-}
-
 void ScalarTraits<StringRef>::output(const StringRef &Val, void *,
                                      raw_ostream &Out) {
   Out << Val;

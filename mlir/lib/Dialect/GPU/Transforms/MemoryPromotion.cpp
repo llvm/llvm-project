@@ -85,7 +85,6 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
     StdIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
   });
-  ivs[0].getParentBlock()->dump();
 
   // Map the innermost loops to threads in reverse order.
   for (auto en :

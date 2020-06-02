@@ -108,6 +108,15 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
   llvm.return
 }
 
+// CHECK-LABEL: @pow_test
+llvm.func @pow_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x float>">, %arg3: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.pow.f32
+  "llvm.intr.pow"(%arg0, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.pow.v8f32
+  "llvm.intr.pow"(%arg2, %arg3) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
 // CHECK-LABEL: @vector_reductions
 llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %arg2: !llvm<"<8 x i32>">) {
   // CHECK: call i32 @llvm.experimental.vector.reduce.add.v8i32

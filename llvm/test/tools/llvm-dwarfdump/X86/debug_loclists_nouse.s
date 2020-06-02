@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
 # RUN: llvm-dwarfdump %t.o | FileCheck %s
 
-# CHECK: 0x00000000: Compile Unit: length = 0x00000009 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000000d)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000009, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000000d)
 # CHECK: 0x0000000c: DW_TAG_compile_unit
 
 	.section	.debug_abbrev,"",@progbits

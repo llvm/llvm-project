@@ -1629,18 +1629,21 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     MachineInstr *MI = &*I++;
     if (MI->isPHI()) {
       // This is an illegal PHI. If we move any instructions using an illegal
-      // PHI, we need to create a legal Phi
-      Register PhiR = MI->getOperand(0).getReg();
-      auto RC = MRI.getRegClass(PhiR);
-      Register NR = MRI.createVirtualRegister(RC);
-      MachineInstr *NI = BuildMI(*DestBB, DestBB->getFirstNonPHI(), DebugLoc(),
-                                 TII->get(TargetOpcode::PHI), NR)
-                             .addReg(PhiR)
-                             .addMBB(SourceBB);
-      BlockMIs[{DestBB, CanonicalMIs[MI]}] = NI;
-      CanonicalMIs[NI] = CanonicalMIs[MI];
-      Remaps[PhiR] = NR;
-      continue;
+      // PHI, we need to create a legal Phi.
+      if (getStage(MI) != Stage) {
+        // The legal Phi is not necessary if the illegal phi's stage
+        // is being moved.
+        Register PhiR = MI->getOperand(0).getReg();
+        auto RC = MRI.getRegClass(PhiR);
+        Register NR = MRI.createVirtualRegister(RC);
+        MachineInstr *NI = BuildMI(*DestBB, DestBB->getFirstNonPHI(),
+                                   DebugLoc(), TII->get(TargetOpcode::PHI), NR)
+                               .addReg(PhiR)
+                               .addMBB(SourceBB);
+        BlockMIs[{DestBB, CanonicalMIs[MI]}] = NI;
+        CanonicalMIs[NI] = CanonicalMIs[MI];
+        Remaps[PhiR] = NR;
+      }
     }
     if (getStage(MI) != Stage)
       continue;

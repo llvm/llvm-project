@@ -138,11 +138,13 @@ void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx64 ": ", Offset);
   if (Length) {
-    int LengthFieldWidth = (Format == dwarf::DwarfFormat::DWARF64) ? 16 : 8;
-    OS << format("Address table header: length = 0x%0*" PRIx64
-                 ", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
-                 ", seg_size = 0x%2.2" PRIx8 "\n",
-                 LengthFieldWidth, Length, Version, AddrSize, SegSize);
+    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
+    OS << "Address table header: "
+       << format("length = 0x%0*" PRIx64, OffsetDumpWidth, Length)
+       << ", format = " << dwarf::FormatString(Format)
+       << format(", version = 0x%4.4" PRIx16, Version)
+       << format(", addr_size = 0x%2.2" PRIx8, AddrSize)
+       << format(", seg_size = 0x%2.2" PRIx8, SegSize) << "\n";
   }
 
   if (Addrs.size() > 0) {

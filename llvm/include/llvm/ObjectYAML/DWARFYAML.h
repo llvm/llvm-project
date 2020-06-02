@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -98,6 +99,9 @@ struct PubSection {
   uint32_t UnitSize;
   bool IsGNUStyle = false;
   std::vector<PubEntry> Entries;
+
+  PubSection() = default;
+  PubSection(bool IsGNUStyle) : IsGNUStyle(IsGNUStyle) {}
 };
 
 struct FormValue {
@@ -160,17 +164,19 @@ struct Data {
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
   std::vector<Ranges> DebugRanges;
-  PubSection PubNames;
-  PubSection PubTypes;
+  Optional<PubSection> PubNames;
+  Optional<PubSection> PubTypes;
 
-  PubSection GNUPubNames;
-  PubSection GNUPubTypes;
+  Optional<PubSection> GNUPubNames;
+  Optional<PubSection> GNUPubTypes;
 
   std::vector<Unit> CompileUnits;
 
   std::vector<LineTable> DebugLines;
 
   bool isEmpty() const;
+
+  SetVector<StringRef> getUsedSectionNames() const;
 };
 
 } // end namespace DWARFYAML
@@ -210,7 +216,7 @@ template <> struct MappingTraits<DWARFYAML::ARangeDescriptor> {
 };
 
 template <> struct MappingTraits<DWARFYAML::ARange> {
-  static void mapping(IO &IO, DWARFYAML::ARange &Range);
+  static void mapping(IO &IO, DWARFYAML::ARange &ARange);
 };
 
 template <> struct MappingTraits<DWARFYAML::RangeEntry> {

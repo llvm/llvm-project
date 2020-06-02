@@ -26,6 +26,7 @@ add_lldb_tool(lldb-test
 
 if(PYTHON_RPATH)
   set_property(TARGET lldb-test APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
+  set_property(TARGET lldb-test APPEND PROPERTY BUILD_RPATH   "${PYTHON_RPATH}")
 endif()
 
 target_include_directories(lldb-test PRIVATE ${LLDB_SOURCE_DIR}/source)

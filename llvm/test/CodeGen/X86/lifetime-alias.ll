@@ -70,9 +70,9 @@ define i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__g
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, .Ldo_not_optimize${{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, .Ldo_not_optimize${{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
 ; CHECK-NEXT:    cmpb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jns .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50

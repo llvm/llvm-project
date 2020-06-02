@@ -15,7 +15,7 @@ func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3]
   // CHECK: shape.const_shape [4, 5]
   %c2 = constant 2 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 
@@ -28,7 +28,7 @@ func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.const_shape [2, 3, 4]
   // CHECK: shape.const_shape [5]
   %c-1 = constant -1 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c-1) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
@@ -39,7 +39,7 @@ func @f() -> (!shape.shape, !shape.shape) {
 func @f() -> (!shape.shape, !shape.shape) {
   // CHECK: shape.split_at
   %c5 = constant 5 : i32
-  %0 = "shape.const_shape"() {shape = dense<[2, 3, 4, 5]> : tensor<4xi64>} : () -> !shape.shape
+  %0 = shape.const_shape [2, 3, 4, 5]
   %head, %tail = "shape.split_at"(%0, %c5) : (!shape.shape, i32) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
@@ -105,4 +105,110 @@ func @no_fold(%arg0: index) -> !shape.shape {
   %e0 = constant 3 : index
   %ret = shape.from_extents %e0, %arg0
   return %ret : !shape.shape
+}
+
+// -----
+// Cast constant size to index and fold it away.
+// CHECK-LABEL: func @const_size_to_index
+func @const_size_to_index() -> index {
+  // CHECK-NOT: shape.index_cast
+  %cs = shape.const_size 123
+  // CHECK: constant 123 : index
+  %ci = shape.size_to_index %cs
+  return %ci : index
+}
+
+// -----
+// Cast constant index to size and fold it away.
+// CHECK-LABEL: func @const_index_to_size
+func @const_index_to_size() -> !shape.size {
+  // CHECK-NOT: index_cast
+  %ci = constant 123 : index
+  // CHECK: shape.const_size 123
+  %cs = shape.index_to_size %ci
+  return %cs : !shape.size
+}
+
+// -----
+// Cast constant index to size, then back, and fold it away.
+// CHECK-LABEL: func @const_index_to_size_to_index
+func @const_index_to_size_to_index() -> index {
+  // CHECK-NOT: shape.index_cast
+  %ci0 = constant 123 : index
+  %cs0 = shape.index_to_size %ci0
+  // CHECK: %[[CI:.*]] = constant 123 : index
+  // CHECK-NEXT: return %[[CI]] : index
+  %ci1 = shape.size_to_index %cs0
+  return %ci1 : index
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_size_to_index
+func @nonfoldable_size_to_index(%cs : !shape.size) -> index {
+  // CHECK: shape.size_to_index
+  %ci = shape.size_to_index %cs
+  return %ci : index
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_index_to_size
+func @nonfoldable_index_to_size(%ci : index) -> !shape.size {
+  // CHECK: shape.index_to_size
+  %cs = shape.index_to_size %ci
+  return %cs : !shape.size
+}
+
+// -----
+// Fold number of elements computation.
+// CHECK-LABEL: func @num_elements
+func @num_elements() -> !shape.size {
+  // CHECK-NOT: shape.const_shape
+  %shape = shape.const_shape [4, 5, 6]
+  // CHECK-NOT: shape.num_elements
+  %num_elements = shape.num_elements %shape
+  // CHECK: %[[NUM:.*]] = shape.const_size 120
+  // CHECK-NEXT: return %[[NUM]] : !shape.size
+  return %num_elements : !shape.size
+}
+
+// -----
+// No folding.
+// CHECK-LABEL: func @nonfoldable_num_elements
+func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
+  // CHECK-NOT: shape.const_{{.*}}
+  %num_elements = shape.num_elements %shape
+  return %num_elements : !shape.size
+}
+
+// -----
+
+// Canonicalization of shape.get_extent
+
+// Basic folding.
+// CHECK-LABEL: func @basic
+func @basic() -> !shape.size {
+  // CHECK: shape.const_size 2
+  %0 = shape.const_shape [0, 1, 2]
+  %1 = shape.get_extent %0, 2
+  return %1 : !shape.size
+}
+
+// Should not fold.
+// CHECK-LABEL: func @out_of_bounds
+func @out_of_bounds() -> !shape.size {
+  // CHECK: shape.const_shape
+  // CHECK: shape.get_extent
+  %0 = shape.const_shape [0, 1, 2]
+  %1 = shape.get_extent %0, 3
+  return %1 : !shape.size
+}
+
+// Should not fold.
+// CHECK-LABEL: func @not_const
+func @not_const(%arg0: !shape.shape) -> !shape.size {
+  // CHECK: shape.get_extent
+  %0 = shape.get_extent %arg0, 3
+  return %0 : !shape.size
 }

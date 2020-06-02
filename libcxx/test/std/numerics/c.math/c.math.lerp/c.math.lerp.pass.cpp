@@ -8,10 +8,9 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 // <cmath>
 
-// constexpr float lerp(float a, float b, float t);
-// constexpr double lerp(double a, double b, double t);
-// constexpr long double lerp(long double a, long double b, long double t);
-
+// constexpr float lerp(float a, float b, float t) noexcept;
+// constexpr double lerp(double a, double b, double t) noexcept;
+// constexpr long double lerp(long double a, long double b, long double t) noexcept;
 
 #include <cmath>
 #include <limits>

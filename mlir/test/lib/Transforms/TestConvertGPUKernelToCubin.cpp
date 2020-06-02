@@ -6,26 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/NVVMIR.h"
+#include "llvm/Support/TargetSelect.h"
 using namespace mlir;
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED
-static OwnedCubin compilePtxToCubinForTesting(const std::string &, Location,
-                                              StringRef) {
+static OwnedBlob compilePtxToCubinForTesting(const std::string &, Location,
+                                             StringRef) {
   const char data[] = "CUBIN";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
 }
 
 namespace mlir {
 void registerTestConvertGPUKernelToCubinPass() {
-  PassPipelineRegistration<>("test-kernel-to-cubin",
-                             "Convert all kernel functions to CUDA cubin blobs",
-                             [](OpPassManager &pm) {
-                               pm.addPass(createConvertGPUKernelToCubinPass(
-                                   compilePtxToCubinForTesting));
-                             });
+  PassPipelineRegistration<>(
+      "test-kernel-to-cubin",
+      "Convert all kernel functions to CUDA cubin blobs",
+      [](OpPassManager &pm) {
+        // Initialize LLVM NVPTX backend.
+        LLVMInitializeNVPTXTarget();
+        LLVMInitializeNVPTXTargetInfo();
+        LLVMInitializeNVPTXTargetMC();
+        LLVMInitializeNVPTXAsmPrinter();
+
+        pm.addPass(createConvertGPUKernelToBlobPass(
+            translateModuleToNVVMIR, compilePtxToCubinForTesting,
+            "nvptx64-nvidia-cuda", "sm_35", "+ptx60", "nvvm.cubin"));
+      });
 }
 } // namespace mlir
 #endif

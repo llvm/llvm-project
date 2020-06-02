@@ -18,6 +18,12 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "TranslationUnit";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
+  case NodeKind::PrefixUnaryOperatorExpression:
+    return OS << "PrefixUnaryOperatorExpression";
+  case NodeKind::PostfixUnaryOperatorExpression:
+    return OS << "PostfixUnaryOperatorExpression";
+  case NodeKind::BinaryOperatorExpression:
+    return OS << "BinaryOperatorExpression";
   case NodeKind::UnknownStatement:
     return OS << "UnknownStatement";
   case NodeKind::DeclarationStatement:
@@ -110,6 +116,16 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "IfStatement_elseKeyword";
   case syntax::NodeRole::IfStatement_elseStatement:
     return OS << "IfStatement_elseStatement";
+  case syntax::NodeRole::UnaryOperatorExpression_operatorToken:
+    return OS << "UnaryOperatorExpression_operatorToken";
+  case syntax::NodeRole::UnaryOperatorExpression_operand:
+    return OS << "UnaryOperatorExpression_operand";
+  case syntax::NodeRole::BinaryOperatorExpression_leftHandSide:
+    return OS << "BinaryOperatorExpression_leftHandSide";
+  case syntax::NodeRole::BinaryOperatorExpression_operatorToken:
+    return OS << "BinaryOperatorExpression_operatorToken";
+  case syntax::NodeRole::BinaryOperatorExpression_rightHandSide:
+    return OS << "BinaryOperatorExpression_rightHandSide";
   case syntax::NodeRole::ReturnStatement_value:
     return OS << "ReturnStatement_value";
   case syntax::NodeRole::ExpressionStatement_expression:
@@ -140,6 +156,31 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "ParametersAndQualifiers_trailingReturn";
   }
   llvm_unreachable("invalid role");
+}
+
+syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::BinaryOperatorExpression_leftHandSide));
+}
+
+syntax::Leaf *syntax::UnaryOperatorExpression::operatorToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::UnaryOperatorExpression_operatorToken));
+}
+
+syntax::Expression *syntax::UnaryOperatorExpression::operand() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::UnaryOperatorExpression_operand));
+}
+
+syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::BinaryOperatorExpression_operatorToken));
+}
+
+syntax::Expression *syntax::BinaryOperatorExpression::rhs() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::BinaryOperatorExpression_rightHandSide));
 }
 
 syntax::Leaf *syntax::SwitchStatement::switchKeyword() {

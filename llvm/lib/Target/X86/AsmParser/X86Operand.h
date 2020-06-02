@@ -456,6 +456,14 @@ struct X86Operand final : public MCParsedAsmOperand {
       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
   }
 
+  bool isVectorReg() const {
+    return Kind == Register &&
+           (X86MCRegisterClasses[X86::VR64RegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR128XRegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR256XRegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::VR512RegClassID].contains(getReg()));
+  }
+
   bool isVK1Pair() const {
     return Kind == Register &&
       X86MCRegisterClasses[X86::VK1RegClassID].contains(getReg());

@@ -255,3 +255,60 @@ body: |
     S_ENDPGM 0, implicit %1
 
 ...
+
+# FIXME: Probably should not be legal
+---
+name:            extract_sgpr_s16_from_v4s16_offset0
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: extract_sgpr_s16_from_v4s16_offset0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; CHECK: S_ENDPGM 0, implicit [[COPY1]]
+    %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
+    %1:sgpr(s16) = G_EXTRACT %0, 0
+    S_ENDPGM 0, implicit %1
+
+...
+
+# FIXME: Probably should not be legal
+---
+name:            extract_sgpr_s16_from_v4s16_offset32
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: extract_sgpr_s16_from_v4s16_offset32
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; CHECK: S_ENDPGM 0, implicit [[COPY1]]
+    %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
+    %1:sgpr(s16) = G_EXTRACT %0, 32
+    S_ENDPGM 0, implicit %1
+
+...
+
+# FIXME: Probably should not be legal
+---
+name:            extract_sgpr_s16_from_v6s16_offset32
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2
+    ; CHECK-LABEL: name: extract_sgpr_s16_from_v6s16_offset32
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; CHECK: S_ENDPGM 0, implicit [[COPY1]]
+    %0:sgpr(<6 x s16>) = COPY $sgpr0_sgpr1_sgpr2
+    %1:sgpr(s16) = G_EXTRACT %0, 32
+    S_ENDPGM 0, implicit %1
+
+...

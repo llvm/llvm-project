@@ -223,8 +223,6 @@ private:
 ///
 class LocalScope {
 public:
-  friend class const_iterator;
-
   using AutomaticVarsTy = BumpVector<VarDecl *>;
 
   /// const_iterator - Iterates local scope backwards and jumps to previous

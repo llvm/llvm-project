@@ -2125,19 +2125,17 @@ public:
   bool isTrivialForCall() const { return FunctionDeclBits.IsTrivialForCall; }
   void setTrivialForCall(bool IT) { FunctionDeclBits.IsTrivialForCall = IT; }
 
-  /// Whether this function is defaulted per C++0x. Only valid for
-  /// special member functions.
+  /// Whether this function is defaulted. Valid for e.g.
+  /// special member functions, defaulted comparisions (not methods!).
   bool isDefaulted() const { return FunctionDeclBits.IsDefaulted; }
   void setDefaulted(bool D = true) { FunctionDeclBits.IsDefaulted = D; }
 
-  /// Whether this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// Whether this function is explicitly defaulted.
   bool isExplicitlyDefaulted() const {
     return FunctionDeclBits.IsExplicitlyDefaulted;
   }
 
-  /// State that this function is explicitly defaulted per C++0x. Only valid
-  /// for special member functions.
+  /// State that this function is explicitly defaulted.
   void setExplicitlyDefaulted(bool ED = true) {
     FunctionDeclBits.IsExplicitlyDefaulted = ED;
   }

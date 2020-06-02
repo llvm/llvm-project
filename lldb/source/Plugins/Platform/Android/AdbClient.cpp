@@ -94,11 +94,7 @@ Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
 
 Status AdbClient::CreateByDeviceID(const std::string &device_id,
                                    AdbClient &adb) {
-  DeviceIDList connect_devices;
-  auto error = adb.GetDevices(connect_devices);
-  if (error.Fail())
-    return error;
-
+  Status error;
   std::string android_serial;
   if (!device_id.empty())
     android_serial = device_id;
@@ -106,18 +102,18 @@ Status AdbClient::CreateByDeviceID(const std::string &device_id,
     android_serial = env_serial;
 
   if (android_serial.empty()) {
-    if (connect_devices.size() != 1)
+    DeviceIDList connected_devices;
+    error = adb.GetDevices(connected_devices);
+    if (error.Fail())
+      return error;
+
+    if (connected_devices.size() != 1)
       return Status("Expected a single connected device, got instead %zu - try "
                     "setting 'ANDROID_SERIAL'",
-                    connect_devices.size());
-    adb.SetDeviceID(connect_devices.front());
+                    connected_devices.size());
+    adb.SetDeviceID(connected_devices.front());
   } else {
-    auto find_it = std::find(connect_devices.begin(), connect_devices.end(),
-                             android_serial);
-    if (find_it == connect_devices.end())
-      return Status("Device \"%s\" not found", android_serial.c_str());
-
-    adb.SetDeviceID(*find_it);
+    adb.SetDeviceID(android_serial);
   }
   return error;
 }
