@@ -40,6 +40,9 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   idx2 = idx1;
   idx1 = idx3;
 
+  if (real->exportDynamic)
+    sym->exportDynamic = true;
+
   // Now renaming is complete, and no one refers to real. We drop real from
   // .symtab and .dynsym. If real is undefined, it is important that we don't
   // leave it in .dynsym, because otherwise it might lead to an undefined symbol
@@ -47,6 +50,7 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // alias for sym, but that could degrade the user experience of some tools
   // that can print out only one symbol for each location: sym is a preferred
   // name than real, but they might print out real instead.
+  memcpy(real, sym, sizeof(SymbolUnion));
   real->isUsedInRegularObj = false;
 }
 
