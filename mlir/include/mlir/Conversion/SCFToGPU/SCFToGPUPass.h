@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPUPASS_H_
-#define MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPUPASS_H_
+#ifndef MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
+#define MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -38,4 +38,4 @@ std::unique_ptr<Pass> createParallelLoopToGpuPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPUPASS_H_
+#endif // MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
