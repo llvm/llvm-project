@@ -66,7 +66,7 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $80, %esp
+; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movzwl 8(%ebp), %esi
 ; X86-NEXT:    movzwl 12(%ebp), %edi
 ; X86-NEXT:    movzwl 20(%ebp), %ebx
