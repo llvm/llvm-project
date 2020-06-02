@@ -35705,7 +35705,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
               LN->getMemOperand()->getFlags());
           DCI.CombineTo(N.getNode(), BcastLd);
           DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
-          DCI.recursivelyDeleteUnusedNodes(LN);
+          DCI.recursivelyDeleteUnusedNodes(Src.getNode());
           return N; // Return N so it doesn't get rechecked!
         }
       }
@@ -35722,7 +35722,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                                       LN->getMemoryVT(), LN->getMemOperand());
           DCI.CombineTo(N.getNode(), BcastLd);
           DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
-          DCI.recursivelyDeleteUnusedNodes(LN);
+          DCI.recursivelyDeleteUnusedNodes(Src.getNode());
           return N; // Return N so it doesn't get rechecked!
         }
       }
@@ -35750,7 +35750,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
               LN->getMemOperand()->getFlags());
           DCI.CombineTo(N.getNode(), BcastLd);
           DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
-          DCI.recursivelyDeleteUnusedNodes(LN);
+          DCI.recursivelyDeleteUnusedNodes(Src.getNode());
           return N; // Return N so it doesn't get rechecked!
         }
       }
