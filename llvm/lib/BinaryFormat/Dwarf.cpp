@@ -770,6 +770,16 @@ bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
   return ExtensionsOk;
 }
 
+StringRef llvm::dwarf::FormatString(DwarfFormat Format) {
+  switch (Format) {
+  case DWARF32:
+    return "DWARF32";
+  case DWARF64:
+    return "DWARF64";
+  }
+  return StringRef();
+}
+
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];

@@ -481,6 +481,7 @@ StringRef AtomTypeString(unsigned Atom);
 StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
 StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
 StringRef IndexString(unsigned Idx);
+StringRef FormatString(DwarfFormat Format);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
