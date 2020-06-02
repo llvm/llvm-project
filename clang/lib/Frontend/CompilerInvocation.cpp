@@ -897,25 +897,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                           Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.LimitFloatPrecision =
       std::string(Args.getLastArgValue(OPT_mlimit_float_precision));
-  Opts.NoInfsFPMath = (Args.hasArg(OPT_menable_no_infinities) ||
-                       Args.hasArg(OPT_cl_finite_math_only) ||
-                       Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.NoNaNsFPMath = (Args.hasArg(OPT_menable_no_nans) ||
-                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                       Args.hasArg(OPT_cl_finite_math_only) ||
-                       Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.NoSignedZeros = (Args.hasArg(OPT_fno_signed_zeros) ||
-                        Args.hasArg(OPT_cl_no_signed_zeros) ||
-                        Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                        Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.Reassociate = Args.hasArg(OPT_mreassociate);
   Opts.CorrectlyRoundedDivSqrt =
       Args.hasArg(OPT_cl_fp32_correctly_rounded_divide_sqrt);
   Opts.UniformWGSize =
       Args.hasArg(OPT_cl_uniform_work_group_size);
   Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
-  Opts.ReciprocalMath = Args.hasArg(OPT_freciprocal_math);
-  Opts.NoTrappingMath = Args.hasArg(OPT_fno_trapping_math);
   Opts.StrictFloatCastOverflow =
       !Args.hasArg(OPT_fno_strict_float_cast_overflow);
 
@@ -940,9 +926,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.StrictReturn = !Args.hasArg(OPT_fno_strict_return);
   Opts.StrictVTablePointers = Args.hasArg(OPT_fstrict_vtable_pointers);
   Opts.ForceEmitVTables = Args.hasArg(OPT_fforce_emit_vtables);
-  Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
-                      Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                      Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.UnwindTables = Args.hasArg(OPT_munwind_tables);
   Opts.RelocationModel = getRelocModel(Args, Diags);
   Opts.ThreadModel =
@@ -3192,31 +3175,46 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (InlineArg->getOption().matches(options::OPT_fno_inline))
       Opts.NoInlineDefine = true;
 
-  Opts.FastMath = Args.hasArg(OPT_ffast_math) ||
-      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.FastMath =
+      Args.hasArg(OPT_ffast_math) || Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.FiniteMathOnly = Args.hasArg(OPT_ffinite_math_only) ||
-      Args.hasArg(OPT_cl_finite_math_only) ||
-      Args.hasArg(OPT_cl_fast_relaxed_math);
+                        Args.hasArg(OPT_ffast_math) ||
+                        Args.hasArg(OPT_cl_finite_math_only) ||
+                        Args.hasArg(OPT_cl_fast_relaxed_math);
   Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                      Args.hasArg(OPT_ffast_math) ||
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                       Args.hasArg(OPT_cl_fast_relaxed_math);
-  Opts.AllowFPReassoc = Opts.FastMath || Args.hasArg(OPT_mreassociate);
-  Opts.NoHonorNaNs = Opts.FastMath || Opts.FiniteMathOnly ||
-                     Args.hasArg(OPT_menable_no_nans) ||
-                     Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+  Opts.AllowFPReassoc = Args.hasArg(OPT_mreassociate) ||
+                        Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                        Args.hasArg(OPT_ffast_math) ||
+                        Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                        Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.NoHonorNaNs =
+      Args.hasArg(OPT_menable_no_nans) || Args.hasArg(OPT_ffinite_math_only) ||
+      Args.hasArg(OPT_ffast_math) || Args.hasArg(OPT_cl_finite_math_only) ||
+      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.NoHonorInfs = Args.hasArg(OPT_menable_no_infinities) ||
+                     Args.hasArg(OPT_ffinite_math_only) ||
+                     Args.hasArg(OPT_ffast_math) ||
                      Args.hasArg(OPT_cl_finite_math_only) ||
                      Args.hasArg(OPT_cl_fast_relaxed_math);
-  Opts.NoHonorInfs = Opts.FastMath || Opts.FiniteMathOnly ||
-                     Args.hasArg(OPT_menable_no_infinities) ||
-                     Args.hasArg(OPT_cl_finite_math_only) ||
-                     Args.hasArg(OPT_cl_fast_relaxed_math);
-  Opts.NoSignedZero = Opts.FastMath || (Args.hasArg(OPT_fno_signed_zeros) ||
+  Opts.NoSignedZero = Args.hasArg(OPT_fno_signed_zeros) ||
+                      Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                      Args.hasArg(OPT_ffast_math) ||
                       Args.hasArg(OPT_cl_no_signed_zeros) ||
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
-                      Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.AllowRecip = Opts.FastMath || Args.hasArg(OPT_freciprocal_math);
+                      Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.AllowRecip = Args.hasArg(OPT_freciprocal_math) ||
+                    Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                    Args.hasArg(OPT_ffast_math) ||
+                    Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                    Args.hasArg(OPT_cl_fast_relaxed_math);
   // Currently there's no clang option to enable this individually
-  Opts.ApproxFunc = Opts.FastMath;
+  Opts.ApproxFunc = Args.hasArg(OPT_menable_unsafe_fp_math) ||
+                    Args.hasArg(OPT_ffast_math) ||
+                    Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
+                    Args.hasArg(OPT_cl_fast_relaxed_math);
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();

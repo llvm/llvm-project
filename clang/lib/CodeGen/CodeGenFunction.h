@@ -4341,6 +4341,9 @@ public:
   /// SetFPModel - Control floating point behavior via fp-model settings.
   void SetFPModel();
 
+  /// Set the codegen fast-math flags.
+  void SetFastMathFlags(FPOptions FPFeatures);
+
 private:
   llvm::MDNode *getRangeForLoadFromType(QualType Ty);
   void EmitReturnOfRValue(RValue RV, QualType Ty);

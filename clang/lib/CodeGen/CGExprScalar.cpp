@@ -215,28 +215,6 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
          (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
 }
 
-/// Update the FastMathFlags of LLVM IR from the FPOptions in LangOptions.
-static void updateFastMathFlags(llvm::FastMathFlags &FMF,
-                                FPOptions FPFeatures) {
-  FMF.setAllowReassoc(FPFeatures.allowAssociativeMath());
-  FMF.setNoNaNs(FPFeatures.noHonorNaNs());
-  FMF.setNoInfs(FPFeatures.noHonorInfs());
-  FMF.setNoSignedZeros(FPFeatures.noSignedZeros());
-  FMF.setAllowReciprocal(FPFeatures.allowReciprocalMath());
-  FMF.setApproxFunc(FPFeatures.allowApproximateFunctions());
-  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement());
-}
-
-/// Propagate fast-math flags from \p Op to the instruction in \p V.
-static Value *propagateFMFlags(Value *V, const BinOpInfo &Op) {
-  if (auto *I = dyn_cast<llvm::Instruction>(V)) {
-    llvm::FastMathFlags FMF = I->getFastMathFlags();
-    updateFastMathFlags(FMF, Op.FPFeatures);
-    I->setFastMathFlags(FMF);
-  }
-  return V;
-}
-
 static void setBuilderFlagsFromFPFeatures(CGBuilderTy &Builder,
                                           CodeGenFunction &CGF,
                                           FPOptions FPFeatures) {
@@ -245,9 +223,7 @@ static void setBuilderFlagsFromFPFeatures(CGBuilderTy &Builder,
   auto NewExceptionBehavior =
       ToConstrainedExceptMD(FPFeatures.getExceptionMode());
   Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
-  auto FMF = Builder.getFastMathFlags();
-  updateFastMathFlags(FMF, FPFeatures);
-  Builder.setFastMathFlags(FMF);
+  CGF.SetFastMathFlags(FPFeatures);
   assert((CGF.CurFuncDecl == nullptr || Builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(CGF.CurFuncDecl) ||
           isa<CXXDestructorDecl>(CGF.CurFuncDecl) ||
@@ -774,8 +750,7 @@ public:
       //  Preserve the old values
       llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
       setBuilderFlagsFromFPFeatures(Builder, CGF, Ops.FPFeatures);
-      Value *V = Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
-      return propagateFMFlags(V, Ops);
+      return Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
     }
     if (Ops.isFixedPointOp())
       return EmitFixedPointBinOp(Ops);
@@ -3571,8 +3546,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
     if (Value *FMulAdd = tryEmitFMulAdd(op, CGF, Builder))
       return FMulAdd;
 
-    Value *V = Builder.CreateFAdd(op.LHS, op.RHS, "add");
-    return propagateFMFlags(V, op);
+    return Builder.CreateFAdd(op.LHS, op.RHS, "add");
   }
 
   if (op.isFixedPointOp())
@@ -3759,8 +3733,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
       // Try to form an fmuladd.
       if (Value *FMulAdd = tryEmitFMulAdd(op, CGF, Builder, true))
         return FMulAdd;
-      Value *V = Builder.CreateFSub(op.LHS, op.RHS, "sub");
-      return propagateFMFlags(V, op);
+      return Builder.CreateFSub(op.LHS, op.RHS, "sub");
     }
 
     if (op.isFixedPointOp())

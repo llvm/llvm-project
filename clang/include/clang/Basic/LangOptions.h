@@ -384,12 +384,10 @@ public:
         fenv_access(LangOptions::FPM_Off),
         rounding(static_cast<unsigned>(LangOpts.getFPRoundingMode())),
         exceptions(LangOpts.getFPExceptionMode()),
-        allow_reassoc(LangOpts.FastMath || LangOpts.AllowFPReassoc),
-        no_nans(LangOpts.FastMath || LangOpts.NoHonorNaNs),
-        no_infs(LangOpts.FastMath || LangOpts.NoHonorInfs),
-        no_signed_zeros(LangOpts.FastMath || LangOpts.NoSignedZero),
-        allow_reciprocal(LangOpts.FastMath || LangOpts.AllowRecip),
-        approx_func(LangOpts.FastMath || LangOpts.ApproxFunc) {}
+        allow_reassoc(LangOpts.AllowFPReassoc), no_nans(LangOpts.NoHonorNaNs),
+        no_infs(LangOpts.NoHonorInfs), no_signed_zeros(LangOpts.NoSignedZero),
+        allow_reciprocal(LangOpts.AllowRecip),
+        approx_func(LangOpts.ApproxFunc) {}
   // FIXME: Use getDefaultFEnvAccessMode() when available.
 
   void setFastMath(bool B = true) {

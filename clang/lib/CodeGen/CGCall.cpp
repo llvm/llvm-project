@@ -1757,7 +1757,8 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     }
 
     FuncAttrs.addAttribute("no-trapping-math",
-                           llvm::toStringRef(CodeGenOpts.NoTrappingMath));
+                           llvm::toStringRef(LangOpts.getFPExceptionMode() ==
+                                             LangOptions::FPE_Ignore));
 
     // Strict (compliant) code is the default, so only add this attribute to
     // indicate that we are trying to workaround a problem case.
@@ -1767,17 +1768,17 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
     FuncAttrs.addAttribute("no-infs-fp-math",
-                           llvm::toStringRef(CodeGenOpts.NoInfsFPMath));
+                           llvm::toStringRef(LangOpts.NoHonorInfs));
     FuncAttrs.addAttribute("no-nans-fp-math",
-                           llvm::toStringRef(CodeGenOpts.NoNaNsFPMath));
+                           llvm::toStringRef(LangOpts.NoHonorNaNs));
     FuncAttrs.addAttribute("unsafe-fp-math",
-                           llvm::toStringRef(CodeGenOpts.UnsafeFPMath));
+                           llvm::toStringRef(LangOpts.UnsafeFPMath));
     FuncAttrs.addAttribute("use-soft-float",
                            llvm::toStringRef(CodeGenOpts.SoftFloat));
     FuncAttrs.addAttribute("stack-protector-buffer-size",
                            llvm::utostr(CodeGenOpts.SSPBufferSize));
     FuncAttrs.addAttribute("no-signed-zeros-fp-math",
-                           llvm::toStringRef(CodeGenOpts.NoSignedZeros));
+                           llvm::toStringRef(LangOpts.NoSignedZero));
     FuncAttrs.addAttribute(
         "correctly-rounded-divide-sqrt-fp-math",
         llvm::toStringRef(CodeGenOpts.CorrectlyRoundedDivSqrt));
