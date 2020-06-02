@@ -55,7 +55,7 @@ private:
     for (auto &CounterName : CounterNames) {
       CounterName = CounterName.trim();
       auto CounterOrError =
-          State.getExegesisTarget().createCounter(CounterName.data(), State);
+          State.getExegesisTarget().createCounter(CounterName, State);
 
       if (!CounterOrError)
         return CounterOrError.takeError();
