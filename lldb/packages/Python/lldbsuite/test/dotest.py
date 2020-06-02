@@ -275,9 +275,9 @@ def parseOptionsAndInitTestdirs():
                     break
 
     if args.dsymutil:
-        os.environ['DSYMUTIL'] = args.dsymutil
+        configuration.dsymutil = args.dsymutil
     elif platform_system == 'Darwin':
-        os.environ['DSYMUTIL'] = seven.get_command_output(
+        configuration.dsymutil = seven.get_command_output(
             'xcrun -find -toolchain default dsymutil')
 
     if args.filecheck:
@@ -302,7 +302,7 @@ def parseOptionsAndInitTestdirs():
 
     # Set SDKROOT if we are using an Apple SDK
     if platform_system == 'Darwin' and args.apple_sdk:
-        os.environ['SDKROOT'] = seven.get_command_output(
+        configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' %
             (args.apple_sdk))
 
@@ -310,10 +310,10 @@ def parseOptionsAndInitTestdirs():
         configuration.arch = args.arch
         if configuration.arch.startswith(
                 'arm') and platform_system == 'Darwin' and not args.apple_sdk:
-            os.environ['SDKROOT'] = seven.get_command_output(
+            configuration.sdkroot = seven.get_command_output(
                 'xcrun --sdk iphoneos.internal --show-sdk-path 2> /dev/null')
-            if not os.path.exists(os.environ['SDKROOT']):
-                os.environ['SDKROOT'] = seven.get_command_output(
+            if not os.path.exists(configuration.sdkroot):
+                configuration.sdkroot = seven.get_command_output(
                     'xcrun --sdk iphoneos --show-sdk-path 2> /dev/null')
     else:
         configuration.arch = platform_machine
@@ -522,7 +522,7 @@ def setupSysPath():
     # Set up the root build directory.
     if not configuration.test_build_dir:
         raise Exception("test_build_dir is not set")
-    os.environ["LLDB_BUILD"] = os.path.abspath(configuration.test_build_dir)
+    configuration.test_build_dir = os.path.abspath(configuration.test_build_dir)
 
     # Set up the LLDB_SRC environment variable, so that the tests can locate
     # the LLDB source code.
@@ -1041,8 +1041,7 @@ def run_suite():
 
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
-    build_dir = configuration.test_build_dir
-    lldbutil.mkdir_p(build_dir)
+    lldbutil.mkdir_p(configuration.test_build_dir)
 
     target_platform = lldb.selected_platform.GetTriple().split('-')[2]
 

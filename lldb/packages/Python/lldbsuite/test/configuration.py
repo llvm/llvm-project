@@ -42,8 +42,10 @@ lldb_framework_path = None
 count = 1
 
 # The 'arch' and 'compiler' can be specified via command line.
-arch = None        # Must be initialized after option parsing
-compiler = None    # Must be initialized after option parsing
+arch = None
+compiler = None
+dsymutil = None
+sdkroot = None
 
 # The overriden dwarf verison.
 dwarf_version = 0
