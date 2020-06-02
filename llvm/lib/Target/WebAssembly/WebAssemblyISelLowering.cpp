@@ -1279,11 +1279,8 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   for (auto MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
-  // TODO: For now, we just pick something arbitrary for a default case for now.
-  // We really want to sniff out the guard and put in the real default case (and
-  // delete the guard).
-  Ops.push_back(DAG.getBasicBlock(MBBs[0]));
-
+  // Do not add the default case for now. It will be added in
+  // WebAssemblyFixBrTableDefaults.
   return DAG.getNode(WebAssemblyISD::BR_TABLE, DL, MVT::Other, Ops);
 }
 
