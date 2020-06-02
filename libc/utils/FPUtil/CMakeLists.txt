@@ -4,6 +4,7 @@ add_header_library(
     BitPatterns.h
     FloatOperations.h
     FloatProperties.h
+    ManipulationFunctions.h
   DEPS
     libc.utils.CPP.standalone_cpp
 )
