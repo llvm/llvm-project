@@ -1,0 +1,12 @@
+set(PUBLIC_HEADERS
+    libc.include.assert_h
+    libc.include.errno
+    libc.include.math
+    libc.include.signal
+    libc.include.stdio
+    libc.include.stdlib
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.include.threads
+    libc.include.unistd
+)
