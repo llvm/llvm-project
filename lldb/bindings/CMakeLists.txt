@@ -1,4 +1,4 @@
-file(GLOB SWIG_INTERFACES interfaces/*.i)
+file(GLOB SWIG_INTERFACES interface/*.i)
 file(GLOB_RECURSE SWIG_SOURCES *.swig)
 file(GLOB SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
