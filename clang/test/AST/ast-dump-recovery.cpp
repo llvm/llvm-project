@@ -181,3 +181,14 @@ void InitializerForAuto() {
 // Verified that the generated call operator is invalid.
 // CHECK: |-CXXMethodDecl {{.*}} invalid operator() 'auto () const -> auto'
 using Escape = decltype([] { return undef(); }());
+
+// CHECK:      VarDecl {{.*}} NoCrashOnInvalidInitList
+// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+// CHECK-NEXT:   `-InitListExpr
+// CHECK-NEXT:     `-DesignatedInitExpr {{.*}} 'void'
+// CHECK-NEXT:       `-CXXNullPtrLiteralExpr {{.*}} 'nullptr_t'
+struct {
+  int& abc;
+} NoCrashOnInvalidInitList = {
+  .abc = nullptr,
+};
