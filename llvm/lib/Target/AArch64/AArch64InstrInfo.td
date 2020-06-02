@@ -7704,3 +7704,5 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
+
+include "AArch64InstrGISel.td"

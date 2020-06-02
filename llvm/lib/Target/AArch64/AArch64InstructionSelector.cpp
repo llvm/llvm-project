@@ -221,6 +221,11 @@ private:
     return selectAddrModeUnscaled(Root, 16);
   }
 
+  /// Helper to try to fold in a GISEL_ADD_LOW into an immediate, to be used
+  /// from complex pattern matchers like selectAddrModeIndexed().
+  ComplexRendererFns tryFoldAddLowIntoImm(MachineInstr &RootDef, unsigned Size,
+                                          MachineRegisterInfo &MRI) const;
+
   ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root,
                                            unsigned Size) const;
   template <int Width>
@@ -1603,6 +1608,18 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return contractCrossBankCopyIntoStore(I, MRI);
   case TargetOpcode::G_PTR_ADD:
     return convertPtrAddToAdd(I, MRI);
+  case TargetOpcode::G_LOAD: {
+    // For scalar loads of pointers, we try to convert the dest type from p0
+    // to s64 so that our imported patterns can match. Like with the G_PTR_ADD
+    // conversion, this should be ok because all users should have been
+    // selected already, so the type doesn't matter for them.
+    Register DstReg = I.getOperand(0).getReg();
+    const LLT DstTy = MRI.getType(DstReg);
+    if (!DstTy.isPointer())
+      return false;
+    MRI.setType(DstReg, LLT::scalar(64));
+    return true;
+  }
   default:
     return false;
   }
@@ -1782,7 +1799,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   unsigned Opcode = I.getOpcode();
   // G_PHI requires same handling as PHI
-  if (!isPreISelGenericOpcode(Opcode) || Opcode == TargetOpcode::G_PHI) {
+  if (!I.isPreISelOpcode() || Opcode == TargetOpcode::G_PHI) {
     // Certain non-generic instructions also need some special handling.
 
     if (Opcode ==  TargetOpcode::LOAD_STACK_GUARD)
@@ -1902,6 +1919,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case TargetOpcode::G_BRJT:
     return selectBrJT(I, MRI);
+
+  case AArch64::G_ADD_LOW: {
+    I.setDesc(TII.get(AArch64::ADDXri));
+    I.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
 
   case TargetOpcode::G_BSWAP: {
     // Handle vector types for G_BSWAP directly.
@@ -5153,14 +5176,51 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
   return None;
 }
 
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
+                                                 unsigned Size,
+                                                 MachineRegisterInfo &MRI) const {
+  if (RootDef.getOpcode() != AArch64::G_ADD_LOW)
+    return None;
+  MachineInstr &Adrp = *MRI.getVRegDef(RootDef.getOperand(1).getReg());
+  if (Adrp.getOpcode() != AArch64::ADRP)
+    return None;
+
+  // TODO: add heuristics like isWorthFoldingADDlow() from SelectionDAG.
+  // TODO: Need to check GV's offset % size if doing offset folding into globals.
+  assert(Adrp.getOperand(1).getOffset() == 0 && "Unexpected offset in global");
+  auto GV = Adrp.getOperand(1).getGlobal();
+  if (GV->isThreadLocal())
+    return None;
+
+  unsigned Alignment = GV->getAlignment();
+  Type *Ty = GV->getValueType();
+  auto &MF = *RootDef.getParent()->getParent();
+  if (Alignment == 0 && Ty->isSized())
+    Alignment = MF.getDataLayout().getABITypeAlignment(Ty);
+
+  if (Alignment < Size)
+    return None;
+
+  unsigned OpFlags = STI.ClassifyGlobalReference(GV, MF.getTarget());
+  MachineIRBuilder MIRBuilder(RootDef);
+  Register AdrpReg = Adrp.getOperand(0).getReg();
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(AdrpReg); },
+           [=](MachineInstrBuilder &MIB) {
+             MIB.addGlobalAddress(GV, /* Offset */ 0,
+                                  OpFlags | AArch64II::MO_PAGEOFF |
+                                      AArch64II::MO_NC);
+           }}};
+}
+
 /// Select a "register plus scaled unsigned 12-bit immediate" address.  The
 /// "Size" argument is the size in bytes of the memory reference, which
 /// determines the scale.
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
                                                   unsigned Size) const {
-  MachineRegisterInfo &MRI =
-      Root.getParent()->getParent()->getParent()->getRegInfo();
+  MachineFunction &MF = *Root.getParent()->getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (!Root.isReg())
     return None;
@@ -5174,6 +5234,14 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
         [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
         [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
     }};
+  }
+
+  CodeModel::Model CM = MF.getTarget().getCodeModel();
+  // Check if we can fold in the ADD of small code model ADRP + ADD address.
+  if (CM == CodeModel::Small) {
+    auto OpFns = tryFoldAddLowIntoImm(*RootDef, Size, MRI);
+    if (OpFns)
+      return OpFns;
   }
 
   if (isBaseWithConstantOffset(Root, MRI)) {
