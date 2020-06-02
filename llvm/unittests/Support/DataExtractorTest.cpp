@@ -102,8 +102,9 @@ TEST(DataExtractorTest, Strings) {
   EXPECT_EQ(11U, C.tell());
   EXPECT_EQ(nullptr, DE.getCStr(C));
   EXPECT_EQ(11U, C.tell());
-  EXPECT_THAT_ERROR(C.takeError(),
-                    FailedWithMessage("unexpected end of data at offset 0xb"));
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("no null terminated string at offset 0xb"));
 }
 
 TEST(DataExtractorTest, LEB128) {
@@ -270,6 +271,12 @@ TEST(DataExtractorTest, getU8_vector) {
   DE.getU8(C, S, 2);
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
   EXPECT_EQ("AB", toStringRef(S));
+
+  C = DataExtractor::Cursor(0x47);
+  DE.getU8(C, S, 2);
+  EXPECT_THAT_ERROR(
+      C.takeError(),
+      FailedWithMessage("offset 0x47 is beyond the end of data at 0x2"));
 }
 
 TEST(DataExtractorTest, getU24) {

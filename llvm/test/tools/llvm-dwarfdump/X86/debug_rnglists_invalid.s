@@ -2,7 +2,7 @@
 # RUN: not llvm-dwarfdump --debug-rnglists - 2>&1 | FileCheck %s --check-prefix=SHORT
 # SHORT-NOT: error:
 # SHORT-NOT: range list header
-# SHORT: error: parsing .debug_rnglists table at offset 0x0: unexpected end of data at offset 0x0
+# SHORT: error: parsing .debug_rnglists table at offset 0x0: unexpected end of data at offset 0x3
 # SHORT-NOT: range list header
 # SHORT-NOT: error:
 

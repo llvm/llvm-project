@@ -689,6 +689,16 @@ protected:
   // public.
   static uint64_t &getOffset(Cursor &C) { return C.Offset; }
   static Error &getError(Cursor &C) { return C.Err; }
+
+private:
+  /// If it is possible to read \a Size bytes at offset \a Offset, returns \b
+  /// true. Otherwise, returns \b false. If \a E is not nullptr, also sets the
+  /// error object to indicate an error.
+  bool prepareRead(uint64_t Offset, uint64_t Size, Error *E) const;
+
+  template <typename T> T getU(uint64_t *OffsetPtr, Error *Err) const;
+  template <typename T>
+  T *getUs(uint64_t *OffsetPtr, T *Dst, uint32_t Count, Error *Err) const;
 };
 
 } // namespace llvm
