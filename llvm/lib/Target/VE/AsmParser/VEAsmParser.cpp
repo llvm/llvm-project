@@ -62,6 +62,9 @@ class VEAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseDirective(AsmToken DirectiveID) override;
 
+  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+                                      unsigned Kind) override;
+
   // Custom parse functions for VE specific operands.
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
   OperandMatchResultTy parseOperand(OperandVector &Operands, StringRef Name);
@@ -77,6 +80,30 @@ public:
 };
 
 } // end anonymous namespace
+
+static const MCPhysReg I32Regs[64] = {
+    VE::SW0,  VE::SW1,  VE::SW2,  VE::SW3,  VE::SW4,  VE::SW5,  VE::SW6,
+    VE::SW7,  VE::SW8,  VE::SW9,  VE::SW10, VE::SW11, VE::SW12, VE::SW13,
+    VE::SW14, VE::SW15, VE::SW16, VE::SW17, VE::SW18, VE::SW19, VE::SW20,
+    VE::SW21, VE::SW22, VE::SW23, VE::SW24, VE::SW25, VE::SW26, VE::SW27,
+    VE::SW28, VE::SW29, VE::SW30, VE::SW31, VE::SW32, VE::SW33, VE::SW34,
+    VE::SW35, VE::SW36, VE::SW37, VE::SW38, VE::SW39, VE::SW40, VE::SW41,
+    VE::SW42, VE::SW43, VE::SW44, VE::SW45, VE::SW46, VE::SW47, VE::SW48,
+    VE::SW49, VE::SW50, VE::SW51, VE::SW52, VE::SW53, VE::SW54, VE::SW55,
+    VE::SW56, VE::SW57, VE::SW58, VE::SW59, VE::SW60, VE::SW61, VE::SW62,
+    VE::SW63};
+
+static const MCPhysReg F32Regs[64] = {
+    VE::SF0,  VE::SF1,  VE::SF2,  VE::SF3,  VE::SF4,  VE::SF5,  VE::SF6,
+    VE::SF7,  VE::SF8,  VE::SF9,  VE::SF10, VE::SF11, VE::SF12, VE::SF13,
+    VE::SF14, VE::SF15, VE::SF16, VE::SF17, VE::SF18, VE::SF19, VE::SF20,
+    VE::SF21, VE::SF22, VE::SF23, VE::SF24, VE::SF25, VE::SF26, VE::SF27,
+    VE::SF28, VE::SF29, VE::SF30, VE::SF31, VE::SF32, VE::SF33, VE::SF34,
+    VE::SF35, VE::SF36, VE::SF37, VE::SF38, VE::SF39, VE::SF40, VE::SF41,
+    VE::SF42, VE::SF43, VE::SF44, VE::SF45, VE::SF46, VE::SF47, VE::SF48,
+    VE::SF49, VE::SF50, VE::SF51, VE::SF52, VE::SF53, VE::SF54, VE::SF55,
+    VE::SF56, VE::SF57, VE::SF58, VE::SF59, VE::SF60, VE::SF61, VE::SF62,
+    VE::SF63};
 
 namespace {
 
@@ -327,6 +354,24 @@ public:
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
+  }
+
+  static bool MorphToI32Reg(VEOperand &Op) {
+    unsigned Reg = Op.getReg();
+    unsigned regIdx = Reg - VE::SX0;
+    if (regIdx > 63)
+      return false;
+    Op.Reg.RegNum = I32Regs[regIdx];
+    return true;
+  }
+
+  static bool MorphToF32Reg(VEOperand &Op) {
+    unsigned Reg = Op.getReg();
+    unsigned regIdx = Reg - VE::SX0;
+    if (regIdx > 63)
+      return false;
+    Op.Reg.RegNum = F32Regs[regIdx];
+    return true;
   }
 
   static std::unique_ptr<VEOperand>
@@ -690,3 +735,25 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "VEGenAsmMatcher.inc"
+
+unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
+                                                 unsigned Kind) {
+  VEOperand &Op = (VEOperand &)GOp;
+
+  // VE uses identical register name for all registers like both
+  // F32 and I32 uses "%s23".  Need to convert the name of them
+  // for validation.
+  switch (Kind) {
+  default:
+    break;
+  case MCK_F32:
+    if (Op.isReg() && VEOperand::MorphToF32Reg(Op))
+      return MCTargetAsmParser::Match_Success;
+    break;
+  case MCK_I32:
+    if (Op.isReg() && VEOperand::MorphToI32Reg(Op))
+      return MCTargetAsmParser::Match_Success;
+    break;
+  }
+  return Match_InvalidOperand;
+}
