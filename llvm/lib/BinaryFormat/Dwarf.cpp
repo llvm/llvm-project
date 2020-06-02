@@ -780,6 +780,10 @@ StringRef llvm::dwarf::FormatString(DwarfFormat Format) {
   return StringRef();
 }
 
+StringRef llvm::dwarf::FormatString(bool IsDWARF64) {
+  return FormatString(IsDWARF64 ? DWARF64 : DWARF32);
+}
+
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
