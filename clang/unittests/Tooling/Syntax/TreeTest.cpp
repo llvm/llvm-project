@@ -51,6 +51,8 @@ struct TestClangConfig {
   TestLanguage Language;
   std::string Target;
 
+  bool isC99OrLater() const { return Language == Lang_C99; }
+
   bool isCXX() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14 || Language == Lang_CXX17 ||
@@ -1903,7 +1905,6 @@ TEST_P(SyntaxTreeTest, ArraySubscriptsInDeclarators) {
 int a[10];
 int b[1][2][3];
 int c[] = {1,2,3};
-// void f(int xs[static 10]);
     )cpp",
       R"txt(
 *: TranslationUnit
@@ -1957,6 +1958,36 @@ int c[] = {1,2,3};
   |     |-UnknownExpression
   |     | `-3
   |     `-}
+  `-;       )txt");
+}
+
+TEST_P(SyntaxTreeTest, StaticArraySubscriptsInDeclarators) {
+  if (!GetParam().isC99OrLater()) {
+    return;
+  }
+  expectTreeDumpEqual(
+      R"cpp(
+void f(int xs[static 10]);
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-f
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   |-xs
+  |   |   `-ArraySubscript
+  |   |     |-[
+  |   |     |-static
+  |   |     |-UnknownExpression
+  |   |     | `-10
+  |   |     `-]
+  |   `-)
   `-;       )txt");
 }
 
