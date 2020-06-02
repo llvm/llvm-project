@@ -77,7 +77,7 @@ protected:
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
   int LocalMemorySize;
-  unsigned WavefrontSize;
+  char WavefrontSizeLog2;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
@@ -181,7 +181,11 @@ public:
   }
 
   unsigned getWavefrontSize() const {
-    return WavefrontSize;
+    return 1 << WavefrontSizeLog2;
+  }
+
+  unsigned getWavefrontSizeLog2() const {
+    return WavefrontSizeLog2;
   }
 
   int getLocalMemorySize() const {
@@ -237,8 +241,8 @@ public:
   /// \returns Corresponsing DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const {
-    return WavefrontSize == 32 ? AMDGPUDwarfFlavour::Wave32
-                               : AMDGPUDwarfFlavour::Wave64;
+    return getWavefrontSize() == 32 ? AMDGPUDwarfFlavour::Wave32
+                                    : AMDGPUDwarfFlavour::Wave64;
   }
 
   virtual ~AMDGPUSubtarget() {}
@@ -452,10 +456,6 @@ public:
 
   Generation getGeneration() const {
     return (Generation)Gen;
-  }
-
-  unsigned getWavefrontSizeLog2() const {
-    return Log2_32(WavefrontSize);
   }
 
   /// Return the number of high bits known to be zero fror a frame index.
@@ -1160,7 +1160,7 @@ public:
       const override;
 
   bool isWave32() const {
-    return WavefrontSize == 32;
+    return getWavefrontSize() == 32;
   }
 
   const TargetRegisterClass *getBoolRC() const {
