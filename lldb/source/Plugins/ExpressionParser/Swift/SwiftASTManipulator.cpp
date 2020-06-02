@@ -90,27 +90,41 @@ void SwiftASTManipulator::WrapExpression(
 __builtin_logger_initialize()
 )";
 
-    // The debug function declarations need only be declared once per session - on the first REPL call.
-    // This code assumes that the first call is the first REPL call; don't call playground once then playground || repl again
+    // The debug function declarations need only be declared once per session -
+    // on the first REPL call.  This code assumes that the first call is the
+    // first REPL call; don't call playground once then playground || repl
+    // again
     bool first_expression = options.GetPreparePlaygroundStubFunctions();
 
-    const char *playground_prefix =  first_expression ? playground_logger_declarations : "";
+    const char *playground_prefix =
+        first_expression ? playground_logger_declarations : "";
 
     if (pound_file && pound_line) {
       wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                             playground_prefix, pound_file, pound_line,
                             orig_text);
     } else {
-      // In 2017+, xcode playgrounds send orig_text that starts with a module loading prefix (not the above prefix), then a sourceLocation specifier that indicates the page name, and then the page body text.
-      // The first_body_line mechanism in this function cannot be used to compensate for the playground_prefix added here, since it incorrectly continues to apply even after sourceLocation directives are read frmo the orig_text.
-      // To make sure playgrounds work correctly whether or not they supply their own sourceLocation, create a dummy sourceLocation here with a fake filename that starts counting the first line of orig_text as line 1.
+      // In 2017+, xcode playgrounds send orig_text that starts with a module
+      // loading prefix (not the above prefix), then a sourceLocation specifier
+      // that indicates the page name, and then the page body text.  The
+      // first_body_line mechanism in this function cannot be used to
+      // compensate for the playground_prefix added here, since it incorrectly
+      // continues to apply even after sourceLocation directives are read from
+      // the orig_text.  To make sure playgrounds work correctly whether or not
+      // they supply their own sourceLocation, create a dummy sourceLocation
+      // here with a fake filename that starts counting the first line of
+      // orig_text as line 1.
       wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                             playground_prefix, "Playground.swift", 1,
                             orig_text);
     }
     first_body_line = 1;
     return;
-  } else if (repl) { // repl but not playground.
+  }
+
+  assert(!playground && "Playground mode not expected");
+
+  if (repl) {
     if (pound_file && pound_line) {
       wrapped_stream.Printf("#sourceLocation(file: \"%s\", line:  %u)\n%s\n",
                             llvm::sys::path::filename(pound_file).str().c_str(),
@@ -122,15 +136,16 @@ __builtin_logger_initialize()
     return;
   }
 
-  std::string expr_source_path;
+  assert(!playground && !repl && "Playground/REPL mode not expected");
 
   if (pound_file && pound_line) {
     fixed_text.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                       pound_file, pound_line, orig_text);
     text = fixed_text.GetString().data();
   } else if (generate_debug_info) {
+    std::string expr_source_path;
     if (SwiftASTManipulator::SaveExpressionTextToTempFile(orig_text, options,
-                                                           expr_source_path)) {
+                                                          expr_source_path)) {
       fixed_text.Printf("#sourceLocation(file: \"%s\", line: 1)\n%s\n",
                         expr_source_path.c_str(), orig_text);
       text = fixed_text.GetString().data();
@@ -138,71 +153,68 @@ __builtin_logger_initialize()
   }
 
   // Note: All the wrapper functions we make are marked with the
-  // @LLDBDebuggerFunction macro so that the compiler
-  // can do whatever special treatment it need to do on them.  If you add new
-  // variants be sure to mark them this way.
-  // Also, any function that might end up being in an extension of swift class
-  // needs to be marked final, since otherwise
-  // the compiler might try to dispatch them dynamically, which it can't do
-  // correctly for these functions.
+  // @LLDBDebuggerFunction macro so that the compiler can do whatever special
+  // treatment it need to do on them.  If you add new variants be sure to mark
+  // them this way.  Also, any function that might end up being in an extension
+  // of swift class needs to be marked final, since otherwise the compiler
+  // might try to dispatch them dynamically, which it can't do correctly for
+  // these functions.
 
-  llvm::SmallString<32> buffer;
-  llvm::raw_svector_ostream os(buffer);
+  std::string availability = "";
   if (!os_version.empty())
-    os << "@available(" << os_version << ", *)";
-  std::string availability = std::string(buffer);
+    availability = (llvm::Twine("@available(") + os_version + ", *)").str();
 
   StreamString wrapped_expr_text;
-  wrapped_expr_text.Printf("do\n"
-                           "{\n"
-                           "%s%s%s\n" // Don't indent the code so error columns
-                                      // match up with errors from compiler
-                           "}\n"
-                           "catch (let __lldb_tmp_error)\n"
-                           "{\n"
-                           "    var %s = __lldb_tmp_error\n"
-                           "}\n",
+
+  // Avoid indenting user code: this makes column information from compiler
+  // errors match up with what the user typed.
+  wrapped_expr_text.Printf(R"(
+do {
+%s%s%s
+} catch (let __lldb_tmp_error) {
+  var %s = __lldb_tmp_error
+}
+)",
                            GetUserCodeStartMarker(), text,
                            GetUserCodeEndMarker(), GetErrorName());
 
-  if (needs_object_ptr | static_method) {
+  if (needs_object_ptr || static_method) {
     const char *func_decorator = "";
     if (static_method) {
       if (is_class)
         func_decorator = "final class";
       else
         func_decorator = "static";
-    } else if (is_class &&
-               !(weak_self)) {
+    } else if (is_class && !weak_self) {
       func_decorator = "final";
     } else {
       func_decorator = "mutating";
     }
 
     const char *optional_extension =
-        (weak_self)
-            ? "Swift.Optional where Wrapped == "
-            : "";
+        weak_self ? "Swift.Optional where Wrapped == " : "";
 
-    wrapped_stream.Printf(
-        "extension %s$__lldb_context {\n"
-        "  @LLDBDebuggerFunction %s\n"
-        "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : "
-        "UnsafeMutablePointer<Any>) {\n"
-        "%s" // This is the expression text (with newlines).
-        "  }\n"
-        "}\n"
-        "%s\n"
-        "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
-        "  do {\n"
-        "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
-        "      $__lldb_arg\n"
-        "    )\n"
-        "  }\n"
-        "}\n",
-        optional_extension, availability.c_str(), func_decorator,
-        current_counter, wrapped_expr_text.GetData(), availability.c_str(),
-        current_counter);
+    // The expression text is inserted into the body of $__lldb_wrapped_expr_%u.
+    wrapped_stream.Printf(R"(
+extension %s$__lldb_context {
+  @LLDBDebuggerFunction %s
+  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
+    %s
+  }
+}
+%s
+func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
+  do {
+    $__lldb_injected_self.$__lldb_wrapped_expr_%u(
+      $__lldb_arg
+    )
+  }
+}
+)",
+                          optional_extension, availability.c_str(),
+                          func_decorator, current_counter,
+                          wrapped_expr_text.GetData(), availability.c_str(),
+                          current_counter);
 
     first_body_line = 5;
   } else {
