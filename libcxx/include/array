@@ -196,9 +196,15 @@ struct _LIBCPP_TEMPLATE_VIS array
 
     // element access:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    reference operator[](size_type __n)             _NOEXCEPT {return __elems_[__n];}
+    reference operator[](size_type __n) _NOEXCEPT {
+        _LIBCPP_ASSERT(__n < _Size, "out-of-bounds access in std::array<T, N>");
+        return __elems_[__n];
+    }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-    const_reference operator[](size_type __n) const _NOEXCEPT {return __elems_[__n];}
+    const_reference operator[](size_type __n) const _NOEXCEPT {
+        _LIBCPP_ASSERT(__n < _Size, "out-of-bounds access in std::array<T, N>");
+        return __elems_[__n];
+    }
 
     _LIBCPP_CONSTEXPR_AFTER_CXX14 reference at(size_type __n)
     {
@@ -214,10 +220,10 @@ struct _LIBCPP_TEMPLATE_VIS array
         return __elems_[__n];
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference front()             _NOEXCEPT {return __elems_[0];}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference front() const _NOEXCEPT {return __elems_[0];}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference back()              _NOEXCEPT {return __elems_[_Size - 1];}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference back() const  _NOEXCEPT {return __elems_[_Size - 1];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference front()             _NOEXCEPT {return (*this)[0];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference front() const _NOEXCEPT {return (*this)[0];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference back()              _NOEXCEPT {return (*this)[_Size - 1];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference back() const  _NOEXCEPT {return (*this)[_Size - 1];}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     value_type* data() _NOEXCEPT {return __elems_;}
