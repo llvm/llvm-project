@@ -48,6 +48,13 @@ func @remap_input_1_to_N_remaining_use(%arg0: f32) {
   "work"(%arg0) : (f32) -> ()
 }
 
+// CHECK-LABEL: func @remap_materialize_1_to_1(%{{.*}}: i43)
+func @remap_materialize_1_to_1(%arg0: i42) {
+  // CHECK: %[[V:.*]] = "test.cast"(%arg0) : (i43) -> i42
+  // CHECK: "test.return"(%[[V]])
+  "test.return"(%arg0) : (i42) -> ()
+}
+
 // CHECK-LABEL: func @remap_input_to_self
 func @remap_input_to_self(%arg0: index) {
   // CHECK-NOT: test.cast
