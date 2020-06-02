@@ -300,7 +300,8 @@ protected:
   std::vector<ConstString> m_types;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SystemRuntime);
+  SystemRuntime(const SystemRuntime &) = delete;
+  const SystemRuntime &operator=(const SystemRuntime &) = delete;
 };
 
 } // namespace lldb_private

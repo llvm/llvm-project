@@ -101,7 +101,8 @@ protected:
   llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);
+  PlatformPOSIX(const PlatformPOSIX &) = delete;
+  const PlatformPOSIX &operator=(const PlatformPOSIX &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_POSIX_PLATFORMPOSIX_H

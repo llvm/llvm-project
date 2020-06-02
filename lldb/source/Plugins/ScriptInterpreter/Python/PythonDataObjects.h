@@ -90,7 +90,9 @@ public:
   void Serialize(llvm::json::OStream &s) const override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(StructuredPythonObject);
+  StructuredPythonObject(const StructuredPythonObject &) = delete;
+  const StructuredPythonObject &
+  operator=(const StructuredPythonObject &) = delete;
 };
 
 enum class PyObjectType {

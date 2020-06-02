@@ -201,7 +201,8 @@ protected:
   uint32_t m_stop_id; // The stop ID that any data in this context is valid for
 private:
   // For RegisterContext only
-  DISALLOW_COPY_AND_ASSIGN(RegisterContext);
+  RegisterContext(const RegisterContext &) = delete;
+  const RegisterContext &operator=(const RegisterContext &) = delete;
 };
 
 } // namespace lldb_private

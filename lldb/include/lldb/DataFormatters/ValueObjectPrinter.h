@@ -141,7 +141,8 @@ private:
 
   friend struct StringSummaryFormat;
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectPrinter);
+  ValueObjectPrinter(const ValueObjectPrinter &) = delete;
+  const ValueObjectPrinter &operator=(const ValueObjectPrinter &) = delete;
 };
 
 } // namespace lldb_private

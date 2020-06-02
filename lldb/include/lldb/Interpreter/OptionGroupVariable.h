@@ -41,7 +41,8 @@ public:
   OptionValueString summary_string; // a summary string
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(OptionGroupVariable);
+  OptionGroupVariable(const OptionGroupVariable &) = delete;
+  const OptionGroupVariable &operator=(const OptionGroupVariable &) = delete;
 };
 
 } // namespace lldb_private

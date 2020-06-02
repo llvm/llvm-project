@@ -60,7 +60,8 @@ public:
                                   lldb::addr_t offset) override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformLinux);
+  PlatformLinux(const PlatformLinux &) = delete;
+  const PlatformLinux &operator=(const PlatformLinux &) = delete;
 };
 
 } // namespace platform_linux

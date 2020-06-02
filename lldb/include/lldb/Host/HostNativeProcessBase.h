@@ -19,7 +19,9 @@ namespace lldb_private {
 class HostThread;
 
 class HostNativeProcessBase {
-  DISALLOW_COPY_AND_ASSIGN(HostNativeProcessBase);
+  HostNativeProcessBase(const HostNativeProcessBase &) = delete;
+  const HostNativeProcessBase &
+  operator=(const HostNativeProcessBase &) = delete;
 
 public:
   HostNativeProcessBase() : m_process(LLDB_INVALID_PROCESS) {}

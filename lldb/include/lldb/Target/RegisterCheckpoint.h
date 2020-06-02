@@ -45,7 +45,8 @@ protected:
   Reason m_reason;
 
   // Make RegisterCheckpointSP if you wish to share the data in this class.
-  DISALLOW_COPY_AND_ASSIGN(RegisterCheckpoint);
+  RegisterCheckpoint(const RegisterCheckpoint &) = delete;
+  const RegisterCheckpoint &operator=(const RegisterCheckpoint &) = delete;
 };
 
 } // namespace lldb_private

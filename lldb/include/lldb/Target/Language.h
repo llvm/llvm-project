@@ -270,7 +270,8 @@ protected:
   Language();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Language);
+  Language(const Language &) = delete;
+  const Language &operator=(const Language &) = delete;
 };
 
 } // namespace lldb_private

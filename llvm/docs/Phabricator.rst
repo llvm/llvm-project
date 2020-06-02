@@ -212,10 +212,10 @@ the following:
 
 ::
 
-  git pull --rebase origin master
+  git pull --rebase https://github.com/llvm/llvm-project.git master
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
-  git push
+  git push https://github.com/llvm/llvm-project.git HEAD:master
 
 Or
 

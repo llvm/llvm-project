@@ -113,7 +113,8 @@ public:
     lldb::ThreadSP m_thread_sp;
     StackID m_stack_id;
 
-    DISALLOW_COPY_AND_ASSIGN(ThreadEventData);
+    ThreadEventData(const ThreadEventData &) = delete;
+    const ThreadEventData &operator=(const ThreadEventData &) = delete;
   };
 
   struct ThreadStateCheckpoint {
@@ -1260,7 +1261,8 @@ private:
 private:
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
-  DISALLOW_COPY_AND_ASSIGN(Thread);
+  Thread(const Thread &) = delete;
+  const Thread &operator=(const Thread &) = delete;
 };
 
 } // namespace lldb_private

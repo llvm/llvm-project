@@ -150,7 +150,9 @@ private:
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager, const Status &error);
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectConstResult);
+  ValueObjectConstResult(const ValueObjectConstResult &) = delete;
+  const ValueObjectConstResult &
+  operator=(const ValueObjectConstResult &) = delete;
 };
 
 } // namespace lldb_private

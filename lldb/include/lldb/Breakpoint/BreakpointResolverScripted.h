@@ -70,7 +70,9 @@ private:
                                   // SBStructuredData).
   StructuredData::GenericSP m_implementation_sp;
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverScripted);
+  BreakpointResolverScripted(const BreakpointResolverScripted &) = delete;
+  const BreakpointResolverScripted &
+  operator=(const BreakpointResolverScripted &) = delete;
 };
 
 } // namespace lldb_private

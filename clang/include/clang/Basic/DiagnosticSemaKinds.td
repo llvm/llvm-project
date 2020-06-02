@@ -2111,6 +2111,10 @@ def err_list_init_in_parens : Error<
   "cannot initialize %select{non-class|reference}0 type %1 with a "
   "parenthesized initializer list">;
 
+def warn_uninit_const_reference : Warning<
+  "variable %0 is uninitialized when passed as a const reference argument "
+  "here">, InGroup<UninitializedConstReference>, DefaultIgnore;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<

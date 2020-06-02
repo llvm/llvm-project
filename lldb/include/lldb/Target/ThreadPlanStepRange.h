@@ -86,7 +86,8 @@ protected:
 private:
   std::vector<lldb::DisassemblerSP> m_instruction_ranges;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepRange);
+  ThreadPlanStepRange(const ThreadPlanStepRange &) = delete;
+  const ThreadPlanStepRange &operator=(const ThreadPlanStepRange &) = delete;
 };
 
 } // namespace lldb_private

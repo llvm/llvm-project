@@ -298,8 +298,8 @@ def S_MOV_FED_B32 : SOP1_32 <"s_mov_fed_b32">;
 
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
-  let Uses = [M0];
-  let Defs = [M0];
+  let Uses = [M0, MODE];
+  let Defs = [M0, MODE];
 }
 }
 
@@ -969,8 +969,8 @@ def S_SET_GPR_IDX_ON : SOPC <0x11,
   (outs),
   (ins SSrc_b32:$src0, GPRIdxMode:$src1),
   "s_set_gpr_idx_on $src0,$src1"> {
-  let Defs = [M0]; // No scc def
-  let Uses = [M0]; // Other bits of m0 unmodified.
+  let Defs = [M0, MODE]; // No scc def
+  let Uses = [M0, MODE]; // Other bits of mode, m0 unmodified.
   let hasSideEffects = 1; // Sets mode.gpr_idx_en
   let FixedSize = 1;
 }
@@ -1199,6 +1199,8 @@ def S_TTRACEDATA : SOPP <0x00000016, (ins), "s_ttracedata"> {
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_OFF : SOPP<0x1c, (ins), "s_set_gpr_idx_off"> {
   let simm16 = 0;
+  let Defs = [MODE];
+  let Uses = [MODE];
 }
 }
 } // End hasSideEffects
@@ -1206,7 +1208,8 @@ def S_SET_GPR_IDX_OFF : SOPP<0x1c, (ins), "s_set_gpr_idx_off"> {
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_MODE : SOPP<0x1d, (ins GPRIdxMode:$simm16),
   "s_set_gpr_idx_mode$simm16"> {
-  let Defs = [M0];
+  let Defs = [M0, MODE];
+  let Uses = [MODE];
 }
 }
 

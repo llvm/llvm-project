@@ -7,16 +7,16 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: simple
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $mode, implicit-def  $m0, implicit $mode, implicit undef $m0
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -25,18 +25,18 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: salu_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $sgpr0 = S_MOV_B32 $sgpr2
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   $sgpr0 = S_MOV_B32 $sgpr2
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -45,20 +45,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: valu_write_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: $vgpr20 = V_MOV_B32_e32 1, implicit $exec
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   $vgpr20 = V_MOV_B32_e32 1, implicit $exec
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -67,20 +67,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: valu_read_in_between
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: V_NOP_e32 implicit $exec, implicit $vgpr0
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   V_NOP_e32 implicit $exec, implicit $vgpr0
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -89,20 +89,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: changed_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: $sgpr2 = S_MOV_B32 1
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   $sgpr2 = S_MOV_B32 1
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -111,20 +111,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: implicitly_changed_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: S_NOP 0, implicit-def $sgpr2
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   S_NOP 0, implicit-def $sgpr2
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -133,20 +133,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: changed_m0
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: $m0 = S_MOV_B32 1
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   $m0 = S_MOV_B32 1
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -155,20 +155,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: implicitly_changed_m0
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: S_NOP 0, implicit-def $m0
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   S_NOP 0, implicit-def $m0
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -177,28 +177,28 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: same_imm_index
-    ; GCN: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 name:            different_imm_index
 body:             |
   bb.0:
 
-  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON 1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON 2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON 2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -207,18 +207,18 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: different_gpr_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -227,24 +227,24 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: different_gpr_index_then_same_index
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-    ; GCN: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+    ; GCN: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -253,18 +253,18 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: use_m0_with_idx_off
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
-    ; GCN: S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
-  S_SET_GPR_IDX_OFF
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -273,20 +273,20 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: three_in_a_row
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr17 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr18 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr17 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr18 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -295,22 +295,22 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: different_gpr_index_then_two_same_indexes
-    ; GCN: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -319,22 +319,22 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: two_same_indexes_then_different
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-    ; GCN: S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+    ; GCN: S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr1, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...
 
 ---
@@ -343,16 +343,16 @@ body:             |
   bb.0:
 
     ; GCN-LABEL: name: indirect_mov
-    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
     ; GCN: $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
     ; GCN: V_MOV_B32_indirect undef $vgpr0, undef $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 3)
     ; GCN: V_MOV_B32_indirect undef $vgpr0, undef $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 3)
-    ; GCN: S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit undef $m0
+    ; GCN: S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
   V_MOV_B32_indirect undef $vgpr0, undef $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 3)
-  S_SET_GPR_IDX_OFF
-  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
   V_MOV_B32_indirect undef $vgpr0, undef $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 3)
-  S_SET_GPR_IDX_OFF
+  S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
 ...

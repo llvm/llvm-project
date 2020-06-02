@@ -81,6 +81,10 @@ function(add_entrypoint_object target_name)
   )
 
   get_fq_target_name(${target_name} fq_target_name)
+  set(entrypoint_name ${target_name})
+  if(ADD_ENTRYPOINT_OBJ_NAME)
+    set(entrypoint_name ${ADD_ENTRYPOINT_OBJ_NAME})
+  endif()
 
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
@@ -109,6 +113,7 @@ function(add_entrypoint_object target_name)
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
+        "ENTRYPOINT_NAME" ${entrypoint_name}
         "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
         "IS_ALIAS" "YES"
         "OBJECT_FILE" ""
@@ -123,11 +128,6 @@ function(add_entrypoint_object target_name)
   endif()
   if(NOT ADD_ENTRYPOINT_OBJ_HDRS)
     message(FATAL_ERROR "`add_entrypoint_object` rule requires HDRS to be specified.")
-  endif()
-
-  set(entrypoint_name ${target_name})
-  if(ADD_ENTRYPOINT_OBJ_NAME)
-    set(entrypoint_name ${ADD_ENTRYPOINT_OBJ_NAME})
   endif()
 
   set(objects_target_name "${fq_target_name}_objects")
@@ -199,6 +199,7 @@ function(add_entrypoint_object target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      "ENTRYPOINT_NAME" ${entrypoint_name}
       "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
       "OBJECT_FILE" "${object_file}"
       "OBJECT_FILE_RAW" "${object_file_raw}"
@@ -255,7 +256,7 @@ function(add_entrypoint_object target_name)
       # crossplatform touch.
       COMMAND "${CMAKE_COMMAND}" -E touch ${lint_timestamp}
       COMMENT "Linting... ${target_name}"
-      DEPENDS ${clang-tidy} ${objects_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
+      DEPENDS clang-tidy ${objects_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
