@@ -673,7 +673,7 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
 
 void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
   Value v = vals[vd];
-  if (isUninitialized(v))
+  if (isAlwaysUninit(v))
     handler.handleConstRefUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
 }
 
