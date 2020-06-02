@@ -14056,7 +14056,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Y = EmitScalarExpr(E->getArg(1));
     Value *Z = EmitScalarExpr(E->getArg(2));
-    Value *Zero = llvm::ConstantFP::getZeroValueForNegation(ResultType);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::fma, ResultType);
     switch (BuiltinID) {
       case PPC::BI__builtin_vsx_xvmaddadp:
@@ -14064,17 +14063,14 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         return Builder.CreateCall(F, {X, Y, Z});
       case PPC::BI__builtin_vsx_xvnmaddadp:
       case PPC::BI__builtin_vsx_xvnmaddasp:
-        return Builder.CreateFSub(Zero,
-                                  Builder.CreateCall(F, {X, Y, Z}), "sub");
+        return Builder.CreateFNeg(Builder.CreateCall(F, {X, Y, Z}), "neg");
       case PPC::BI__builtin_vsx_xvmsubadp:
       case PPC::BI__builtin_vsx_xvmsubasp:
-        return Builder.CreateCall(F,
-                                  {X, Y, Builder.CreateFSub(Zero, Z, "sub")});
+        return Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")});
       case PPC::BI__builtin_vsx_xvnmsubadp:
       case PPC::BI__builtin_vsx_xvnmsubasp:
-        Value *FsubRes =
-          Builder.CreateCall(F, {X, Y, Builder.CreateFSub(Zero, Z, "sub")});
-        return Builder.CreateFSub(Zero, FsubRes, "sub");
+        return Builder.CreateFNeg(
+            Builder.CreateCall(F, {X, Y, Builder.CreateFNeg(Z, "neg")}), "neg");
     }
     llvm_unreachable("Unknown FMA operation");
     return nullptr; // Suppress no-return warning
