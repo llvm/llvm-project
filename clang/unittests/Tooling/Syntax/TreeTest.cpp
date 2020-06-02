@@ -51,15 +51,17 @@ struct TestClangConfig {
   TestLanguage Language;
   std::string Target;
 
+  bool isC99OrLater() const { return Language == Lang_C99; }
+
   bool isCXX() const {
-    return Language == Lang_CXX || Language == Lang_CXX11 ||
+    return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX2a;
+           Language == Lang_CXX20;
   }
 
   bool isCXX11OrLater() const {
     return Language == Lang_CXX11 || Language == Lang_CXX14 ||
-           Language == Lang_CXX17 || Language == Lang_CXX2a;
+           Language == Lang_CXX17 || Language == Lang_CXX20;
   }
 
   bool hasDelayedTemplateParsing() const {
@@ -88,8 +90,8 @@ struct TestClangConfig {
   static std::vector<TestClangConfig> &allConfigs() {
     static std::vector<TestClangConfig> all_configs = []() {
       std::vector<TestClangConfig> all_configs;
-      for (TestLanguage lang : {Lang_C, Lang_C89, Lang_CXX, Lang_CXX11,
-                                Lang_CXX14, Lang_CXX17, Lang_CXX2a}) {
+      for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
+                                Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
         TestClangConfig config;
         config.Language = lang;
         config.Target = "x86_64-pc-linux-gnu";
@@ -1903,7 +1905,6 @@ TEST_P(SyntaxTreeTest, ArraySubscriptsInDeclarators) {
 int a[10];
 int b[1][2][3];
 int c[] = {1,2,3};
-// void f(int xs[static 10]);
     )cpp",
       R"txt(
 *: TranslationUnit
@@ -1957,6 +1958,36 @@ int c[] = {1,2,3};
   |     |-UnknownExpression
   |     | `-3
   |     `-}
+  `-;       )txt");
+}
+
+TEST_P(SyntaxTreeTest, StaticArraySubscriptsInDeclarators) {
+  if (!GetParam().isC99OrLater()) {
+    return;
+  }
+  expectTreeDumpEqual(
+      R"cpp(
+void f(int xs[static 10]);
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-f
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   |-xs
+  |   |   `-ArraySubscript
+  |   |     |-[
+  |   |     |-static
+  |   |     |-UnknownExpression
+  |   |     | `-10
+  |   |     `-]
+  |   `-)
   `-;       )txt");
 }
 
