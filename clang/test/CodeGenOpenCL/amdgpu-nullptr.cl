@@ -358,8 +358,8 @@ void test_cast_null_pointer_to_sizet_calee(size_t arg_private,
                                            size_t arg_generic);
 
 // CHECK-LABEL: test_cast_null_pointer_to_sizet
-// CHECK: call void @test_cast_null_pointer_to_sizet_calee(i64 ptrtoint (i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*) to i64), i64 ptrtoint (i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*) to i64), i64 0, i64 0, i64 0) #7
-// CHECK: call void @test_cast_null_pointer_to_sizet_calee(i64 ptrtoint (i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*) to i64), i64 ptrtoint (i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*) to i64), i64 0, i64 0, i64 0) #7
+// CHECK: call void @test_cast_null_pointer_to_sizet_calee(i64 ptrtoint (i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*) to i64), i64 ptrtoint (i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*) to i64), i64 0, i64 0, i64 0)
+// CHECK: call void @test_cast_null_pointer_to_sizet_calee(i64 ptrtoint (i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*) to i64), i64 ptrtoint (i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*) to i64), i64 0, i64 0, i64 0)
 void test_cast_null_pointer_to_sizet(void) {
   test_cast_null_pointer_to_sizet_calee((size_t)((private char*)0),
                                         (size_t)((local char*)0),
