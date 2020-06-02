@@ -102,7 +102,7 @@ bool getEmulatedTLS();
 
 bool getUniqueSectionNames();
 
-bool getUniqueBBSectionNames();
+bool getUniqueBasicBlockSectionNames();
 
 llvm::EABI getEABIVersion();
 

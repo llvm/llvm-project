@@ -435,7 +435,8 @@ static CodeGenFileType getCodeGenFileType(BackendAction Action) {
   }
 }
 
-static void initTargetOptions(llvm::TargetOptions &Options,
+static void initTargetOptions(DiagnosticsEngine &Diags,
+                              llvm::TargetOptions &Options,
                               const CodeGenOptions &CodeGenOpts,
                               const clang::TargetOptions &TargetOpts,
                               const LangOptions &LangOpts,
@@ -493,9 +494,30 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
   Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
   Options.StackAlignmentOverride = CodeGenOpts.StackAlignment;
+
+  Options.BBSections =
+      llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
+          .Case("all", llvm::BasicBlockSection::All)
+          .Case("labels", llvm::BasicBlockSection::Labels)
+          .StartsWith("list=", llvm::BasicBlockSection::List)
+          .Case("none", llvm::BasicBlockSection::None)
+          .Default(llvm::BasicBlockSection::None);
+
+  if (Options.BBSections == llvm::BasicBlockSection::List) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+        MemoryBuffer::getFile(CodeGenOpts.BBSections.substr(5));
+    if (!MBOrErr)
+      Diags.Report(diag::err_fe_unable_to_load_basic_block_sections_file)
+          << MBOrErr.getError().message();
+    else
+      Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+  }
+
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
+  Options.UniqueBasicBlockSectionNames =
+      CodeGenOpts.UniqueBasicBlockSectionNames;
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.ExplicitEmulatedTLS = CodeGenOpts.ExplicitEmulatedTLS;
@@ -815,7 +837,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
 
   llvm::TargetOptions Options;
-  initTargetOptions(Options, CodeGenOpts, TargetOpts, LangOpts, HSOpts);
+  initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts, HSOpts);
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
 }
@@ -1496,15 +1518,12 @@ BitcodeModule *clang::FindThinLTOModule(MutableArrayRef<BitcodeModule> BMs) {
   return nullptr;
 }
 
-static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
-                              const HeaderSearchOptions &HeaderOpts,
-                              const CodeGenOptions &CGOpts,
-                              const clang::TargetOptions &TOpts,
-                              const LangOptions &LOpts,
-                              std::unique_ptr<raw_pwrite_stream> OS,
-                              std::string SampleProfile,
-                              std::string ProfileRemapping,
-                              BackendAction Action) {
+static void runThinLTOBackend(
+    DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex, Module *M,
+    const HeaderSearchOptions &HeaderOpts, const CodeGenOptions &CGOpts,
+    const clang::TargetOptions &TOpts, const LangOptions &LOpts,
+    std::unique_ptr<raw_pwrite_stream> OS, std::string SampleProfile,
+    std::string ProfileRemapping, BackendAction Action) {
   StringMap<DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -1574,7 +1593,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.RelocModel = CGOpts.RelocationModel;
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
+  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
@@ -1664,8 +1683,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
     // of an error).
     if (CombinedIndex) {
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
-        runThinLTOBackend(CombinedIndex.get(), M, HeaderOpts, CGOpts, TOpts,
-                          LOpts, std::move(OS), CGOpts.SampleProfileFile,
+        runThinLTOBackend(Diags, CombinedIndex.get(), M, HeaderOpts, CGOpts,
+                          TOpts, LOpts, std::move(OS), CGOpts.SampleProfileFile,
                           CGOpts.ProfileRemappingFile, Action);
         return;
       }
