@@ -305,19 +305,19 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
   Weights.reserve(TI->getNumSuccessors());
-  for (unsigned i = 1, e = WeightsNode->getNumOperands(); i != e; ++i) {
+  for (unsigned I = 1, E = WeightsNode->getNumOperands(); I != E; ++I) {
     ConstantInt *Weight =
-        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(i));
+        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(I));
     if (!Weight)
       return false;
     assert(Weight->getValue().getActiveBits() <= 32 &&
            "Too many bits for uint32_t");
     Weights.push_back(Weight->getZExtValue());
     WeightSum += Weights.back();
-    if (PostDominatedByUnreachable.count(TI->getSuccessor(i - 1)))
-      UnreachableIdxs.push_back(i - 1);
+    if (PostDominatedByUnreachable.count(TI->getSuccessor(I - 1)))
+      UnreachableIdxs.push_back(I - 1);
     else
-      ReachableIdxs.push_back(i - 1);
+      ReachableIdxs.push_back(I - 1);
   }
   assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
 
@@ -328,32 +328,32 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 
   if (ScalingFactor > 1) {
     WeightSum = 0;
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      Weights[i] /= ScalingFactor;
-      WeightSum += Weights[i];
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
+      Weights[I] /= ScalingFactor;
+      WeightSum += Weights[I];
     }
   }
   assert(WeightSum <= UINT32_MAX &&
          "Expected weights to scale down to 32 bits");
 
   if (WeightSum == 0 || ReachableIdxs.size() == 0) {
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      Weights[i] = 1;
+    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
+      Weights[I] = 1;
     WeightSum = TI->getNumSuccessors();
   }
 
   // Set the probability.
   SmallVector<BranchProbability, 2> BP;
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-    BP.push_back({ Weights[i], static_cast<uint32_t>(WeightSum) });
+  for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
+    BP.push_back({ Weights[I], static_cast<uint32_t>(WeightSum) });
 
   // Examine the metadata against unreachable heuristic.
   // If the unreachable heuristic is more strong then we use it for this edge.
   if (UnreachableIdxs.size() > 0 && ReachableIdxs.size() > 0) {
     auto UnreachableProb = UR_TAKEN_PROB;
-    for (auto i : UnreachableIdxs)
-      if (UnreachableProb < BP[i]) {
-        BP[i] = UnreachableProb;
+    for (auto I : UnreachableIdxs)
+      if (UnreachableProb < BP[I]) {
+        BP[I] = UnreachableProb;
       }
 
     // Because of possible rounding errors and the above fix up for
@@ -376,8 +376,8 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
     // newBP[i] = oldBP[i] * Denominator / (Denominator - ToDistribute)
     BranchProbability PerEdge = ToDistribute / ReachableIdxs.size();
     if (PerEdge > BranchProbability::getZero())
-      for (auto i : ReachableIdxs)
-        BP[i] += PerEdge;
+      for (auto I : ReachableIdxs)
+        BP[I] += PerEdge;
   }
 
   setEdgeProbability(BB, BP);
