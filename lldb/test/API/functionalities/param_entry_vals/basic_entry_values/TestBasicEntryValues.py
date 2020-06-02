@@ -12,6 +12,7 @@ lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators,
         name="BasicEntryValues_V5",
         build_dict=dict(CXXFLAGS_EXTRAS="-O2 -glldb"))
 
-lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators,
+lldbinline.MakeInlineTest(__file__, globals(),
+        decorators=decorators+[skipIf(debug_info="dsym")],
         name="BasicEntryValues_GNU",
         build_dict=dict(CXXFLAGS_EXTRAS="-O2 -ggdb"))
