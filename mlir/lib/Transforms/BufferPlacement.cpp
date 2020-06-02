@@ -469,6 +469,57 @@ LogicalResult FunctionAndBlockSignatureConverter::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// BufferAssignmentCallOpConverter
+//===----------------------------------------------------------------------===//
+
+// Performs `CallOp` conversion to match its operands and results with the
+// signature of the callee after rewriting the callee with
+// FunctionAndBlockSignatureConverter.
+LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
+    CallOp callOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+
+  Location loc = callOp.getLoc();
+  SmallVector<Value, 2> newOperands, replacingValues;
+  SmallVector<Type, 2> newResultTypes;
+  unsigned numResults = callOp.getNumResults();
+  newOperands.reserve(numResults + operands.size());
+  newOperands.append(operands.begin(), operands.end());
+  newResultTypes.reserve(numResults);
+  replacingValues.reserve(numResults);
+
+  // For each memref result of `CallOp` which has not been a memref before type
+  // conversion, a new buffer is allocated and passed to the operands list of
+  // the new `CallOp`. Otherwise, it remains as a caller result.
+  for (Value result : callOp.getResults()) {
+    Type currType = result.getType();
+    Type newType = converter->convertType(result.getType());
+    if (BufferAssignmentTypeConverter::isConvertedMemref(newType, currType)) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.restoreInsertionPoint(
+          bufferAssignment->computeAllocPosition(result.dyn_cast<OpResult>()));
+      Value alloc =
+          rewriter.create<AllocOp>(loc, newType.dyn_cast<MemRefType>());
+      newOperands.push_back(alloc);
+      replacingValues.push_back(alloc);
+    } else {
+      newResultTypes.push_back(currType);
+
+      // No replacing is required.
+      replacingValues.push_back(nullptr);
+    }
+  }
+
+  // Creating the new `CallOp`.
+  rewriter.create<CallOp>(loc, callOp.getCallee(), newResultTypes, newOperands);
+
+  // Replacing the results of the old `CallOp`.
+  rewriter.replaceOp(callOp, replacingValues);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BufferAssignmentTypeConverter
 //===----------------------------------------------------------------------===//
 
