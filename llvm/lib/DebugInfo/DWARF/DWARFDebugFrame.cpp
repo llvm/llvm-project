@@ -314,9 +314,10 @@ void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
      << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
                getCIEId(IsDWARF64, IsEH))
-     << " CIE\n";
-  OS << format("  Version:               %d\n", Version);
-  OS << "  Augmentation:          \"" << Augmentation << "\"\n";
+     << " CIE\n"
+     << "  Format:                " << FormatString(IsDWARF64) << "\n"
+     << format("  Version:               %d\n", Version)
+     << "  Augmentation:          \"" << Augmentation << "\"\n";
   if (Version >= 4) {
     OS << format("  Address size:          %u\n", (uint32_t)AddressSize);
     OS << format("  Segment desc size:     %u\n",
@@ -349,6 +350,7 @@ void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
     OS << "<invalid offset>";
   OS << format(" pc=%08" PRIx64 "...%08" PRIx64 "\n", InitialLocation,
                InitialLocation + AddressRange);
+  OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
   CFIs.dump(OS, MRI, IsEH);
