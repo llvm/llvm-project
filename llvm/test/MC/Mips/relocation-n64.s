@@ -70,4 +70,6 @@
         .word 0
 bar:
         .word 1
+        .option pic2
+        .quad foo+0x1fffffff0-.               // RELOC: R_MIPS_PC32/R_MIPS_64/R_MIPS_NONE foo 0x1FFFFFFF0
 // DATA-LABEL: Section {
