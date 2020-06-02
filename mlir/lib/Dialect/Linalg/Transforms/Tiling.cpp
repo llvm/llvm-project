@@ -459,8 +459,8 @@ class RewritePatternList<OpTy, OpTypes...> {
 public:
   static void insert(OwningRewritePatternList &patterns,
                      const LinalgTilingOptions &options, MLIRContext *ctx) {
-    patterns.insert<LinalgTilingPattern<OpTy>>(ctx, options,
-                                               LinalgMarker({}, "tiled"));
+    patterns.insert<LinalgTilingPattern<OpTy>>(
+        ctx, options, LinalgMarker({}, Identifier::get("tiled", ctx)));
     RewritePatternList<OpTypes...>::insert(patterns, options, ctx);
   }
 };
