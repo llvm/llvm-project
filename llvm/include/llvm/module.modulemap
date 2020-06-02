@@ -119,6 +119,7 @@ module LLVM_DebugInfo_PDB {
   exclude header "DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumSymbols.h"
   exclude header "DebugInfo/PDB/DIA/DIAEnumTables.h"
+  exclude header "DebugInfo/PDB/DIA/DIAError.h"
   exclude header "DebugInfo/PDB/DIA/DIAFrameData.h"
   exclude header "DebugInfo/PDB/DIA/DIAInjectedSource.h"
   exclude header "DebugInfo/PDB/DIA/DIALineNumber.h"
