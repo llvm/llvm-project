@@ -107,7 +107,7 @@ CU_4_version:
         .byte 0 # NULL
 CU_4_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x00000015, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000019)
+# CHECK: 0x00000000: Compile Unit: length = 0x00000015, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000019)
 # CHECK: 0x0000000b: DW_TAG_compile_unit
 
 # DWARF v5 normal CU header.
@@ -125,7 +125,7 @@ CU_5_version:
         .byte 0 # NULL
 CU_5_end:
 
-# CHECK: 0x00000019: Compile Unit: length = 0x00000016, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000033)
+# CHECK: 0x00000019: Compile Unit: length = 0x00000016, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000033)
 # CHECK: 0x00000025: DW_TAG_compile_unit
 
         .section .debug_info.dwo,"e",@progbits
@@ -147,7 +147,7 @@ CU_split_5_version:
         .byte 0 # NULL
 CU_split_5_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x0000001e, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x000000000000005a (next unit at 0x00000022)
+# CHECK: 0x00000000: Compile Unit: length = 0x0000001e, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = 0x000000000000005a (next unit at 0x00000022)
 # CHECK: 0x00000014: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWO producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_dwo_compile_unit"
