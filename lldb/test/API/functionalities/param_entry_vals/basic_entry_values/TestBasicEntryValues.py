@@ -11,3 +11,7 @@ decorators = [skipIf(archs=no_match(supported_archs)),
 lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators,
         name="BasicEntryValues_V5",
         build_dict=dict(CXXFLAGS_EXTRAS="-O2 -glldb"))
+
+lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators,
+        name="BasicEntryValues_GNU",
+        build_dict=dict(CXXFLAGS_EXTRAS="-O2 -ggdb"))

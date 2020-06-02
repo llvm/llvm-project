@@ -2,9 +2,9 @@ volatile int x;
 
 void __attribute__((noinline)) sink() {
   x++; //% self.filecheck("bt", "main.cpp", "-implicit-check-not=artificial")
-  // CHECK: frame #0: 0x{{[0-9a-f]+}} a.out`sink() at main.cpp:[[@LINE-1]]:4 [opt]
-  // CHECK-NEXT: func2{{.*}} [opt] [artificial]
-  // CHECK-NEXT: main{{.*}} [opt]
+  // CHECK: frame #0: 0x{{[0-9a-f]+}} a.out`sink() at main.cpp:[[@LINE-1]]:4
+  // CHECK-NEXT: func2{{.*}} [artificial]
+  // CHECK-NEXT: main{{.*}}
 }
 
 void __attribute__((noinline)) func2() {
