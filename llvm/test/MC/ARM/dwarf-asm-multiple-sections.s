@@ -78,7 +78,7 @@ b:
 // DWARF34-NEXT: 00000000 <End of list>
 
 // DWARF5:      .debug_rnglists contents:
-// DWARF5-NEXT: 0x00000000: range list header: length = 0x00000015, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000000
+// DWARF5-NEXT: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000000
 // DWARF5-NEXT: ranges:
 // DWARF5-NEXT: 0x0000000c: [DW_RLE_start_length]: 0x00000000, 0x00000004 => [0x00000000, 0x00000004)
 // DWARF5-NEXT: 0x00000012: [DW_RLE_start_length]: 0x00000000, 0x00000004 => [0x00000000, 0x00000004)
