@@ -336,6 +336,8 @@ __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_omp_reg_task_with_affinity, false, Int32, IdentPtr, Int32,
+          Int8Ptr, Int32, Int8Ptr)
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
 __OMP_RTL(omp_get_num_threads, false, Int32, )
