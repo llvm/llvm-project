@@ -216,6 +216,7 @@ Range1_end:
 # RNGLISTS:      .debug_rnglists contents:
 # RNGLISTS:      range list header:
 # RNGLISTS-SAME:   length = 0x0000000000000031,
+# RNGLISTS-SAME:   format = DWARF64,
 # RNGLISTS-SAME:   version = 0x0005,
 # RNGLISTS-SAME:   addr_size = 0x04,
 # RNGLISTS-SAME:   seg_size = 0x00,
@@ -234,6 +235,7 @@ Range1_end:
 # RNGLISTS:      .debug_rnglists.dwo contents:
 # RNGLISTS:      range list header:
 # RNGLISTS-SAME:   length = 0x0000000000000022,
+# RNGLISTS-SAME:   format = DWARF64,
 # RNGLISTS-SAME:   version = 0x0005,
 # RNGLISTS-SAME:   addr_size = 0x04,
 # RNGLISTS-SAME:   seg_size = 0x00,

@@ -32,7 +32,7 @@
 
 # BOTH-NEXT:         DW_LLE_startx_length (0x000000000000dead, 0x0000000000000001): DW_OP_reg4 RSI)
 
-# BOTH: locations list header: length = 0x00000056, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# BOTH: locations list header: length = 0x00000056, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # BOTH-NEXT: 0x0000000c:
 # BOTH-NEXT:     DW_LLE_startx_endx     (0x0000000000000000, 0x0000000000000001): DW_OP_reg0 RAX
 # BOTH-NEXT:     DW_LLE_startx_length   (0x0000000000000001, 0x0000000000000001): DW_OP_reg1 RDX

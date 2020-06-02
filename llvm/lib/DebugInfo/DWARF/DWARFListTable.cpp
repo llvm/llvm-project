@@ -80,11 +80,12 @@ void DWARFListTableHeader::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx64 ": ", HeaderOffset);
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
-  OS << format("%s list header: length = 0x%0*" PRIx64
-               ", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
+  OS << format("%s list header: length = 0x%0*" PRIx64, ListTypeString.data(),
+               OffsetDumpWidth, HeaderData.Length)
+     << ", format = " << dwarf::FormatString(Format)
+     << format(", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
                ", seg_size = 0x%2.2" PRIx8
                ", offset_entry_count = 0x%8.8" PRIx32 "\n",
-               ListTypeString.data(), OffsetDumpWidth, HeaderData.Length,
                HeaderData.Version, HeaderData.AddrSize, HeaderData.SegSize,
                HeaderData.OffsetEntryCount);
 

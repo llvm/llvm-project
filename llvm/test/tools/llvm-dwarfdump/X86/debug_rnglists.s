@@ -5,10 +5,10 @@
 # RUN: FileCheck %s --input-file %t.err --check-prefix=ERR
 
 # BOTH:         .debug_rnglists contents:
-# TERSE-NEXT:     range list header: length = 0x00000037, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:     range list header: length = 0x00000037, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x00000037, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x00000037, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
 # TERSE-NEXT:   [0x0000000000000010, 0x0000000000000020)
@@ -24,10 +24,10 @@
 # VERBOSE-NEXT: 0x00000029: [DW_RLE_start_end   ]: [0x0000000000000100, 0x0000000000000200)
 # VERBOSE-NEXT: 0x0000003a: [DW_RLE_end_of_list ]
 
-# TERSE-NEXT:   range list header: length = 0x0000002b, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000002
+# TERSE-NEXT:   range list header: length = 0x0000002b, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000002
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x0000002b, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000002
+# VERBOSE-SAME: range list header: length = 0x0000002b, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00, offset_entry_count = 0x00000002
 
 # BOTH-NEXT:    offsets: [
 # BOTH-NEXT:      0x00000008
@@ -49,19 +49,19 @@
 # VERBOSE-NEXT: 0x00000062: [DW_RLE_start_length]:  0x00000036, 0x00000100 => [0x00000036, 0x00000136)
 # VERBOSE-NEXT: 0x00000069: [DW_RLE_end_of_list ]
 
-# TERSE-NEXT:   range list header: length = 0x00000008, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:   range list header: length = 0x00000008, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x00000008, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x00000008, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NOT:     offsets:
 # BOTH:         ranges:
 # BOTH-NOT:     [
 
-# TERSE-NEXT:   range list header: length = 0x0000000b, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:   range list header: length = 0x0000000b, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x0000000b, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x0000000b, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
 # TERSE-NEXT:   <End of list>
@@ -69,10 +69,10 @@
 # VERBOSE-NEXT: 0x00000082: [DW_RLE_base_addressx]:  0x0000000000000000
 # VERBOSE-NEXT: 0x00000084: [DW_RLE_end_of_list ]
 
-# TERSE-NEXT:   range list header: length = 0x0000000c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:   range list header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x0000000c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
 # TERSE-NEXT:   [0x0000000000000000, 0x000000000000002a)
@@ -81,10 +81,10 @@
 # VERBOSE-NEXT: 0x000000a1: [DW_RLE_startx_length]:  0x0000000000000002, 0x000000000000002a => [0x0000000000000000, 0x000000000000002a)
 # VERBOSE-NEXT: 0x000000a4: [DW_RLE_end_of_list ]
 
-# TERSE-NEXT:   range list header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:   range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
 # TERSE-NEXT:   [0x0000000000000800, 0x0000000000001000)
@@ -94,10 +94,10 @@
 # VERBOSE-SAME:                                   [0x0000000000000800, 0x0000000000001000)
 # VERBOSE-NEXT: 0x000000b6: [DW_RLE_end_of_list]
 
-# TERSE-NEXT:   range list header: length = 0x00000017, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# TERSE-NEXT:   range list header: length = 0x00000017, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
-# VERBOSE-SAME: range list header: length = 0x00000017, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# VERBOSE-SAME: range list header: length = 0x00000017, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
 # TERSE-NEXT:   [0x0000000000001800, 0x0000000000002000)
