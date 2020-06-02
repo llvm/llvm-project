@@ -10,7 +10,7 @@ __global__ void use_dispatch_ptr(int* out) {
 }
 
 // CHECK-LABEL: @_Z12test_ds_fmaxf(
-// CHECK: call float @llvm.amdgcn.ds.fmax(float addrspace(3)* @_ZZ12test_ds_fmaxfE6shared, float %{{[^,]*}}, i32 0, i32 0, i1 false)
+// CHECK: call contract float @llvm.amdgcn.ds.fmax(float addrspace(3)* @_ZZ12test_ds_fmaxfE6shared, float %{{[^,]*}}, i32 0, i32 0, i1 false)
 __global__
 void test_ds_fmax(float src) {
   __shared__ float shared;

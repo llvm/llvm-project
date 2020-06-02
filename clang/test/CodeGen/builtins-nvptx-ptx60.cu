@@ -45,25 +45,25 @@ __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
   // CHECK: call i32 @llvm.nvvm.shfl.sync.down.i32(i32 {{%[0-9]+}}, i32
   // expected-error@+1 {{'__nvvm_shfl_sync_down_i32' needs target feature ptx60}}
   __nvvm_shfl_sync_down_i32(mask, i, a, b);
-  // CHECK: call float @llvm.nvvm.shfl.sync.down.f32(i32 {{%[0-9]+}}, float
+  // CHECK: call contract float @llvm.nvvm.shfl.sync.down.f32(i32 {{%[0-9]+}}, float
   // expected-error@+1 {{'__nvvm_shfl_sync_down_f32' needs target feature ptx60}}
   __nvvm_shfl_sync_down_f32(mask, f, a, b);
   // CHECK: call i32 @llvm.nvvm.shfl.sync.up.i32(i32 {{%[0-9]+}}, i32
   // expected-error@+1 {{'__nvvm_shfl_sync_up_i32' needs target feature ptx60}}
   __nvvm_shfl_sync_up_i32(mask, i, a, b);
-  // CHECK: call float @llvm.nvvm.shfl.sync.up.f32(i32 {{%[0-9]+}}, float
+  // CHECK: call contract float @llvm.nvvm.shfl.sync.up.f32(i32 {{%[0-9]+}}, float
   // expected-error@+1 {{'__nvvm_shfl_sync_up_f32' needs target feature ptx60}}
   __nvvm_shfl_sync_up_f32(mask, f, a, b);
   // CHECK: call i32 @llvm.nvvm.shfl.sync.bfly.i32(i32 {{%[0-9]+}}, i32
   // expected-error@+1 {{'__nvvm_shfl_sync_bfly_i32' needs target feature ptx60}}
   __nvvm_shfl_sync_bfly_i32(mask, i, a, b);
-  // CHECK: call float @llvm.nvvm.shfl.sync.bfly.f32(i32 {{%[0-9]+}}, float
+  // CHECK: call contract float @llvm.nvvm.shfl.sync.bfly.f32(i32 {{%[0-9]+}}, float
   // expected-error@+1 {{'__nvvm_shfl_sync_bfly_f32' needs target feature ptx60}}
   __nvvm_shfl_sync_bfly_f32(mask, f, a, b);
   // CHECK: call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 {{%[0-9]+}}, i32
   // expected-error@+1 {{'__nvvm_shfl_sync_idx_i32' needs target feature ptx60}}
   __nvvm_shfl_sync_idx_i32(mask, i, a, b);
-  // CHECK: call float @llvm.nvvm.shfl.sync.idx.f32(i32 {{%[0-9]+}}, float
+  // CHECK: call contract float @llvm.nvvm.shfl.sync.idx.f32(i32 {{%[0-9]+}}, float
   // expected-error@+1 {{'__nvvm_shfl_sync_idx_f32' needs target feature ptx60}}
   __nvvm_shfl_sync_idx_f32(mask, f, a, b);
 
