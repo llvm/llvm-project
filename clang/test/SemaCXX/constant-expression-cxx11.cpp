@@ -2046,9 +2046,9 @@ namespace BadDefaultInit {
   // FIXME: The "constexpr constructor must initialize all members" diagnostic
   // here is bogus (we discard the k(k) initializer because the parameter 'k'
   // has been marked invalid).
-  struct B { // expected-note 2{{candidate}}
-    constexpr B( // expected-warning {{initialize all members}} expected-note {{candidate}}
-        int k = X<B().k>::n) : // expected-error {{no matching constructor}}
+  struct B {
+    constexpr B( // expected-warning {{initialize all members}}
+        int k = X<B().k>::n) : // expected-error {{default argument to function 'B' that is declared later}} expected-note {{here}}
       k(k) {}
     int k; // expected-note {{not initialized}}
   };

@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_SYNTHETIC_SECTIONS_H
 #define LLD_MACHO_SYNTHETIC_SECTIONS_H
 
+#include "Config.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "OutputSection.h"
@@ -66,7 +67,7 @@ class PageZeroSection : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
-  size_t getSize() const override { return ImageBase; }
+  size_t getSize() const override { return PageZeroSize; }
   uint64_t getFileSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
 };

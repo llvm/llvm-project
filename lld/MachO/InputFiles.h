@@ -9,6 +9,8 @@
 #ifndef LLD_MACHO_INPUT_FILES_H
 #define LLD_MACHO_INPUT_FILES_H
 
+#include "MachOStructs.h"
+
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -52,7 +54,7 @@ protected:
 
   void parseSections(ArrayRef<llvm::MachO::section_64>);
 
-  void parseSymbols(ArrayRef<llvm::MachO::nlist_64> nList, const char *strtab,
+  void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
                     bool subsectionsViaSymbols);
 
   void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);

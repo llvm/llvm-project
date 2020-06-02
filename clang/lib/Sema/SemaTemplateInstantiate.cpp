@@ -3609,6 +3609,13 @@ void LocalInstantiationScope::MakeInstantiatedLocalArgPack(const Decl *D) {
   ArgumentPacks.push_back(Pack);
 }
 
+bool LocalInstantiationScope::isLocalPackExpansion(const Decl *D) {
+  for (DeclArgumentPack *Pack : ArgumentPacks)
+    if (std::find(Pack->begin(), Pack->end(), D) != Pack->end())
+      return true;
+  return false;
+}
+
 void LocalInstantiationScope::SetPartiallySubstitutedPack(NamedDecl *Pack,
                                           const TemplateArgument *ExplicitArgs,
                                                     unsigned NumExplicitArgs) {

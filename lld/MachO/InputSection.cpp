@@ -13,6 +13,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
 
+using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support;
 using namespace lld;

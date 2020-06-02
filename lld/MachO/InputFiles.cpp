@@ -45,6 +45,7 @@
 #include "Config.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
+#include "MachOStructs.h"
 #include "OutputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -177,9 +178,7 @@ void InputFile::parseRelocations(const section_64 &sec,
     Reloc r;
     r.type = rel.r_type;
     r.pcrel = rel.r_pcrel;
-    uint32_t secRelOffset = rel.r_address;
-    uint64_t rawAddend =
-        target->getImplicitAddend(buf + sec.offset + secRelOffset, r.type);
+    uint64_t rawAddend = target->getImplicitAddend(mb, sec, rel);
 
     if (rel.r_extern) {
       r.target = symbols[rel.r_symbolnum];
@@ -202,25 +201,25 @@ void InputFile::parseRelocations(const section_64 &sec,
       // TODO: The offset of 4 is probably not right for ARM64, nor for
       //       relocations with r_length != 2.
       uint32_t targetOffset =
-          sec.addr + secRelOffset + 4 + rawAddend - targetSec.addr;
+          sec.addr + rel.r_address + 4 + rawAddend - targetSec.addr;
       r.target = findContainingSubsection(targetSubsecMap, &targetOffset);
       r.addend = targetOffset;
     }
 
-    InputSection *subsec = findContainingSubsection(subsecMap, &secRelOffset);
-    r.offset = secRelOffset;
+    r.offset = rel.r_address;
+    InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
     subsec->relocs.push_back(r);
   }
 }
 
-void InputFile::parseSymbols(ArrayRef<nlist_64> nList, const char *strtab,
-                             bool subsectionsViaSymbols) {
+void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
+                             const char *strtab, bool subsectionsViaSymbols) {
   // resize(), not reserve(), because we are going to create N_ALT_ENTRY symbols
   // out-of-sequence.
   symbols.resize(nList.size());
   std::vector<size_t> altEntrySymIdxs;
 
-  auto createDefined = [&](const nlist_64 &sym, InputSection *isec,
+  auto createDefined = [&](const structs::nlist_64 &sym, InputSection *isec,
                            uint32_t value) -> Symbol * {
     StringRef name = strtab + sym.n_strx;
     if (sym.n_type & N_EXT)
@@ -232,7 +231,7 @@ void InputFile::parseSymbols(ArrayRef<nlist_64> nList, const char *strtab,
   };
 
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
-    const nlist_64 &sym = nList[i];
+    const structs::nlist_64 &sym = nList[i];
 
     // Undefined symbol
     if (!sym.n_sect) {
@@ -291,7 +290,7 @@ void InputFile::parseSymbols(ArrayRef<nlist_64> nList, const char *strtab,
   }
 
   for (size_t idx : altEntrySymIdxs) {
-    const nlist_64 &sym = nList[idx];
+    const structs::nlist_64 &sym = nList[idx];
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
     uint32_t off = sym.n_value - sectionHeaders[sym.n_sect - 1].addr;
     InputSection *subsec = findContainingSubsection(subsecMap, &off);
@@ -313,8 +312,8 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
   // TODO: Error on missing LC_SYMTAB?
   if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
     auto *c = reinterpret_cast<const symtab_command *>(cmd);
-    ArrayRef<nlist_64> nList(
-        reinterpret_cast<const nlist_64 *>(buf + c->symoff), c->nsyms);
+    ArrayRef<structs::nlist_64> nList(
+        reinterpret_cast<const structs::nlist_64 *>(buf + c->symoff), c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
     parseSymbols(nList, strtab, subsectionsViaSymbols);

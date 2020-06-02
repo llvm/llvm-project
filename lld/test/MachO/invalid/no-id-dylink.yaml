@@ -1,5 +1,12 @@
-## This yaml file was originally generated from linking the following source
-## input with ld64:
+# REQUIRES: x86
+# RUN: mkdir -p %t
+# RUN: yaml2obj %s -o %t/libnoid.dylib
+# RUN: echo ".globl _main; .text; _main: ret" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/no-id-dylink.o
+# RUN: not lld -flavor darwinnew -o %t/no-id-dylink -Z -L%t -lnoid %t/no-id-dylink.o 2>&1 | FileCheck %s
+# CHECK: error: dylib {{.*}}libnoid.dylib missing LC_ID_DYLIB load command
+
+## This YAML file was originally generated from linking the following source
+## input with ld64 and passing the resulting binary through obj2yaml:
 ##
 ## .section __TEXT,__cstring
 ## .globl _hello_world
@@ -7,9 +14,9 @@
 ## _hello_world:
 ## .asciz "Hello world!\n"
 ##
-## Then we deleted the LC_ID_DYLIB command from the YAML file.
+## Then we deleted the LC_ID_DYLIB command from the file.
 
---- !mach-o
+!mach-o
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -157,4 +164,3 @@ LinkEditData:
     - ' '
     - _hello_world
     - ''
-...
