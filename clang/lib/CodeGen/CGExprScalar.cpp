@@ -634,8 +634,8 @@ public:
   }
 
   Value *VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
-    VersionTuple Version = E->getVersion();
-    VersionTuple VariantVersion = E->getVariantVersion();
+    VersionTuple Version = E->getVersionAsWritten();
+    VersionTuple VariantVersion = E->getVariantVersionAsWritten();
 
     // If we're checking for a platform older than our minimum deployment
     // target, we can fold the check away.
