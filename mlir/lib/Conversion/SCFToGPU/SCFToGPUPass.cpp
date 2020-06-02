@@ -18,9 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 
-#define PASS_NAME "convert-affine-for-to-gpu"
-#define LOOPOP_TO_GPU_PASS_NAME "convert-loop-op-to-gpu"
-
 using namespace mlir;
 using namespace mlir::scf;
 

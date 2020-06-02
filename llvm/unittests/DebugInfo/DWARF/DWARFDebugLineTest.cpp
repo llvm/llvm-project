@@ -211,8 +211,9 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
 
   EXPECT_THAT_EXPECTED(
       getOrParseLineTableFatalErrors(0),
-      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
-                        "unexpected end of data at offset 0x0"));
+      FailedWithMessage(
+          "parsing line table prologue at offset 0x00000000: "
+          "unexpected end of data at offset 0x1 while reading [0x0, 0x4)"));
 
   EXPECT_THAT_EXPECTED(
       getOrParseLineTableFatalErrors(1),

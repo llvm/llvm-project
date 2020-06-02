@@ -4830,6 +4830,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::SveFloat32:
     case clang::BuiltinType::SveFloat64:
       break;
+
+    case clang::BuiltinType::IncompleteMatrixIdx:
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may

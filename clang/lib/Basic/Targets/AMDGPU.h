@@ -355,7 +355,9 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    return AS == LangAS::opencl_local ? ~0 : 0;
+    // FIXME: Also should handle region.
+    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private)
+      ? ~0 : 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;

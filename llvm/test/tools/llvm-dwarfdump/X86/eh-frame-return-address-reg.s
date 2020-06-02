@@ -11,6 +11,7 @@
 
 # CHECK:      .eh_frame contents:
 # CHECK:      00000000 00000010 00000000 CIE
+# CHECK-NEXT:   Format:                DWARF32
 # CHECK-NEXT:   Version:               1
 # CHECK-NEXT:   Augmentation:          "zR"
 # CHECK-NEXT:   Code alignment factor: 1

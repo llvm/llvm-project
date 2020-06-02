@@ -8304,8 +8304,21 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   }
 
   FullExpr = CorrectDelayedTyposInExpr(FullExpr.get());
-  if (FullExpr.isInvalid())
-    return ExprError();
+  if (FullExpr.isInvalid()) {
+    // Typo-correction fails, we rebuild the broken AST with the typos degraded
+    // to RecoveryExpr.
+    // FIXME: we lose source locations for RecoveryExpr, as TypoExpr doesn't
+    // track source locations.
+    struct TyposReplace : TreeTransform<TyposReplace> {
+      TyposReplace(Sema &SemaRef) : TreeTransform(SemaRef) {}
+      ExprResult TransformTypoExpr(TypoExpr *E) {
+        return this->SemaRef.CreateRecoveryExpr(E->getBeginLoc(),
+                                                E->getEndLoc(), {});
+      }
+    } TT(*this);
+
+    return TT.TransformExpr(FE);
+  }
 
   CheckCompletedExpr(FullExpr.get(), CC, IsConstexpr);
 

@@ -122,11 +122,6 @@ public:
   /// pointers to memref descriptors for arguments.
   LLVM::LLVMType convertFunctionTypeCWrapper(FunctionType type);
 
-  /// Creates descriptor structs from individual values constituting them.
-  Operation *materializeConversion(PatternRewriter &rewriter, Type type,
-                                   ArrayRef<Value> values,
-                                   Location loc) override;
-
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
   LLVM::LLVMType getIndexType();

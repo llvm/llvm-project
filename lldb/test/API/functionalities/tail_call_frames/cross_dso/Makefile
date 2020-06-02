@@ -1,6 +1,6 @@
 LD_EXTRAS := -L. -l$(LIB_PREFIX)One -l$(LIB_PREFIX)Two
 C_SOURCES := main.c
-CFLAGS_EXTRAS := -g -O2 -glldb
+CFLAGS_EXTRAS := -O2
 
 include Makefile.rules
 

@@ -9,6 +9,7 @@
 # CHECK-NEXT: warning: line table program with offset 0x00000000 has length 0xfffffffc but only 0x0000003a bytes are available
 # CHECK-NEXT: Line table prologue:
 # CHECK-NEXT:     total_length: 0x00000000fffffff0
+# CHECK-NEXT:           format: DWARF64
 # CHECK-NEXT:          version: 4
 # CHECK-NEXT:  prologue_length: 0x0000000000000016
 
