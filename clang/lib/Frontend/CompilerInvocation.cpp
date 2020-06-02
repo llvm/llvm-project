@@ -937,10 +937,19 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.TrapFuncName = std::string(Args.getLastArgValue(OPT_ftrap_function_EQ));
   Opts.UseInitArray = !Args.hasArg(OPT_fno_use_init_array);
 
-  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
+  Opts.BBSections =
+      std::string(Args.getLastArgValue(OPT_fbasic_block_sections_EQ, "none"));
+
+  // Basic Block Sections implies Function Sections.
+  Opts.FunctionSections =
+      Args.hasArg(OPT_ffunction_sections) ||
+      (Opts.BBSections != "none" && Opts.BBSections != "labels");
+
   Opts.DataSections = Args.hasArg(OPT_fdata_sections);
   Opts.StackSizeSection = Args.hasArg(OPT_fstack_size_section);
   Opts.UniqueSectionNames = !Args.hasArg(OPT_fno_unique_section_names);
+  Opts.UniqueBasicBlockSectionNames =
+      Args.hasArg(OPT_funique_basic_block_section_names);
   Opts.UniqueInternalLinkageNames =
       Args.hasArg(OPT_funique_internal_linkage_names);
 

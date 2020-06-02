@@ -1988,6 +1988,11 @@ def ffunction_sections : Flag<["-"], "ffunction-sections">, Group<f_Group>,
   Flags<[CC1Option]>,
   HelpText<"Place each function in its own section">;
 def fno_function_sections : Flag<["-"], "fno-function-sections">, Group<f_Group>;
+def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_Group>,
+  Flags<[CC1Option, CC1AsOption]>,
+  HelpText<"Place each function's basic blocks in unique sections (ELF Only) : all | labels | none | list=<file>">,
+  DocBrief<[{Generate labels for each basic block or place each basic block or a subset of basic blocks in its own section.}]>,
+  Values<"all,labels,none,list=">;
 def fdata_sections : Flag <["-"], "fdata-sections">, Group<f_Group>,
  Flags<[CC1Option]>, HelpText<"Place each data in its own section">;
 def fno_data_sections : Flag <["-"], "fno-data-sections">, Group<f_Group>;
@@ -2001,6 +2006,12 @@ def funique_section_names : Flag <["-"], "funique-section-names">,
   HelpText<"Use unique names for text and data sections">;
 def fno_unique_section_names : Flag <["-"], "fno-unique-section-names">,
   Group<f_Group>, Flags<[CC1Option]>;
+
+def funique_basic_block_section_names : Flag <["-"], "funique-basic-block-section-names">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Use unique names for basic block sections (ELF Only)">;
+def fno_unique_basic_block_section_names : Flag <["-"], "fno-unique-basic-block-section-names">,
+  Group<f_Group>;
 
 def funique_internal_linkage_names : Flag <["-"], "funique-internal-linkage-names">,
   Group<f_Group>, Flags<[CC1Option]>,
