@@ -1045,7 +1045,7 @@ uptr GetUserBegin(uptr chunk) {
   if (!m)
     Printf(
         "ASAN is about to crash with a CHECK failure.\n"
-        "The ASAN developers are trying to chaise down this bug,\n"
+        "The ASAN developers are trying to chase down this bug,\n"
         "so if you've encountered this bug please let us know.\n"
         "See also: https://github.com/google/sanitizers/issues/1193\n"
         "chunk: %p caller %p __lsan_current_stage %s\n",
