@@ -469,11 +469,12 @@ entry:
                                  i32 2, label %case_c
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !8
+; Reachable probabilities keep their relation: 4/64/4/4 = 5.26% / 84.21% / 5.26% / 5.26%.
 ; CHECK: edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x07ffffff / 0x80000000 = 6.25%
-; CHECK: edge entry -> case_c probability is 0x67ffffff / 0x80000000 = 81.25% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x07ffffff / 0x80000000 = 6.25%
-; CHECK: edge entry -> case_e probability is 0x07ffffff / 0x80000000 = 6.25%
+; CHECK: edge entry -> case_b probability is 0x06bca1af / 0x80000000 = 5.26%
+; CHECK: edge entry -> case_c probability is 0x6bca1af3 / 0x80000000 = 84.21% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x06bca1af / 0x80000000 = 5.26%
+; CHECK: edge entry -> case_e probability is 0x06bca1af / 0x80000000 = 5.26%
 
 case_a:
   unreachable
@@ -511,11 +512,13 @@ entry:
                                  i32 2, label %case_c
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !9
+; Reachable probabilities keep their relation: 64/4/4 = 88.89% / 5.56% / 5.56%.
 ; CHECK: edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
 ; CHECK: edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6aaaaaaa / 0x80000000 = 83.33% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x0aaaaaaa / 0x80000000 = 8.33%
-; CHECK: edge entry -> case_e probability is 0x0aaaaaaa / 0x80000000 = 8.33%
+; CHECK: edge entry -> case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK: edge entry -> case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
+
 
 case_a:
   unreachable
@@ -551,11 +554,12 @@ entry:
                                  i32 2, label %case_c
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !10
+; Reachable probabilities keep their relation: 64/4/4 = 88.89% / 5.56% / 5.56%.
 ; CHECK: edge entry -> case_a probability is 0x00000000 / 0x80000000 = 0.00%
 ; CHECK: edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6e08fb82 / 0x80000000 = 85.96% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x08fb823e / 0x80000000 = 7.02%
-; CHECK: edge entry -> case_e probability is 0x08fb823e / 0x80000000 = 7.02%
+; CHECK: edge entry -> case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK: edge entry -> case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
 
 case_a:
   unreachable
