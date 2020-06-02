@@ -68,6 +68,7 @@
     .long 0xffffffff                # DWARF64 mark
     .quad   .L4end - .L4version     # Length
 # CHECK: Address Range Header: length = 0x000000000000001c,
+# CHECK-SAME: format = DWARF64,
 .L4version:
     .short  2                       # Version
     .quad   0x123456789abc          # Debug Info Offset

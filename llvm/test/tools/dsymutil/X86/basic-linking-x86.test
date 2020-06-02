@@ -143,12 +143,12 @@ CHECK:    NULL
 CHECK-NOT: .debug_loc contents
 
 CHECK:.debug_aranges contents:
-CHECK-NEXT:Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT:[0x0000000100000ea0, 0x0000000100000ec4)
-CHECK-NEXT:Address Range Header: length = 0x0000003c, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:Address Range Header: length = 0x0000003c, format = DWARF32, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT:[0x0000000100000ed0, 0x0000000100000f19)
 CHECK-NEXT:[0x0000000100000f20, 0x0000000100000f37)
-CHECK-NEXT:Address Range Header: length = 0x0000003c, version = 0x0002, cu_offset = 0x00000126, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:Address Range Header: length = 0x0000003c, format = DWARF32, version = 0x0002, cu_offset = 0x00000126, addr_size = 0x08, seg_size = 0x00
 CHECK-NEXT:[0x0000000100000f40, 0x0000000100000f84)
 CHECK-NEXT:[0x0000000100000f90, 0x0000000100000fa9)
 
