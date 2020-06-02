@@ -45,7 +45,7 @@ namespace llvm {
   FunctionPass *createUnreachableBlockEliminationPass();
 
   /// createBBSectionsPrepare Pass - This pass assigns sections to machine basic
-  /// blocks and is enabled with -fbasicblock-sections.
+  /// blocks and is enabled with -fbasic-block-sections.
   /// Buf is a memory buffer that contains the list of functions and basic
   /// block ids to selectively enable basic block sections.
   MachineFunctionPass *createBBSectionsPreparePass(const MemoryBuffer *Buf);

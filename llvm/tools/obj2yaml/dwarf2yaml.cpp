@@ -115,10 +115,12 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   return ErrorSuccess();
 }
 
-void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
-                    DWARFSection Section) {
+static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
+                                            const DWARFSection &Section,
+                                            bool IsGNUStyle) {
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
+  DWARFYAML::PubSection Y(IsGNUStyle);
   uint64_t Offset = 0;
   dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);
@@ -127,41 +129,35 @@ void dumpPubSection(DWARFContext &DCtx, DWARFYAML::PubSection &Y,
   while (Offset < Y.Length.getLength()) {
     DWARFYAML::PubEntry NewEntry;
     NewEntry.DieOffset = PubSectionData.getU32(&Offset);
-    if (Y.IsGNUStyle)
+    if (IsGNUStyle)
       NewEntry.Descriptor = PubSectionData.getU8(&Offset);
     NewEntry.Name = PubSectionData.getCStr(&Offset);
     Y.Entries.push_back(NewEntry);
   }
+
+  return Y;
 }
 
 void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   const DWARFObject &D = DCtx.getDWARFObj();
 
   const DWARFSection PubNames = D.getPubnamesSection();
-  if (!PubNames.Data.empty()) {
-    Y.PubNames.emplace(/*IsGNUStyle=*/false);
-    dumpPubSection(DCtx, *Y.PubNames, PubNames);
-  }
+  if (!PubNames.Data.empty())
+    Y.PubNames = dumpPubSection(DCtx, PubNames, /*IsGNUStyle=*/false);
 
   const DWARFSection PubTypes = D.getPubtypesSection();
-  if (!PubTypes.Data.empty()) {
-    Y.PubTypes.emplace(/*IsGNUStyle=*/false);
-    dumpPubSection(DCtx, *Y.PubTypes, PubTypes);
-  }
+  if (!PubTypes.Data.empty())
+    Y.PubTypes = dumpPubSection(DCtx, PubTypes, /*IsGNUStyle=*/false);
 
   const DWARFSection GNUPubNames = D.getGnuPubnamesSection();
-  if (!GNUPubNames.Data.empty()) {
+  if (!GNUPubNames.Data.empty())
     // TODO: Test dumping .debug_gnu_pubnames section.
-    Y.GNUPubNames.emplace(/*IsGNUStyle=*/true);
-    dumpPubSection(DCtx, *Y.GNUPubNames, GNUPubNames);
-  }
+    Y.GNUPubNames = dumpPubSection(DCtx, GNUPubNames, /*IsGNUStyle=*/true);
 
   const DWARFSection GNUPubTypes = D.getGnuPubtypesSection();
-  if (!GNUPubTypes.Data.empty()) {
+  if (!GNUPubTypes.Data.empty())
     // TODO: Test dumping .debug_gnu_pubtypes section.
-    Y.GNUPubTypes.emplace(/*IsGNUStyle=*/true);
-    dumpPubSection(DCtx, *Y.GNUPubTypes, GNUPubTypes);
-  }
+    Y.GNUPubTypes = dumpPubSection(DCtx, GNUPubTypes, /*IsGNUStyle=*/true);
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {

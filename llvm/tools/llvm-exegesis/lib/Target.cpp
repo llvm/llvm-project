@@ -30,8 +30,7 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
 }
 
 Expected<std::unique_ptr<pfm::Counter>>
-ExegesisTarget::createCounter(const char *CounterName,
-                              const LLVMState &) const {
+ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &) const {
   pfm::PerfEvent Event(CounterName);
   if (!Event.valid())
     return llvm::make_error<Failure>(

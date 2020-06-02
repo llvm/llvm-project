@@ -157,6 +157,21 @@ public:
     return success();
   }
 };
+
+/// Converts `CallOp` to match its operands and results with the
+/// the callee after rewriting the callee with
+/// FunctionAndBlockSignatureConverter.
+class BufferAssignmentCallOpConverter
+    : public BufferAssignmentOpConversionPattern<CallOp> {
+public:
+  using BufferAssignmentOpConversionPattern<
+      CallOp>::BufferAssignmentOpConversionPattern;
+
+  /// Performs the actual `CallOp` conversion step.
+  LogicalResult
+  matchAndRewrite(CallOp callOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final;
+};
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_BUFFERPLACEMENT_H

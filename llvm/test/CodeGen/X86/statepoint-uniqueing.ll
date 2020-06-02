@@ -14,16 +14,16 @@ declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32) #3
 define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_gcrelocate_uniqueing:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq f
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq (%rsp), %rdi
 ; CHECK-NEXT:    movq %rdi, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq use
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %tok = tail call token (i64, i32, void ()*, i32, i32, ...)
@@ -38,16 +38,16 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_gcptr_uniqueing:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq f
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq (%rsp), %rdi
 ; CHECK-NEXT:    movq %rdi, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq use
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %ptr2 = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
@@ -64,12 +64,12 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 define void @test_deopt_use(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_deopt_use:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq f
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   tail call token (i64, i32, void ()*, i32, i32, ...)
