@@ -230,7 +230,7 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
   SDValue Incoming = Builder.getValue(IncomingValue);
 
   if (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-      isa<FrameIndexSDNode>(Incoming)) {
+      isa<FrameIndexSDNode>(Incoming) || Incoming.isUndef()) {
     // We won't need to spill this, so no need to check for previously
     // allocated stack slots
     return;
@@ -387,6 +387,15 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
   // exploit that chain wise.  DAGCombine will happily do so as needed, so
   // doing it here would be a small compile time win at most.
   SDValue Chain = Builder.getRoot();
+
+  if (Incoming.isUndef() && Incoming.getValueType().getSizeInBits() <= 64) {
+    // Put an easily recognized constant that's unlikely to be a valid
+    // value so that uses of undef by the consumer of the stackmap is
+    // easily recognized. This is legal since the compiler is always
+    // allowed to chose an arbitrary value for undef.
+    pushStackMapConstant(Ops, Builder, 0xFEFEFEFE);
+    return;
+  }
 
   // If the original value was a constant, make sure it gets recorded as
   // such in the stackmap.  This is required so that the consumer can
@@ -1005,6 +1014,13 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();
   SDValue SD = getValue(DerivedPtr);
+
+  if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
+    // Lowering relocate(undef) as arbitrary constant. Current constant value
+    // is chosen such that it's unlikely to be a valid pointer.
+    setValue(&Relocate, DAG.getTargetConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    return;
+  }
 
   auto &SpillMap = FuncInfo.StatepointSpillMaps[Relocate.getStatepoint()];
   auto SlotIt = SpillMap.find(DerivedPtr);
