@@ -157,8 +157,6 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
   Entry *get(unsigned PhysReg);
 
 public:
-  friend class Cursor;
-
   InterferenceCache() = default;
 
   ~InterferenceCache() {
