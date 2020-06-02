@@ -58,7 +58,7 @@ createAArch64InstructionSelector(const AArch64TargetMachine &,
                                  AArch64Subtarget &, AArch64RegisterBankInfo &);
 FunctionPass *createAArch64PreLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizeCombiner(bool IsOptNone);
-FunctionPass *createAArch64StackTaggingPass(bool MergeInit);
+FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRAPass();
 
 void initializeAArch64A53Fix835769Pass(PassRegistry&);

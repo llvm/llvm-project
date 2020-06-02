@@ -1251,15 +1251,15 @@ Deserializer::processCooperativeMatrixType(ArrayRef<uint32_t> operands) {
            << operands[1];
   }
 
-  auto scope = spirv::symbolizeScope(operands[2]);
+  auto scope = spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
   if (!scope) {
     return emitError(unknownLoc,
                      "OpTypeCooperativeMatrix references undefined scope <id> ")
            << operands[2];
   }
 
-  unsigned rows = operands[3];
-  unsigned columns = operands[4];
+  unsigned rows = getConstantInt(operands[3]).getInt();
+  unsigned columns = getConstantInt(operands[4]).getInt();
 
   typeMap[operands[0]] = spirv::CooperativeMatrixNVType::get(
       elementTy, scope.getValue(), rows, columns);

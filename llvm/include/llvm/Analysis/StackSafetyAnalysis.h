@@ -62,7 +62,7 @@ public:
   StackSafetyGlobalInfo &operator=(StackSafetyGlobalInfo &&);
   ~StackSafetyGlobalInfo();
 
-  bool setMetadata(Module &M) const;
+  bool isSafe(const AllocaInst &AI) const;
   void print(raw_ostream &O) const;
   void dump() const;
 };
@@ -124,14 +124,6 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class StackSafetyGlobalAnnotatorPass
-    : public PassInfoMixin<StackSafetyGlobalAnnotatorPass> {
-
-public:
-  explicit StackSafetyGlobalAnnotatorPass() {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
 /// This pass performs the global (interprocedural) stack safety analysis
 /// (legacy pass manager).
 class StackSafetyGlobalInfoWrapperPass : public ModulePass {
@@ -150,8 +142,6 @@ public:
 
   bool runOnModule(Module &M) override;
 };
-
-ModulePass *createStackSafetyGlobalInfoWrapperPass();
 
 } // end namespace llvm
 

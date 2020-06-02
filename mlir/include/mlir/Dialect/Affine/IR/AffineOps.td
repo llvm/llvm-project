@@ -389,13 +389,6 @@ class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
       return getAttr(getMapAttrName()).cast<AffineMapAttr>();
     }
 
-    /// Returns the AffineMapAttr associated with 'memref'.
-    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
-      assert(memref == getMemRef());
-      return {Identifier::get(getMapAttrName(), getContext()),
-              getAffineMapAttr()};
-    }
-
     static StringRef getMapAttrName() { return "map"; }
   }];
 }
@@ -460,6 +453,14 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
     static StringRef getMapAttrName() { return "map"; }
     AffineMap getAffineMap() { return map(); }
     ValueRange getMapOperands() { return operands(); }
+    ValueRange getDimOperands() {
+      return OperandRange{operands().begin(),
+                        operands().begin() + map().getNumDims()};
+    }
+    ValueRange getSymbolOperands() {
+      return OperandRange{operands().begin() + map().getNumDims(),
+                        operands().end()};
+    }
   }];
   let verifier = [{ return ::verifyAffineMinMaxOp(*this); }];
   let printer = [{ return ::printAffineMinMaxOp(p, *this); }];

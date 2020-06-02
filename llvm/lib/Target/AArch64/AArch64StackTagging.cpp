@@ -23,6 +23,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -60,6 +62,11 @@ using namespace llvm;
 static cl::opt<bool> ClMergeInit(
     "stack-tagging-merge-init", cl::Hidden, cl::init(true), cl::ZeroOrMore,
     cl::desc("merge stack variable initializers with tagging when possible"));
+
+static cl::opt<bool>
+    ClUseStackSafety("stack-tagging-use-stack-safety", cl::Hidden,
+                     cl::init(true), cl::ZeroOrMore,
+                     cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
                                      cl::init(40), cl::Hidden);
@@ -275,15 +282,17 @@ class AArch64StackTagging : public FunctionPass {
     int Tag; // -1 for non-tagged allocations
   };
 
-  bool MergeInit;
+  const bool MergeInit;
+  const bool UseStackSafety;
 
 public:
   static char ID; // Pass ID, replacement for typeid
 
-  AArch64StackTagging(bool MergeInit = true)
+  AArch64StackTagging(bool IsOptNone = false)
       : FunctionPass(ID),
-        MergeInit(ClMergeInit.getNumOccurrences() > 0 ? ClMergeInit
-                                                      : MergeInit) {
+        MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
+        UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
+                                                            : !IsOptNone) {
     initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
   }
 
@@ -305,13 +314,16 @@ public:
   StringRef getPassName() const override { return "AArch64 Stack Tagging"; }
 
 private:
-  Function *F;
-  Function *SetTagFunc;
-  const DataLayout *DL;
-  AAResults *AA;
+  Function *F = nullptr;
+  Function *SetTagFunc = nullptr;
+  const DataLayout *DL = nullptr;
+  AAResults *AA = nullptr;
+  const StackSafetyGlobalInfo *SSI = nullptr;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    if (UseStackSafety)
+      AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
   }
@@ -323,11 +335,13 @@ char AArch64StackTagging::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
 INITIALIZE_PASS_END(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                     false, false)
 
-FunctionPass *llvm::createAArch64StackTaggingPass(bool MergeInit) {
-  return new AArch64StackTagging(MergeInit);
+FunctionPass *llvm::createAArch64StackTaggingPass(bool IsOptNone) {
+  return new AArch64StackTagging(IsOptNone);
 }
 
 Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
@@ -402,7 +416,7 @@ bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
       // swifterror allocas are register promoted by ISel
       !AI.isSwiftError() &&
       // safe allocas are not interesting
-      !AI.getMetadata("stack-safe");
+      !(SSI && SSI->isSafe(AI));
   return IsInteresting;
 }
 
@@ -518,6 +532,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 
+  if (UseStackSafety)
+    SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
   if (MergeInit)

@@ -1104,10 +1104,15 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
       return failure();
     }
     typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
+    auto getConstantOp = [&](uint32_t id) {
+      auto attr = IntegerAttr::get(IntegerType::get(32, type.getContext()), id);
+      return prepareConstantInt(loc, attr);
+    };
     operands.push_back(elementTypeID);
-    operands.push_back(static_cast<uint32_t>(cooperativeMatrixType.getScope()));
-    operands.push_back(cooperativeMatrixType.getRows());
-    operands.push_back(cooperativeMatrixType.getColumns());
+    operands.push_back(
+        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())));
+    operands.push_back(getConstantOp(cooperativeMatrixType.getRows()));
+    operands.push_back(getConstantOp(cooperativeMatrixType.getColumns()));
     return success();
   }
 
