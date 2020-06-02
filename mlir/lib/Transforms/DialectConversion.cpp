@@ -722,11 +722,9 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state) {
 }
 
 void ConversionPatternRewriterImpl::eraseDanglingBlocks() {
-  for (auto &action : blockActions) {
-    if (action.kind != BlockActionKind::Erase)
-      continue;
-    delete action.block;
-  }
+  for (auto &action : blockActions)
+    if (action.kind == BlockActionKind::Erase)
+      delete action.block;
 }
 
 void ConversionPatternRewriterImpl::undoBlockActions(

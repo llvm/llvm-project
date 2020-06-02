@@ -288,7 +288,7 @@ ValueVector mlir::scf::buildLoopNest(
           currentLoc = nestedLoc;
         });
     // Set the builder to point to the body of the newly created loop. We don't
-    // do this in the callback beacause the builder is reset when the callback
+    // do this in the callback because the builder is reset when the callback
     // returns.
     builder.setInsertionPointToStart(loop.getBody());
     loops.push_back(loop);
