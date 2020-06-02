@@ -1401,7 +1401,11 @@ private:
     // data transfer statement.
   }
 
-  void genFIR(const Fortran::parser::EntryStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::EntryStmt &) {
+    // FIXME: Need to lower this for F77.
+    mlir::emitError(toLocation(), "ENTRY statement is not handled.");
+    exit(1);
+  }
 
   void genFIR(const Fortran::parser::PauseStmt &stmt) {
     genPauseStatement(*this, stmt);
