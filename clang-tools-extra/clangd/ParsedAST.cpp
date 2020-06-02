@@ -136,8 +136,7 @@ private:
   ReplayPreamble(const IncludeStructure &Includes, PPCallbacks *Delegate,
                  const SourceManager &SM, Preprocessor &PP,
                  const LangOptions &LangOpts, const PreambleBounds &PB)
-      : IncludesToReplay(Includes.MainFileIncludes), Delegate(Delegate), SM(SM),
-        PP(PP) {
+      : Includes(Includes), Delegate(Delegate), SM(SM), PP(PP) {
     // Only tokenize the preamble section of the main file, as we are not
     // interested in the rest of the tokens.
     MainFileTokens = syntax::tokenize(
@@ -168,7 +167,7 @@ private:
   }
 
   void replay() {
-    for (const auto &Inc : IncludesToReplay) {
+    for (const auto &Inc : Includes.MainFileIncludes) {
       const FileEntry *File = nullptr;
       if (Inc.Resolved != "")
         if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
@@ -228,7 +227,7 @@ private:
     }
   }
 
-  std::vector<Inclusion> IncludesToReplay;
+  const IncludeStructure &Includes;
   PPCallbacks *Delegate;
   const SourceManager &SM;
   Preprocessor &PP;
