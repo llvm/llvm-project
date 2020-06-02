@@ -215,7 +215,6 @@ static SectionChunk *const pendingComdat = reinterpret_cast<SectionChunk *>(1);
 
 void ObjFile::initializeChunks() {
   uint32_t numSections = coffObj->getNumberOfSections();
-  chunks.reserve(numSections);
   sparseChunks.resize(numSections + 1);
   for (uint32_t i = 1; i < numSections + 1; ++i) {
     const coff_section *sec = getSection(i);
@@ -458,6 +457,9 @@ void ObjFile::initializeSymbols() {
     uint32_t idx = kv.second;
     checkAndSetWeakAlias(symtab, this, sym, symbols[idx]);
   }
+
+  // Free the memory used by sparseChunks now that symbol loading is finished.
+  decltype(sparseChunks)().swap(sparseChunks);
 }
 
 Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
