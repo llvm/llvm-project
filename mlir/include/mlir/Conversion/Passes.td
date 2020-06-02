@@ -180,27 +180,14 @@ def SCFToStandard : Pass<"convert-scf-to-std"> {
 // SCFToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertSimpleSCFToGPU : FunctionPass<"convert-scf-to-gpu"> {
-  let summary = "Convert top-level loops to GPU kernels";
-  let constructor = "mlir::createSimpleSCFToGPUPass()";
+def ConvertAffineForToGPU : FunctionPass<"convert-affine-for-to-gpu"> {
+  let summary = "Convert top-level AffineFor Ops to GPU kernels";
+  let constructor = "mlir::createAffineForToGPUPass()";
   let options = [
     Option<"numBlockDims", "gpu-block-dims", "unsigned", /*default=*/"1u",
            "Number of GPU block dimensions for mapping">,
     Option<"numThreadDims", "gpu-thread-dims", "unsigned", /*default=*/"1u",
            "Number of GPU thread dimensions for mapping">
-  ];
-}
-
-def ConvertSCFToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
-  let summary = "Convert top-level scf::ForOp to GPU kernels";
-  let constructor = "mlir::createLoopToGPUPass()";
-  let options = [
-    ListOption<"numWorkGroups", "gpu-num-workgroups", "int64_t",
-               "Num workgroups in the GPU launch",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
-    ListOption<"workGroupSize", "gpu-workgroup-size", "int64_t",
-               "Workgroup Size in the GPU launch",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
 }
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-gpu="gpu-block-dims=1 gpu-thread-dims=1" %s | FileCheck %s
+// RUN: mlir-opt -convert-affine-for-to-gpu="gpu-block-dims=1 gpu-thread-dims=1" %s | FileCheck %s
 
 // CHECK-LABEL: @step_var
 func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
