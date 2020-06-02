@@ -389,13 +389,6 @@ class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
       return getAttr(getMapAttrName()).cast<AffineMapAttr>();
     }
 
-    /// Returns the AffineMapAttr associated with 'memref'.
-    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
-      assert(memref == getMemRef());
-      return {Identifier::get(getMapAttrName(), getContext()),
-              getAffineMapAttr()};
-    }
-
     static StringRef getMapAttrName() { return "map"; }
   }];
 }

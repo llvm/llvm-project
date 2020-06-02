@@ -30,7 +30,7 @@ using namespace mlir;
 // Temporary utility: will be replaced when this is modeled through
 // side-effects/op traits. TODO(b/117228571)
 static bool isMemRefDereferencingOp(Operation &op) {
-  if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op) ||
+  if (isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op) ||
       isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op))
     return true;
   return false;
@@ -39,8 +39,8 @@ static bool isMemRefDereferencingOp(Operation &op) {
 /// Return the AffineMapAttr associated with memory 'op' on 'memref'.
 static NamedAttribute getAffineMapAttrForMemRef(Operation *op, Value memref) {
   return TypeSwitch<Operation *, NamedAttribute>(op)
-      .Case<AffineDmaStartOp, AffineLoadOp, AffinePrefetchOp, AffineStoreOp,
-            AffineDmaWaitOp>(
+      .Case<AffineDmaStartOp, AffineReadOpInterface, AffinePrefetchOp,
+            AffineWriteOpInterface, AffineDmaWaitOp>(
           [=](auto op) { return op.getAffineMapAttrForMemRef(memref); });
 }
 
