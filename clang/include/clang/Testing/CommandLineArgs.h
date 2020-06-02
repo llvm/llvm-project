@@ -19,13 +19,13 @@
 namespace clang {
 
 enum TestLanguage {
-  Lang_C,
   Lang_C89,
-  Lang_CXX,
+  Lang_C99,
+  Lang_CXX03,
   Lang_CXX11,
   Lang_CXX14,
   Lang_CXX17,
-  Lang_CXX2a,
+  Lang_CXX20,
   Lang_OpenCL,
   Lang_OBJCXX
 };
