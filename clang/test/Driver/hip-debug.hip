@@ -9,11 +9,13 @@
 // RUN:   FileCheck -check-prefixes=CHECK %s
 
 // CHECK: {{.*}}clang{{.*}}"-triple" "amdgcn-amd-amdhsa"
+// CHECK-NOT: "-disable-O0-optnone"
+// CHECK-NOT: "-disable-O0-noinline"
 // CHECK-DAG: "-debug-info-kind=line-tables-only"
-// CHECK-DAG: "-disable-O0-optnone"
-// CHECK-DAG: "-disable-O0-noinline"
 // CHECK-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // CHECK-DAG: "-debugger-tuning=gdb"
+// CHECK-NOT: "-disable-O0-optnone"
+// CHECK-NOT: "-disable-O0-noinline"
 // CHECK-LABEL: clang-offload-bundler
 // CHECK: {{.*}}clang{{.*}}"-triple" "x86_64-unknown-linux-gnu"
 // CHECK-NOT: "-disable-O0-optnone"

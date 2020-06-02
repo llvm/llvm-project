@@ -3707,8 +3707,6 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       else {
         DebuggerTuning = llvm::DebuggerKind::GDB;
         if (T.getArch() == llvm::Triple::amdgcn) {
-          CmdArgs.push_back("-disable-O0-optnone");
-          CmdArgs.push_back("-disable-O0-noinline");
           CmdArgs.push_back("-mllvm");
           CmdArgs.push_back("-amdgpu-spill-cfi-saved-regs");
           // -ggdb with AMDGCN does not currently compose with options that
