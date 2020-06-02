@@ -72,14 +72,9 @@ static void lowerOpToLoops(Operation *op, ArrayRef<Value> operands,
   SmallVector<Value, 4> loopIvs;
   for (auto dim : tensorType.getShape()) {
     auto loop = rewriter.create<AffineForOp>(loc, /*lb=*/0, dim, /*step=*/1);
-    for (Operation &nested : *loop.getBody())
-      rewriter.eraseOp(&nested);
     loopIvs.push_back(loop.getInductionVar());
 
-    // Terminate the loop body and update the rewriter insertion point to the
-    // beginning of the loop.
-    rewriter.setInsertionPointToStart(loop.getBody());
-    rewriter.create<AffineTerminatorOp>(loc);
+    // Update the rewriter insertion point to the beginning of the loop.
     rewriter.setInsertionPointToStart(loop.getBody());
   }
 
