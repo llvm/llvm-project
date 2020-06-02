@@ -52,6 +52,7 @@ void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
     int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
     OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
+    OS << ", format = " << dwarf::FormatString(S.Format);
     OS << ", version = " << format("0x%04x", S.Version);
     OS << ", unit_offset = "
        << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);

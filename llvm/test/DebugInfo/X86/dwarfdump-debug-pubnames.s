@@ -4,6 +4,7 @@
 
 # CHECK: .debug_pubnames contents:
 # CHECK-NEXT: length = 0x0000000000000032
+# CHECK-SAME: format = DWARF64
 # CHECK-SAME: version = 0x0002
 # CHECK-SAME: unit_offset = 0x0000112233445566
 # CHECK-SAME: unit_size = 0x0000110022003300
