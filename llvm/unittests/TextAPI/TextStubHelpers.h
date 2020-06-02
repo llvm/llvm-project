@@ -6,6 +6,7 @@
 //
 //===-----------------------------------------------------------------------===/
 
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include <algorithm>
 #include <string>
