@@ -305,27 +305,18 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
         // persist in the IR after conversion.
         if (!origArg.use_empty()) {
           rewriter.setInsertionPointToStart(newBlock);
-          auto *newOp = typeConverter->materializeConversion(
-              rewriter, origArg.getType(), llvm::None, loc);
-          origArg.replaceAllUsesWith(newOp->getResult(0));
+          Value newArg = typeConverter->materializeConversion(
+              rewriter, loc, origArg.getType(), llvm::None);
+          assert(newArg &&
+                 "Couldn't materialize a block argument after 1->0 conversion");
+          origArg.replaceAllUsesWith(newArg);
         }
         continue;
       }
 
-      // If mapping is 1-1, replace the remaining uses and drop the cast
-      // operation.
-      // FIXME(riverriddle) This should check that the result type and operand
-      // type are the same, otherwise it should force a conversion to be
-      // materialized.
-      if (argInfo->newArgSize == 1) {
-        origArg.replaceAllUsesWith(
-            mapping.lookupOrDefault(newBlock->getArgument(argInfo->newArgIdx)));
-        continue;
-      }
-
-      // Otherwise this is a 1->N value mapping.
+      // Otherwise this is a 1->1+ value mapping.
       Value castValue = argInfo->castValue;
-      assert(argInfo->newArgSize > 1 && castValue && "expected 1->N mapping");
+      assert(argInfo->newArgSize >= 1 && castValue && "expected 1->1+ mapping");
 
       // If the argument is still used, replace it with the generated cast.
       if (!origArg.use_empty())
@@ -333,7 +324,7 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
 
       // If all users of the cast were removed, we can drop it. Otherwise, keep
       // the operation alive and let the user handle any remaining usages.
-      if (castValue.use_empty())
+      if (castValue.use_empty() && castValue.getDefiningOp())
         castValue.getDefiningOp()->erase();
     }
   }
@@ -389,22 +380,22 @@ Block *ArgConverter::applySignatureConversion(
       continue;
     }
 
-    // If this is a 1->1 mapping, then map the argument directly.
-    if (inputMap->size == 1) {
-      mapping.map(origArg, newArgs[inputMap->inputNo]);
-      info.argInfo[i] = ConvertedArgInfo(inputMap->inputNo, inputMap->size);
-      continue;
-    }
-
-    // Otherwise, this is a 1->N mapping. Call into the provided type converter
-    // to pack the new values.
+    // Otherwise, this is a 1->1+ mapping. Call into the provided type converter
+    // to pack the new values. For 1->1 mappings, if there is no materialization
+    // provided, use the argument directly instead.
     auto replArgs = newArgs.slice(inputMap->inputNo, inputMap->size);
-    Operation *cast = typeConverter->materializeConversion(
-        rewriter, origArg.getType(), replArgs, loc);
-    assert(cast->getNumResults() == 1);
-    mapping.map(origArg, cast->getResult(0));
+    Value newArg;
+    if (typeConverter)
+      newArg = typeConverter->materializeConversion(
+          rewriter, loc, origArg.getType(), replArgs);
+    if (!newArg) {
+      assert(replArgs.size() == 1 &&
+             "couldn't materialize the result of 1->N conversion");
+      newArg = replArgs.front();
+    }
+    mapping.map(origArg, newArg);
     info.argInfo[i] =
-        ConvertedArgInfo(inputMap->inputNo, inputMap->size, cast->getResult(0));
+        ConvertedArgInfo(inputMap->inputNo, inputMap->size, newArg);
   }
 
   // Remove the original block from the region and return the new one.
@@ -1813,6 +1804,15 @@ LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
   // Otherwise, add the new inputs.
   result.addInputs(inputNo, convertedTypes);
   return success();
+}
+
+Value TypeConverter::materializeConversion(PatternRewriter &rewriter,
+                                           Location loc, Type resultType,
+                                           ValueRange inputs) {
+  for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
+    if (Optional<Value> result = fn(rewriter, resultType, inputs, loc))
+      return result.getValue();
+  return nullptr;
 }
 
 /// Create a default conversion pattern that rewrites the type signature of a
