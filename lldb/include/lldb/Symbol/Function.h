@@ -266,6 +266,7 @@ using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
 /// in the call graph between two functions, or to evaluate DW_OP_entry_value.
 class CallEdge {
 public:
+  enum class AddrType : uint8_t { Call, AfterCall };
   virtual ~CallEdge() {}
 
   /// Get the callee's definition.
@@ -281,21 +282,32 @@ public:
   /// made the call.
   lldb::addr_t GetReturnPCAddress(Function &caller, Target &target) const;
 
-  /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
-  lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
+  /// Return an address in the caller. This can either be the address of the
+  /// call instruction, or the address of the instruction after the call.
+  std::pair<AddrType, lldb::addr_t> GetCallerAddress(Function &caller,
+                                                     Target &target) const {
+    return {caller_address_type,
+            GetLoadAddress(caller_address, caller, target)};
+  }
 
-  /// Get the load PC address of the call instruction (or LLDB_INVALID_ADDRESS).
-  lldb::addr_t GetCallInstPC(Function &caller, Target &target) const;
+  bool IsTailCall() const { return is_tail_call; }
 
   /// Get the call site parameters available at this call edge.
   llvm::ArrayRef<CallSiteParameter> GetCallSiteParameters() const {
     return parameters;
   }
 
+  /// Non-tail-calls go first, sorted by the return address. They are followed
+  /// by tail calls, which have no specific order.
+  std::pair<bool, lldb::addr_t> GetSortKey() const {
+    return {is_tail_call, GetUnresolvedReturnPCAddress()};
+  }
+
 protected:
-  CallEdge(lldb::addr_t return_pc, lldb::addr_t call_inst_pc,
-           CallSiteParameterArray &&parameters)
-      : return_pc(return_pc), call_inst_pc(call_inst_pc),
+  CallEdge(AddrType caller_address_type, lldb::addr_t caller_address,
+           bool is_tail_call, CallSiteParameterArray &&parameters)
+      : caller_address(caller_address),
+        caller_address_type(caller_address_type), is_tail_call(is_tail_call),
         parameters(std::move(parameters)) {}
 
   /// Helper that finds the load address of \p unresolved_pc, a file address
@@ -303,13 +315,17 @@ protected:
   static lldb::addr_t GetLoadAddress(lldb::addr_t unresolved_pc,
                                      Function &caller, Target &target);
 
-  /// An invalid address if this is a tail call. Otherwise, the return PC for
-  /// the call. Note that this is a file address which must be resolved.
-  lldb::addr_t return_pc;
+  /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
+  lldb::addr_t GetUnresolvedReturnPCAddress() const {
+    return caller_address_type == AddrType::AfterCall && !is_tail_call
+               ? caller_address
+               : LLDB_INVALID_ADDRESS;
+  }
 
-  /// The address of the call instruction. Usually an invalid address, unless
-  /// this is a tail call.
-  lldb::addr_t call_inst_pc;
+private:
+  lldb::addr_t caller_address;
+  AddrType caller_address_type;
+  bool is_tail_call;
 
   CallSiteParameterArray parameters;
 };
@@ -321,9 +337,11 @@ class DirectCallEdge : public CallEdge {
 public:
   /// Construct a call edge using a symbol name to identify the callee, and a
   /// return PC within the calling function to identify a specific call site.
-  DirectCallEdge(const char *symbol_name, lldb::addr_t return_pc,
-                 lldb::addr_t call_inst_pc, CallSiteParameterArray &&parameters)
-      : CallEdge(return_pc, call_inst_pc, std::move(parameters)) {
+  DirectCallEdge(const char *symbol_name, AddrType caller_address_type,
+                 lldb::addr_t caller_address, bool is_tail_call,
+                 CallSiteParameterArray &&parameters)
+      : CallEdge(caller_address_type, caller_address, is_tail_call,
+                 std::move(parameters)) {
     lazy_callee.symbol_name = symbol_name;
   }
 
@@ -352,10 +370,11 @@ class IndirectCallEdge : public CallEdge {
 public:
   /// Construct a call edge using a DWARFExpression to identify the callee, and
   /// a return PC within the calling function to identify a specific call site.
-  IndirectCallEdge(DWARFExpression call_target, lldb::addr_t return_pc,
-                   lldb::addr_t call_inst_pc,
+  IndirectCallEdge(DWARFExpression call_target, AddrType caller_address_type,
+                   lldb::addr_t caller_address, bool is_tail_call,
                    CallSiteParameterArray &&parameters)
-      : CallEdge(return_pc, call_inst_pc, std::move(parameters)),
+      : CallEdge(caller_address_type, caller_address, is_tail_call,
+                 std::move(parameters)),
         call_target(std::move(call_target)) {}
 
   Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;

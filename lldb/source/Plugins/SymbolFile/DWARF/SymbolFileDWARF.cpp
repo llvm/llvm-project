@@ -3733,26 +3733,30 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
             child.GetCU());
       }
     }
-    if (child.Tag() == DW_TAG_GNU_call_site) {
-      // In DWARF v4 DW_AT_low_pc is always the address of the instruction after
-      // the call. For tail calls, approximate the address of the call
-      // instruction by subtracting 1.
-      if (tail_call)
-        call_inst_pc = low_pc - 1;
-      else
-        return_pc = low_pc;
-    }
-
     if (!call_origin && !call_target) {
       LLDB_LOG(log, "CollectCallEdges: call site without any call target");
       continue;
     }
 
+    addr_t caller_address;
+    CallEdge::AddrType caller_address_type;
+    if (return_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = return_pc;
+      caller_address_type = CallEdge::AddrType::AfterCall;
+    } else if (low_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = low_pc;
+      caller_address_type = CallEdge::AddrType::AfterCall;
+    } else if (call_inst_pc != LLDB_INVALID_ADDRESS) {
+      caller_address = call_inst_pc;
+      caller_address_type = CallEdge::AddrType::Call;
+    } else {
+      LLDB_LOG(log, "CollectCallEdges: No caller address");
+      continue;
+    }
     // Adjust any PC forms. It needs to be fixed up if the main executable
     // contains a debug map (i.e. pointers to object files), because we need a
     // file address relative to the executable's text section.
-    return_pc = FixupAddress(return_pc);
-    call_inst_pc = FixupAddress(call_inst_pc);
+    caller_address = FixupAddress(caller_address);
 
     // Extract call site parameters.
     CallSiteParameterArray parameters =
@@ -3764,9 +3768,9 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
                "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x}) "
                "(call-PC: {2:x})",
                call_origin->GetPubname(), return_pc, call_inst_pc);
-      edge = std::make_unique<DirectCallEdge>(call_origin->GetMangledName(),
-                                              return_pc, call_inst_pc,
-                                              std::move(parameters));
+      edge = std::make_unique<DirectCallEdge>(
+          call_origin->GetMangledName(), caller_address_type, caller_address,
+          tail_call, std::move(parameters));
     } else {
       if (log) {
         StreamString call_target_desc;
@@ -3776,7 +3780,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
                  call_target_desc.GetString());
       }
       edge = std::make_unique<IndirectCallEdge>(
-          *call_target, return_pc, call_inst_pc, std::move(parameters));
+          *call_target, caller_address_type, caller_address, tail_call,
+          std::move(parameters));
     }
 
     if (log && parameters.size()) {
