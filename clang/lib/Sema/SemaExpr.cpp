@@ -4737,6 +4737,7 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
     bool ConversionOk = tryConvertToTy(*this, Context.getSizeType(), &ConvExpr);
     assert(ConversionOk &&
            "should be able to convert any integer type to size type");
+    (void)ConversionOk;
     return ConvExpr.get();
   };
 
