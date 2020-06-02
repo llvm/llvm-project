@@ -483,10 +483,10 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   if (LangOpts.WasmExceptions)
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
 
-  Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
-  Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;
+  Options.NoInfsFPMath = LangOpts.NoHonorInfs;
+  Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = CodeGenOpts.UnsafeFPMath;
+  Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
   Options.StackAlignmentOverride = CodeGenOpts.StackAlignment;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
