@@ -328,6 +328,8 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
               testing::UnorderedElementsAreArray(TestCase.points()));
 }
 
+MATCHER_P(WithFileName, Inc, "") { return arg.FileName == Inc; }
+
 TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
   struct Inclusion {
     Inclusion(const SourceManager &SM, SourceLocation HashLoc,
@@ -439,6 +441,24 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
         Code.substr(FileRange.Begin - 1, FileRange.End - FileRange.Begin + 2));
     EXPECT_EQ(SkippedFiles[I].kind(), tok::header_name);
   }
+
+  // Make sure replay logic works with patched preambles.
+  TU.Code = "";
+  StoreDiags Diags;
+  auto Inputs = TU.inputs();
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  auto EmptyPreamble =
+      buildPreamble(testPath(TU.Filename), *CI, Inputs, true, nullptr);
+  ASSERT_TRUE(EmptyPreamble);
+  TU.Code = "#include <a.h>";
+  Includes.clear();
+  auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(),
+                                     std::move(CI), {}, EmptyPreamble);
+  ASSERT_TRUE(PatchedAST);
+  // Make sure includes were seen only once.
+  EXPECT_THAT(Includes,
+              ElementsAre(WithFileName(testPath("__preamble_patch__.h")),
+                          WithFileName("a.h")));
 }
 
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {

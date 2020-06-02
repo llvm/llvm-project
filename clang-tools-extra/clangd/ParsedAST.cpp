@@ -116,7 +116,7 @@ public:
   // Attach preprocessor hooks such that preamble events will be injected at
   // the appropriate time.
   // Events will be delivered to the *currently registered* PP callbacks.
-  static void attach(const IncludeStructure &Includes, CompilerInstance &Clang,
+  static void attach(std::vector<Inclusion> Includes, CompilerInstance &Clang,
                      const PreambleBounds &PB) {
     auto &PP = Clang.getPreprocessor();
     auto *ExistingCallbacks = PP.getPPCallbacks();
@@ -124,7 +124,7 @@ public:
     if (!ExistingCallbacks)
       return;
     PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(new ReplayPreamble(
-        Includes, ExistingCallbacks, Clang.getSourceManager(), PP,
+        std::move(Includes), ExistingCallbacks, Clang.getSourceManager(), PP,
         Clang.getLangOpts(), PB)));
     // We're relying on the fact that addPPCallbacks keeps the old PPCallbacks
     // around, creating a chaining wrapper. Guard against other implementations.
@@ -133,10 +133,10 @@ public:
   }
 
 private:
-  ReplayPreamble(const IncludeStructure &Includes, PPCallbacks *Delegate,
+  ReplayPreamble(std::vector<Inclusion> Includes, PPCallbacks *Delegate,
                  const SourceManager &SM, Preprocessor &PP,
                  const LangOptions &LangOpts, const PreambleBounds &PB)
-      : Includes(Includes), Delegate(Delegate), SM(SM), PP(PP) {
+      : Includes(std::move(Includes)), Delegate(Delegate), SM(SM), PP(PP) {
     // Only tokenize the preamble section of the main file, as we are not
     // interested in the rest of the tokens.
     MainFileTokens = syntax::tokenize(
@@ -167,7 +167,7 @@ private:
   }
 
   void replay() {
-    for (const auto &Inc : Includes.MainFileIncludes) {
+    for (const auto &Inc : Includes) {
       const FileEntry *File = nullptr;
       if (Inc.Resolved != "")
         if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
@@ -227,7 +227,7 @@ private:
     }
   }
 
-  const IncludeStructure &Includes;
+  const std::vector<Inclusion> Includes;
   PPCallbacks *Delegate;
   const SourceManager &SM;
   Preprocessor &PP;
@@ -382,7 +382,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Includes = Preamble->Includes;
     Includes.MainFileIncludes = Patch->preambleIncludes();
     // Replay the preamble includes so that clang-tidy checks can see them.
-    ReplayPreamble::attach(Includes, *Clang, Preamble->Preamble.getBounds());
+    ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
+                           Preamble->Preamble.getBounds());
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
