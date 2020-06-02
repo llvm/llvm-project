@@ -1,8 +1,10 @@
-//===-- Flang.cpp - Flang+LLVM ToolChain Implementations --------*- C++ -*-===//
+#ifndef __NEWFLANG__
+//===--- Flang.cpp - Flang+LLVM ToolChain Implementations -------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,7 +49,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   SmallString<256> Stem;
   SmallString<256> Path;
   std::string OutFile;
-  bool NeedIEEE = false;
+  bool NeedIEEE = true;
   bool NeedFastMath = false;
   bool NeedRelaxedMath = false;
 
@@ -128,6 +130,24 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       CommonCmdArgs.push_back("-std");
       CommonCmdArgs.push_back(Arg->getValue(0));
     }
+  }
+  // By default -disable-vectorize-pragmas option should be passed to flang1
+  // If the option is found in command line, check its value
+  //   true => Do not pass the option to flang1 [Allow vectorize pragms to be effective]
+  //   false => Pass -disable-vectorize-pragmas to flang1
+  if (Args.hasArg(options::OPT_Menable_vectorize_pragmas_EQ)) {
+    for (auto Arg : Args.filtered(options::OPT_Menable_vectorize_pragmas_EQ)) {
+      StringRef ArgValue = Arg->getValue(0);
+      if (Arg->getNumValues() == 1 &&
+          (ArgValue == "true")) {
+           // Do not pass -disable-vectorize-pragmas to flang1
+      } else {
+        // Pass -disable-vectorize-pragmas option to flang1
+        CommonCmdArgs.push_back("-disable-vectorize-pragmas");
+      }
+    }
+  } else {
+    CommonCmdArgs.push_back("-disable-vectorize-pragmas");
   }
   // AOCC End
   for (auto Arg : Args.filtered(options::OPT_Msave_on)) {
@@ -311,28 +331,34 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     CommonCmdArgs.push_back("8");
   }
 
-  // -g should produce DWARFv2
-  for (auto Arg : Args.filtered(options::OPT_g_Flag)) {
-    Arg->claim();
-    CommonCmdArgs.push_back("-x");
-    CommonCmdArgs.push_back("120");
-    CommonCmdArgs.push_back("0x200");
-  }
+  // Last argument of -g/-gdwarfX should be taken.
+  Arg *GArg = Args.getLastArg(options::OPT_g_Flag);
+  Arg *GDwarfArg = Args.getLastArg(options::OPT_gdwarf_2,
+                                   options::OPT_gdwarf_3,
+                                   options::OPT_gdwarf_4,
+                                   options::OPT_gdwarf_5);
 
-  // -gdwarf-2
-  for (auto Arg : Args.filtered(options::OPT_gdwarf_2)) {
-    Arg->claim();
-    CommonCmdArgs.push_back("-x");
-    CommonCmdArgs.push_back("120");
-    CommonCmdArgs.push_back("0x200");
-  }
+  if (GArg || GDwarfArg) {
 
-  // -gdwarf-3
-  for (auto Arg : Args.filtered(options::OPT_gdwarf_3)) {
-    Arg->claim();
+    for (auto Arg : Args.filtered(options::OPT_g_Flag, options::OPT_gdwarf_2,
+	  options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+	  options::OPT_gdwarf_5)) {
+      Arg->claim();
+    }
+
     CommonCmdArgs.push_back("-x");
     CommonCmdArgs.push_back("120");
-    CommonCmdArgs.push_back("0x4000");
+
+    if (!GDwarfArg) // -g without -gdwarf-X produces default (DWARFv4)
+      CommonCmdArgs.push_back("0x1000000");
+    else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_2)) // -gdwarf-2
+      CommonCmdArgs.push_back("0x200");
+    else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_3)) // -gdwarf-3
+      CommonCmdArgs.push_back("0x4000");
+    else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_4)) // -gdwarf-4
+      CommonCmdArgs.push_back("0x1000000");
+    else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_5)) // -gdwarf-5
+      CommonCmdArgs.push_back("0x2000000");
   }
 
   // -Mipa has no effect
@@ -581,12 +607,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   UpperCmdArgs.append(CommonCmdArgs.begin(), CommonCmdArgs.end()); // Append common arguments
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("19"); UpperCmdArgs.push_back("0x400000");
   UpperCmdArgs.push_back("-quad");
+  UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("7");  UpperCmdArgs.push_back("0x100000"); // AOCC
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("68"); UpperCmdArgs.push_back("0x1");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("59"); UpperCmdArgs.push_back("4");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("15"); UpperCmdArgs.push_back("2");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("49"); UpperCmdArgs.push_back("0x400004");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("51"); UpperCmdArgs.push_back("0x20");
-  UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("57"); UpperCmdArgs.push_back("0x4c");
+  UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("57"); UpperCmdArgs.push_back("0x48");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("58"); UpperCmdArgs.push_back("0x10000");
   UpperCmdArgs.push_back("-x"); UpperCmdArgs.push_back("124"); UpperCmdArgs.push_back("0x1000");
   UpperCmdArgs.push_back("-tp"); UpperCmdArgs.push_back("px");
@@ -611,6 +638,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     UpperCmdArgs.push_back("-x");
     UpperCmdArgs.push_back("52");
     UpperCmdArgs.push_back("2");
+    UpperCmdArgs.push_back("-x");
+    UpperCmdArgs.push_back("2");
+    UpperCmdArgs.push_back("0x400000");
   }
 
   // Add system include arguments.
@@ -919,7 +949,7 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("121"); LowerCmdArgs.push_back("0x800");
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("54"); LowerCmdArgs.push_back("0x10");
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("70"); LowerCmdArgs.push_back("0x40000000");
-  LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("249"); LowerCmdArgs.push_back("89"); // LLVM version
+  LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("249"); LowerCmdArgs.push_back("1023"); // LLVM version
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("124"); LowerCmdArgs.push_back("1");
   LowerCmdArgs.push_back("-y"); LowerCmdArgs.push_back("163"); LowerCmdArgs.push_back("0xc0000000");
   LowerCmdArgs.push_back("-x"); LowerCmdArgs.push_back("189"); LowerCmdArgs.push_back("0x10");
@@ -1034,3 +1064,5 @@ Flang::Flang(const ToolChain &TC)
     : Tool("flang", "flang frontend", TC, RF_Full) {}
 
 Flang::~Flang() {}
+
+#endif

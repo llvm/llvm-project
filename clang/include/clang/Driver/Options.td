@@ -3429,6 +3429,13 @@ defm func_args_alias : BooleanFFlag<"func-args-alias">, Group<gfortran_Group>,
   HelpText<"Function argument may alias (equivalent to ansi alias)">;
 defm use_flang_math_libs : BooleanFFlag<"use-flang-math-libs">, Group<gfortran_Group>,
   HelpText<"Use Flang internal runtime math library instead of LLVM math intrinsics.">;
+// AOCC Begin
+// Flang option to enable all loop vectorize pragmas: !dir$ vector/novector/ivdep
+def Menable_vectorize_pragmas_EQ : Joined<["-"], "Menable-vectorize-pragmas=">, Group<pgi_fortran_Group>,
+HelpText<"Enable loop vectorizing pragmas">, Values<"true,false">,
+Flags<[HelpHidden]>;
+// AOCC End
+
 // Flang-specific options
 multiclass BooleanKFlag<string name> {
   def _on : Flag<["-"], "K"#name>;
