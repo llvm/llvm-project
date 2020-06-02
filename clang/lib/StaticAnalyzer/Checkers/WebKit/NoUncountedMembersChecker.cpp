@@ -75,7 +75,8 @@ public:
         continue;
 
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
-        if (isRefCountable(MemberCXXRD))
+        // If we don't see the definition we just don't know.
+        if (MemberCXXRD->hasDefinition() && isRefCountable(MemberCXXRD))
           reportBug(Member, MemberType, MemberCXXRD, RD);
       }
     }
