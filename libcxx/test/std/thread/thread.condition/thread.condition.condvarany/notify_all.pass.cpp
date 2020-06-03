@@ -18,6 +18,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <atomic>
 #include <cassert>
 
 #include "test_macros.h"
@@ -45,7 +46,7 @@ int main(int, char**)
   notReady = threadCount;
   std::vector<std::thread> threads;
   for (unsigned i = 0; i < threadCount; i++)
-    threads.push_back(std::thread(helper));
+    threads.emplace_back(helper);
   {
     while (notReady > 0)
       std::this_thread::yield();
