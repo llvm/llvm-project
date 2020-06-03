@@ -219,4 +219,16 @@ namespace dr727 { // dr727: partial
   Collision<int, int> c; // expected-note {{in instantiation of}}
 }
 
-// dr777 superseded by dr2233
+namespace dr777 { // dr777: 3.7
+#if __cplusplus >= 201103L
+template <typename... T>
+void f(int i = 0, T ...args) {}
+void ff() { f(); }
+
+template <typename... T>
+void g(int i = 0, T ...args, T ...args2) {}
+
+template <typename... T>
+void h(int i = 0, T ...args, int j = 1) {}
+#endif
+}
