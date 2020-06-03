@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14,c++17 %s readability-use-anyofallof %t
+// RUN: %check_clang_tidy -std=c++14,c++17 %s readability-use-anyofallof %t -- -- -fexceptions
 
 bool good_any_of() {
   int v[] = {1, 2, 3};

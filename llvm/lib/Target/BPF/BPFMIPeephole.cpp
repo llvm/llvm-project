@@ -57,6 +57,7 @@ private:
   bool isPhiFrom32Def(MachineInstr *MovMI);
   bool isMovFrom32Def(MachineInstr *MovMI);
   bool eliminateZExtSeq(void);
+  bool eliminateZExt(void);
 
   std::set<MachineInstr *> PhiInsns;
 
@@ -69,7 +70,12 @@ public:
 
     initialize(MF);
 
-    return eliminateZExtSeq();
+    // First try to eliminate (zext, lshift, rshift) and then
+    // try to eliminate zext.
+    bool ZExtSeqExist, ZExtExist;
+    ZExtSeqExist = eliminateZExtSeq();
+    ZExtExist = eliminateZExt();
+    return ZExtSeqExist || ZExtExist;
   }
 };
 
@@ -228,6 +234,51 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
         ZExtElemNum++;
         Eliminated = true;
       }
+    }
+  }
+
+  return Eliminated;
+}
+
+bool BPFMIPeephole::eliminateZExt(void) {
+  MachineInstr* ToErase = nullptr;
+  bool Eliminated = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      // If the previous instruction was marked for elimination, remove it now.
+      if (ToErase) {
+        ToErase->eraseFromParent();
+        ToErase = nullptr;
+      }
+
+      if (MI.getOpcode() != BPF::MOV_32_64)
+        continue;
+
+      // Eliminate MOV_32_64 if possible.
+      //   MOV_32_64 rA, wB
+      //
+      // If wB has been zero extended, replace it with a SUBREG_TO_REG.
+      // This is to workaround BPF programs where pkt->{data, data_end}
+      // is encoded as u32, but actually the verifier populates them
+      // as 64bit pointer. The MOV_32_64 will zero out the top 32 bits.
+      LLVM_DEBUG(dbgs() << "Candidate MOV_32_64 instruction:");
+      LLVM_DEBUG(MI.dump());
+
+      if (!isMovFrom32Def(&MI))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Removing the MOV_32_64 instruction\n");
+
+      Register dst = MI.getOperand(0).getReg();
+      Register src = MI.getOperand(1).getReg();
+
+      // Build a SUBREG_TO_REG instruction.
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
+        .addImm(0).addReg(src).addImm(BPF::sub_32);
+
+      ToErase = &MI;
+      Eliminated = true;
     }
   }
 

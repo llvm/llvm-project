@@ -20,7 +20,12 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   ZeroDirectiveSupportsNonZeroValue = false;
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
-  Data64bitsDirective = "\t.llong\t";
+
+  // Use .vbyte for data definition to avoid directives that apply an implicit
+  // alignment.
+  Data16bitsDirective = "\t.vbyte\t2, ";
+  Data32bitsDirective = "\t.vbyte\t4, ";
+
   COMMDirectiveAlignmentIsInBytes = false;
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;

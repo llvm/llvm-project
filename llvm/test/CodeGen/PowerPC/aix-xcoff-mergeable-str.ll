@@ -28,17 +28,17 @@ entry:
 ; CHECK:   .csect .rodata.str2.2[RO],2
 ; CHECK-NEXT:   .align  1
 ; CHECK-NEXT: .Lmagic16:
-; CHECK-NEXT:   .short  264                     # 0x108
-; CHECK-NEXT:   .short  272                     # 0x110
-; CHECK-NEXT:   .short  213                     # 0xd5
-; CHECK-NEXT:   .short  0                       # 0x0
+; CHECK-NEXT:   .vbyte	2, 264                     # 0x108
+; CHECK-NEXT:   .vbyte	2, 272                     # 0x110
+; CHECK-NEXT:   .vbyte	2, 213                     # 0xd5
+; CHECK-NEXT:   .vbyte	2, 0                       # 0x0
 ; CHECK-NEXT:   .csect .rodata.str4.4[RO],2
 ; CHECK-NEXT:   .align  2
 ; CHECK-NEXT: .Lmagic32:
-; CHECK-NEXT:   .long   464                     # 0x1d0
-; CHECK-NEXT:   .long   472                     # 0x1d8
-; CHECK-NEXT:   .long   413                     # 0x19d
-; CHECK-NEXT:   .long   0                       # 0x0
+; CHECK-NEXT:   .vbyte	4, 464                     # 0x1d0
+; CHECK-NEXT:   .vbyte	4, 472                     # 0x1d8
+; CHECK-NEXT:   .vbyte	4, 413                     # 0x19d
+; CHECK-NEXT:   .vbyte	4, 0                       # 0x0
 ; CHECK-NEXT:   .csect .rodata.str1.1[RO],2
 ; CHECK-NEXT: .LstrA:
 ; CHECK-NEXT: .byte   104

@@ -1463,6 +1463,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::LDFF1:             return "AArch64ISD::LDFF1";
   case AArch64ISD::LDFF1S:            return "AArch64ISD::LDFF1S";
   case AArch64ISD::LD1RQ:             return "AArch64ISD::LD1RQ";
+  case AArch64ISD::LD1RO:             return "AArch64ISD::LD1RO";
   case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
   case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
   case AArch64ISD::GLD1_SXTW:         return "AArch64ISD::GLD1_SXTW";
@@ -11885,7 +11886,10 @@ static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   return L;
 }
 
-static SDValue performLD1RQCombine(SDNode *N, SelectionDAG &DAG) {
+template <unsigned Opcode>
+static SDValue performLD1ReplicateCombine(SDNode *N, SelectionDAG &DAG) {
+  static_assert(Opcode == AArch64ISD::LD1RQ || Opcode == AArch64ISD::LD1RO,
+                "Unsupported opcode.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -11894,13 +11898,13 @@ static SDValue performLD1RQCombine(SDNode *N, SelectionDAG &DAG) {
     LoadVT = VT.changeTypeToInteger();
 
   SDValue Ops[] = {N->getOperand(0), N->getOperand(2), N->getOperand(3)};
-  SDValue Load = DAG.getNode(AArch64ISD::LD1RQ, DL, {LoadVT, MVT::Other}, Ops);
+  SDValue Load = DAG.getNode(Opcode, DL, {LoadVT, MVT::Other}, Ops);
   SDValue LoadChain = SDValue(Load.getNode(), 1);
 
   if (VT.isFloatingPoint())
     Load = DAG.getNode(ISD::BITCAST, DL, VT, Load.getValue(0));
 
-  return DAG.getMergeValues({ Load, LoadChain }, DL);
+  return DAG.getMergeValues({Load, LoadChain}, DL);
 }
 
 static SDValue performST1Combine(SDNode *N, SelectionDAG &DAG) {
@@ -13493,7 +13497,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1rq:
-      return performLD1RQCombine(N, DAG);
+      return performLD1ReplicateCombine<AArch64ISD::LD1RQ>(N, DAG);
+    case Intrinsic::aarch64_sve_ld1ro:
+      return performLD1ReplicateCombine<AArch64ISD::LD1RO>(N, DAG);
     case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLDNT1);
     case Intrinsic::aarch64_sve_ldnt1_gather:
