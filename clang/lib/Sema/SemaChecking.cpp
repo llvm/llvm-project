@@ -12928,6 +12928,11 @@ public:
   }
 
   void VisitCallExpr(const CallExpr *CE) {
+    // FIXME: CXXNewExpr and CXXDeleteExpr implicitly call functions.
+
+    if (CE->isUnevaluatedBuiltinCall(Context))
+      return;
+
     // C++11 [intro.execution]p15:
     //   When calling a function [...], every value computation and side effect
     //   associated with any argument expression, or with the postfix expression
@@ -12935,10 +12940,41 @@ public:
     //   expression or statement in the body of the function [and thus before
     //   the value computation of its result].
     SequencedSubexpression Sequenced(*this);
-    SemaRef.runWithSufficientStackSpace(CE->getExprLoc(),
-                                        [&] { Base::VisitCallExpr(CE); });
+    SemaRef.runWithSufficientStackSpace(CE->getExprLoc(), [&] {
+      // C++17 [expr.call]p5
+      //   The postfix-expression is sequenced before each expression in the
+      //   expression-list and any default argument. [...]
+      SequenceTree::Seq CalleeRegion;
+      SequenceTree::Seq OtherRegion;
+      if (SemaRef.getLangOpts().CPlusPlus17) {
+        CalleeRegion = Tree.allocate(Region);
+        OtherRegion = Tree.allocate(Region);
+      } else {
+        CalleeRegion = Region;
+        OtherRegion = Region;
+      }
+      SequenceTree::Seq OldRegion = Region;
 
-    // FIXME: CXXNewExpr and CXXDeleteExpr implicitly call functions.
+      // Visit the callee expression first.
+      Region = CalleeRegion;
+      if (SemaRef.getLangOpts().CPlusPlus17) {
+        SequencedSubexpression Sequenced(*this);
+        Visit(CE->getCallee());
+      } else {
+        Visit(CE->getCallee());
+      }
+
+      // Then visit the argument expressions.
+      Region = OtherRegion;
+      for (const Expr *Argument : CE->arguments())
+        Visit(Argument);
+
+      Region = OldRegion;
+      if (SemaRef.getLangOpts().CPlusPlus17) {
+        Tree.merge(CalleeRegion);
+        Tree.merge(OtherRegion);
+      }
+    });
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
