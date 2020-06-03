@@ -74,8 +74,6 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllq $63, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
