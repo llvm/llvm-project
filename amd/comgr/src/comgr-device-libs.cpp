@@ -36,6 +36,7 @@
 #include "comgr-device-libs.h"
 #include "comgr.h"
 #include "libraries.inc"
+#include "llvm/ADT/StringSwitch.h"
 #include <cstdint>
 
 using namespace llvm;
