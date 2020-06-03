@@ -4748,19 +4748,19 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(isa<ConstantInt>(Derived),
            "gc.relocate operand #3 must be integer offset", Call);
 
-    const int BaseIndex = cast<ConstantInt>(Base)->getZExtValue();
-    const int DerivedIndex = cast<ConstantInt>(Derived)->getZExtValue();
+    const uint64_t BaseIndex = cast<ConstantInt>(Base)->getZExtValue();
+    const uint64_t DerivedIndex = cast<ConstantInt>(Derived)->getZExtValue();
 
     // Check the bounds
     if (auto Opt = StatepointCall.getOperandBundle(LLVMContext::OB_gc_live)) {
-      Assert(0 <= BaseIndex && BaseIndex < (int)Opt->Inputs.size(),
+      Assert(BaseIndex < Opt->Inputs.size(),
              "gc.relocate: statepoint base index out of bounds", Call);
-      Assert(0 <= DerivedIndex && DerivedIndex < (int)Opt->Inputs.size(),
+      Assert(DerivedIndex < Opt->Inputs.size(),
              "gc.relocate: statepoint derived index out of bounds", Call);
     } else {
-      Assert(0 <= BaseIndex && BaseIndex < (int)StatepointCall.arg_size(),
+      Assert(BaseIndex < StatepointCall.arg_size(),
              "gc.relocate: statepoint base index out of bounds", Call);
-      Assert(0 <= DerivedIndex && DerivedIndex < (int)StatepointCall.arg_size(),
+      Assert(DerivedIndex < StatepointCall.arg_size(),
              "gc.relocate: statepoint derived index out of bounds", Call);
 
       // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
@@ -4769,25 +4769,25 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
              "gc.statepoint: insufficient arguments");
       Assert(isa<ConstantInt>(StatepointCall.getArgOperand(3)),
              "gc.statement: number of call arguments must be constant integer");
-      const unsigned NumCallArgs =
+      const uint64_t NumCallArgs =
         cast<ConstantInt>(StatepointCall.getArgOperand(3))->getZExtValue();
       Assert(StatepointCall.arg_size() > NumCallArgs + 5,
              "gc.statepoint: mismatch in number of call arguments");
       Assert(isa<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5)),
              "gc.statepoint: number of transition arguments must be "
              "a constant integer");
-      const int NumTransitionArgs =
+      const uint64_t NumTransitionArgs =
           cast<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5))
               ->getZExtValue();
-      const int DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
+      const uint64_t DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
       Assert(isa<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart)),
              "gc.statepoint: number of deoptimization arguments must be "
              "a constant integer");
-      const int NumDeoptArgs =
+      const uint64_t NumDeoptArgs =
           cast<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart))
               ->getZExtValue();
-      const int GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
-      const int GCParamArgsEnd = StatepointCall.arg_size();
+      const uint64_t GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
+      const uint64_t GCParamArgsEnd = StatepointCall.arg_size();
       Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
              "gc.relocate: statepoint base index doesn't fall within the "
              "'gc parameters' section of the statepoint call",
