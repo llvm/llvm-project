@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -24,7 +25,8 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  uint64_t getImplicitAddend(const uint8_t *loc, uint8_t type) const override;
+  uint64_t getImplicitAddend(MemoryBufferRef, const section_64 &,
+                             const relocation_info &) const override;
   void relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const override;
 
   void writeStub(uint8_t *buf, const DylibSymbol &) const override;
@@ -38,19 +40,36 @@ struct X86_64 : TargetInfo {
 
 } // namespace
 
-uint64_t X86_64::getImplicitAddend(const uint8_t *loc, uint8_t type) const {
-  switch (type) {
+static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
+                                    const relocation_info &rel) {
+  return ("invalid relocation at offset " + std::to_string(rel.r_address) +
+          " of " + sec.segname + "," + sec.sectname + " in " +
+          mb.getBufferIdentifier())
+      .str();
+}
+
+uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
+                                   const relocation_info &rel) const {
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const uint8_t *loc = buf + sec.offset + rel.r_address;
+  switch (rel.r_type) {
   case X86_64_RELOC_BRANCH:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
+    if (!rel.r_pcrel)
+      fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
+            std::to_string(rel.r_type) + " must be pcrel");
     return read32le(loc);
   case X86_64_RELOC_UNSIGNED:
+    if (rel.r_pcrel)
+      fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
+            std::to_string(rel.r_type) + " must not be pcrel");
     return read64le(loc);
   default:
-    error("TODO: Unhandled relocation type " + std::to_string(type));
+    error("TODO: Unhandled relocation type " + std::to_string(rel.r_type));
     return 0;
   }
 }
