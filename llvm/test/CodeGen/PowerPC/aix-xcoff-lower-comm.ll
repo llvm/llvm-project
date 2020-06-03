@@ -19,8 +19,8 @@
 ; ASM32-NEXT:        .align  2
 ; ASM64-NEXT:        .align  3
 ; CHECK-NEXT:pointer:
-; ASM32-NEXT:        .long   common[RW]
-; ASM64-NEXT:        .llong   common[RW]
+; ASM32-NEXT:        .vbyte	4, common[RW]
+; ASM64-NEXT:        .vbyte	8, common[RW]
 
 
 ; RELOC:      Relocations [

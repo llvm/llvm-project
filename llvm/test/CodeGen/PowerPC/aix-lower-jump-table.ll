@@ -99,10 +99,10 @@
 ; 32SMALL-ASM: 	    .csect .rodata[RO],2
 ; 32SMALL-ASM: 	    .align  2
 ; 32SMALL-ASM: .LJTI0_0:
-; 32SMALL-ASM: 	    .long   LBB0_2-.LJTI0_0
-; 32SMALL-ASM: 	    .long   LBB0_3-.LJTI0_0
-; 32SMALL-ASM: 	    .long   LBB0_4-.LJTI0_0
-; 32SMALL-ASM: 	    .long   LBB0_5-.LJTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, LBB0_2-.LJTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, LBB0_3-.LJTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, LBB0_4-.LJTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, LBB0_5-.LJTI0_0
 
 ; 32LARGE-ASM-LABEL: jump_table
 ; 32LARGE-ASM: .jump_table:
@@ -126,10 +126,10 @@
 ; 32LARGE-ASM:      .csect .rodata[RO],2
 ; 32LARGE-ASM:      .align  2
 ; 32LARGE-ASM: .LJTI0_0:
-; 32LARGE-ASM:      .long   LBB0_2-.LJTI0_0
-; 32LARGE-ASM:      .long   LBB0_3-.LJTI0_0
-; 32LARGE-ASM:      .long   LBB0_4-.LJTI0_0
-; 32LARGE-ASM:      .long   LBB0_5-.LJTI0_0
+; 32LARGE-ASM:      .vbyte	4, LBB0_2-.LJTI0_0
+; 32LARGE-ASM:      .vbyte	4, LBB0_3-.LJTI0_0
+; 32LARGE-ASM:      .vbyte	4, LBB0_4-.LJTI0_0
+; 32LARGE-ASM:      .vbyte	4, LBB0_5-.LJTI0_0
 
 ; 64SMALL-ASM-LABEL: jump_table
 ; 64SMALL-ASM: .jump_table:
@@ -152,10 +152,10 @@
 ; 64SMALL-ASM:      .csect .rodata[RO],2
 ; 64SMALL-ASM:      .align  2
 ; 64SMALL-ASM: .LJTI0_0:
-; 64SMALL-ASM:      .long   LBB0_2-.LJTI0_0
-; 64SMALL-ASM:      .long   LBB0_3-.LJTI0_0
-; 64SMALL-ASM:      .long   LBB0_4-.LJTI0_0
-; 64SMALL-ASM:      .long   LBB0_5-.LJTI0_0
+; 64SMALL-ASM:      .vbyte	4, LBB0_2-.LJTI0_0
+; 64SMALL-ASM:      .vbyte	4, LBB0_3-.LJTI0_0
+; 64SMALL-ASM:      .vbyte	4, LBB0_4-.LJTI0_0
+; 64SMALL-ASM:      .vbyte	4, LBB0_5-.LJTI0_0
 
 ; 64LARGE-ASM-LABEL: jump_table
 ; 64LARGE-ASM: .jump_table:
@@ -179,10 +179,10 @@
 ; 64LARGE-ASM:      .csect .rodata[RO],2
 ; 64LARGE-ASM:      .align  2
 ; 64LARGE-ASM: .LJTI0_0:
-; 64LARGE-ASM:      .long   LBB0_2-.LJTI0_0
-; 64LARGE-ASM:      .long   LBB0_3-.LJTI0_0
-; 64LARGE-ASM:      .long   LBB0_4-.LJTI0_0
-; 64LARGE-ASM:      .long   LBB0_5-.LJTI0_0
+; 64LARGE-ASM:      .vbyte	4, LBB0_2-.LJTI0_0
+; 64LARGE-ASM:      .vbyte	4, LBB0_3-.LJTI0_0
+; 64LARGE-ASM:      .vbyte	4, LBB0_4-.LJTI0_0
+; 64LARGE-ASM:      .vbyte	4, LBB0_5-.LJTI0_0
 
 ; CHECK: .toc
 ; CHECK: .tc .LJTI0_0[TC],.LJTI0_0
