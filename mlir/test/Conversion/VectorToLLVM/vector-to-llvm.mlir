@@ -941,7 +941,7 @@ func @genbool_1d() -> vector<8xi1> {
   return %0 : vector<8xi1>
 }
 // CHECK-LABEL: func @genbool_1d
-// CHECK: %[[T0:.*]] = llvm.mlir.constant(1 : i1) : !llvm.i1
+// CHECK: %[[T0:.*]] = llvm.mlir.constant(true) : !llvm.i1
 // CHECK: %[[T1:.*]] = llvm.mlir.constant(dense<false> : vector<8xi1>) : !llvm<"<8 x i1>">
 // CHECK: %[[T2:.*]] = llvm.mlir.constant(0 : i64) : !llvm.i64
 // CHECK: %[[T3:.*]] = llvm.insertelement %[[T0]], %[[T1]][%[[T2]] : !llvm.i64] : !llvm<"<8 x i1>">

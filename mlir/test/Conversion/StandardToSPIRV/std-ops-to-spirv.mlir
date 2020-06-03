@@ -447,9 +447,9 @@ func @corner_cases() {
 
 
   // CHECK: spv.constant false
-  %9 = constant 0 : i1
+  %9 = constant false
   // CHECK: spv.constant true
-  %10 = constant 1 : i1
+  %10 = constant true
 
   return
 }

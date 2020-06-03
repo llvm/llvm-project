@@ -71,7 +71,7 @@ declare float @fe(i32)
 ; CHECK-LABEL: llvm.func @f1(%arg0: !llvm.i64) -> !llvm.i32 {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : !llvm.i32
-; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(1 : i1) : !llvm.i1
+; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : !llvm.i1
 ; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : !llvm.i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:

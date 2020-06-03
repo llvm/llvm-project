@@ -1318,11 +1318,6 @@ void ModulePrinter::printAttribute(Attribute attr,
   case StandardAttributes::Unit:
     os << "unit";
     break;
-  case StandardAttributes::Bool:
-    os << (attr.cast<BoolAttr>().getValue() ? "true" : "false");
-
-    // BoolAttr always elides the type.
-    return;
   case StandardAttributes::Dictionary:
     os << '{';
     interleaveComma(attr.cast<DictionaryAttr>().getValue(),
@@ -1331,6 +1326,13 @@ void ModulePrinter::printAttribute(Attribute attr,
     break;
   case StandardAttributes::Integer: {
     auto intAttr = attr.cast<IntegerAttr>();
+    if (attrType.isSignlessInteger(1)) {
+      os << (intAttr.getValue().getBoolValue() ? "true" : "false");
+
+      // Boolean integer attributes always elides the type.
+      return;
+    }
+
     // Only print attributes as unsigned if they are explicitly unsigned or are
     // signless 1-bit values.  Indexes, signed values, and multi-bit signless
     // values print as signed.

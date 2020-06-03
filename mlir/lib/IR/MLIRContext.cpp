@@ -86,7 +86,7 @@ namespace {
 /// the IR.
 struct BuiltinDialect : public Dialect {
   BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
-    addAttributes<AffineMapAttr, ArrayAttr, BoolAttr, DenseIntOrFPElementsAttr,
+    addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
                   DenseStringElementsAttr, DictionaryAttr, FloatAttr,
                   SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
                   OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
@@ -378,11 +378,14 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   //// Note: These must be registered after the types as they may generate one
   //// of the above types internally.
   /// Bool Attributes.
-  // Note: The context is also used within the BoolAttrStorage.
-  impl->falseAttr = AttributeUniquer::get<BoolAttr>(
-      this, StandardAttributes::Bool, this, false);
-  impl->trueAttr = AttributeUniquer::get<BoolAttr>(
-      this, StandardAttributes::Bool, this, true);
+  impl->falseAttr = AttributeUniquer::get<IntegerAttr>(
+                        this, StandardAttributes::Integer, impl->int1Ty,
+                        APInt(/*numBits=*/1, false))
+                        .cast<BoolAttr>();
+  impl->trueAttr = AttributeUniquer::get<IntegerAttr>(
+                       this, StandardAttributes::Integer, impl->int1Ty,
+                       APInt(/*numBits=*/1, true))
+                       .cast<BoolAttr>();
   /// Unit Attribute.
   impl->unitAttr =
       AttributeUniquer::get<UnitAttr>(this, StandardAttributes::Unit);

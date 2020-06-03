@@ -1028,8 +1028,6 @@ CondBranchOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
-  if (BoolAttr condAttr = operands.front().dyn_cast_or_null<BoolAttr>())
-    return condAttr.getValue() ? trueDest() : falseDest();
   if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
     return condAttr.getValue().isOneValue() ? trueDest() : falseDest();
   return nullptr;
@@ -1172,9 +1170,8 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (value.getType() != type)
     return false;
   // Finally, check that the attribute kind is handled.
-  return value.isa<BoolAttr>() || value.isa<IntegerAttr>() ||
-         value.isa<FloatAttr>() || value.isa<ElementsAttr>() ||
-         value.isa<UnitAttr>();
+  return value.isa<IntegerAttr>() || value.isa<FloatAttr>() ||
+         value.isa<ElementsAttr>() || value.isa<UnitAttr>();
 }
 
 void ConstantFloatOp::build(OpBuilder &builder, OperationState &result,

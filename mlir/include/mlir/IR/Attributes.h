@@ -30,7 +30,6 @@ namespace detail {
 
 struct AffineMapAttributeStorage;
 struct ArrayAttributeStorage;
-struct BoolAttributeStorage;
 struct DictionaryAttributeStorage;
 struct IntegerAttributeStorage;
 struct IntegerSetAttributeStorage;
@@ -131,7 +130,6 @@ namespace StandardAttributes {
 enum Kind {
   AffineMap = Attribute::FIRST_STANDARD_ATTR,
   Array,
-  Bool,
   Dictionary,
   Float,
   Integer,
@@ -240,24 +238,6 @@ public:
     return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                             attr_value_iterator<AttrTy>(end()));
   }
-};
-
-//===----------------------------------------------------------------------===//
-// BoolAttr
-//===----------------------------------------------------------------------===//
-
-class BoolAttr : public Attribute::AttrBase<BoolAttr, Attribute,
-                                            detail::BoolAttributeStorage> {
-public:
-  using Base::Base;
-  using ValueType = bool;
-
-  static BoolAttr get(bool value, MLIRContext *context);
-
-  bool getValue() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == StandardAttributes::Bool; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -407,6 +387,29 @@ public:
                                                     int64_t value);
   static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     const APInt &value);
+};
+
+//===----------------------------------------------------------------------===//
+// BoolAttr
+
+/// Special case of IntegerAttr to represent boolean integers, i.e., signless i1
+/// integers.
+class BoolAttr : public Attribute {
+public:
+  using Attribute::Attribute;
+  using ValueType = bool;
+
+  static BoolAttr get(bool value, MLIRContext *context);
+
+  /// Enable conversion to IntegerAttr. This uses conversion vs. inheritance to
+  /// avoid bringing in all of IntegerAttrs methods.
+  operator IntegerAttr() const { return IntegerAttr(impl); }
+
+  /// Return the boolean value of this attribute.
+  bool getValue() const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(Attribute attr);
 };
 
 //===----------------------------------------------------------------------===//
