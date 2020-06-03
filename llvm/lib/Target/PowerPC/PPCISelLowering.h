@@ -89,11 +89,6 @@ namespace llvm {
     FRE,
     FRSQRTE,
 
-    // VMADDFP, VNMSUBFP - The VMADDFP and VNMSUBFP instructions, taking
-    // three v4f32 operands and producing a v4f32 result.
-    VMADDFP,
-    VNMSUBFP,
-
     /// VPERM - The PPC VPERM Instruction.
     ///
     VPERM,

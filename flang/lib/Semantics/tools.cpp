@@ -581,6 +581,35 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
 
 bool IsCoarray(const Symbol &symbol) { return symbol.Corank() > 0; }
 
+bool IsAutomaticObject(const Symbol &symbol) {
+  if (IsDummy(symbol) || IsPointer(symbol) || IsAllocatable(symbol)) {
+    return false;
+  }
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    if (type->category() == DeclTypeSpec::Character) {
+      ParamValue length{type->characterTypeSpec().length()};
+      if (length.isExplicit()) {
+        if (MaybeIntExpr lengthExpr{length.GetExplicit()}) {
+          if (!ToInt64(lengthExpr)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  if (symbol.IsObjectArray()) {
+    for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
+      auto &lbound{spec.lbound().GetExplicit()};
+      auto &ubound{spec.ubound().GetExplicit()};
+      if ((lbound && !evaluate::ToInt64(*lbound)) ||
+          (ubound && !evaluate::ToInt64(*ubound))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
@@ -588,6 +617,20 @@ bool IsAssumedLengthCharacter(const Symbol &symbol) {
   } else {
     return false;
   }
+}
+
+bool IsInBlankCommon(const Symbol &symbol) {
+  if (FindCommonBlockContaining(symbol)) {
+    if (const auto *details{
+            symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->commonBlock()) {
+        if (details->commonBlock()->name().empty()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 // C722 and C723:  For a function to be assumed length, it must be external and

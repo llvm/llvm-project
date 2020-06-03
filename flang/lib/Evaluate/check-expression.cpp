@@ -59,7 +59,9 @@ public:
     }
     return true;
   }
-
+  bool operator()(const Component &component) const {
+    return (*this)(component.base());
+  }
   // Forbid integer division by zero in constants.
   template <int KIND>
   bool operator()(

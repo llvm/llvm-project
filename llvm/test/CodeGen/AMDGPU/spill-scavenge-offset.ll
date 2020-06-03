@@ -35,7 +35,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_limited_sgpr
-; GFX6: s_mov_b32 s32, 0x84100
+; GFX6: s_mov_b32 s32, 0x{{[0-9]+}}
 ; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s32
 ; GFX6: NumSgprs: 48
 ; GFX6: ScratchSize: 8624

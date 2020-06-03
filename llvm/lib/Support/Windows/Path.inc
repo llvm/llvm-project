@@ -1255,6 +1255,43 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
+  OVERLAPPED OV = {0};
+  file_t File = convertFDToNativeFile(FD);
+  auto Start = std::chrono::steady_clock::now();
+  auto End = Start + Timeout;
+  do {
+    if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))
+      return std::error_code();
+    DWORD Error = ::GetLastError();
+    if (Error == ERROR_LOCK_VIOLATION) {
+      ::Sleep(1);
+      continue;
+    }
+    return mapWindowsError(Error);
+  } while (std::chrono::steady_clock::now() < End);
+  return mapWindowsError(ERROR_LOCK_VIOLATION);
+}
+
+std::error_code lockFile(int FD) {
+  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
+  OVERLAPPED OV = {0};
+  file_t File = convertFDToNativeFile(FD);
+  if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))
+    return std::error_code();
+  DWORD Error = ::GetLastError();
+  return mapWindowsError(Error);
+}
+
+std::error_code unlockFile(int FD) {
+  OVERLAPPED OV = {0};
+  file_t File = convertFDToNativeFile(FD);
+  if (::UnlockFileEx(File, 0, MAXDWORD, MAXDWORD, &OV))
+    return std::error_code();
+  return mapWindowsError(::GetLastError());
+}
+
 std::error_code closeFile(file_t &F) {
   file_t TmpF = F;
   F = kInvalidFile;

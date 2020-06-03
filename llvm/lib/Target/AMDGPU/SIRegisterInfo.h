@@ -103,6 +103,11 @@ public:
   const TargetRegisterClass *getPointerRegClass(
     const MachineFunction &MF, unsigned Kind = 0) const override;
 
+  void buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI, int Index,
+                               int Offset, unsigned EltSize, Register VGPR,
+                               int64_t VGPRLanes, RegScavenger *RS,
+                               bool IsLoad) const;
+
   /// If \p OnlyToVGPR is true, this will only succeed if this
   bool spillSGPR(MachineBasicBlock::iterator MI,
                  int FI, RegScavenger *RS,
