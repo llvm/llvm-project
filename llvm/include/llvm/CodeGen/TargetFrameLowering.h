@@ -14,8 +14,6 @@
 #define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/ADT/StringSwitch.h"
-#include <utility>
 #include <vector>
 
 namespace llvm {
