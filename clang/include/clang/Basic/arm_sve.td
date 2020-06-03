@@ -470,6 +470,10 @@ def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoa
 // Load one quadword and replicate (scalar base)
 def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1rq">;
 
+// Load one octoword and replicate (scalar base)
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
+  def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1ro">;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Stores
 
