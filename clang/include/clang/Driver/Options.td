@@ -866,11 +866,6 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
 
-def faddrsig : Flag<["-"], "faddrsig">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
-  HelpText<"Emit an address-significance table">;
-def fno_addrsig : Flag<["-"], "fno-addrsig">, Group<f_Group>, Flags<[CoreOption]>,
-  HelpText<"Don't emit an address-significance table">;
-
 defm addrsig : OptInFFlag<"addrsig", "Emit", "Don't emit", " an address-significance table", [CoreOption]>;
 
 def fblocks : Flag<["-"], "fblocks">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
