@@ -382,14 +382,14 @@ if.end:
 
 ; CHECK-LABEL: test4:
 ; CHECK-NEXT: .functype test4 (i32) -> (){{$}}
+; CHECK:      block   {{$}}
 ; CHECK-NEXT: block   {{$}}
-; CHECK-NEXT: block   {{$}}
-; CHECK-NEXT: br_table   $0, 1, 1, 1, 1, 1, 0{{$}}
-; CHECK-NEXT: .LBB{{[0-9]+}}_1:
-; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: i32.const $push[[C:[0-9]+]]=, 622{{$}}
-; CHECK-NEXT: i32.eq $drop=, $0, $pop[[C]]{{$}}
+; CHECK:      br_if     0, $pop{{[0-9]+}}{{$}}
+; CHECK:      br        1{{$}}
 ; CHECK-NEXT: .LBB{{[0-9]+}}_2:
+; CHECK-NEXT: end_block{{$}}
+; CHECK-NEXT: br_table   $0, 0, 0, 0, 0, 0, 0{{$}}
+; CHECK-NEXT: .LBB{{[0-9]+}}_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @test4(i32 %t) {
@@ -649,16 +649,20 @@ end:
 ; CHECK:       br_if     0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NEXT:  block   {{$}}
-; CHECK-NOT:   br_if
-; CHECK:       br_table   $pop{{[^,]+}}, 0, 3, 1, 2, 3
-; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
+; CHECK:       br_if     0, {{[^,]+}}{{$}}
+; CHECK:       br        3{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       block   {{$}}
+; CHECK-NEXT:  br_table   $0, 0, 3, 1, 2, 0
+; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_9:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK:       br        0{{$}}
-; CHECK-NEXT:  .LBB{{[0-9]+}}_8:
+; CHECK-NEXT:  .LBB{{[0-9]+}}_10:
 ; CHECK-NEXT:  end_loop{{$}}
 define void @test10() {
 bb0:
@@ -763,22 +767,25 @@ bb8:
 
 ; CHECK-LABEL: test12:
 ; CHECK:       .LBB{{[0-9]+}}_1:
-; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
-; CHECK:       br_table  {{[^,]+}}, 1, 3, 3, 3, 1, 0{{$}}
-; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:  end_block{{$}}
+; CHECK-NEXT:  block   {{$}}
 ; CHECK:       br_if     0, {{[^,]+}}{{$}}
 ; CHECK:       br_if     2, {{[^,]+}}{{$}}
+; CHECK:       br_if     1, {{[^,]+}}{{$}}
+; CHECK-NEXT:  br        2{{$}}
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:  end_block{{$}}
-; CHECK:       br        0{{$}}
+; CHECK-NEXT:  br_table   $2, 1, 0, 0, 0, 1, 1{{$}}
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_6:
+; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br        0{{$}}
+; CHECK-NEXT:  .LBB{{[0-9]+}}_7:
+; CHECK-NEXT:  end_loop{{$}}
 define void @test12(i8* %arg) {
 bb:
   br label %bb1
