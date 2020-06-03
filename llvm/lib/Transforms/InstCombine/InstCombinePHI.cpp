@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -30,7 +31,7 @@ MaxNumPhis("instcombine-max-num-phis", cl::init(512),
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
 /// locations of the original PHI node arguments.
-void InstCombiner::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
+void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   auto *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
   Inst->setDebugLoc(FirstInst->getDebugLoc());
   // We do not expect a CallInst here, otherwise, N-way merging of DebugLoc
@@ -93,7 +94,7 @@ void InstCombiner::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
 //    ptr_val_inc = ...
 //    ...
 //
-Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::FoldIntegerTypedPHI(PHINode &PN) {
   if (!PN.getType()->isIntegerTy())
     return nullptr;
   if (!PN.hasOneUse())
@@ -292,7 +293,7 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
 /// adds all have a single use, turn this into a phi and a single binop.
-Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   Instruction *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
   assert(isa<BinaryOperator>(FirstInst) || isa<CmpInst>(FirstInst));
   unsigned Opc = FirstInst->getOpcode();
@@ -385,7 +386,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   return NewBinOp;
 }
 
-Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::FoldPHIArgGEPIntoPHI(PHINode &PN) {
   GetElementPtrInst *FirstInst =cast<GetElementPtrInst>(PN.getIncomingValue(0));
 
   SmallVector<Value*, 16> FixedOperands(FirstInst->op_begin(),
@@ -494,7 +495,6 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
   return NewGEP;
 }
 
-
 /// Return true if we know that it is safe to sink the load out of the block
 /// that defines it. This means that it must be obvious the value of the load is
 /// not changed from the point of the load to the end of the block it is in.
@@ -540,7 +540,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
   return true;
 }
 
-Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::FoldPHIArgLoadIntoPHI(PHINode &PN) {
   LoadInst *FirstLI = cast<LoadInst>(PN.getIncomingValue(0));
 
   // FIXME: This is overconservative; this transform is allowed in some cases
@@ -654,7 +654,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
 /// TODO: This function could handle other cast types, but then it might
 /// require special-casing a cast from the 'i1' type. See the comment in
 /// FoldPHIArgOpIntoPHI() about pessimizing illegal integer types.
-Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
+Instruction *InstCombinerImpl::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
   if (Instruction *TI = Phi.getParent()->getTerminator())
@@ -728,7 +728,7 @@ Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
 /// If all operands to a PHI node are the same "unary" operator and they all are
 /// only used by the PHI, PHI together their inputs, and do the operation once,
 /// to the result of the PHI.
-Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::FoldPHIArgOpIntoPHI(PHINode &PN) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
   if (Instruction *TI = PN.getParent()->getTerminator())
@@ -955,7 +955,7 @@ namespace llvm {
 /// TODO: The user of the trunc may be an bitcast to float/double/vector or an
 /// inttoptr.  We should produce new PHIs in the right type.
 ///
-Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
+Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   // PHIUsers - Keep track of all of the truncated values extracted from a set
   // of PHIs, along with their offset.  These are the things we want to rewrite.
   SmallVector<PHIUsageRecord, 16> PHIUsers;
@@ -1203,7 +1203,7 @@ static Value *SimplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
 
 // PHINode simplification
 //
-Instruction *InstCombiner::visitPHINode(PHINode &PN) {
+Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   if (Value *V = SimplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
     return replaceInstUsesWith(PN, V);
 

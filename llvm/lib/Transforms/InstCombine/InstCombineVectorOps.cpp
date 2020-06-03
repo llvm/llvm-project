@@ -35,6 +35,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -85,7 +86,8 @@ static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
 // If we have a PHI node with a vector type that is only used to feed
 // itself and be an operand of extractelement at a constant location,
 // try to replace the PHI of the vector type with a PHI of a scalar type.
-Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
+Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
+                                            PHINode *PN) {
   SmallVector<Instruction *, 2> Extracts;
   // The users we want the PHI to have are:
   // 1) The EI ExtractElement (we already know this)
@@ -321,7 +323,7 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
   return UnionUsedElts;
 }
 
-Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
+Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
   if (Value *V = SimplifyExtractElementInst(SrcVec, Index,
@@ -531,7 +533,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
 /// shufflevector to replace one or more insert/extract pairs.
 static void replaceExtractElements(InsertElementInst *InsElt,
                                    ExtractElementInst *ExtElt,
-                                   InstCombiner &IC) {
+                                   InstCombinerImpl &IC) {
   VectorType *InsVecType = InsElt->getType();
   VectorType *ExtVecType = ExtElt->getVectorOperandType();
   unsigned NumInsElts = InsVecType->getNumElements();
@@ -614,7 +616,7 @@ using ShuffleOps = std::pair<Value *, Value *>;
 
 static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
                                          Value *PermittedRHS,
-                                         InstCombiner &IC) {
+                                         InstCombinerImpl &IC) {
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
   unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
@@ -699,7 +701,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
 /// first one, making the first one redundant.
 /// It should be transformed to:
 ///  %0 = insertvalue { i8, i32 } undef, i8 %y, 0
-Instruction *InstCombiner::visitInsertValueInst(InsertValueInst &I) {
+Instruction *InstCombinerImpl::visitInsertValueInst(InsertValueInst &I) {
   bool IsRedundant = false;
   ArrayRef<unsigned int> FirstIndices = I.getIndices();
 
@@ -1041,7 +1043,7 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
+Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
   Value *IdxOp    = IE.getOperand(2);
@@ -1525,7 +1527,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
       is_contained(Mask, UndefMaskElem) &&
       (Instruction::isIntDivRem(BOpcode) || Instruction::isShift(BOpcode));
   if (MightCreatePoisonOrUB)
-    NewC = getSafeVectorConstantForBinop(BOpcode, NewC, true);
+    NewC = InstCombiner::getSafeVectorConstantForBinop(BOpcode, NewC, true);
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
@@ -1652,7 +1654,8 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
       is_contained(Mask, UndefMaskElem) &&
       (Instruction::isIntDivRem(BOpc) || Instruction::isShift(BOpc));
   if (MightCreatePoisonOrUB)
-    NewC = getSafeVectorConstantForBinop(BOpc, NewC, ConstantsAreOp1);
+    NewC = InstCombiner::getSafeVectorConstantForBinop(BOpc, NewC,
+                                                       ConstantsAreOp1);
 
   Value *V;
   if (X == Y) {
@@ -1823,7 +1826,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
 /// Try to replace a shuffle with an insertelement or try to replace a shuffle
 /// operand with the operand of an insertelement.
 static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
-                                          InstCombiner &IC) {
+                                          InstCombinerImpl &IC) {
   Value *V0 = Shuf.getOperand(0), *V1 = Shuf.getOperand(1);
   SmallVector<int, 16> Mask;
   Shuf.getShuffleMask(Mask);
@@ -1974,7 +1977,7 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
   return new ShuffleVectorInst(X, Y, NewMask);
 }
 
-Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
+Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
   SimplifyQuery ShufQuery = SQ.getWithInstruction(&SVI);

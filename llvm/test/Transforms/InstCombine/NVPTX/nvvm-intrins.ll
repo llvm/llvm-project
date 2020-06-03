@@ -6,11 +6,11 @@
 
 ; RUN: cat %s > %t.ftz
 ; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }' >> %t.ftz
-; RUN: opt < %t.ftz -instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
+; RUN: opt < %t.ftz -instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 ; RUN: cat %s > %t.noftz
 ; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "ieee" }' >> %t.noftz
-; RUN: opt < %t.noftz -instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
+; RUN: opt < %t.noftz -instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 ; We handle nvvm intrinsics with ftz variants as follows:
 ;  - If the module is in ftz mode, the ftz variant is transformed into the

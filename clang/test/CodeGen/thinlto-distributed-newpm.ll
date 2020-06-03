@@ -62,13 +62,13 @@
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
+; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running analysis: ScopedNoAliasAA on main
 ; CHECK-O: Running analysis: TypeBasedAA on main
 ; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Running pass: SimplifyCFGPass on main
-; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O: Running analysis: GlobalsAA

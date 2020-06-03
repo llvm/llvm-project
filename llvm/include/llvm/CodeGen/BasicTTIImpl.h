@@ -477,6 +477,30 @@ public:
     return BaseT::emitGetActiveLaneMask();
   }
 
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) {
+    return BaseT::instCombineIntrinsic(IC, II);
+  }
+
+  Optional<Value *> simplifyDemandedUseBitsIntrinsic(InstCombiner &IC,
+                                                     IntrinsicInst &II,
+                                                     APInt DemandedMask,
+                                                     KnownBits &Known,
+                                                     bool &KnownBitsComputed) {
+    return BaseT::simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
+                                                   KnownBitsComputed);
+  }
+
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) {
+    return BaseT::simplifyDemandedVectorEltsIntrinsic(
+        IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+        SimplifyAndSetOp);
+  }
+
   int getInstructionLatency(const Instruction *I) {
     if (isa<LoadInst>(I))
       return getST()->getSchedModel().DefaultLoadLatency;
@@ -1605,7 +1629,7 @@ public:
       }
     }
 
-    auto MinLegalCostI = std::min_element(LegalCost.begin(), LegalCost.end());
+    auto *MinLegalCostI = std::min_element(LegalCost.begin(), LegalCost.end());
     if (MinLegalCostI != LegalCost.end())
       return *MinLegalCostI;
 
