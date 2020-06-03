@@ -4584,7 +4584,7 @@ with this attribute. This is because previously constructed subobjects need to
 be destroyed if an exception gets thrown before the initialization of the
 complete object is complete. For instance:
 
-.. code-block::c++
+.. code-block:: c++
 
   void f() {
     try {
