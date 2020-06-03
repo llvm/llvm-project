@@ -406,10 +406,6 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
   addPass(createWebAssemblySetP2AlignOperands());
-
-  // Eliminate range checks and add default targets to br_table instructions.
-  addPass(createWebAssemblyFixBrTableDefaults());
-
   return false;
 }
 

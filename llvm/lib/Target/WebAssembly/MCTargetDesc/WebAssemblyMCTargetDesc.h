@@ -459,18 +459,6 @@ inline bool isCallIndirect(unsigned Opc) {
   }
 }
 
-inline bool isBrTable(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case WebAssembly::BR_TABLE_I32:
-  case WebAssembly::BR_TABLE_I32_S:
-  case WebAssembly::BR_TABLE_I64:
-  case WebAssembly::BR_TABLE_I64_S:
-    return true;
-  default:
-    return false;
-  }
-}
-
 inline bool isMarker(unsigned Opc) {
   switch (Opc) {
   case WebAssembly::BLOCK:
