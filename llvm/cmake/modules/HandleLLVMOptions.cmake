@@ -559,8 +559,6 @@ if (MSVC)
           # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
           # is fixed.
       -wd4709 # Suppress comma operator within array index expression
-          # Cases arise from TableGen that result in this type of switch
-      -wd4065 # Suppress: 'switch statement contains 'default' but no 'case' labels'
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
