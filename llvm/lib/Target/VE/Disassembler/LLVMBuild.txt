@@ -1,4 +1,4 @@
-;===- ./lib/Target/VE/LLVMBuild.txt ----------------------------*- Conf -*--===;
+;===- ./lib/Target/VE/Disassembler/LLVMBuild.txt ---------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,21 +14,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
-
 [component_0]
-type = TargetGroup
-name = VE
-parent = Target
-has_asmparser = 1
-has_asmprinter = 1
-has_disassembler = 1
-
-[component_1]
 type = Library
-name = VECodeGen
+name = VEDisassembler
 parent = VE
-required_libraries = Analysis AsmPrinter CodeGen Core
-                     MC SelectionDAG VEDesc VEInfo Support Target
+required_libraries = MCDisassembler VEInfo Support
 add_to_library_groups = VE
