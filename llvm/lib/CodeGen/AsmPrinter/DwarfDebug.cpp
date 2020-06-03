@@ -807,6 +807,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     auto Suc = std::next(CallMI->getIterator());
     // Only one-instruction delay slot is supported.
     auto BundleEnd = llvm::getBundleEnd(CallMI->getIterator());
+    (void)BundleEnd;
     assert(std::next(Suc) == BundleEnd &&
            "More than one instruction in call delay slot");
     // Try to interpret value loaded by instruction.
@@ -856,7 +857,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       return false;
     auto Suc = std::next(MI.getIterator());
     auto CallInstrBundle = getBundleStart(MI.getIterator());
+    (void)CallInstrBundle;
     auto DelaySlotBundle = getBundleStart(Suc);
+    (void)DelaySlotBundle;
     // Ensure that label after call is following delay slot instruction.
     // Ex. CALL_INSTRUCTION {
     //       DELAY_SLOT_INSTRUCTION }
@@ -1893,6 +1896,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     if (!MI.isBundledWithSucc())
       return false;
     auto Suc = std::next(MI.getIterator());
+    (void)Suc;
     // Ensure that delay slot instruction is successor of the call instruction.
     // Ex. CALL_INSTRUCTION {
     //        DELAY_SLOT_INSTRUCTION }
