@@ -162,7 +162,8 @@ private:
 
     friend class AppleObjCRuntimeV2;
 
-    DISALLOW_COPY_AND_ASSIGN(NonPointerISACache);
+    NonPointerISACache(const NonPointerISACache &) = delete;
+    const NonPointerISACache &operator=(const NonPointerISACache &) = delete;
   };
 
   class TaggedPointerVendorV2
@@ -181,7 +182,9 @@ private:
         : TaggedPointerVendor(), m_runtime(runtime) {}
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorV2);
+    TaggedPointerVendorV2(const TaggedPointerVendorV2 &) = delete;
+    const TaggedPointerVendorV2 &
+    operator=(const TaggedPointerVendorV2 &) = delete;
   };
 
   class TaggedPointerVendorRuntimeAssisted : public TaggedPointerVendorV2 {
@@ -212,7 +215,10 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorRuntimeAssisted);
+    TaggedPointerVendorRuntimeAssisted(
+        const TaggedPointerVendorRuntimeAssisted &) = delete;
+    const TaggedPointerVendorRuntimeAssisted &
+    operator=(const TaggedPointerVendorRuntimeAssisted &) = delete;
   };
 
   class TaggedPointerVendorExtended
@@ -250,7 +256,9 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorExtended);
+    TaggedPointerVendorExtended(const TaggedPointerVendorExtended &) = delete;
+    const TaggedPointerVendorExtended &
+    operator=(const TaggedPointerVendorExtended &) = delete;
   };
 
   class TaggedPointerVendorLegacy : public TaggedPointerVendorV2 {
@@ -266,7 +274,9 @@ private:
 
     friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
 
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorLegacy);
+    TaggedPointerVendorLegacy(const TaggedPointerVendorLegacy &) = delete;
+    const TaggedPointerVendorLegacy &
+    operator=(const TaggedPointerVendorLegacy &) = delete;
   };
 
   struct DescriptorMapUpdateResult {

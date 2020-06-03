@@ -117,7 +117,9 @@ private:
   std::vector<lldb::break_id_t> m_step_in_deep_bps; // Places where we might
                                                     // want to stop when we do a
                                                     // step out.
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepInRange);
+  ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
+  const ThreadPlanStepInRange &
+  operator=(const ThreadPlanStepInRange &) = delete;
 };
 
 } // namespace lldb_private

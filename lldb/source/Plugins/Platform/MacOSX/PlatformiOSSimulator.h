@@ -82,7 +82,8 @@ protected:
   const char *GetSDKDirectoryAsCString();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformiOSSimulator);
+  PlatformiOSSimulator(const PlatformiOSSimulator &) = delete;
+  const PlatformiOSSimulator &operator=(const PlatformiOSSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMIOSSIMULATOR_H

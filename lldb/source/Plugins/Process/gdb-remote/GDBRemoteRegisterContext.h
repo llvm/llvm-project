@@ -120,7 +120,9 @@ private:
   bool SetPrimordialRegister(const RegisterInfo *reg_info,
                              GDBRemoteCommunicationClient &gdb_comm);
 
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteRegisterContext);
+  GDBRemoteRegisterContext(const GDBRemoteRegisterContext &) = delete;
+  const GDBRemoteRegisterContext &
+  operator=(const GDBRemoteRegisterContext &) = delete;
 };
 
 } // namespace process_gdb_remote

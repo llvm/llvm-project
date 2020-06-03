@@ -452,7 +452,8 @@ private:
   // object
   Debugger(lldb::LogOutputCallback m_log_callback, void *baton);
 
-  DISALLOW_COPY_AND_ASSIGN(Debugger);
+  Debugger(const Debugger &) = delete;
+  const Debugger &operator=(const Debugger &) = delete;
 };
 
 } // namespace lldb_private

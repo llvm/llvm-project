@@ -38,7 +38,8 @@ public:
   uint32_t GetPluginVersion() override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SymbolVendorELF);
+  SymbolVendorELF(const SymbolVendorELF &) = delete;
+  const SymbolVendorELF &operator=(const SymbolVendorELF &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_ELF_SYMBOLVENDORELF_H

@@ -686,7 +686,8 @@ protected:
                                         uint64_t Offset);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ObjectFile);
+  ObjectFile(const ObjectFile &) = delete;
+  const ObjectFile &operator=(const ObjectFile &) = delete;
 };
 
 } // namespace lldb_private

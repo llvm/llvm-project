@@ -152,7 +152,9 @@ private:
   TypeOrName m_type;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(TypeNameSpecifierImpl);
+  TypeNameSpecifierImpl(const TypeNameSpecifierImpl &) = delete;
+  const TypeNameSpecifierImpl &
+  operator=(const TypeNameSpecifierImpl &) = delete;
 };
 
 } // namespace lldb_private

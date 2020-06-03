@@ -345,7 +345,8 @@ private:
 
   void SendBreakpointLocationChangedEvent(lldb::BreakpointEventType eventKind);
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointLocation);
+  BreakpointLocation(const BreakpointLocation &) = delete;
+  const BreakpointLocation &operator=(const BreakpointLocation &) = delete;
 };
 
 } // namespace lldb_private

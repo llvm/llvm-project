@@ -185,7 +185,8 @@ protected:
 private:
   friend class Thread;
 
-  DISALLOW_COPY_AND_ASSIGN(StopInfo);
+  StopInfo(const StopInfo &) = delete;
+  const StopInfo &operator=(const StopInfo &) = delete;
 };
 
 } // namespace lldb_private

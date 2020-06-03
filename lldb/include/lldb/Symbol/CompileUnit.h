@@ -447,7 +447,8 @@ private:
         (1u << 6) ///< Have we parsed the debug macros already?
   };
 
-  DISALLOW_COPY_AND_ASSIGN(CompileUnit);
+  CompileUnit(const CompileUnit &) = delete;
+  const CompileUnit &operator=(const CompileUnit &) = delete;
 };
 
 } // namespace lldb_private

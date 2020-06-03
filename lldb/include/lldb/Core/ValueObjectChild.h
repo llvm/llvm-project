@@ -88,7 +88,8 @@ protected:
                    AddressType child_ptr_or_ref_addr_type,
                    uint64_t language_flags);
 
-  DISALLOW_COPY_AND_ASSIGN(ValueObjectChild);
+  ValueObjectChild(const ValueObjectChild &) = delete;
+  const ValueObjectChild &operator=(const ValueObjectChild &) = delete;
 };
 
 } // namespace lldb_private

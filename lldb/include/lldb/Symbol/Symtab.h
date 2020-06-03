@@ -224,7 +224,8 @@ private:
                             const char *decl_context,
                             const std::set<const char *> &class_contexts);
 
-  DISALLOW_COPY_AND_ASSIGN(Symtab);
+  Symtab(const Symtab &) = delete;
+  const Symtab &operator=(const Symtab &) = delete;
 };
 
 } // namespace lldb_private

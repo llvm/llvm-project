@@ -331,7 +331,8 @@ private:
                                               ///that receives new top-level
                                               ///functions.
   private:
-    DISALLOW_COPY_AND_ASSIGN(ParserVars);
+    ParserVars(const ParserVars &) = delete;
+    const ParserVars &operator=(const ParserVars &) = delete;
   };
 
   std::unique_ptr<ParserVars> m_parser_vars;

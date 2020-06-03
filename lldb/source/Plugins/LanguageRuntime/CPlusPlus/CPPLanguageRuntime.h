@@ -90,7 +90,8 @@ private:
 
   OperatorStringToCallableInfoMap CallableLookupCache;
 
-  DISALLOW_COPY_AND_ASSIGN(CPPLanguageRuntime);
+  CPPLanguageRuntime(const CPPLanguageRuntime &) = delete;
+  const CPPLanguageRuntime &operator=(const CPPLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

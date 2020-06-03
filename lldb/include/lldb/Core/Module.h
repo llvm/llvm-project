@@ -1061,7 +1061,8 @@ private:
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);
 
-  DISALLOW_COPY_AND_ASSIGN(Module);
+  Module(const Module &) = delete;
+  const Module &operator=(const Module &) = delete;
 };
 
 } // namespace lldb_private

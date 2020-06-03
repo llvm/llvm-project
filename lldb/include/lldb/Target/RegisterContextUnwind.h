@@ -249,7 +249,9 @@ private:
   lldb_private::UnwindLLDB &m_parent_unwind; // The UnwindLLDB that is creating
                                              // this RegisterContextUnwind
 
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextUnwind);
+  RegisterContextUnwind(const RegisterContextUnwind &) = delete;
+  const RegisterContextUnwind &
+  operator=(const RegisterContextUnwind &) = delete;
 };
 
 } // namespace lldb_private

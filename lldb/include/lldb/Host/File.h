@@ -367,7 +367,8 @@ protected:
   void CalculateInteractiveAndTerminal();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(File);
+  File(const File &) = delete;
+  const File &operator=(const File &) = delete;
 };
 
 class NativeFile : public File {
@@ -428,7 +429,8 @@ protected:
   std::mutex offset_access_mutex;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(NativeFile);
+  NativeFile(const NativeFile &) = delete;
+  const NativeFile &operator=(const NativeFile &) = delete;
 };
 
 } // namespace lldb_private
