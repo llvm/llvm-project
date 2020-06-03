@@ -2664,6 +2664,18 @@ TEST_F(FormatTest, FormatTryCatch) {
   verifyIncompleteFormat("try {} catch (");
 }
 
+TEST_F(FormatTest, FormatTryAsAVariable) {
+  verifyFormat("int try;");
+  verifyFormat("int try, size;");
+  verifyFormat("try = foo();");
+  verifyFormat("if (try < size) {\n  return true;\n}");
+
+  verifyFormat("int catch;");
+  verifyFormat("int catch, size;");
+  verifyFormat("catch = foo();");
+  verifyFormat("if (catch < size) {\n  return true;\n}");
+}
+
 TEST_F(FormatTest, FormatSEHTryCatch) {
   verifyFormat("__try {\n"
                "  int a = b * c;\n"
@@ -16415,6 +16427,17 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("Foo::operator&&(void &&);", Style);
   verifyFormat("Foo::operator&&();", Style);
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
+}
+
+TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
+  FormatStyle Style = getLLVMStyle();
+  // PR46157
+  verifyFormat("foo(operator+, -42);", Style);
+  verifyFormat("foo(operator++, -42);", Style);
+  verifyFormat("foo(operator--, -42);", Style);
+  verifyFormat("foo(-42, operator--);", Style);
+  verifyFormat("foo(-42, operator, );", Style);
+  verifyFormat("foo(operator, , -42);", Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {

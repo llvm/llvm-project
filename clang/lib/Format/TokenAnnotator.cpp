@@ -978,16 +978,18 @@ private:
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
         consumeToken();
+        if (CurrentToken && CurrentToken->is(tok::comma) &&
+            CurrentToken->Previous->isNot(tok::kw_operator))
+          break;
         if (CurrentToken && CurrentToken->Previous->isOneOf(
                                 TT_BinaryOperator, TT_UnaryOperator, tok::comma,
                                 tok::star, tok::arrow, tok::amp, tok::ampamp))
           CurrentToken->Previous->setType(TT_OverloadedOperator);
       }
-      if (CurrentToken) {
+      if (CurrentToken && CurrentToken->is(tok::l_paren))
         CurrentToken->setType(TT_OverloadedOperatorLParen);
-        if (CurrentToken->Previous->is(TT_BinaryOperator))
-          CurrentToken->Previous->setType(TT_OverloadedOperator);
-      }
+      if (CurrentToken && CurrentToken->Previous->is(TT_BinaryOperator))
+        CurrentToken->Previous->setType(TT_OverloadedOperator);
       break;
     case tok::question:
       if (Tok->is(TT_CSharpNullConditionalLSquare)) {
