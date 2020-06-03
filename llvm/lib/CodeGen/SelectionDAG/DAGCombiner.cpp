@@ -7944,6 +7944,7 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   EVT WideVT1 = LeftOp.getValueType();
   EVT WideVT2 = RightOp.getValueType();
+  (void)WideVT2;
   // Proceed with the transformation if the wide types match.
   assert((WideVT1 == WideVT2) &&
          "Cannot have a multiply node with two different operand types.");
