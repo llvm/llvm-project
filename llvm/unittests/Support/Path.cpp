@@ -39,8 +39,6 @@
 #include <sys/stat.h>
 #endif
 
-#include <future>
-
 using namespace llvm;
 using namespace llvm::sys;
 
@@ -2039,48 +2037,5 @@ TEST_F(FileSystemTest, widenPath) {
   EXPECT_EQ(Result, Expected);
 }
 #endif
-
-TEST_F(FileSystemTest, lockFile) {
-  int FD1, FD2;
-  SmallString<64> TempPath;
-  ASSERT_NO_ERROR(fs::createTemporaryFile("test", "temp", FD1, TempPath));
-  FileRemover Cleanup(TempPath);
-  ASSERT_NO_ERROR(fs::openFileForReadWrite(TempPath, FD2, fs::CD_OpenExisting,
-                                           fs::OF_Append));
-  ASSERT_NO_ERROR(fs::tryLockFile(FD1));
-
-  ASSERT_EQ(errc::no_lock_available,
-            fs::tryLockFile(FD2, std::chrono::milliseconds(5)));
-  ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ASSERT_NO_ERROR(fs::tryLockFile(FD2));
-  ASSERT_NO_ERROR(fs::unlockFile(FD2));
-}
-
-TEST_F(FileSystemTest, lockFileThread) {
-#if LLVM_ENABLE_THREADS
-  int FD1, FD2;
-  SmallString<64> TempPath;
-  ASSERT_NO_ERROR(fs::createTemporaryFile("test", "temp", FD1, TempPath));
-  FileRemover Cleanup(TempPath);
-  ASSERT_NO_ERROR(fs::openFileForReadWrite(TempPath, FD2, fs::CD_OpenExisting,
-                                           fs::OF_Append));
-
-  ASSERT_NO_ERROR(fs::tryLockFile(FD1));
-  ASSERT_ERROR(fs::tryLockFile(FD2));
-  std::future<std::error_code> Future = std::async(std::launch::async, [&] {
-    return fs::tryLockFile(FD2, std::chrono::seconds(5));
-  });
-  ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ASSERT_NO_ERROR(Future.get());
-  fs::unlockFile(FD2);
-
-  ASSERT_NO_ERROR(fs::tryLockFile(FD1));
-  ASSERT_ERROR(fs::tryLockFile(FD2));
-  Future = std::async(std::launch::async, [&] { return fs::lockFile(FD2); });
-  ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ASSERT_NO_ERROR(Future.get());
-  fs::unlockFile(FD2);
-#endif
-}
 
 } // anonymous namespace
