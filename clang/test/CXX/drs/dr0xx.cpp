@@ -316,15 +316,16 @@ namespace dr25 { // dr25: yes
 namespace dr26 { // dr26: yes
   struct A { A(A, const A & = A()); }; // expected-error {{must pass its first argument by reference}}
   struct B {
-    B(); // expected-note 0-1{{candidate}}
+    B();
+    // FIXME: In C++98, we diagnose this twice.
     B(const B &, B = B());
 #if __cplusplus <= 201402L
-    // expected-error@-2 {{no matching constructor}} expected-note@-2 {{candidate}} expected-note@-2 {{here}}
+    // expected-error@-2 1+{{recursive evaluation of default argument}} expected-note@-2 1+{{used here}}
 #endif
   };
   struct C {
     static C &f();
-    C(const C &, C = f()); // expected-error {{no matching constructor}} expected-note {{candidate}} expected-note {{here}}
+    C(const C &, C = f()); // expected-error {{recursive evaluation of default argument}} expected-note {{used here}}
   };
 }
 
