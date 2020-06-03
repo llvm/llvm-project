@@ -352,11 +352,6 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
   PM.add(createDataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
 }
 
-static void addMemTagOptimizationPasses(const PassManagerBuilder &Builder,
-                                        legacy::PassManagerBase &PM) {
-  PM.add(createStackSafetyGlobalInfoWrapperPass());
-}
-
 static void addSoftPointerAuthPass(const PassManagerBuilder &Builder,
                                    legacy::PassManagerBase &PM) {
   PM.add(createSoftPointerAuthPass());
@@ -731,11 +726,6 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addDataFlowSanitizerPass);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addDataFlowSanitizerPass);
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::MemTag)) {
-    PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
-                           addMemTagOptimizationPasses);
   }
 
   if (LangOpts.SoftPointerAuth) {
@@ -1398,11 +1388,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
       MPM.addPass(HWAddressSanitizerPass(
           /*CompileKernel=*/true, /*Recover=*/true));
-    }
-
-    if (CodeGenOpts.OptimizationLevel > 0 &&
-        LangOpts.Sanitize.has(SanitizerKind::MemTag)) {
-      MPM.addPass(StackSafetyGlobalAnnotatorPass());
     }
 
     if (CodeGenOpts.OptimizationLevel == 0) {
