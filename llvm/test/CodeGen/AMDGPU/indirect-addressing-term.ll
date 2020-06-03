@@ -86,10 +86,10 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN:   renamable $sgpr2 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
   ; GCN:   renamable $sgpr4_sgpr5 = V_CMP_EQ_U32_e64 $sgpr2, killed $vgpr1, implicit $exec
   ; GCN:   renamable $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 killed renamable $sgpr4_sgpr5, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN:   S_SET_GPR_IDX_ON killed renamable $sgpr2, 1, implicit-def $m0, implicit undef $m0
+  ; GCN:   S_SET_GPR_IDX_ON killed renamable $sgpr2, 1, implicit-def $m0, implicit-def undef $mode, implicit $m0, implicit $mode
   ; GCN:   $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = SI_SPILL_V512_RESTORE %stack.2, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr32, 0, implicit $exec :: (load 64 from %stack.2, align 4, addrspace 5)
   ; GCN:   renamable $vgpr18 = V_MOV_B32_e32 undef $vgpr3, implicit $exec, implicit killed $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, implicit $m0
-  ; GCN:   S_SET_GPR_IDX_OFF
+  ; GCN:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   ; GCN:   renamable $vgpr19 = COPY renamable $vgpr18
   ; GCN:   renamable $sgpr6_sgpr7 = COPY renamable $sgpr4_sgpr5
   ; GCN:   SI_SPILL_S64_SAVE killed $sgpr6_sgpr7, %stack.5, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32 :: (store 8 into %stack.5, align 4, addrspace 5)
