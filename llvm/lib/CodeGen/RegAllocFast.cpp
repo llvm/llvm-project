@@ -133,7 +133,6 @@ namespace {
     RegUnitSet UsedInInstr;
 
     void setPhysRegState(MCPhysReg PhysReg, unsigned NewState);
-    bool isPhysRegFree(MCPhysReg PhysReg) const;
 
     /// Mark a physreg as used in this instruction.
     void markRegUsedInInstr(MCPhysReg PhysReg) {
@@ -226,7 +225,6 @@ namespace {
     bool mayLiveOut(Register VirtReg);
     bool mayLiveIn(Register VirtReg);
 
-    void printRegUnitState(unsigned State) const;
     void dumpState() const;
   };
 
@@ -240,14 +238,6 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
 void RegAllocFast::setPhysRegState(MCPhysReg PhysReg, unsigned NewState) {
   for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI)
     RegUnitStates[*UI] = NewState;
-}
-
-bool RegAllocFast::isPhysRegFree(MCPhysReg PhysReg) const {
-  for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
-    if (RegUnitStates[*UI] != regFree)
-      return false;
-  }
-  return true;
 }
 
 /// This allocates space for the specified virtual register to be held on the
