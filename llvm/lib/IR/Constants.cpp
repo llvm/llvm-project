@@ -1187,13 +1187,13 @@ ConstantVector::ConstantVector(VectorType *T, ArrayRef<Constant *> V)
 Constant *ConstantVector::get(ArrayRef<Constant*> V) {
   if (Constant *C = getImpl(V))
     return C;
-  VectorType *Ty = VectorType::get(V.front()->getType(), V.size());
+  auto *Ty = FixedVectorType::get(V.front()->getType(), V.size());
   return Ty->getContext().pImpl->VectorConstants.getOrCreate(Ty, V);
 }
 
 Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   assert(!V.empty() && "Vectors can't be empty");
-  VectorType *T = VectorType::get(V.front()->getType(), V.size());
+  auto *T = FixedVectorType::get(V.front()->getType(), V.size());
 
   // If this is an all-undef or all-zero vector, return a
   // ConstantAggregateZero or UndefValue.
@@ -1960,7 +1960,7 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
     Type *MidTy = PointerType::get(DstElemTy, SrcScalarTy->getAddressSpace());
     if (VectorType *VT = dyn_cast<VectorType>(DstTy)) {
       // Handle vectors of pointers.
-      MidTy = VectorType::get(MidTy, VT->getNumElements());
+      MidTy = FixedVectorType::get(MidTy, VT->getNumElements());
     }
     C = getBitCast(C, MidTy);
   }
@@ -2742,32 +2742,32 @@ Constant *ConstantDataArray::getString(LLVMContext &Context,
 /// count and element type matching the ArrayRef passed in.  Note that this
 /// can return a ConstantAggregateZero object.
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint8_t> Elts){
-  Type *Ty = VectorType::get(Type::getInt8Ty(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getInt8Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 1), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint16_t> Elts){
-  Type *Ty = VectorType::get(Type::getInt16Ty(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getInt16Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint32_t> Elts){
-  Type *Ty = VectorType::get(Type::getInt32Ty(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getInt32Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
-  Type *Ty = VectorType::get(Type::getInt64Ty(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getInt64Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<float> Elts) {
-  Type *Ty = VectorType::get(Type::getFloatTy(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getFloatTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<double> Elts) {
-  Type *Ty = VectorType::get(Type::getDoubleTy(Context), Elts.size());
+  auto *Ty = FixedVectorType::get(Type::getDoubleTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
@@ -2782,14 +2782,14 @@ Constant *ConstantDataVector::getFP(Type *ElementType,
                                     ArrayRef<uint16_t> Elts) {
   assert((ElementType->isHalfTy() || ElementType->isBFloatTy()) &&
          "Element type is not a 16-bit float type");
-  Type *Ty = VectorType::get(ElementType, Elts.size());
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataVector::getFP(Type *ElementType,
                                     ArrayRef<uint32_t> Elts) {
   assert(ElementType->isFloatTy() && "Element type is not a 32-bit float type");
-  Type *Ty = VectorType::get(ElementType, Elts.size());
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
@@ -2797,7 +2797,7 @@ Constant *ConstantDataVector::getFP(Type *ElementType,
                                     ArrayRef<uint64_t> Elts) {
   assert(ElementType->isDoubleTy() &&
          "Element type is not a 64-bit float type");
-  Type *Ty = VectorType::get(ElementType, Elts.size());
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }

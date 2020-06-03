@@ -79,11 +79,12 @@ define i64 @addressModeWith32bitIndex(i32 %V) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    ## kill: def $rax killed $eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    cqto
-; CHECK-NEXT:    movslq %edi, %rsi
-; CHECK-NEXT:    idivq (%rcx,%rsi,8)
+; CHECK-NEXT:    movslq %edi, %rcx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi ## 8-byte Reload
+; CHECK-NEXT:    idivq (%rsi,%rcx,8)
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %gep = getelementptr i64, i64* null, i32 %V

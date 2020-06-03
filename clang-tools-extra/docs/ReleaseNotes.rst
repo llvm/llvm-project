@@ -136,6 +136,12 @@ New checks
   Finds includes of system libc headers not provided by the compiler within
   llvm-libc implementations.
 
+- New :doc:`modernize-replace-disallow-copy-and-assign-macro
+  <clang-tidy/checks/modernize-replace-disallow-copy-and-assign-macro>` check.
+
+  Finds macro expansions of ``DISALLOW_COPY_AND_ASSIGN`` and replaces them with
+  a deleted copy constructor and a deleted assignment operator.
+
 - New :doc:`objc-dealloc-in-category
   <clang-tidy/checks/objc-dealloc-in-category>` check.
 

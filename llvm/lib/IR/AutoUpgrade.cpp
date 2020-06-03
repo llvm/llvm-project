@@ -42,7 +42,7 @@ static bool UpgradePTESTIntrinsic(Function* F, Intrinsic::ID IID,
   // Check whether this is an old version of the function, which received
   // v4f32 arguments.
   Type *Arg0Type = F->getFunctionType()->getParamType(0);
-  if (Arg0Type != VectorType::get(Type::getFloatTy(F->getContext()), 4))
+  if (Arg0Type != FixedVectorType::get(Type::getFloatTy(F->getContext()), 4))
     return false;
 
   // Yes, it's old, replace it with new version.
@@ -903,7 +903,7 @@ static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder,
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
-  Type *VecTy = VectorType::get(Builder.getInt8Ty(), NumElts);
+  Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), NumElts);
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
@@ -937,7 +937,7 @@ static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
-  Type *VecTy = VectorType::get(Builder.getInt8Ty(), NumElts);
+  Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), NumElts);
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
@@ -965,8 +965,8 @@ static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
 
 static Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask,
                             unsigned NumElts) {
-  llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
-                             cast<IntegerType>(Mask->getType())->getBitWidth());
+  llvm::VectorType *MaskTy = FixedVectorType::get(
+      Builder.getInt1Ty(), cast<IntegerType>(Mask->getType())->getBitWidth());
   Mask = Builder.CreateBitCast(Mask, MaskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
@@ -1002,9 +1002,8 @@ static Value *EmitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask,
     if (C->isAllOnesValue())
       return Op0;
 
-  llvm::VectorType *MaskTy =
-    llvm::VectorType::get(Builder.getInt1Ty(),
-                          Mask->getType()->getIntegerBitWidth());
+  auto *MaskTy = FixedVectorType::get(Builder.getInt1Ty(),
+                                      Mask->getType()->getIntegerBitWidth());
   Mask = Builder.CreateBitCast(Mask, MaskTy);
   Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
   return Builder.CreateSelect(Mask, Op0, Op1);
@@ -1371,9 +1370,11 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
 
   Value *Cmp;
   if (CC == 3) {
-    Cmp = Constant::getNullValue(llvm::VectorType::get(Builder.getInt1Ty(), NumElts));
+    Cmp = Constant::getNullValue(
+        FixedVectorType::get(Builder.getInt1Ty(), NumElts));
   } else if (CC == 7) {
-    Cmp = Constant::getAllOnesValue(llvm::VectorType::get(Builder.getInt1Ty(), NumElts));
+    Cmp = Constant::getAllOnesValue(
+        FixedVectorType::get(Builder.getInt1Ty(), NumElts));
   } else {
     ICmpInst::Predicate Pred;
     switch (CC) {
@@ -1756,7 +1757,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
 
-      Type *NewVecTy = VectorType::get(Type::getInt64Ty(C), 2);
+      auto *NewVecTy = FixedVectorType::get(Type::getInt64Ty(C), 2);
       Value *BC0 = Builder.CreateBitCast(Arg1, NewVecTy, "cast");
       Value *Elt = Builder.CreateExtractElement(BC0, (uint64_t)0);
       Value *BC = Builder.CreateBitCast(Arg0,
@@ -2161,7 +2162,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Rep = Builder.CreateShuffleVector(Rep, Rep, ArrayRef<int>{0, 1, 2, 3});
       }
       Rep = Builder.CreateBitCast(
-          Rep, VectorType::get(Type::getHalfTy(C), NumDstElts));
+          Rep, FixedVectorType::get(Type::getHalfTy(C), NumDstElts));
       Rep = Builder.CreateFPExt(Rep, DstTy, "cvtph2ps");
       if (CI->getNumArgOperands() >= 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
@@ -2335,7 +2336,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Replace vbroadcastf128/vbroadcasti128 with a vector load+shuffle.
       Type *EltTy = cast<VectorType>(CI->getType())->getElementType();
       unsigned NumSrcElts = 128 / EltTy->getPrimitiveSizeInBits();
-      Type *VT = VectorType::get(EltTy, NumSrcElts);
+      auto *VT = FixedVectorType::get(EltTy, NumSrcElts);
       Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
                                             PointerType::getUnqual(VT));
       Value *Load = Builder.CreateAlignedLoad(VT, Op, Align(1));
@@ -3658,13 +3659,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     // So, the only thing required is a bitcast for both arguments.
     // First, check the arguments have the old type.
     Value *Arg0 = CI->getArgOperand(0);
-    if (Arg0->getType() != VectorType::get(Type::getFloatTy(C), 4))
+    if (Arg0->getType() != FixedVectorType::get(Type::getFloatTy(C), 4))
       return;
 
     // Old intrinsic, add bitcasts
     Value *Arg1 = CI->getArgOperand(1);
 
-    Type *NewVecTy = VectorType::get(Type::getInt64Ty(C), 2);
+    auto *NewVecTy = FixedVectorType::get(Type::getInt64Ty(C), 2);
 
     Value *BC0 = Builder.CreateBitCast(Arg0, NewVecTy, "cast");
     Value *BC1 = Builder.CreateBitCast(Arg1, NewVecTy, "cast");
