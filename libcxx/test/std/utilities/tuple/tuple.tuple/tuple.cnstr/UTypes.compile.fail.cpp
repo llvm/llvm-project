@@ -13,7 +13,7 @@
 // template <class... UTypes>
 //   explicit tuple(UTypes&&... u);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 /*
     This is testing an extension whereby only Types having an explicit conversion

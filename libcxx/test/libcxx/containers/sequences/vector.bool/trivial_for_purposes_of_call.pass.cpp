@@ -24,7 +24,7 @@
 //       destructor, or
 //     * all of its copy and move constructors are deleted.
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <vector>
 #include <cassert>

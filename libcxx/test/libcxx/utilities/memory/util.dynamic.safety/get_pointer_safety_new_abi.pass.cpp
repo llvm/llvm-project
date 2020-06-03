@@ -11,7 +11,7 @@
 // pointer_safety get_pointer_safety();
 
 // The pointer_safety interface is no longer provided in C++03 in the new ABI.
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
 
