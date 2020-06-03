@@ -34,12 +34,10 @@ class Value;
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
-/// Base class for type conversion interface. Specific converters must
-/// derive this class and implement the pure virtual functions.
+/// Type conversion class. Specific conversions and materializations can be
+/// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
-  virtual ~TypeConverter() = default;
-
   /// This class provides all of the information necessary to convert a type
   /// signature.
   class SignatureConversion {
@@ -156,11 +154,11 @@ public:
   /// legal.
   bool isSignatureLegal(FunctionType funcType);
 
-  /// This hook allows for converting a specific argument of a signature. It
+  /// This method allows for converting a specific argument of a signature. It
   /// takes as inputs the original argument input number, type.
-  /// On success, this function should populate 'result' with any new mappings.
-  virtual LogicalResult convertSignatureArg(unsigned inputNo, Type type,
-                                            SignatureConversion &result);
+  /// On success, it populates 'result' with any new mappings.
+  LogicalResult convertSignatureArg(unsigned inputNo, Type type,
+                                    SignatureConversion &result);
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
