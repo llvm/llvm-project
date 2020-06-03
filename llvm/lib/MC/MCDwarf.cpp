@@ -1614,14 +1614,24 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
 
   MCSymbol *sectionEnd = context.createTempSymbol();
 
+  dwarf::DwarfFormat Format = IsEH ? dwarf::DWARF32 : context.getDwarfFormat();
+  unsigned UnitLengthBytes = dwarf::getUnitLengthFieldByteSize(Format);
+  unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);
+  bool IsDwarf64 = Format == dwarf::DWARF64;
+
+  if (IsDwarf64)
+    // DWARF64 mark
+    Streamer.emitInt32(dwarf::DW_LENGTH_DWARF64);
+
   // Length
-  const MCExpr *Length =
-      MakeStartMinusEndExpr(context, *sectionStart, *sectionEnd, 4);
-  emitAbsValue(Streamer, Length, 4);
+  const MCExpr *Length = MakeStartMinusEndExpr(context, *sectionStart,
+                                               *sectionEnd, UnitLengthBytes);
+  emitAbsValue(Streamer, Length, OffsetSize);
 
   // CIE ID
-  unsigned CIE_ID = IsEH ? 0 : -1;
-  Streamer.emitInt32(CIE_ID);
+  uint64_t CIE_ID =
+      IsEH ? 0 : (IsDwarf64 ? dwarf::DW64_CIE_ID : dwarf::DW_CIE_ID);
+  Streamer.emitIntValue(CIE_ID, OffsetSize);
 
   // Version
   uint8_t CIEVersion = getCIEVersion(IsEH, context.getDwarfVersion());
@@ -1731,9 +1741,16 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 
   CFAOffset = InitialCFAOffset;
 
+  dwarf::DwarfFormat Format = IsEH ? dwarf::DWARF32 : context.getDwarfFormat();
+  unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);
+
+  if (Format == dwarf::DWARF64)
+    // DWARF64 mark
+    Streamer.emitInt32(dwarf::DW_LENGTH_DWARF64);
+
   // Length
   const MCExpr *Length = MakeStartMinusEndExpr(context, *fdeStart, *fdeEnd, 0);
-  emitAbsValue(Streamer, Length, 4);
+  emitAbsValue(Streamer, Length, OffsetSize);
 
   Streamer.emitLabel(fdeStart);
 
@@ -1742,13 +1759,13 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   if (IsEH) {
     const MCExpr *offset =
         MakeStartMinusEndExpr(context, cieStart, *fdeStart, 0);
-    emitAbsValue(Streamer, offset, 4);
+    emitAbsValue(Streamer, offset, OffsetSize);
   } else if (!asmInfo->doesDwarfUseRelocationsAcrossSections()) {
     const MCExpr *offset =
         MakeStartMinusEndExpr(context, SectionStart, cieStart, 0);
-    emitAbsValue(Streamer, offset, 4);
+    emitAbsValue(Streamer, offset, OffsetSize);
   } else {
-    Streamer.emitSymbolValue(&cieStart, 4,
+    Streamer.emitSymbolValue(&cieStart, OffsetSize,
                              asmInfo->needsDwarfSectionOffsetDirective());
   }
 
