@@ -16,7 +16,11 @@ def buildDsym(
                     ["MAKE_DSYM=YES",
                      getArchSpec(architecture),
                      getCCSpec(compiler),
-                     "all", getCmdLine(dictionary)])
+                     getDsymutilSpec(),
+                     getSDKRootSpec(),
+                     getModuleCacheSpec(),
+                     "all",
+                     getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
 
