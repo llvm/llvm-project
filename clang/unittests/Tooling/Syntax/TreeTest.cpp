@@ -705,20 +705,16 @@ void test(int a) {
 }
 
 TEST_P(SyntaxTreeTest, PrefixUnaryOperator) {
-  if (!GetParam().isCXX()) {
-    // TODO: Split parts that depend on C++ into a separate test.
-    return;
-  }
   expectTreeDumpEqual(
       R"cpp(
-void test(int a, int *ap, bool b) {
+void test(int a, int *ap) {
   --a; ++a;
-  ~a; compl a;
+  ~a;
   -a;
   +a;
   &a;
   *ap;
-  !b; not b;
+  !a;
   __real a; __imag a;
 }
     )cpp",
@@ -740,11 +736,6 @@ void test(int a, int *ap, bool b) {
   |   | `-SimpleDeclarator
   |   |   |-*
   |   |   `-ap
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-bool
-  |   | `-SimpleDeclarator
-  |   |   `-b
   |   `-)
   `-CompoundStatement
     |-{
@@ -763,12 +754,6 @@ void test(int a, int *ap, bool b) {
     |-ExpressionStatement
     | |-PrefixUnaryOperatorExpression
     | | |-~
-    | | `-UnknownExpression
-    | |   `-a
-    | `-;
-    |-ExpressionStatement
-    | |-PrefixUnaryOperatorExpression
-    | | |-compl
     | | `-UnknownExpression
     | |   `-a
     | `-;
@@ -800,13 +785,7 @@ void test(int a, int *ap, bool b) {
     | |-PrefixUnaryOperatorExpression
     | | |-!
     | | `-UnknownExpression
-    | |   `-b
-    | `-;
-    |-ExpressionStatement
-    | |-PrefixUnaryOperatorExpression
-    | | |-not
-    | | `-UnknownExpression
-    | |   `-b
+    | |   `-a
     | `-;
     |-ExpressionStatement
     | |-PrefixUnaryOperatorExpression
@@ -819,6 +798,53 @@ void test(int a, int *ap, bool b) {
     | | |-__imag
     | | `-UnknownExpression
     | |   `-a
+    | `-;
+    `-}
+)txt");
+}
+
+TEST_P(SyntaxTreeTest, PrefixUnaryOperatorCxx) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  expectTreeDumpEqual(
+      R"cpp(
+void test(int a, bool b) {
+  compl a;
+  not b;
+}
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-a
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-bool
+  |   | `-SimpleDeclarator
+  |   |   `-b
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-compl
+    | | `-UnknownExpression
+    | |   `-a
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-not
+    | | `-UnknownExpression
+    | |   `-b
     | `-;
     `-}
 )txt");
