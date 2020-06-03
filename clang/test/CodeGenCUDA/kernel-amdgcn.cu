@@ -39,4 +39,4 @@ int main() {
   launch((void*)D.Empty());
   return 0;
 }
-// CHECK: attributes #[[ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,256"
+// CHECK: attributes #[[ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"
