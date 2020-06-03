@@ -22,7 +22,7 @@ class DylibSymbol;
 class InputSection;
 struct Reloc;
 
-enum {
+enum : uint64_t {
   // We are currently only supporting 64-bit targets since macOS and iOS are
   // deprecating 32-bit apps.
   WordSize = 8,
