@@ -15402,21 +15402,23 @@ Syntax:
 
 ::
 
-      declare vectorty @llvm.matrix.multiply.*(vectorty %A, vectorty %B, i32 <M>, i32 <N>, i32 <K>)
+      declare vectorty @llvm.matrix.multiply.*(vectorty %A, vectorty %B, i32 <OuterRows>, i32 <Inner>, i32 <OuterColumns>)
 
 Overview:
 """""""""
 
-The '``llvm.matrix.multiply.*``' intrinsic treats %A as matrix with <M> rows and <K> columns, %B as
-matrix with <K> rows and <N> columns and multiplies them. The result matrix is returned embedded in the
+The '``llvm.matrix.multiply.*``' intrinsic treats %A as a matrix with <OuterRows>
+rows and <Inner> columns, %B as a matrix with <Inner> rows and <OuterColumns>
+columns and multiplies them. The result matrix is returned embedded in the
 result vector.
 
 Arguments:
 """"""""""
 
-The <M>, <N> and <K> arguments must be constant integers.  The vector argument %A
-must have <M> * <K> elements, %B must have <K> * <N> elements and the returned
-vector must have <M> * <N> elements.
+The <OuterRows>, <Inner> and <OuterColumns> arguments must be constant
+integers. The vector argument %A must have <OuterRows> * <Inner> elements, %B
+must have <Inner> * <OuterColumns> elements and the returned vector must have
+<OuterRows> * <OuterColumns> elements.
 
 
 '``llvm.matrix.columnwise.load.*``' Intrinsic
