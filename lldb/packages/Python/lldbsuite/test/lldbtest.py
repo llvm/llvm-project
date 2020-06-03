@@ -507,7 +507,7 @@ class Base(unittest2.TestCase):
 
     def trace(self, *args,**kwargs):
         with recording(self, self.TraceOn()) as sbuf:
-            print(*args, **kwargs, file=sbuf)
+            print(*args, file=sbuf, **kwargs)
 
     @classmethod
     def setUpClass(cls):
