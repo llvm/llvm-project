@@ -96,7 +96,7 @@ extern cl::opt<std::string> MemOPSizeRange;
 extern cl::opt<unsigned> MemOPSizeLarge;
 
 cl::opt<bool>
-    MemOPOptMemcmpBcmp("pgo-memop-optimize-memcmp-bcmp", cl::init(false),
+    MemOPOptMemcmpBcmp("pgo-memop-optimize-memcmp-bcmp", cl::init(true),
                        cl::Hidden,
                        cl::desc("Size-specialize memcmp and bcmp calls"));
 
