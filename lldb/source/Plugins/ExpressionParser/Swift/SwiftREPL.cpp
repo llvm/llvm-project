@@ -575,9 +575,8 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       repl_module = swift_ast->CreateModule(completion_module_info, error,
                                             importInfo);
       llvm::Optional<unsigned> bufferID;
-      swift::SourceFile *repl_source_file = new (*ast)
-          swift::SourceFile(*repl_module, swift::SourceFileKind::Main, bufferID,
-                            /*Keep tokens*/false);
+      swift::SourceFile *repl_source_file = new (*ast) swift::SourceFile(
+          *repl_module, swift::SourceFileKind::Main, bufferID);
       repl_module->addFile(*repl_source_file);
       swift::performImportResolution(*repl_source_file);
       m_completion_module_initialized = true;
