@@ -238,7 +238,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_8:
     return IsPCRel
                ? setRTypes(ELF::R_MIPS_PC32, ELF::R_MIPS_64, ELF::R_MIPS_NONE)
-               : ELF::R_MIPS_64;
+               : (unsigned)ELF::R_MIPS_64;
   }
 
   if (IsPCRel) {
