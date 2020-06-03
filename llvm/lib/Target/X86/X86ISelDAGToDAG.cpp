@@ -803,6 +803,7 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
 }
 
 void X86DAGToDAGISel::PreprocessISelDAG() {
+  bool MadeChange = false;
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
        E = CurDAG->allnodes_end(); I != E; ) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
@@ -815,7 +816,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
 
@@ -846,7 +847,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         --I;
         CurDAG->ReplaceAllUsesWith(N, Res.getNode());
         ++I;
-        CurDAG->DeleteNode(N);
+        MadeChange = true;
         continue;
       }
     }
@@ -870,7 +871,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         --I;
         CurDAG->ReplaceAllUsesWith(N, Res.getNode());
         ++I;
-        CurDAG->DeleteNode(N);
+        MadeChange = true;
+        continue;
       }
 
       break;
@@ -898,7 +900,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         SDValue To[] = {Res, NarrowBCast.getValue(1)};
         CurDAG->ReplaceAllUsesWith(N, To);
         ++I;
-        CurDAG->DeleteNode(N);
+        MadeChange = true;
+        continue;
       }
 
       break;
@@ -915,7 +918,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesWith(N, Blendv.getNode());
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     case ISD::FP_ROUND:
@@ -951,7 +954,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesWith(N, Res.getNode());
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     case ISD::SHL:
@@ -974,7 +977,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     case ISD::ANY_EXTEND:
@@ -1000,7 +1003,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     case ISD::FCEIL:
@@ -1044,7 +1047,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesWith(N, Res.getNode());
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     case X86ISD::FANDN:
@@ -1087,7 +1090,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
-      CurDAG->DeleteNode(N);
+      MadeChange = true;
       continue;
     }
     }
@@ -1126,6 +1129,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         continue;
       moveBelowOrigChain(CurDAG, Load, SDValue(N, 0), Chain);
       ++NumLoadMoved;
+      MadeChange = true;
       continue;
     }
 
@@ -1284,13 +1288,12 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     // Now that we did that, the node is dead.  Increment the iterator to the
     // next node to process, then delete N.
     ++I;
-    CurDAG->DeleteNode(N);
+    MadeChange = true;
   }
 
-  // The load+call transform above can leave some dead nodes in the graph. Make
-  // sure we remove them. Its possible some of the other transforms do to so
-  // just remove dead nodes unconditionally.
-  CurDAG->RemoveDeadNodes();
+  // Remove any dead nodes that may have been left behind.
+  if (MadeChange)
+    CurDAG->RemoveDeadNodes();
 }
 
 // Look for a redundant movzx/movsx that can occur after an 8-bit divrem.
