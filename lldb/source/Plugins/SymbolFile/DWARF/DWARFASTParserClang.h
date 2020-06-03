@@ -194,10 +194,10 @@ private:
 
   void
   ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
-                    lldb_private::CompilerType &class_clang_type,
+                    const lldb_private::CompilerType &class_clang_type,
                     const lldb::LanguageType class_language,
                     std::vector<int> &member_accessibilities,
-                    lldb::AccessType &default_accessibility,
+                    lldb::AccessType default_accessibility,
                     DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
