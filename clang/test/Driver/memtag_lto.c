@@ -121,7 +121,7 @@ __attribute__((noinline)) void use_local(char *p) { *p = w; }
 
 // SSI-LABEL: @fn
 // SSI-LABEL: allocas uses:
-__attribute__((visibility("default"))) int fn() {
+int fn() {
   // XUNSAFE-DAG: [4]: full-set
   // XSAFE-DAG: [4]: [0,4)
   int x;

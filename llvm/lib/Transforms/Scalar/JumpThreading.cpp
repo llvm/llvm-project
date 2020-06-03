@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1478,56 +1479,28 @@ FindMostPopularDest(BasicBlock *BB,
   // explicitly choose to ignore 'undef' destinations.  We prefer to thread
   // blocks with known and real destinations to threading undef.  We'll handle
   // them later if interesting.
-  DenseMap<BasicBlock*, unsigned> DestPopularity;
+  MapVector<BasicBlock *, unsigned> DestPopularity;
+
+  // Populate DestPopularity with the successors in the order they appear in the
+  // successor list.  This way, we ensure determinism by iterating it in the
+  // same order in std::max_element below.  We map nullptr to 0 so that we can
+  // return nullptr when PredToDestList contains nullptr only.
+  DestPopularity[nullptr] = 0;
+  for (auto *SuccBB : successors(BB))
+    DestPopularity[SuccBB] = 0;
+
   for (const auto &PredToDest : PredToDestList)
     if (PredToDest.second)
       DestPopularity[PredToDest.second]++;
 
-  if (DestPopularity.empty())
-    return nullptr;
-
   // Find the most popular dest.
-  DenseMap<BasicBlock*, unsigned>::iterator DPI = DestPopularity.begin();
-  BasicBlock *MostPopularDest = DPI->first;
-  unsigned Popularity = DPI->second;
-  SmallVector<BasicBlock*, 4> SamePopularity;
-
-  for (++DPI; DPI != DestPopularity.end(); ++DPI) {
-    // If the popularity of this entry isn't higher than the popularity we've
-    // seen so far, ignore it.
-    if (DPI->second < Popularity)
-      ; // ignore.
-    else if (DPI->second == Popularity) {
-      // If it is the same as what we've seen so far, keep track of it.
-      SamePopularity.push_back(DPI->first);
-    } else {
-      // If it is more popular, remember it.
-      SamePopularity.clear();
-      MostPopularDest = DPI->first;
-      Popularity = DPI->second;
-    }
-  }
-
-  // Okay, now we know the most popular destination.  If there is more than one
-  // destination, we need to determine one.  This is arbitrary, but we need
-  // to make a deterministic decision.  Pick the first one that appears in the
-  // successor list.
-  if (!SamePopularity.empty()) {
-    SamePopularity.push_back(MostPopularDest);
-    Instruction *TI = BB->getTerminator();
-    for (unsigned i = 0; ; ++i) {
-      assert(i != TI->getNumSuccessors() && "Didn't find any successor!");
-
-      if (!is_contained(SamePopularity, TI->getSuccessor(i)))
-        continue;
-
-      MostPopularDest = TI->getSuccessor(i);
-      break;
-    }
-  }
+  using VT = decltype(DestPopularity)::value_type;
+  auto MostPopular = std::max_element(
+      DestPopularity.begin(), DestPopularity.end(),
+      [](const VT &L, const VT &R) { return L.second < R.second; });
 
   // Okay, we have finally picked the most popular destination.
-  return MostPopularDest;
+  return MostPopular->first;
 }
 
 // Try to evaluate the value of V when the control flows from PredPredBB to

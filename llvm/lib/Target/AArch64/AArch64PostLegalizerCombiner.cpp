@@ -28,6 +28,45 @@
 
 using namespace llvm;
 
+/// \return true if \p M is a zip mask for a shuffle vector of \p NumElts.
+/// Whether or not G_ZIP1 or G_ZIP2 should be used is stored in \p WhichResult.
+static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
+                      unsigned &WhichResult) {
+  if (NumElts % 2 != 0)
+    return false;
+
+  // 0 means use ZIP1, 1 means use ZIP2.
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  unsigned Idx = WhichResult * NumElts / 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+      if ((M[i] >= 0 && static_cast<unsigned>(M[i]) != Idx) ||
+          (M[i + 1] >= 0 && static_cast<unsigned>(M[i + 1]) != Idx + NumElts))
+        return false;
+    Idx += 1;
+  }
+  return true;
+}
+
+static bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     unsigned &Opc) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  unsigned WhichResult;
+  ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
+  unsigned NumElts = MRI.getType(MI.getOperand(0).getReg()).getNumElements();
+  if (!isZipMask(ShuffleMask, NumElts, WhichResult))
+    return false;
+  Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
+  return true;
+}
+
+static bool applyZip(MachineInstr &MI, unsigned Opc) {
+  MachineIRBuilder MIRBuilder(MI);
+  MIRBuilder.buildInstr(Opc, {MI.getOperand(0).getReg()},
+                        {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+  MI.eraseFromParent();
+  return true;
+}
+
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGICombiner.inc"
 #undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
