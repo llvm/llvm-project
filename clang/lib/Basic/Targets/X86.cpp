@@ -1605,8 +1605,7 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
 bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
 #define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
-#define X86_CPU_TYPE_COMPAT_WITH_ALIAS(ARCHNAME, ENUM, STR, ALIAS)             \
-  .Cases(STR, ALIAS, true)
+#define X86_CPU_TYPE_COMPAT_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
 #define X86_CPU_TYPE_COMPAT(ARCHNAME, ENUM, STR) .Case(STR, true)
 #define X86_CPU_SUBTYPE_COMPAT(ARCHNAME, ENUM, STR) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
