@@ -44,9 +44,9 @@ void helper() {
 int main(int, char**)
 {
   notReady = threadCount;
-  std::vector<std::thread> threads;
+  std::vector<std::thread> threads(threadCount);
   for (unsigned i = 0; i < threadCount; i++)
-    threads.emplace_back(helper);
+    threads[i] = std::thread(helper);
   {
     while (notReady > 0)
       std::this_thread::yield();
