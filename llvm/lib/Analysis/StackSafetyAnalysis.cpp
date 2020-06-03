@@ -140,7 +140,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
 }
 
 struct FunctionInfo {
-  std::map<const AllocaInst *, UseInfo> Allocas;
+  SmallVector<UseInfo, 4> Allocas;
   SmallVector<UseInfo, 4> Params;
   // TODO: describe return value as depending on one or more of its arguments.
 
@@ -165,11 +165,13 @@ struct FunctionInfo {
 
     O << "    allocas uses:\n";
     if (F) {
+      size_t Pos = 0;
       for (auto &I : instructions(F)) {
         if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-          auto &AS = Allocas.find(AI)->second;
+          auto &AS = Allocas[Pos];
           O << "      " << AI->getName() << "["
             << getStaticAllocaSizeRange(*AI).getUpper() << "]: " << AS << "\n";
+          ++Pos;
         }
       }
     } else {
@@ -389,7 +391,8 @@ FunctionInfo StackSafetyLocalAnalysis::run() {
 
   for (auto &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      UseInfo &AS = Info.Allocas.emplace(AI, PointerSize).first->second;
+      Info.Allocas.emplace_back(PointerSize);
+      UseInfo &AS = Info.Allocas.back();
       analyzeAllUses(AI, AS);
     }
   }
@@ -599,18 +602,19 @@ GVToSSI createGlobalStackSafetyInfo(
 
   for (auto &F : SSDFA.run()) {
     auto FI = F.second;
+    size_t Pos = 0;
     auto &SrcF = Functions[F.first];
-    for (auto &KV : FI.Allocas) {
-      auto &A = KV.second;
+    for (auto &A : FI.Allocas) {
       resolveAllCalls(A);
       for (auto &C : A.Calls) {
         A.updateRange(
             SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
       }
       // FIXME: This is needed only to preserve calls in print() results.
-      A.Calls = SrcF.Allocas.find(KV.first)->second.Calls;
+      A.Calls = SrcF.Allocas[Pos].Calls;
+      ++Pos;
     }
-    size_t Pos = 0;
+    Pos = 0;
     for (auto &P : FI.Params) {
       P.Calls = SrcF.Params[Pos].Calls;
       ++Pos;
@@ -658,11 +662,20 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
     }
     Info.reset(
         new InfoTy{createGlobalStackSafetyInfo(std::move(Functions)), {}});
-    for (auto &FnKV : Info->Info) {
-      for (auto &KV : FnKV.second.Allocas) {
-        const AllocaInst *AI = KV.first;
-        if (getStaticAllocaSizeRange(*AI).contains(KV.second.Range))
-          Info->SafeAllocas.insert(AI);
+    for (auto &KV : Info->Info) {
+      if (!KV.first->isDeclaration()) {
+        size_t Pos = 0;
+        // FIXME: Convert FunctionInfo::Allocas into map<AllocaInst*, UseInfo>
+        // and do not rely on alloca index.
+        for (auto &I : instructions(*cast<Function>(KV.first))) {
+          if (const auto &AI = dyn_cast<AllocaInst>(&I)) {
+            if (getStaticAllocaSizeRange(*AI).contains(
+                    KV.second.Allocas[Pos].Range)) {
+              Info->SafeAllocas.insert(AI);
+            }
+            ++Pos;
+          }
+        }
       }
     }
     if (StackSafetyPrint)
