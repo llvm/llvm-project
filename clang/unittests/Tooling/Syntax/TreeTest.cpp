@@ -670,6 +670,35 @@ void test() {
 )txt");
 }
 
+TEST_P(SyntaxTreeTest, CxxNullPtrLiteral) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  expectTreeDumpEqual(
+      R"cpp(
+void test() {
+  nullptr;
+}
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CxxNullPtrExpression
+    | | `-nullptr
+    | `-;
+    `-}
+)txt");
+}
+
 TEST_P(SyntaxTreeTest, PostfixUnaryOperator) {
   expectTreeDumpEqual(
       R"cpp(
