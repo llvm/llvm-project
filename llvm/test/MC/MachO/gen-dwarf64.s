@@ -10,5 +10,10 @@
 // CHECK:      DW_TAG_label [2]
 // CHECK-NEXT:   DW_AT_name [DW_FORM_string] ("foo")
 
+// CHECK:      .debug_aranges contents:
+// CHECK-NEXT: Address Range Header: length = 0x0000000000000034, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
+// CHECK-NEXT: [0x0000000000000000,  0x0000000000000001)
+// CHECK-EMPTY:
+
 _foo:
     nop
