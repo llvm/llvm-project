@@ -1042,6 +1042,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (R != SymbolMap.end() && R->getValue() &&
               !R->getValue()->isDeclaration() &&
               R->getValue()->getSubprogram() &&
+              R->getValue()->hasFnAttribute("use-sample-profile") &&
               isLegalToPromote(*I, R->getValue(), &Reason)) {
             uint64_t C = FS->getEntrySamples();
             auto &DI =
@@ -1785,7 +1786,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
 
   if (!ProfileTopDownLoad || CG == nullptr) {
     for (Function &F : M)
-      if (!F.isDeclaration())
+      if (!F.isDeclaration() && F.hasFnAttribute("use-sample-profile"))
         FunctionOrderList.push_back(&F);
     return FunctionOrderList;
   }
@@ -1795,7 +1796,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
   while (!CGI.isAtEnd()) {
     for (CallGraphNode *node : *CGI) {
       auto F = node->getFunction();
-      if (F && !F->isDeclaration())
+      if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
         FunctionOrderList.push_back(F);
     }
     ++CGI;

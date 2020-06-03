@@ -8,7 +8,7 @@
 
 declare i1 @foo()
 
-define void @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() !dbg !2 {
+define void @_ZN3foo3barERKN1M1XINS_6detail3quxEEE() #0 !dbg !2 {
 ; CHECK: Printing analysis 'Branch Probability Analysis' for function '_ZN3foo3barERKN1M1XINS_6detail3quxEEE':
 
 entry:
@@ -48,6 +48,8 @@ if.else:
 return:
   ret void
 }
+
+attributes #0 = { "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!4, !5}
