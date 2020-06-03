@@ -46,14 +46,10 @@ using llvm::dbgs;
 const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<StringRef> matchDisjunction,
-                                         Optional<StringRef> replacement)
+mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<Identifier> matchDisjunction,
+                                         Optional<Identifier> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement) {}
-
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<StringRef> matchDisjunction,
-                                         StringRef replacement)
-    : LinalgMarker(matchDisjunction, Optional<StringRef>{replacement}) {}
 
 LogicalResult
 mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
@@ -66,12 +62,7 @@ mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
     if (matchDisjunction.empty())
       return success();
 
-    // 2. Has no marker and matchDisjuntion matches the no-moarker case.
-    for (auto marker : matchDisjunction)
-      if (marker.empty())
-        return success();
-
-    // 3. Has no marker but was expecting a marker.
+    // 2. Has no marker but was expecting a marker.
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << " does not have any marker from list: ";
       interleaveComma(matchDisjunction, diag);

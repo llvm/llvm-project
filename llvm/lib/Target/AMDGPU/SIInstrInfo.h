@@ -181,9 +181,6 @@ public:
                                int64_t &Offset1,
                                int64_t &Offset2) const override;
 
-  unsigned getOperandSizeInBytes(const MachineInstr &LdSt,
-                                 const MachineOperand *MOp) const;
-
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,

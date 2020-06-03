@@ -175,7 +175,6 @@ entry:
 define void @NonConstantOffset(i1 zeroext %z) {
 ; CHECK-LABEL: @NonConstantOffset dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; FIXME: SCEV can't look through selects.
 ; CHECK-NEXT: x[4]: [-4,4){{$}}
@@ -205,7 +204,6 @@ entry:
 define void @PossiblyNegativeOffset(i16 %z) {
 ; CHECK-LABEL: @PossiblyNegativeOffset dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: full-set
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[40]: [-131072,131072){{$}}
 ; CHECK-NOT: ]:
@@ -219,7 +217,6 @@ entry:
 define void @NonConstantOffsetOOB(i1 zeroext %z) {
 ; CHECK-LABEL: @NonConstantOffsetOOB dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [-8,8){{$}}
 ; CHECK-NOT: ]:
@@ -265,7 +262,6 @@ entry:
 define void @DynamicAllocaUnused(i64 %size) {
 ; CHECK-LABEL: @DynamicAllocaUnused dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: empty-set{{$}}
 ; CHECK-NOT: ]:
@@ -278,7 +274,6 @@ entry:
 define void @DynamicAlloca(i64 %size) {
 ; CHECK-LABEL: @DynamicAlloca dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
@@ -293,7 +288,6 @@ entry:
 define void @DynamicAllocaFiniteSizeRange(i1 zeroext %z) {
 ; CHECK-LABEL: @DynamicAllocaFiniteSizeRange dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: [-9223372036854775808,9223372036854775796){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[0]: [0,4){{$}}
 ; CHECK-NOT: ]:
@@ -359,7 +353,6 @@ for.cond.cleanup:
 define dso_local void @SizeCheck(i32 %sz) {
 ; CHECK-LABEL: @SizeCheck{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: sz[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x1[128]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
@@ -384,7 +377,6 @@ define void @Scalable(<vscale x 4 x i32>* %p, <vscale x 4 x i32>* %unused, <vsca
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT:   p[]: full-set
 ; CHECK-NEXT:   unused[]: empty-set
-; CHECK-NEXT:   v[]: full-set
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT:   x[0]: [0,1){{$}}
 ; CHECK-NOT: ]:

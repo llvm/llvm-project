@@ -14,9 +14,10 @@
 func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
           %y: memref<?xf32, offset: ?, strides: [1]>,
           %v: memref<f32>) {
-  linalg.dot(%x, %y, %v) : memref<?xf32, offset: ?, strides: [1]>,
-                           memref<?xf32, offset: ?, strides: [1]>,
-                           memref<f32>
+  linalg.dot(%x, %y, %v) { __internal_linalg_transform__ = "MEM" } :
+             memref<?xf32, offset: ?, strides: [1]>,
+             memref<?xf32, offset: ?, strides: [1]>,
+             memref<f32>
   return
 }
 // CHECK-LABEL: func @dot
@@ -35,9 +36,10 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {
-  linalg.matvec(%A, %x, %y) : memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                              memref<?xf32, offset: ?, strides: [1]>,
-                              memref<?xf32, offset: ?, strides: [1]>
+  linalg.matvec(%A, %x, %y) :
+                memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?xf32, offset: ?, strides: [1]>,
+                memref<?xf32, offset: ?, strides: [1]>
   return
 }
 // CHECK-LABEL: func @matvec
@@ -51,9 +53,10 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                              memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                              memref<?x?xf32, offset: ?, strides: [?, 1]>
+  linalg.matmul(%A, %B, %C) { __internal_linalg_transform__ = "MEM" } :
+                memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?x?xf32, offset: ?, strides: [?, 1]>
   return
 }
 // CHECK-LABEL: func @matmul
