@@ -33,7 +33,6 @@
 
 #include <dirent.h>
 #include <pwd.h>
-#include <sys/file.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -1046,34 +1045,6 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   if (NumRead == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   return NumRead;
-}
-
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
-  auto Start = std::chrono::steady_clock::now();
-  auto End = Start + Timeout;
-  do {
-    if (::flock(FD, LOCK_EX | LOCK_NB) == 0)
-      return std::error_code();
-    int Error = errno;
-    if (Error == EWOULDBLOCK) {
-      usleep(1000);
-      continue;
-    }
-    return std::error_code(Error, std::generic_category());
-  } while (std::chrono::steady_clock::now() < End);
-  return make_error_code(errc::no_lock_available);
-}
-
-std::error_code lockFile(int FD) {
-  if (::flock(FD, LOCK_EX) == 0)
-    return std::error_code();
-  return std::error_code(errno, std::generic_category());
-}
-
-std::error_code unlockFile(int FD) {
-  if (::flock(FD, LOCK_UN) == -1)
-    return std::error_code(errno, std::generic_category());
-  return std::error_code();
 }
 
 std::error_code closeFile(file_t &F) {

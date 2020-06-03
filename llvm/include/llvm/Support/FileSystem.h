@@ -1131,39 +1131,6 @@ Expected<file_t>
 openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
                       SmallVectorImpl<char> *RealPath = nullptr);
 
-/// Try to locks the file during the specified time.
-///
-/// This function implements advisory locking on entire file. If it returns
-/// <em>errc::success</em>, the file is locked by the calling process. Until the
-/// process unlocks the file by calling \a unlockFile, all attempts to lock the
-/// same file will fail/block. The process that locked the file may assume that
-/// none of other processes read or write this file, provided that all processes
-/// lock the file prior to accessing its content.
-///
-/// @param File    The descriptor representing the file to lock.
-/// @param Timeout Time in milliseconds that the process should wait before
-///                reporting lock failure. Zero value means try to get lock only
-///                once.
-/// @returns errc::success if lock is successfully obtained,
-/// errc::no_lock_available if the file cannot be locked, or platform-specific
-/// error_code otherwise.
-std::error_code
-tryLockFile(int FD,
-            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
-
-/// Lock the file.
-///
-/// This function acts as @ref tryLockFile(int,std::chrono::milliseconds) but it
-/// waits infinitely.
-std::error_code lockFile(int FD);
-
-/// Unlock the file.
-///
-/// @param File The descriptor representing the file to unlock.
-/// @returns errc::success if lock is successfully released or platform-specific
-/// error_code otherwise.
-std::error_code unlockFile(int FD);
-
 /// @brief Close the file object.  This should be used instead of ::close for
 /// portability. On error, the caller should assume the file is closed, as is
 /// the case for Process::SafelyCloseFileDescriptor
