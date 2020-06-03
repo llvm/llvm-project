@@ -257,11 +257,8 @@ SkylakeCommon:
     break;
 
   case CK_Tremont:
-    setFeatureEnabledImpl(Features, "cldemote", true);
-    setFeatureEnabledImpl(Features, "movdiri", true);
-    setFeatureEnabledImpl(Features, "movdir64b", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
     setFeatureEnabledImpl(Features, "gfni", true);
-    setFeatureEnabledImpl(Features, "waitpkg", true);
     LLVM_FALLTHROUGH;
   case CK_GoldmontPlus:
     setFeatureEnabledImpl(Features, "ptwrite", true);
