@@ -2664,6 +2664,18 @@ TEST_F(FormatTest, FormatTryCatch) {
   verifyIncompleteFormat("try {} catch (");
 }
 
+TEST_F(FormatTest, FormatTryAsAVariable) {
+  verifyFormat("int try;");
+  verifyFormat("int try, size;");
+  verifyFormat("try = foo();");
+  verifyFormat("if (try < size) {\n  return true;\n}");
+
+  verifyFormat("int catch;");
+  verifyFormat("int catch, size;");
+  verifyFormat("catch = foo();");
+  verifyFormat("if (catch < size) {\n  return true;\n}");
+}
+
 TEST_F(FormatTest, FormatSEHTryCatch) {
   verifyFormat("__try {\n"
                "  int a = b * c;\n"
