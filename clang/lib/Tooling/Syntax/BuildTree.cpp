@@ -608,6 +608,14 @@ public:
     return true;
   }
 
+  bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
+    Builder.markChildToken(S->getLocation(),
+                           syntax::NodeRole::CxxNullPtrExpression_keyword);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::CxxNullPtrExpression, S);
+    return true;
+  }
+
   bool WalkUpFromUnaryOperator(UnaryOperator *S) {
     Builder.markChildToken(
         S->getOperatorLoc(),

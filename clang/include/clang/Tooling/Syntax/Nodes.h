@@ -43,6 +43,7 @@ enum class NodeKind : uint16_t {
   PrefixUnaryOperatorExpression,
   PostfixUnaryOperatorExpression,
   BinaryOperatorExpression,
+  CxxNullPtrExpression,
 
   // Statements.
   UnknownStatement,
@@ -112,6 +113,7 @@ enum class NodeRole : uint8_t {
   BinaryOperatorExpression_leftHandSide,
   BinaryOperatorExpression_operatorToken,
   BinaryOperatorExpression_rightHandSide,
+  CxxNullPtrExpression_keyword,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -164,6 +166,16 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// C++11 'nullptr' expression.
+class CxxNullPtrExpression final : public Expression {
+public:
+  CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CxxNullPtrExpression;
+  }
+  syntax::Leaf *nullPtrKeyword();
 };
 
 /// An abstract class for prefix and postfix unary operators.
