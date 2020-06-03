@@ -23,9 +23,9 @@ class SwiftCompletionTest(PExpectTest):
         # pexpect is not recognized as a interactive terminal by pexpect it seems.
         self.child.send("\t\t\t")
 
-        # Try completing something that only has one result "Hasabl" -> "Hashable".
-        self.child.send("Hashabl\t")
-        self.child.expect_exact("Hashable")
+        # Try completing something that only has one result "fun" -> "func".
+        self.child.send("fun\t")
+        self.child.expect_exact("func")
         self.child.sendline("")
 
         # Try completing something that has multiple completions.

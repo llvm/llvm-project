@@ -925,6 +925,7 @@ static void SplitDottedName(llvm::StringRef name,
 
 std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
   class SwiftTypeScavenger : public Language::TypeScavenger {
+    friend std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger();
   private:
     typedef SwiftASTContext::TypeOrDecl TypeOrDecl;
     typedef SwiftASTContext::TypesOrDecls TypesOrDecls;

@@ -45,6 +45,7 @@
 
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftFormatters.h"
+#include "Plugins/Language/Swift/SwiftRuntimeFailureRecognizer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -238,7 +239,10 @@ public:
   }
 
   void AddToLibraryNegativeCache(llvm::StringRef library_name) {}
-  bool IsInLibraryNegativeCache(llvm::StringRef library_name) {}
+
+  bool IsInLibraryNegativeCache(llvm::StringRef library_name) {
+    return false;
+  }
 
   void ReleaseAssociatedRemoteASTContext(swift::ASTContext *ctx) {}
 
@@ -1987,6 +1991,7 @@ void SwiftLanguageRuntime::Initialize() {
         return CommandObjectSP(new CommandObjectMultiwordSwift(interpreter));
       },
       SwiftLanguageRuntimeImpl::GetBreakpointExceptionPrecondition);
+  RegisterSwiftRuntimeFailureRecognizer();
 }
 
 void SwiftLanguageRuntime::Terminate() {

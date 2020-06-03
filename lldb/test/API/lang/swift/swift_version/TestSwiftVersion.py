@@ -58,6 +58,7 @@ class TestSwiftVersion(TestBase):
         # Create the target
         target = self.dbg.CreateTarget(exe_path)
         self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['mod4', 'mod5'])
 
         for t in tests:
           source_name = t['file']

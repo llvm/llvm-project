@@ -4961,8 +4961,11 @@ void SwiftASTContext::LogConfiguration() {
   LOG_PRINTF(LIBLLDB_LOG_TYPES,
              "(SwiftASTContext*)%p:", static_cast<void *>(this));
 
-  if (!m_ast_context_ap)
+  if (!m_ast_context_ap) {
     log->Printf("  (no AST context)");
+    return;
+  }
+
   log->Printf("  Architecture                 : %s",
               m_ast_context_ap->LangOpts.Target.getTriple().c_str());
   log->Printf("  SDK path                     : %s",
@@ -8242,6 +8245,9 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   } break;
   case swift::FileUnitKind::Builtin: {
     s.PutCString("Builtin");
+  } break;
+  case swift::FileUnitKind::Synthesized: {
+    s.PutCString("Synthesized");
   } break;
   case swift::FileUnitKind::SerializedAST:
   case swift::FileUnitKind::ClangModule: {

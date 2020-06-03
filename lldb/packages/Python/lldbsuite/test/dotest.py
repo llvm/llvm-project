@@ -333,9 +333,6 @@ def parseOptionsAndInitTestdirs():
     if args.swiftcompiler:
         configuration.swiftCompiler = args.swiftcompiler
 
-    if args.swiftlibrary:
-        configuration.swiftLibrary = args.swiftlibrary
-
     if args.xfail_categories:
         configuration.xfail_categories += test_categories.validate(
             args.xfail_categories, False)
@@ -1106,8 +1103,6 @@ def run_suite():
     os.environ["CC"] = configuration.compiler
     if configuration.swiftCompiler:
         os.environ["SWIFTC"] = configuration.swiftCompiler
-    if configuration.swiftLibrary:
-        os.environ["USERSWIFTLIBRARY"] = configuration.swiftLibrary
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 

@@ -408,16 +408,25 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder, m_status);
-      if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
-      {
-        // If we are planning to step out further, then the frame we are going
-        // to step out to is about to go away, so we need to reset the frame
-        // we are stepping out to to the one our step out plan is aiming for.
-        ThreadPlanStepOut *as_step_out
-          = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
-        m_step_out_to_id = as_step_out->m_step_out_to_id;
+      if (!m_step_out_further_plan_sp) {
+        // We didn't want to stop here, but we can't find a plan to get us 
+        // out of here, so we'll stop.
+        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+        LLDB_LOG(log, "Should stop here was false but we couldn't find a"
+                      "plan to get us out from here.  Stopping.");
+        SetPlanComplete();
+      } else {
+        if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
+        {
+          // If we are planning to step out further, then the frame we are going
+          // to step out to is about to go away, so we need to reset the frame
+          // we are stepping out to to the one our step out plan is aiming for.
+          ThreadPlanStepOut *as_step_out
+            = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
+          m_step_out_to_id = as_step_out->m_step_out_to_id;
+        }
+        done = false;
       }
-      done = false;
     }
   }
 
