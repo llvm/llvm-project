@@ -112,6 +112,7 @@ static StringRef toString(CheckerRegistry::StateFromCmdLine Kind) {
   case CheckerRegistry::StateFromCmdLine::State_Unspecified:
     return "Unspecified";
   }
+  llvm_unreachable("Unhandled CheckerRegistry::StateFromCmdLine enum");
 }
 
 LLVM_DUMP_METHOD void
