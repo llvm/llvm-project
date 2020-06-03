@@ -77,9 +77,9 @@ declare i32 @bar_extern(i32*)
 ; COMMON-NEXT:	    .extern	.bar_extern
 ; COMMON-NEXT:      .extern     bar_extern[DS]
 ; COMMON-NEXT:	    .toc
-; COMMON-NEXT: LC0:
+; COMMON-NEXT: L..C0:
 ; COMMON-NEXT:      .tc b_e[TC],b_e[UA]
-; COMMON-NEXT: LC1:
+; COMMON-NEXT: L..C1:
 ; COMMON-NEXT:      .tc bar_p[TC],bar_p
 
 ; CHECKSYM:       Symbols [

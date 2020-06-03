@@ -48,25 +48,25 @@ __here:
 
 ; 32SMALL-ASM-LABEL: foo
 ; 32SMALL-ASM: .foo:
-; 32SMALL-ASM: Ltmp0:
-; 32SMALL-ASM: 	       lwz [[REG1:[0-9]+]], LC0(2)
+; 32SMALL-ASM: L..tmp0:
+; 32SMALL-ASM: 	       lwz [[REG1:[0-9]+]], L..C0(2)
 
 ; 32LARGE-ASM-LABEL: foo
 ; 32LARGE-ASM: .foo:
-; 32LARGE-ASM: Ltmp0:
-; 32LARGE-ASM:         addis [[REG1:[0-9]+]], LC0@u(2)
-; 32LARGE-ASM:         lwz [[REG2:[0-9]+]], LC0@l([[REG1]])
+; 32LARGE-ASM: L..tmp0:
+; 32LARGE-ASM:         addis [[REG1:[0-9]+]], L..C0@u(2)
+; 32LARGE-ASM:         lwz [[REG2:[0-9]+]], L..C0@l([[REG1]])
 
 ; 64SMALL-ASM-LABEL: foo
 ; 64SMALL-ASM: .foo:
-; 64SMALL-ASM: Ltmp0:
-; 64SMALL-ASM:         ld [[REG1:[0-9]+]], LC0(2)
+; 64SMALL-ASM: L..tmp0:
+; 64SMALL-ASM:         ld [[REG1:[0-9]+]], L..C0(2)
 
 ; 64LARGE-ASM-LABEL: foo
 ; 64LARGE-ASM: .foo:
-; 64LARGE-ASM: Ltmp0:
-; 64LARGE-ASM:         addis [[REG1:[0-9]+]], LC0@u(2)
-; 64LARGE-ASM:         ld [[REG2:[0-9]+]], LC0@l([[REG1]])
+; 64LARGE-ASM: L..tmp0:
+; 64LARGE-ASM:         addis [[REG1:[0-9]+]], L..C0@u(2)
+; 64LARGE-ASM:         ld [[REG2:[0-9]+]], L..C0@l([[REG1]])
 
 ; CHECK: .toc
-; CHECK: .tc Ltmp0[TC],Ltmp0
+; CHECK: .tc L..tmp0[TC],L..tmp0

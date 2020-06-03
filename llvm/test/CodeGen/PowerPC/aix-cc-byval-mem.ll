@@ -30,14 +30,14 @@ entry:
 ; CHECKASM-LABEL: .call_test_byval_mem1:
 
 ; ASM32BIT:       stwu 1, -64(1)
-; ASM32BIT:       lwz [[REG1:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32BIT:       lwz [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM32BIT:       lbz [[REG2:[0-9]+]], 0([[REG1]])
 ; ASM32BIT:       stb [[REG2]], 56(1)
 ; ASM32BIT:       bl .test_byval_mem1
 ; ASM32BIT:       addi 1, 1, 64
 
 ; ASM64BIT:       stdu 1, -128(1)
-; ASM64BIT:       ld [[REG1:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64BIT:       ld [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT:       lbz [[REG2:[0-9]+]], 0([[REG1]])
 ; ASM64BIT:       stb [[REG2]], 112(1)
 ; ASM64BIT:       bl .test_byval_mem1
@@ -106,7 +106,7 @@ entry:
 
 ; ASM32BIT:       stwu 1, -320(1)
 ; ASM32BIT-DAG:   addi 3, 1, 56
-; ASM32BIT-DAG:   lwz 4, LC{{[0-9]+}}(2)
+; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
 ; ASM32BIT-NEXT:  bl .memcpy
 ; ASM32BIT:       bl .test_byval_mem2
@@ -136,7 +136,7 @@ entry:
 
 ; ASM64BIT:       stdu 1, -368(1)
 ; ASM64BIT-DAG:   addi 3, 1, 112
-; ASM64BIT-DAG:   ld 4, LC{{[0-9]+}}(2)
+; ASM64BIT-DAG:   ld 4, L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   li 5, 256
 ; ASM64BIT-NEXT:  bl .memcpy
 ; ASM64BIT:       bl .test_byval_mem2
@@ -204,7 +204,7 @@ entry:
 ; CHECKASM-LABEL: .call_test_byval_mem3:
 
 ; ASM32BIT:       stwu 1, -112(1)
-; ASM32BIT-DAG:   lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32BIT-DAG:   lwz [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   addi 3, 1, 56
 ; ASM32BIT-DAG:   addi 4, [[REG]], 24
 ; ASM32BIT-DAG:   li 5, 33
@@ -220,7 +220,7 @@ entry:
 
 ; The memcpy call was inlined in 64-bit so MIR test is redundant and omitted.
 ; ASM64BIT:       stdu 1, -128(1)
-; ASM64BIT-DAG:   ld [[REG1:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64BIT-DAG:   ld [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   ld [[REG2:[0-9]+]], 48([[REG1]])
 ; ASM64BIT-DAG:   std [[REG2]], 112(1)
 ; ASM64BIT-DAG:   lbz [[REG3:[0-9]+]], 56([[REG1]])
@@ -321,13 +321,13 @@ entry:
 
 ; ASM32BIT:       stwu 1, -336(1)
 ; ASM32BIT-NEXT:  stw [[REG1:[0-9]+]], {{[0-9]+}}(1)
-; ASM32BIT:       lwz [[REG1]], LC{{[0-9]+}}(2)
+; ASM32BIT:       lwz [[REG1]], L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   lhz [[REG2:[0-9]+]], 28([[REG1]])
 ; ASM32BIT-DAG:   sth [[REG2]], 56(1)
 ; ASM32BIT-DAG:   lbz [[REG3:[0-9]+]], 30([[REG1]])
 ; ASM32BIT-DAG:   stb [[REG3]], 58(1)
 ; ASM32BIT-DAG:   addi 3, 1, 60
-; ASM32BIT-DAG:   lwz 4, LC{{[0-9]+}}(2)
+; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
 ; ASM32BIT-NEXT:  bl .memcpy
 ; ASM32BIT-DAG:   lwz 4, 0([[REG1]])
@@ -364,12 +364,12 @@ entry:
 ; 64BIT-NEXT:     ADJCALLSTACKUP 344, 0, implicit-def dead $r1, implicit $r1
 
 ; ASM64BIT:       stdu 1, -368(1)
-; ASM64BIT-DAG:   ld [[REG1:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64BIT-DAG:   ld [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   addi 3, 1, 112
 ; ASM64BIT-DAG:   addi 4, [[REG1]], 24
 ; ASM64BIT-DAG:   li 5, 232
 ; ASM64BIT-NEXT:  bl .memcpy
-; ASM64BIT-DAG:   ld [[REG2:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64BIT-DAG:   ld [[REG2:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   ld 4, 0([[REG2]])
 ; ASM64BIT-DAG:   ld 5, 8([[REG2]])
 ; ASM64BIT-DAG:   ld 6, 16([[REG2]])

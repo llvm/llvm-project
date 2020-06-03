@@ -50,7 +50,7 @@ entry:
 ; 32SMALL-ASM: .LCPI0_0:
 ; 32SMALL-ASM:         .vbyte	4, 0x40b00000
 ; 32SMALL-ASM: .test_float:
-; 32SMALL-ASM:         lwz [[REG1:[0-9]+]], LC0(2)
+; 32SMALL-ASM:         lwz [[REG1:[0-9]+]], L..C0(2)
 ; 32SMALL-ASM:         lfs 1, 0([[REG1]])
 ; 32SMALL-ASM:         blr
 
@@ -59,8 +59,8 @@ entry:
 ; 32LARGE-ASM: .LCPI0_0:
 ; 32LARGE-ASM:         .vbyte	4, 0x40b00000
 ; 32LARGE-ASM: .test_float:
-; 32LARGE-ASM:         addis [[REG1:[0-9]+]], LC0@u(2)
-; 32LARGE-ASM:         lwz [[REG2:[0-9]+]], LC0@l([[REG1]])
+; 32LARGE-ASM:         addis [[REG1:[0-9]+]], L..C0@u(2)
+; 32LARGE-ASM:         lwz [[REG2:[0-9]+]], L..C0@l([[REG1]])
 ; 32LARGE-ASM:         lfs 1, 0([[REG2]])
 ; 32LARGE-ASM:         blr
 
@@ -69,7 +69,7 @@ entry:
 ; 64SMALL-ASM: .LCPI0_0:
 ; 64SMALL-ASM:         .vbyte	4, 0x40b00000
 ; 64SMALL-ASM: .test_float:
-; 64SMALL-ASM:         ld [[REG1:[0-9]+]], LC0(2)
+; 64SMALL-ASM:         ld [[REG1:[0-9]+]], L..C0(2)
 ; 64SMALL-ASM:         lfs 1, 0([[REG1]])
 ; 64SMALL-ASM:         blr
 
@@ -78,8 +78,8 @@ entry:
 ; 64LARGE-ASM: .LCPI0_0:
 ; 64LARGE-ASM:         .vbyte	4, 0x40b00000
 ; 64LARGE-ASM: .test_float:
-; 64LARGE-ASM:         addis [[REG1:[0-9]+]], LC0@u(2)
-; 64LARGE-ASM:         ld [[REG2:[0-9]+]], LC0@l([[REG1]])
+; 64LARGE-ASM:         addis [[REG1:[0-9]+]], L..C0@u(2)
+; 64LARGE-ASM:         ld [[REG2:[0-9]+]], L..C0@l([[REG1]])
 ; 64LARGE-ASM:         lfs 1, 0([[REG2]])
 ; 64LARGE-ASM:         blr
 
