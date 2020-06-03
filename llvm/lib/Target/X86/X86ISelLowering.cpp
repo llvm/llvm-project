@@ -7439,8 +7439,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       return false;
 
     // Subvector shuffle inputs must not be larger than the subvector.
-    if (llvm::any_of(SubInputs, [SubVT](SDValue Op) {
-          return SubVT.getSizeInBits() > Op.getValueSizeInBits();
+    if (llvm::any_of(SubInputs, [SubVT](SDValue SubInput) {
+          return SubVT.getSizeInBits() < SubInput.getValueSizeInBits();
         }))
       return false;
 
