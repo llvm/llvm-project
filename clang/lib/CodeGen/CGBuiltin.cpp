@@ -11375,8 +11375,8 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   std::tie(Index, Value) = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
 #define X86_VENDOR(ENUM, STRING)                                               \
   .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE_COMPAT_WITH_ALIAS(ARCHNAME, ENUM, STR, ALIAS)             \
-  .Cases(STR, ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
+#define X86_CPU_TYPE_COMPAT_ALIAS(ENUM, ALIAS)             \
+  .Case(ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_TYPE_COMPAT(ARCHNAME, ENUM, STR)                               \
   .Case(STR, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_SUBTYPE_COMPAT(ARCHNAME, ENUM, STR)                            \
