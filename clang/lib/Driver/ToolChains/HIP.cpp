@@ -175,6 +175,17 @@ const char *AMDGCN::Linker::constructLlcCommand(
     LlcArgs.push_back(A->getValue(0));
   }
 
+  // FIXME: Remove this hack. This shouldn't be dependent on a -g option in the
+  // first place, but since HIP invokes llc directly this also has to be
+  // duplicated here.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {
+    if (!A->getOption().matches(options::OPT_glldb) &&
+        !A->getOption().matches(options::OPT_gsce)) {
+      LlcArgs.push_back("-amdgpu-spill-cfi-saved-regs");
+    }
+  }
+
   // Add output filename
   LlcArgs.push_back("-o");
   auto LlcOutputFile =
