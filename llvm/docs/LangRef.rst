@@ -2240,6 +2240,19 @@ that will have been done by one of the ``@llvm.call.preallocated.*`` intrinsics.
       ; initialize %b
       call void @bar(i32 42, %foo* preallocated(%foo) %b) ["preallocated"(token %t)]
 
+.. _ob_gc_live
+
+GC Live Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A "gc-live" operand bundle is only valid on a :ref:`gc.statepoint <gc_statepoint>`
+intrinsic. The operand bundle must contain every pointer to a garbage collected
+object which potentially needs to be updated by the garbage collector.
+
+When lowered, any relocated value will be recorded in the corresponding
+:ref:`stackmap entry <statepoint-stackmap-format>`.  See the intrinsic description
+for further details.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
