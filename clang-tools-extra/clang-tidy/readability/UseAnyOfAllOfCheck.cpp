@@ -88,7 +88,7 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
 }
 
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
-  StringRef Ranges = getLangOpts().CPlusPlus2a ? "::ranges" : "";
+  StringRef Ranges = getLangOpts().CPlusPlus20 ? "::ranges" : "";
 
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
