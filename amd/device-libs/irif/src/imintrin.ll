@@ -1255,7 +1255,7 @@ bb:
 declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.image.amdgcn.gather4.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: nounwind readonly
 declare <4 x float> @llvm.amdgcn.image.gather4.lz.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
@@ -1273,10 +1273,10 @@ declare <4 x float> @llvm.amdgcn.image.gather4.l.2darray.v4f32.f32(i32, float, f
 declare <4 x float> @llvm.amdgcn.image.gather.4h.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.image.amdgcn.gather.4h.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather.4h.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.image.amdgcn.gather.4h.2darray.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather.4h.2darray.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 attributes #0 = { alwaysinline nounwind readonly }
 attributes #1 = { nounwind readonly }
