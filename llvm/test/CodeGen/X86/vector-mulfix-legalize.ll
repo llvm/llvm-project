@@ -59,7 +59,7 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    pextrw $1, %xmm0, %esi
 ; CHECK-NEXT:    movswl %si, %edi
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $15, %eax
+; CHECK-NEXT:    shrl $16, %eax
 ; CHECK-NEXT:    leal (%rdi,%rdi), %esi
 ; CHECK-NEXT:    shrdw $15, %ax, %si
 ; CHECK-NEXT:    sarl $15, %edi

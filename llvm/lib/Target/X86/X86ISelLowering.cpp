@@ -37152,6 +37152,14 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       }
     }
 
+    // If we are only demanding sign bits then we can use the shift source directly.
+    unsigned NumSignBits =
+        TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1);
+    unsigned UpperDemandedBits =
+        BitWidth - OriginalDemandedBits.countTrailingZeros();
+    if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= UpperDemandedBits)
+      return TLO.CombineTo(Op, Op0);
+
     if (SimplifyDemandedBits(Op0, DemandedMask, OriginalDemandedElts, Known,
                              TLO, Depth + 1))
       return true;
@@ -37429,7 +37437,19 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements()) &&
         !DemandedElts[CIdx->getZExtValue()])
       return Vec;
-     break;
+    break;
+  }
+  case X86ISD::VSHLI: {
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    unsigned BitWidth = DemandedBits.getBitWidth();
+    unsigned NumSignBits = DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+    unsigned UpperDemandedBits = BitWidth - DemandedBits.countTrailingZeros();
+    if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= UpperDemandedBits)
+      return Op0;
+    break;
   }
   case X86ISD::VSRAI:
     // iff we only need the sign bit then we can use the source directly.
