@@ -237,10 +237,10 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     }
     if (ch == '-' || ch == '+' || (ch >= '0' && ch <= '9')) {
       repeat = GetIntField(context, ch);
-      ch = GetNextChar(context);
+      ch = Capitalize(GetNextChar(context));
     } else if (ch == '*') {
       unlimited = true;
-      ch = GetNextChar(context);
+      ch = Capitalize(GetNextChar(context));
       if (ch != '(') {
         context.SignalError(IostatErrorInFormat,
             "Invalid FORMAT: '*' may appear only before '('");
