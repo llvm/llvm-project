@@ -326,7 +326,7 @@ subroutine sub3()
 end subroutine
 
 ! CHECK: Subroutine sub4
-subroutine sub4(i, j)
+subroutine sub4()
   integer :: i
   print*, "test"
   ! CHECK: DataStmt

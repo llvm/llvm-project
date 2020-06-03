@@ -56,22 +56,69 @@ public:
   }
   bool operator()(const evaluate::Component &component) {
     hasComponent_ = true;
-    return (*this)(component.base());
+    const Symbol &lastSymbol{component.GetLastSymbol()};
+    if (isPointerAllowed_) {
+      if (IsPointer(lastSymbol) && hasSubscript_) { // C877
+        context_.Say(source_,
+            "Rightmost data object pointer '%s' must not be subscripted"_err_en_US,
+            lastSymbol.name().ToString());
+        return false;
+      }
+      RestrictPointer();
+    } else {
+      if (IsPointer(lastSymbol)) { // C877
+        context_.Say(source_,
+            "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
+            lastSymbol.name().ToString());
+        return false;
+      }
+    }
+    if (!isFirstSymbolChecked_) {
+      isFirstSymbolChecked_ = true;
+      if (!CheckFirstSymbol(component.GetFirstSymbol())) {
+        return false;
+      }
+    }
+    return (*this)(component.base()) && (*this)(lastSymbol);
+  }
+  bool operator()(const evaluate::ArrayRef &arrayRef) {
+    hasSubscript_ = true;
+    return (*this)(arrayRef.base()) && (*this)(arrayRef.subscript());
+  }
+  bool operator()(const evaluate::Substring &substring) {
+    hasSubscript_ = true;
+    return (*this)(substring.parent()) && (*this)(substring.lower()) &&
+        (*this)(substring.upper());
+  }
+  bool operator()(const evaluate::CoarrayRef &) { // C874
+    hasSubscript_ = true;
+    context_.Say(
+        source_, "Data object must not be a coindexed variable"_err_en_US);
+    return false;
+  }
+  bool operator()(const evaluate::Symbol &symbol) {
+    if (!isFirstSymbolChecked_) {
+      return CheckFirstSymbol(symbol) && CheckAnySymbol(symbol);
+    } else {
+      return CheckAnySymbol(symbol);
+    }
   }
   bool operator()(const evaluate::Subscript &subs) {
-    hasSubscript_ = true;
+    DataVarChecker subscriptChecker{context_, source_};
+    subscriptChecker.RestrictPointer();
     return std::visit(
-        common::visitors{
-            [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
-              return CheckSubscriptExpr(expr);
-            },
-            [&](const evaluate::Triplet &triplet) {
-              return CheckSubscriptExpr(triplet.lower()) &&
-                  CheckSubscriptExpr(triplet.upper()) &&
-                  CheckSubscriptExpr(triplet.stride());
-            },
-        },
-        subs.u);
+               common::visitors{
+                   [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
+                     return CheckSubscriptExpr(expr);
+                   },
+                   [&](const evaluate::Triplet &triplet) {
+                     return CheckSubscriptExpr(triplet.lower()) &&
+                         CheckSubscriptExpr(triplet.upper()) &&
+                         CheckSubscriptExpr(triplet.stride());
+                   },
+               },
+               subs.u) &&
+        subscriptChecker(subs.u);
   }
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &) const { // C875
@@ -79,11 +126,7 @@ public:
         "Data object variable must not be a function reference"_err_en_US);
     return false;
   }
-  bool operator()(const evaluate::CoarrayRef &) const { // C874
-    context_.Say(
-        source_, "Data object must not be a coindexed variable"_err_en_US);
-    return false;
-  }
+  void RestrictPointer() { isPointerAllowed_ = false; }
 
 private:
   bool CheckSubscriptExpr(
@@ -104,21 +147,71 @@ private:
       return true;
     }
   }
+  bool CheckFirstSymbol(const Symbol &symbol);
+  bool CheckAnySymbol(const Symbol &symbol);
 
   SemanticsContext &context_;
   parser::CharBlock source_;
   bool hasComponent_{false};
   bool hasSubscript_{false};
+  bool isPointerAllowed_{true};
+  bool isFirstSymbolChecked_{false};
 };
 
-// TODO: C876, C877, C879
+bool DataVarChecker::CheckFirstSymbol(const Symbol &symbol) { // C876
+  const Scope &scope{context_.FindScope(source_)};
+  if (IsDummy(symbol)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be a dummy argument"_err_en_US,
+        symbol.name().ToString());
+  } else if (IsFunction(symbol)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be a function name"_err_en_US,
+        symbol.name().ToString());
+  } else if (symbol.IsFuncResult()) {
+    context_.Say(source_,
+        "Data object part '%s' must not be a function result"_err_en_US,
+        symbol.name().ToString());
+  } else if (IsHostAssociated(symbol, scope)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be accessed by host association"_err_en_US,
+        symbol.name().ToString());
+  } else if (IsUseAssociated(symbol, scope)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be accessed by use association"_err_en_US,
+        symbol.name().ToString());
+  } else if (IsInBlankCommon(symbol)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be in blank COMMON"_err_en_US,
+        symbol.name().ToString());
+  } else {
+    return true;
+  }
+  return false;
+}
+
+bool DataVarChecker::CheckAnySymbol(const Symbol &symbol) { // C876
+  if (IsAutomaticObject(symbol)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be an automatic object"_err_en_US,
+        symbol.name().ToString());
+  } else if (IsAllocatable(symbol)) {
+    context_.Say(source_,
+        "Data object part '%s' must not be an allocatable object"_err_en_US,
+        symbol.name().ToString());
+  } else {
+    return true;
+  }
+  return false;
+}
+
 void DataChecker::Leave(const parser::DataIDoObject &object) {
   if (const auto *designator{
           std::get_if<parser::Scalar<common::Indirection<parser::Designator>>>(
               &object.u)}) {
     if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
       auto source{designator->thing.value().source};
-      if (evaluate::IsConstantExpr(*expr)) { // C878
+      if (evaluate::IsConstantExpr(*expr)) { // C878,C879
         exprAnalyzer_.Say(
             source, "Data implied do object must be a variable"_err_en_US);
       } else {
