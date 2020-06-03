@@ -881,7 +881,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
 
   // Undefined shuffle mask -> undefined value.
   if (all_of(Mask, [](int Elt) { return Elt == UndefMaskElem; })) {
-    return UndefValue::get(VectorType::get(EltTy, MaskNumElts));
+    return UndefValue::get(FixedVectorType::get(EltTy, MaskNumElts));
   }
 
   // If the mask is all zeros this is a splat, no need to go through all
@@ -2287,13 +2287,13 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Type *OrigGEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
       Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
       if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-        GEPTy = VectorType::get(OrigGEPTy, VT->getNumElements());
+        GEPTy = FixedVectorType::get(OrigGEPTy, VT->getNumElements());
 
       // The GEP returns a vector of pointers when one of more of
       // its arguments is a vector.
       for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
         if (auto *VT = dyn_cast<VectorType>(Idxs[i]->getType())) {
-          GEPTy = VectorType::get(OrigGEPTy, VT->getNumElements());
+          GEPTy = FixedVectorType::get(OrigGEPTy, VT->getNumElements());
           break;
         }
       }
@@ -2528,7 +2528,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     // overflow trouble.
     Type *ExtendedTy = Type::getIntNTy(Div->getContext(), CommonExtendedWidth);
     if (UseVector)
-      ExtendedTy = VectorType::get(
+      ExtendedTy = FixedVectorType::get(
           ExtendedTy,
           IsPrevIdxVector
               ? cast<VectorType>(PrevIdx->getType())->getNumElements()
