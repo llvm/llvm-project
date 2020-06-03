@@ -299,6 +299,7 @@ Clang-Tidy Checks
    `readability-string-compare <readability-string-compare.html>`_, "Yes"
    `readability-uniqueptr-delete-release <readability-uniqueptr-delete-release.html>`_, "Yes"
    `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
+   `readability-use-anyofallof`_, "No"
    `zircon-temporary-objects <zircon-temporary-objects.html>`_,
 
 
