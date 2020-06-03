@@ -422,6 +422,9 @@ class VarDecl;
     NamedDecl *
     getPartiallySubstitutedPack(const TemplateArgument **ExplicitArgs = nullptr,
                                 unsigned *NumExplicitArgs = nullptr) const;
+
+    /// Determine whether D is a pack expansion created in this scope.
+    bool isLocalPackExpansion(const Decl *D);
   };
 
   class TemplateDeclInstantiator
