@@ -534,8 +534,8 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
 }
 
 #ifndef NDEBUG
-template <typename ID>
-void StackSafetyDataFlowAnalysis<ID>::verifyFixedPoint() {
+template <typename CalleeTy>
+void StackSafetyDataFlowAnalysis<CalleeTy>::verifyFixedPoint() {
   WorkList.clear();
   updateAllNodes();
   assert(WorkList.empty());
