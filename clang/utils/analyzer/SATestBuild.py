@@ -44,7 +44,7 @@ variable. It should contain a comma separated list.
 """
 import CmpRuns
 import SATestUtils
-from ProjectMap import DownloadType, ProjectInfo, ProjectMap
+from ProjectMap import DownloadType, ProjectInfo
 
 import glob
 import logging
@@ -225,10 +225,11 @@ class RegressionTester:
     """
     A component aggregating all of the project testing.
     """
-    def __init__(self, jobs: int, override_compiler: bool,
-                 extra_analyzer_config: str, regenerate: bool,
-                 strictness: bool):
+    def __init__(self, jobs: int, projects: List[ProjectInfo],
+                 override_compiler: bool, extra_analyzer_config: str,
+                 regenerate: bool, strictness: bool):
         self.jobs = jobs
+        self.projects = projects
         self.override_compiler = override_compiler
         self.extra_analyzer_config = extra_analyzer_config
         self.regenerate = regenerate
@@ -237,10 +238,8 @@ class RegressionTester:
     def test_all(self) -> bool:
         projects_to_test: List[TestInfo] = []
 
-        project_map = ProjectMap()
-
         # Test the projects.
-        for project in project_map.projects:
+        for project in self.projects:
             projects_to_test.append(
                 TestInfo(project,
                          self.override_compiler,

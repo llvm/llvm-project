@@ -28,7 +28,29 @@ def add(parser, args):
 
 def build(parser, args):
     SATestBuild.VERBOSE = args.verbose
-    tester = SATestBuild.RegressionTester(args.jobs, args.override_compiler,
+
+    project_map = ProjectMap()
+    projects = project_map.projects
+
+    if args.projects:
+        projects_arg = args.projects.split(",")
+        available_projects = [project.name
+                              for project in projects]
+
+        # validate that given projects are present in the project map file
+        for manual_project in projects_arg:
+            if manual_project not in available_projects:
+                parser.error("Project '{project}' is not found in "
+                             "the project map file. Available projects are "
+                             "{all}.".format(project=manual_project,
+                                             all=available_projects))
+
+        projects = [project.with_fields(enabled=project.name in projects_arg)
+                    for project in projects]
+
+    tester = SATestBuild.RegressionTester(args.jobs,
+                                          projects,
+                                          args.override_compiler,
                                           args.extra_analyzer_config,
                                           args.regenerate,
                                           args.strictness)
@@ -111,6 +133,8 @@ def main():
                               dest="extra_analyzer_config", type=str,
                               default="",
                               help="Arguments passed to to -analyzer-config")
+    build_parser.add_argument("--projects", action="store", default="",
+                              help="Comma-separated list of projects to test")
     build_parser.add_argument("-v", "--verbose", action="count", default=0)
     build_parser.set_defaults(func=build)
 

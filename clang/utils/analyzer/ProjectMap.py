@@ -28,6 +28,20 @@ class ProjectInfo(NamedTuple):
     commit: str = ""
     enabled: bool = True
 
+    def with_fields(self, **kwargs) -> "ProjectInfo":
+        """
+        Create a copy of this project info with customized fields.
+        NamedTuple is immutable and this is a way to create modified copies.
+
+          info.enabled = True
+          info.mode = 1
+
+        can be done as follows:
+
+          modified = info.with_fields(enbled=True, mode=1)
+        """
+        return ProjectInfo(**{**self._asdict(), **kwargs})
+
 
 class ProjectMap:
     """
