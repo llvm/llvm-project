@@ -16429,6 +16429,17 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
 }
 
+TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
+  FormatStyle Style = getLLVMStyle();
+  // PR46157
+  verifyFormat("foo(operator+, -42);", Style);
+  verifyFormat("foo(operator++, -42);", Style);
+  verifyFormat("foo(operator--, -42);", Style);
+  verifyFormat("foo(-42, operator--);", Style);
+  verifyFormat("foo(-42, operator, );", Style);
+  verifyFormat("foo(operator, , -42);", Style);
+}
+
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
   // These tests are not in NamespaceFixer because that doesn't
   // test its interaction with line wrapping
