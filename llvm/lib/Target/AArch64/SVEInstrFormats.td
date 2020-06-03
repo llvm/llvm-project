@@ -7663,7 +7663,7 @@ class sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand VecList>
 }
 
 multiclass sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand listty,
-                           ZPRRegOp zprty> {
+                           ZPRRegOp zprty, ValueType Ty, ValueType PredTy, SDNode Ld1ro> {
   def NAME : sve_mem_ldor_si<sz, asm, listty>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
@@ -7671,6 +7671,11 @@ multiclass sve_mem_ldor_si<bits<2> sz, string asm, RegisterOperand listty,
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s32:$imm4), 0>;
+
+  // Base addressing mode
+  def : Pat<(Ty (Ld1ro (PredTy PPR3bAny:$gp), GPR64sp:$base)),
+            (!cast<Instruction>(NAME) PPR3bAny:$gp, GPR64sp:$base, (i64 0))>;
+
 }
 
 class sve_mem_ldor_ss<bits<2> sz, string asm, RegisterOperand VecList,
