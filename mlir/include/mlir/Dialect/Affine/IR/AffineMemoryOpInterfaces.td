@@ -68,6 +68,19 @@ def AffineReadOpInterface : OpInterface<"AffineReadOpInterface"> {
         return op.getAffineMapAttr().getValue();
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/"Returns the AffineMapAttr associated with 'memref'.",
+      /*retTy=*/"NamedAttribute",
+      /*methodName=*/"getAffineMapAttrForMemRef",
+      /*args=*/(ins "Value":$memref),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        assert(memref == getMemRef());
+        return {Identifier::get(op.getMapAttrName(), op.getContext()),
+                op.getAffineMapAttr()};
+      }]
+    >,
   ];
 }
 
@@ -122,6 +135,19 @@ def AffineWriteOpInterface : OpInterface<"AffineWriteOpInterface"> {
       /*defaultImplementation=*/[{
         ConcreteOp op = cast<ConcreteOp>(this->getOperation());
         return op.getAffineMapAttr().getValue();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Returns the AffineMapAttr associated with 'memref'.",
+      /*retTy=*/"NamedAttribute",
+      /*methodName=*/"getAffineMapAttrForMemRef",
+      /*args=*/(ins "Value":$memref),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        assert(memref == getMemRef());
+        return {Identifier::get(op.getMapAttrName(), op.getContext()),
+                op.getAffineMapAttr()};
       }]
     >,
   ];
