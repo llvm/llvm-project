@@ -14,7 +14,7 @@ int const_ref_use(const int &i);
 A const_use_A(const A a);
 int const_use(const int i);
 
-void f() {
+void f(int a) {
   int i;
   const_ref_use(i);             // expected-warning {{variable 'i' is uninitialized when passed as a const reference argument here}}
   int j = j + const_ref_use(j); // expected-warning {{variable 'j' is uninitialized when used within its own initialization}} expected-warning {{variable 'j' is uninitialized when passed as a const reference argument here}}
@@ -28,4 +28,9 @@ void f() {
 
   A a5;
   const_ref_use_A(a5);
+
+  int m;
+  if (a < 42)
+    m = 1;
+  const_ref_use(m);
 }
