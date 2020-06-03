@@ -5028,7 +5028,9 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
 
   def : Pat<(v8i32 (InVecOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
-  def : Pat<(v8i32 (InVecOp (v16i8 (X86vzload64 addr:$src)))),
+  def : Pat<(v8i32 (InVecOp (bc_v16i8 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
+  def : Pat<(v8i32 (InVecOp (bc_v16i8 (v2i64 (X86vzload64 addr:$src))))),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
 
   def : Pat<(v4i64 (ExtOp (loadv4i32 addr:$src))),
@@ -5036,12 +5038,14 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
 
   def : Pat<(v4i64 (InVecOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
             (!cast<I>(OpcPrefix#BQYrm) addr:$src)>;
-  def : Pat<(v4i64 (InVecOp (v16i8 (X86vzload64 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (bc_v16i8 (v2i64 (X86vzload32 addr:$src))))),
             (!cast<I>(OpcPrefix#BQYrm) addr:$src)>;
 
   def : Pat<(v4i64 (InVecOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
-  def : Pat<(v4i64 (InVecOp (v8i16 (X86vzload64 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (bc_v8i16 (v2f64 (scalar_to_vector (loadf64 addr:$src)))))),
+            (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
+  def : Pat<(v4i64 (InVecOp (bc_v8i16 (v2i64 (X86vzload64 addr:$src))))),
             (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
   }
 }
