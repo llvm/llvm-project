@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, c++03
+// UNSUPPORTED: libcpp-has-no-threads
 
 // <thread>
 
@@ -16,6 +16,7 @@
 
 #include <thread>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -30,12 +31,10 @@ public:
     G(const G& g) : alive_(g.alive_) {++n_alive;}
     ~G() {alive_ = 0; --n_alive;}
 
-    void operator()(int i, double j)
+    void operator()()
     {
         assert(alive_ == 1);
         assert(n_alive >= 1);
-        assert(i == 5);
-        assert(j == 5.5);
         op_run = true;
     }
 };
@@ -45,22 +44,27 @@ bool G::op_run = false;
 
 int main(int, char**)
 {
+    assert(G::n_alive == 0);
+    assert(!G::op_run);
     {
-        assert(G::n_alive == 0);
-        assert(!G::op_run);
-        {
         G g;
-        std::thread t0(g, 5, 5.5);
+        assert(G::n_alive == 1);
+        assert(!G::op_run);
+
+        std::thread t0(g);
         std::thread::id id = t0.get_id();
+
         std::thread t1;
         t1 = std::move(t0);
         assert(t1.get_id() == id);
         assert(t0.get_id() == std::thread::id());
+
         t1.join();
-        }
-        assert(G::n_alive == 0);
+        assert(G::n_alive == 1);
         assert(G::op_run);
     }
+    assert(G::n_alive == 0);
+    assert(G::op_run);
 
-  return 0;
+    return 0;
 }

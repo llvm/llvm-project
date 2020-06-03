@@ -13,13 +13,13 @@ entry:
 }
 
 ; SMALL-LABEL: .test_load:{{$}}
-; SMALL: lwz [[REG1:[0-9]+]], LC0(2)
+; SMALL: lwz [[REG1:[0-9]+]], L..C0(2)
 ; SMALL: lwz [[REG2:[0-9]+]], 0([[REG1]])
 ; SMALL: blr
 
 ; LARGE-LABEL: .test_load:{{$}}
-; LARGE: addis [[REG1:[0-9]+]], LC0@u(2)
-; LARGE: lwz [[REG2:[0-9]+]], LC0@l([[REG1]])
+; LARGE: addis [[REG1:[0-9]+]], L..C0@u(2)
+; LARGE: lwz [[REG2:[0-9]+]], L..C0@l([[REG1]])
 ; LARGE: lwz [[REG3:[0-9]+]], 0([[REG2]])
 ; LARGE: blr
 
@@ -31,13 +31,13 @@ define void @test_store(i32 %0) {
 }
 
 ; SMALL-LABEL: .test_store:{{$}}
-; SMALL: lwz [[REG1:[0-9]+]], LC1(2)
+; SMALL: lwz [[REG1:[0-9]+]], L..C1(2)
 ; SMALL: stw [[REG2:[0-9]+]], 0([[REG1]])
 ; SMALL: blr
 
 ; LARGE-LABEL: .test_store:{{$}}
-; LARGE: addis [[REG1:[0-9]+]], LC1@u(2)
-; LARGE: lwz [[REG2:[0-9]+]], LC1@l([[REG1]])
+; LARGE: addis [[REG1:[0-9]+]], L..C1@u(2)
+; LARGE: lwz [[REG2:[0-9]+]], L..C1@l([[REG1]])
 ; LARGE: stw [[REG3:[0-9]+]], 0([[REG2]])
 ; LARGE: blr
 
