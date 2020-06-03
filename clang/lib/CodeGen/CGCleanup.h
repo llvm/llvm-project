@@ -284,8 +284,8 @@ public:
     return sizeof(EHCleanupScope) + CleanupBits.CleanupSize;
   }
 
-  EHCleanupScope(bool isNormal, bool isEH, bool isActive,
-                 unsigned cleanupSize, unsigned fixupDepth,
+  EHCleanupScope(bool isNormal, bool isEH, unsigned cleanupSize,
+                 unsigned fixupDepth,
                  EHScopeStack::stable_iterator enclosingNormal,
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
@@ -293,7 +293,7 @@ public:
         ActiveFlag(nullptr), ExtInfo(nullptr), FixupDepth(fixupDepth) {
     CleanupBits.IsNormalCleanup = isNormal;
     CleanupBits.IsEHCleanup = isEH;
-    CleanupBits.IsActive = isActive;
+    CleanupBits.IsActive = true;
     CleanupBits.IsLifetimeMarker = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
