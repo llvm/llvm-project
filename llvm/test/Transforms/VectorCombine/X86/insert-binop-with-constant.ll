@@ -105,6 +105,21 @@ define <3 x i64> @mul_constant_not_undef_lane(i64 %x) {
   ret <3 x i64> %bo
 }
 
+define <16 x i8> @mul_constant_multiuse(i8 %a0, <16 x i8> %a1) {
+; CHECK-LABEL: @mul_constant_multiuse(
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <16 x i8> <i8 undef, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, i8 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = mul <16 x i8> [[INS]], <i8 3, i8 7, i8 9, i8 11, i8 13, i8 15, i8 17, i8 19, i8 21, i8 23, i8 25, i8 27, i8 29, i8 31, i8 33, i8 35>
+; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[INS]], [[A1:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <16 x i8> [[AND]], [[MUL]]
+; CHECK-NEXT:    ret <16 x i8> [[XOR]]
+;
+  %ins = insertelement <16 x i8> <i8 undef, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, i8 %a0, i32 0
+  %mul = mul <16 x i8> %ins, <i8 3, i8 7, i8 9, i8 11, i8 13, i8 15, i8 17, i8 19, i8 21, i8 23, i8 25, i8 27, i8 29, i8 31, i8 33, i8 35>
+  %and = and <16 x i8> %ins, %a1
+  %xor = xor <16 x i8> %and, %mul
+  ret <16 x i8> %xor
+}
+
 define <2 x i64> @shl_constant_op0(i64 %x) {
 ; CHECK-LABEL: @shl_constant_op0(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 1
