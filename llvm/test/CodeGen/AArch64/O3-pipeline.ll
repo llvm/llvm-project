@@ -59,13 +59,6 @@
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
-; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       Memory SSA
-; CHECK-NEXT:       Interleaved Load Combine Pass
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:     Stack Safety Analysis
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -77,6 +70,11 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       Memory SSA
+; CHECK-NEXT:       Interleaved Load Combine Pass
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:     Rewrite Symbols
