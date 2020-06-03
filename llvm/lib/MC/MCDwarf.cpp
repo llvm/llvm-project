@@ -833,14 +833,15 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   MCOS->emitULEB128IntValue(1);
   MCOS->emitULEB128IntValue(dwarf::DW_TAG_compile_unit);
   MCOS->emitInt8(dwarf::DW_CHILDREN_yes);
-  EmitAbbrev(MCOS, dwarf::DW_AT_stmt_list, context.getDwarfVersion() >= 4
-                                               ? dwarf::DW_FORM_sec_offset
-                                               : dwarf::DW_FORM_data4);
+  dwarf::Form SecOffsetForm =
+      context.getDwarfVersion() >= 4
+          ? dwarf::DW_FORM_sec_offset
+          : (context.getDwarfFormat() == dwarf::DWARF64 ? dwarf::DW_FORM_data8
+                                                        : dwarf::DW_FORM_data4);
+  EmitAbbrev(MCOS, dwarf::DW_AT_stmt_list, SecOffsetForm);
   if (context.getGenDwarfSectionSyms().size() > 1 &&
       context.getDwarfVersion() >= 3) {
-    EmitAbbrev(MCOS, dwarf::DW_AT_ranges, context.getDwarfVersion() >= 4
-                                              ? dwarf::DW_FORM_sec_offset
-                                              : dwarf::DW_FORM_data4);
+    EmitAbbrev(MCOS, dwarf::DW_AT_ranges, SecOffsetForm);
   } else {
     EmitAbbrev(MCOS, dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr);
     EmitAbbrev(MCOS, dwarf::DW_AT_high_pc, dwarf::DW_FORM_addr);
