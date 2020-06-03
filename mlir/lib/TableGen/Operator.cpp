@@ -315,7 +315,7 @@ void tblgen::Operator::populateTypeInferenceInfo(
         continue;
       }
 
-      if (auto *attr = getArg(*mi).dyn_cast<NamedAttribute *>()) {
+      if (getArg(*mi).isa<NamedAttribute *>()) {
         // TODO: Handle attributes.
         continue;
       } else {
