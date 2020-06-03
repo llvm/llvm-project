@@ -545,13 +545,13 @@ TEST(Matcher, isInstanceMethod) {
 }
 
 TEST(MatcherCXXMemberCallExpr, On) {
-  auto Snippet1 = R"cc(
+  StringRef Snippet1 = R"cc(
         struct Y {
           void m();
         };
         void z(Y y) { y.m(); }
       )cc";
-  auto Snippet2 = R"cc(
+  StringRef Snippet2 = R"cc(
         struct Y {
           void m();
         };
@@ -566,7 +566,7 @@ TEST(MatcherCXXMemberCallExpr, On) {
   EXPECT_TRUE(matches(Snippet2, MatchesX));
 
   // Parens are ignored.
-  auto Snippet3 = R"cc(
+  StringRef Snippet3 = R"cc(
     struct Y {
       void m();
     };
@@ -578,13 +578,13 @@ TEST(MatcherCXXMemberCallExpr, On) {
 }
 
 TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
-  auto Snippet1 = R"cc(
+  StringRef Snippet1 = R"cc(
     struct Y {
       void m();
     };
     void z(Y y) { y.m(); }
   )cc";
-  auto Snippet2 = R"cc(
+  StringRef Snippet2 = R"cc(
     struct Y {
       void m();
     };
@@ -603,7 +603,7 @@ TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
   EXPECT_TRUE(notMatches(Snippet2, MatchesX));
 
   // Parens are not ignored.
-  auto Snippet3 = R"cc(
+  StringRef Snippet3 = R"cc(
     struct Y {
       void m();
     };
@@ -617,13 +617,13 @@ TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
 }
 
 TEST(Matcher, HasObjectExpr) {
-  auto Snippet1 = R"cc(
+  StringRef Snippet1 = R"cc(
         struct X {
           int m;
           int f(X x) { return x.m; }
         };
       )cc";
-  auto Snippet2 = R"cc(
+  StringRef Snippet2 = R"cc(
         struct X {
           int m;
           int f(X x) { return m; }
@@ -1622,7 +1622,7 @@ TEST(IgnoringImplicit, MatchesImplicit) {
 }
 
 TEST(IgnoringImplicit, MatchesNestedImplicit) {
-  const char *Code = R"(
+  StringRef Code = R"(
 
 struct OtherType;
 
@@ -1666,7 +1666,7 @@ TEST(IgnoringImplicit, DoesNotMatchIncorrectly) {
 
 TEST(Traversal, traverseMatcher) {
 
-  const char *VarDeclCode = R"cpp(
+  StringRef VarDeclCode = R"cpp(
 void foo()
 {
   int i = 3.0;
@@ -1727,7 +1727,7 @@ void foo()
       matches(VarDeclCode, functionDecl(traverse(TK_IgnoreUnlessSpelledInSource,
                                                  hasAnyName("foo", "bar")))));
 
-  const char *Code = R"cpp(
+  StringRef Code = R"cpp(
 void foo(int a)
 {
   int i = 3.0 + a;
@@ -1896,7 +1896,7 @@ void actual_template_test() {
 template <typename MatcherT>
 bool matcherTemplateWithBinding(StringRef Code, const MatcherT &M) {
   return matchAndVerifyResultTrue(
-      std::string(Code), M.bind("matchedStmt"),
+      Code, M.bind("matchedStmt"),
       std::make_unique<VerifyIdIsBoundTo<ReturnStmt>>("matchedStmt", 1));
 }
 
@@ -1917,7 +1917,7 @@ int foo()
 
 TEST(Traversal, traverseMatcherNesting) {
 
-  const char *Code = R"cpp(
+  StringRef Code = R"cpp(
 float bar(int i)
 {
   return i;
@@ -1937,7 +1937,7 @@ void foo()
 }
 
 TEST(Traversal, traverseMatcherThroughImplicit) {
-  const char *Code = R"cpp(
+  StringRef Code = R"cpp(
 struct S {
   S(int x);
 };
@@ -1957,7 +1957,7 @@ void constructImplicit() {
 
 TEST(Traversal, traverseMatcherThroughMemoization) {
 
-  const char *Code = R"cpp(
+  StringRef Code = R"cpp(
 void foo()
 {
   int i = 3.0;
@@ -1982,7 +1982,7 @@ void foo()
 
 TEST(Traversal, traverseUnlessSpelledInSource) {
 
-  const char *Code = R"cpp(
+  StringRef Code = R"cpp(
 
 struct A
 {
@@ -3049,8 +3049,8 @@ TEST(NNS, BindsNestedNameSpecifierLocs) {
 }
 
 TEST(NNS, DescendantsOfNestedNameSpecifiers) {
-  std::string Fragment =
-    "namespace a { struct A { struct B { struct C {}; }; }; };"
+  StringRef Fragment =
+      "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
   EXPECT_TRUE(matches(
     Fragment,
@@ -3078,8 +3078,8 @@ TEST(NNS, DescendantsOfNestedNameSpecifiers) {
 }
 
 TEST(NNS, NestedNameSpecifiersAsDescendants) {
-  std::string Fragment =
-    "namespace a { struct A { struct B { struct C {}; }; }; };"
+  StringRef Fragment =
+      "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
   EXPECT_TRUE(matches(
     Fragment,
@@ -3094,8 +3094,8 @@ TEST(NNS, NestedNameSpecifiersAsDescendants) {
 }
 
 TEST(NNSLoc, DescendantsOfNestedNameSpecifierLocs) {
-  std::string Fragment =
-    "namespace a { struct A { struct B { struct C {}; }; }; };"
+  StringRef Fragment =
+      "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
   EXPECT_TRUE(matches(
     Fragment,
@@ -3121,8 +3121,8 @@ TEST(NNSLoc, DescendantsOfNestedNameSpecifierLocs) {
 }
 
 TEST(NNSLoc, NestedNameSpecifierLocsAsDescendants) {
-  std::string Fragment =
-    "namespace a { struct A { struct B { struct C {}; }; }; };"
+  StringRef Fragment =
+      "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
   EXPECT_TRUE(matches(
     Fragment,
@@ -3198,21 +3198,19 @@ TEST(StatementMatcher, HasReturnValue) {
 }
 
 TEST(StatementMatcher, ForFunction) {
-  const auto CppString1 =
-    "struct PosVec {"
-      "  PosVec& operator=(const PosVec&) {"
-      "    auto x = [] { return 1; };"
-      "    return *this;"
-      "  }"
-      "};";
-  const auto CppString2 =
-    "void F() {"
-      "  struct S {"
-      "    void F2() {"
-      "       return;"
-      "    }"
-      "  };"
-      "}";
+  StringRef CppString1 = "struct PosVec {"
+                         "  PosVec& operator=(const PosVec&) {"
+                         "    auto x = [] { return 1; };"
+                         "    return *this;"
+                         "  }"
+                         "};";
+  StringRef CppString2 = "void F() {"
+                         "  struct S {"
+                         "    void F2() {"
+                         "       return;"
+                         "    }"
+                         "  };"
+                         "}";
   EXPECT_TRUE(
     matches(
       CppString1,
@@ -3277,10 +3275,10 @@ TEST(Matcher, ForEachOverriden) {
 }
 
 TEST(Matcher, HasAnyDeclaration) {
-  std::string Fragment = "void foo(int p1);"
-                         "void foo(int *p2);"
-                         "void bar(int p3);"
-                         "template <typename T> void baz(T t) { foo(t); }";
+  StringRef Fragment = "void foo(int p1);"
+                       "void foo(int *p2);"
+                       "void bar(int p3);"
+                       "template <typename T> void baz(T t) { foo(t); }";
 
   EXPECT_TRUE(
       matches(Fragment, unresolvedLookupExpr(hasAnyDeclaration(functionDecl(
@@ -3296,10 +3294,10 @@ TEST(Matcher, HasAnyDeclaration) {
 }
 
 TEST(SubstTemplateTypeParmType, HasReplacementType) {
-  std::string Fragment = "template<typename T>"
-                         "double F(T t);"
-                         "int i;"
-                         "double j = F(i);";
+  StringRef Fragment = "template<typename T>"
+                       "double F(T t);"
+                       "int i;"
+                       "double j = F(i);";
   EXPECT_TRUE(matches(Fragment, substTemplateTypeParmType(hasReplacementType(
                                     qualType(asString("int"))))));
   EXPECT_TRUE(notMatches(Fragment, substTemplateTypeParmType(hasReplacementType(
