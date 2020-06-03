@@ -241,12 +241,19 @@ public:
 #endif
     ~thread();
 
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = _LIBCPP_NULL_THREAD;}
+    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {
+        __t.__t_ = _LIBCPP_NULL_THREAD;
+    }
+
     _LIBCPP_INLINE_VISIBILITY
-    thread& operator=(thread&& __t) _NOEXCEPT;
-#endif  // _LIBCPP_CXX03_LANG
+    thread& operator=(thread&& __t) _NOEXCEPT {
+        if (!__libcpp_thread_isnull(&__t_))
+            terminate();
+        __t_ = __t.__t_;
+        __t.__t_ = _LIBCPP_NULL_THREAD;
+        return *this;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
@@ -302,17 +309,6 @@ thread::thread(_Fp&& __f, _Args&&... __args)
         __p.release();
     else
         __throw_system_error(__ec, "thread constructor failed");
-}
-
-inline
-thread&
-thread::operator=(thread&& __t) _NOEXCEPT
-{
-    if (!__libcpp_thread_isnull(&__t_))
-        terminate();
-    __t_ = __t.__t_;
-    __t.__t_ = _LIBCPP_NULL_THREAD;
-    return *this;
 }
 
 #else  // _LIBCPP_CXX03_LANG
