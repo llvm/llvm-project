@@ -18,7 +18,7 @@ class CreateDuringInstructionStepTestCase(TestBase):
 
     @skipUnlessPlatform(['linux'])
     @expectedFailureAndroid('llvm.org/pr24737', archs=['arm'])
-    @expectedFlakeyLinux(bugnumber="llvm.org/pr24737")
+    @skipIf(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr24737")
     def test_step_inst(self):
         self.build(dictionary=self.getBuildFlags())
         exe = self.getBuildArtifact("a.out")
