@@ -235,9 +235,16 @@ public:
   template <typename A>
   mlir::LLVM::LLVMType convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
+    // A sequence type is a special case. A sequence of runtime size on its
+    // interior dimensions lowers to a memory reference. In that case, we
+    // degenerate the array and do not want a the type to become `T**` but
+    // merely `T*`.
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (!seqTy.hasConstantShape() && seqTy.hasConstantInterior())
-        return unwrap(convertType(seqTy));
+      if (!seqTy.hasConstantShape()) {
+        if (seqTy.hasConstantInterior())
+          return unwrap(convertType(seqTy));
+        eleTy = seqTy.getEleTy();
+      }
     }
     return unwrap(convertType(eleTy)).getPointerTo();
   }
