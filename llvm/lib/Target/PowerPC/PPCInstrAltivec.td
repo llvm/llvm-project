@@ -1024,14 +1024,6 @@ def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
              (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
 
-// Fused multiply add and multiply sub for packed float.  These are represented
-// separately from the real instructions above, for operations that must have
-// the additional precision, such as Newton-Rhapson (used by divide, sqrt)
-def : Pat<(PPCvmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
-          (VMADDFP $A, $B, $C)>;
-def : Pat<(PPCvnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
-          (VNMSUBFP $A, $B, $C)>;
-
 def : Pat<(int_ppc_altivec_vmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
           (VMADDFP $A, $B, $C)>;
 def : Pat<(int_ppc_altivec_vnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
