@@ -19,6 +19,7 @@
 
 namespace llvm {
 class Any;
+raw_ostream &errs();
 } // end namespace llvm
 
 namespace mlir {
@@ -221,9 +222,12 @@ public:
   ///   potential mutations were made.
   /// * 'out' corresponds to the stream to output the printed IR to.
   void enableIRPrinting(
-      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
-      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
-      bool printModuleScope, bool printAfterOnlyOnChange, raw_ostream &out);
+      std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
+          [](Pass *, Operation *) { return true; },
+      std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
+          [](Pass *, Operation *) { return true; },
+      bool printModuleScope = true, bool printAfterOnlyOnChange = true,
+      raw_ostream &out = llvm::errs());
 
   //===--------------------------------------------------------------------===//
   // Pass Timing
