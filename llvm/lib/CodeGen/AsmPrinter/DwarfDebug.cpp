@@ -752,6 +752,10 @@ static bool interpretNextInstr(const MachineInstr *CurMI,
   if (ForwardedRegWorklist.empty())
     return false;
 
+  // Avoid NOP description.
+  if (CurMI->getNumOperands() == 0)
+    return true;
+
   interpretValues(CurMI, ForwardedRegWorklist, Params);
 
   return true;
@@ -798,6 +802,18 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // as the entry value within basic blocks other than the first one.
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
 
+  // Search for a loading value in forwarding registers inside call delay slot.
+  if (CallMI->hasDelaySlot()) {
+    auto Suc = std::next(CallMI->getIterator());
+    // Only one-instruction delay slot is supported.
+    auto BundleEnd = llvm::getBundleEnd(CallMI->getIterator());
+    assert(std::next(Suc) == BundleEnd &&
+           "More than one instruction in call delay slot");
+    // Try to interpret value loaded by instruction.
+    if (!interpretNextInstr(&*Suc, ForwardedRegWorklist, Params))
+      return;
+  }
+
   // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
     // Try to interpret values loaded by instruction.
@@ -834,6 +850,23 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "TargetInstrInfo not found: cannot label tail calls");
 
+  // Delay slot support check.
+  auto delaySlotSupported = [&](const MachineInstr &MI) {
+    if (!MI.isBundledWithSucc())
+      return false;
+    auto Suc = std::next(MI.getIterator());
+    auto CallInstrBundle = getBundleStart(MI.getIterator());
+    auto DelaySlotBundle = getBundleStart(Suc);
+    // Ensure that label after call is following delay slot instruction.
+    // Ex. CALL_INSTRUCTION {
+    //       DELAY_SLOT_INSTRUCTION }
+    //      LABEL_AFTER_CALL
+    assert(getLabelAfterInsn(&*CallInstrBundle) ==
+               getLabelAfterInsn(&*DelaySlotBundle) &&
+           "Call and its successor instruction don't have same label after.");
+    return true;
+  };
+
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
@@ -853,8 +886,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (MI.getFlag(MachineInstr::FrameSetup))
         continue;
 
-      // TODO: Add support for targets with delay slots (see: beginInstruction).
-      if (MI.hasDelaySlot())
+      // Check if delay slot support is enabled.
+      if (MI.hasDelaySlot() && !delaySlotSupported(*&MI))
         return;
 
       // If this is a direct call, find the callee's subprogram.
@@ -1855,11 +1888,23 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   bool NoDebug =
       !SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug;
 
+  // Delay slot support check.
+  auto delaySlotSupported = [](const MachineInstr &MI) {
+    if (!MI.isBundledWithSucc())
+      return false;
+    auto Suc = std::next(MI.getIterator());
+    // Ensure that delay slot instruction is successor of the call instruction.
+    // Ex. CALL_INSTRUCTION {
+    //        DELAY_SLOT_INSTRUCTION }
+    assert(Suc->isBundledWithPred() &&
+           "Call bundle instructions are out of order");
+    return true;
+  };
+
   // When describing calls, we need a label for the call instruction.
-  // TODO: Add support for targets with delay slots.
   if (!NoDebug && SP->areAllCallsDescribed() &&
       MI->isCandidateForCallSiteEntry(MachineInstr::AnyInBundle) &&
-      !MI->hasDelaySlot()) {
+      (!MI->hasDelaySlot() || delaySlotSupported(*MI))) {
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool IsTail = TII->isTailCall(*MI);
     // For tail calls, we need the address of the branch instruction for
