@@ -44,6 +44,7 @@ struct OffsetOption {
   bool HasValue = false;
   bool IsRequested = false;
 };
+struct BoolOption : public OffsetOption {};
 } // namespace
 
 namespace llvm {
@@ -72,16 +73,39 @@ public:
     return ValueOptional;
   }
 
-  StringRef getValueName() const override { return StringRef(); }
+  StringRef getValueName() const override { return StringRef("offset"); }
 
   void printOptionDiff(const Option &O, OffsetOption V, OptVal Default,
                        size_t GlobalWidth) const {
     printOptionName(O, GlobalWidth);
     outs() << "[=offset]";
   }
+};
 
-  // An out-of-line virtual method to provide a 'home' for this class.
-  void anchor() override {};
+template <> class parser<BoolOption> final : public basic_parser<BoolOption> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  /// Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, BoolOption &Val) {
+    if (Arg != "")
+      return O.error("this is a flag and does not take a value.");
+    Val.Val = 0;
+    Val.HasValue = false;
+    Val.IsRequested = true;
+    return false;
+  }
+
+  enum ValueExpected getValueExpectedFlagDefault() const {
+    return ValueOptional;
+  }
+
+  StringRef getValueName() const override { return StringRef(); }
+
+  void printOptionDiff(const Option &O, OffsetOption V, OptVal Default,
+                       size_t GlobalWidth) const {
+    printOptionName(O, GlobalWidth);
+  }
 };
 } // namespace cl
 } // namespace llvm
@@ -112,10 +136,10 @@ static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 static unsigned DumpType = DIDT_Null;
 static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
     DumpOffsets;
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  static opt<OffsetOption> Dump##ENUM_NAME(                                    \
-      CMDLINE_NAME, desc("Dump the " ELF_NAME " section"),                     \
-      cat(SectionCategory));
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
+  static opt<OPTION> Dump##ENUM_NAME(CMDLINE_NAME,                             \
+                                     desc("Dump the " ELF_NAME " section"),    \
+                                     cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
@@ -240,7 +264,7 @@ static void error(StringRef Prefix, std::error_code EC) {
   exit(1);
 }
 
-static DIDumpOptions getDumpOpts(DWARFContext& C) { 
+static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.ChildRecurseDepth = ChildRecurseDepth;
@@ -609,7 +633,7 @@ int main(int argc, char **argv) {
 
   // Defaults to dumping all sections, unless brief mode is specified in which
   // case only the .debug_info section in dumped.
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   if (Dump##ENUM_NAME.IsRequested) {                                           \
     DumpType |= DIDT_##ENUM_NAME;                                              \
     if (Dump##ENUM_NAME.HasValue) {                                            \
