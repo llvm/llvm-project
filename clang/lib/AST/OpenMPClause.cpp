@@ -2167,22 +2167,21 @@ std::string OMPTraitInfo::getMangledName() const {
   std::string MangledName;
   llvm::raw_string_ostream OS(MangledName);
   for (const OMPTraitSet &Set : Sets) {
-    OS << '.' << 'S' << unsigned(Set.Kind);
+    OS << '$' << 'S' << unsigned(Set.Kind);
     for (const OMPTraitSelector &Selector : Set.Selectors) {
 
       bool AllowsTraitScore = false;
       bool RequiresProperty = false;
       isValidTraitSelectorForTraitSet(
           Selector.Kind, Set.Kind, AllowsTraitScore, RequiresProperty);
-      OS << '.' << 's' << unsigned(Selector.Kind);
+      OS << '$' << 's' << unsigned(Selector.Kind);
 
       if (!RequiresProperty ||
           Selector.Kind == TraitSelector::user_condition)
         continue;
 
       for (const OMPTraitProperty &Property : Selector.Properties)
-        OS << '.' << 'P'
-           << getOpenMPContextTraitPropertyName(Property.Kind);
+        OS << '$' << 'P' << getOpenMPContextTraitPropertyName(Property.Kind);
     }
   }
   return OS.str();
@@ -2191,7 +2190,7 @@ std::string OMPTraitInfo::getMangledName() const {
 OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
   unsigned long U;
   do {
-    if (!MangledName.consume_front(".S"))
+    if (!MangledName.consume_front("$S"))
       break;
     if (MangledName.consumeInteger(10, U))
       break;
@@ -2199,7 +2198,7 @@ OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
     OMPTraitSet &Set = Sets.back();
     Set.Kind = TraitSet(U);
     do {
-      if (!MangledName.consume_front(".s"))
+      if (!MangledName.consume_front("$s"))
         break;
       if (MangledName.consumeInteger(10, U))
         break;
@@ -2207,11 +2206,11 @@ OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
       OMPTraitSelector &Selector = Set.Selectors.back();
       Selector.Kind = TraitSelector(U);
       do {
-        if (!MangledName.consume_front(".P"))
+        if (!MangledName.consume_front("$P"))
           break;
         Selector.Properties.push_back(OMPTraitProperty());
         OMPTraitProperty &Property = Selector.Properties.back();
-        std::pair<StringRef, StringRef> PropRestPair = MangledName.split('.');
+        std::pair<StringRef, StringRef> PropRestPair = MangledName.split('$');
         Property.Kind =
             getOpenMPContextTraitPropertyKind(Set.Kind, PropRestPair.first);
         MangledName = PropRestPair.second;
