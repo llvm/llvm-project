@@ -155,6 +155,21 @@ define <2 x i64> @shl_constant_op0_load(i64* %p) {
   ret <2 x i64> %bo
 }
 
+define <4 x i32> @shl_constant_op0_multiuse(i32 %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @shl_constant_op0_multiuse(
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INS]], <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[INS]], [[A1:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i32> [[AND]], [[MUL]]
+; CHECK-NEXT:    ret <4 x i32> [[XOR]]
+;
+  %ins = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 %a0, i32 0
+  %mul = shl <4 x i32> %ins, <i32 3, i32 4, i32 5, i32 6>
+  %and = and <4 x i32> %ins, %a1
+  %xor = xor <4 x i32> %and, %mul
+  ret <4 x i32> %xor
+}
+
 define <2 x i64> @shl_constant_op1(i64 %x) {
 ; CHECK-LABEL: @shl_constant_op1(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
