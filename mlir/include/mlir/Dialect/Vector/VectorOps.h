@@ -53,9 +53,19 @@ enum class VectorContractLowering {
   /// Lower to `vector.outerproduct`.
   OuterProduct = 2,
 };
+/// Enum to control the lowering of `vector.transpose` operations.
+enum class VectorTransposeLowering {
+  // Lower transpose into element-wise extract and inserts.
+  EltWise = 0,
+  /// Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix
+  /// intrinsics.
+  Flat = 1,
+};
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
   VectorContractLowering vectorContractLowering = VectorContractLowering::FMA;
+  VectorTransposeLowering vectorTransposeLowering =
+      VectorTransposeLowering::EltWise;
   VectorTransformsOptions &
   setVectorTransformsOptions(VectorContractLowering opt) {
     vectorContractLowering = opt;
