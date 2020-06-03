@@ -14,6 +14,8 @@ void MCAsmInfoXCOFF::anchor() {}
 
 MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsLittleEndian = false;
+  PrivateGlobalPrefix = "L..";
+  PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
   UseDotAlignForAlignment = true;
   ZeroDirective = "\t.space\t";

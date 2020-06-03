@@ -140,7 +140,7 @@ declare void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1)
 ; CHECKASM-LABEL: .test_byval_64Byte:
 
 ; ASM:         stdu 1, -112(1)
-; ASM-NEXT:    ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM-NEXT:    ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM-DAG:     ld 3, 0([[REG]])
 ; ASM-DAG:     ld 4, 8([[REG]])
 ; ASM-DAG:     ld 5, 16([[REG]])
