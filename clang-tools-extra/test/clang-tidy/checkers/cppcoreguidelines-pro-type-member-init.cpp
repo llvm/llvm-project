@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s cppcoreguidelines-pro-type-member-init %t -- -- -fno-delayed-template-parsing
-// FIXME: Fix the checker to work in C++2a mode.
+// FIXME: Fix the checker to work in C++20 mode.
 
 struct PositiveFieldBeforeConstructor {
   int F;
