@@ -209,7 +209,7 @@ def MakeREPLTest(__file, __globals, decorators=None):
     test = type(test_name, (REPLTest,), {'using_dsym': None})
     test.name = test_name
 
-    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    target_platform = lldb.selected_platform.GetTriple().split('-')[2]
     if test_categories.is_supported_on_platform(
             "dwarf", target_platform, configuration.compiler):
         test.test_with_dwarf = ApplyDecoratorsToFunction(
