@@ -121,14 +121,6 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def add_conditional_breakpoint(self, file_, line, condition):
-        pass
-
-    @abc.abstractmethod
-    def delete_conditional_breakpoint(self, file_, line, condition):
-        pass
-
-    @abc.abstractmethod
     def launch(self):
         pass
 
