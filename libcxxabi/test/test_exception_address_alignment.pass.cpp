@@ -9,10 +9,14 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++03
 
-// The system unwind.h on OS X provides an incorrectly aligned _Unwind_Exception
-// type. That causes these tests to fail. This XFAIL is my best attempt at
-// working around this failure.
-// XFAIL: darwin && libcxxabi-has-system-unwinder
+// The system unwind.h on older OSX versions provided an incorrectly aligned
+// _Unwind_Exception type. That causes these tests to fail on those platforms.
+// XFAIL: macosx10.14 && libcxxabi-has-system-unwinder
+// XFAIL: macosx10.13 && libcxxabi-has-system-unwinder
+// XFAIL: macosx10.12 && libcxxabi-has-system-unwinder
+// XFAIL: macosx10.11 && libcxxabi-has-system-unwinder
+// XFAIL: macosx10.10 && libcxxabi-has-system-unwinder
+// XFAIL: macosx10.9 && libcxxabi-has-system-unwinder
 
 // Test that the address of the exception object is properly aligned as required
 // by the relevant ABI
