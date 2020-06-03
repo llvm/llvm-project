@@ -16,7 +16,6 @@ from dex.builder import run_external_build_script
 from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
-from dex.debugger.DebuggerControllers.ConditionalController import ConditionalController
 from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
 from dex.tools import TestToolBase
@@ -137,15 +136,9 @@ class Tool(TestToolBase):
             executable_path=self.context.options.executable,
             source_paths=self.context.options.source_files,
             dexter_version=self.context.version)
-
         step_collection.commands = get_command_infos(
             self.context.options.source_files)
-
-        if 'DexLimitSteps' in step_collection.commands:
-            debugger_controller = ConditionalController(self.context, step_collection)
-        else:
-            debugger_controller = DefaultController(self.context, step_collection)
-
+        debugger_controller = DefaultController(self.context, step_collection)
         return debugger_controller
 
     def _get_steps(self, builderIR):
