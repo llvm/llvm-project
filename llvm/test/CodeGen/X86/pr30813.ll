@@ -1,9 +1,8 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -O0 %s -o - | FileCheck %s
 ; CHECK: patatino:
 ; CHECK:         .cfi_startproc
-; CHECK:         movzwl  (%rax), [[REG0:%e[abcd]x]]
-; CHECK:         movl    [[REG0]], %e[[REG1C:[abcd]]]x
-; CHECK:         movq    %r[[REG1C]]x, ({{%r[abcd]x}})
+; CHECK:         movzwl  (%rax), %e[[REG0:[abcd]x]]
+; CHECK:         movq    %r[[REG0]], ({{%r[abcd]x}})
 ; CHECK:         retq
 
 define void @patatino() {
