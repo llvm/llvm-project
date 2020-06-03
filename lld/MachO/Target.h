@@ -27,7 +27,7 @@ enum {
   // deprecating 32-bit apps.
   WordSize = 8,
   PageSize = 4096,
-  ImageBase = 4096,
+  PageZeroSize = 1ull << 32, // XXX should be 4096 for 32-bit targets
   MaxAlignmentPowerOf2 = 32,
 };
 
