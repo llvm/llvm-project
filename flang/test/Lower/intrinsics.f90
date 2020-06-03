@@ -91,14 +91,6 @@ subroutine floor_test2(i, a)
   ! CHECK: fir.convert %[[f]] : (f32) -> i64
 end subroutine
 
-! IAND
-! CHECK-LABEL: iand_test
-subroutine iand_test(a, b)
-  integer :: a, b
-  print *, iand(a, b)
-  ! CHECK: %{{[0-9]+}} = and %{{[0-9]+}}, %{{[0-9]+}} : i{{(8|16|32|64|128)}}
-end subroutine iand_test
-
 ! ICHAR
 ! CHECK-LABEL: ichar_test
 subroutine ichar_test(c)
@@ -106,22 +98,6 @@ subroutine ichar_test(c)
   ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
   print *, ichar(c)
 end subroutine
-
-! IEOR
-! CHECK-LABEL: ieor_test
-subroutine ieor_test(a, b)
-  integer :: a, b
-  print *, ieor(a, b)
-  ! CHECK: %{{[0-9]+}} = xor %{{[0-9]+}}, %{{[0-9]+}} : i{{(8|16|32|64|128)}}
-end subroutine ieor_test
-
-! IOR
-! CHECK-LABEL: ior_test
-subroutine ior_test(a, b)
-  integer :: a, b
-  print *, ior(a, b)
-  ! CHECK: %{{[0-9]+}} = or %{{[0-9]+}}, %{{[0-9]+}} : i{{(8|16|32|64|128)}}
-end subroutine ior_test
 
 ! LEN
 ! CHECK-LABEL: len_test
