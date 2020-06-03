@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // test that referencing quick_exit when _LIBCPP_HAS_QUICK_EXIT is not defined
 // results in a compile error.

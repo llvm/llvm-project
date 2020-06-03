@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <memory>
 
@@ -197,7 +197,7 @@ int main(int, char**)
         assert(A3<F>::constructed);
         s->~S();
     }
-  
+
     // LWG 2586
     // Test that is_constructible uses an lvalue ref so the correct constructor
     // is picked.

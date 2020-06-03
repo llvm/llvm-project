@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // REQUIRES: has-fblocks
 // ADDITIONAL_COMPILE_FLAGS: -fblocks
 

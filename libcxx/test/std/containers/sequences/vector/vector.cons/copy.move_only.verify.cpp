@@ -8,7 +8,7 @@
 
 // Make sure that a std::vector containing move-only types can't be copied.
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <vector>
 

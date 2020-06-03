@@ -12,7 +12,7 @@
 //  deprecated in C++17
 
 // UNSUPPORTED: clang-4.0
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <functional>
 

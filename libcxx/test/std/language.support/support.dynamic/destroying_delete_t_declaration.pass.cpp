@@ -12,7 +12,7 @@
 // };
 // inline constexpr destroying_delete_t destroying_delete{};
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Test only the library parts of destroying delete in this test.
 // Verify that it's properly declared after C++17 and that it's constexpr.

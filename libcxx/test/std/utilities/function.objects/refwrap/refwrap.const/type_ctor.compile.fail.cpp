@@ -12,7 +12,7 @@
 
 // reference_wrapper(T&&) = delete;
 
-// XFAIL: c++98, c++03
+// XFAIL: c++03
 
 #include <functional>
 #include <cassert>

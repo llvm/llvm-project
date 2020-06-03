@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES: c++98 || c++03 || c++11 || c++14
+// REQUIRES: c++03 || c++11 || c++14
 
 // template<Returnable S, ClassType T, CopyConstructible A>
 //   const_mem_fun1_ref_t<S,T,A>

@@ -12,7 +12,7 @@
 
 // template<class Y> operator auto_ptr<Y>() throw();
 
-// REQUIRES: c++98 || c++03 || c++11 || c++14
+// REQUIRES: c++03 || c++11 || c++14
 
 #define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
