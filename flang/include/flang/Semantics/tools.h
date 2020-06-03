@@ -146,6 +146,8 @@ bool IsFinalizable(const Symbol &);
 bool IsFinalizable(const DerivedTypeSpec &);
 bool HasImpureFinal(const DerivedTypeSpec &);
 bool IsCoarray(const Symbol &);
+bool IsInBlankCommon(const Symbol &);
+bool IsAutomaticObject(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
   const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
   return details && details->IsAssumedSize();
