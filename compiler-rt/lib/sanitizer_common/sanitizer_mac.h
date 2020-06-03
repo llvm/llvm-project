@@ -41,7 +41,7 @@ struct VersionBase {
     return major == other.major && minor == other.minor;
   }
   bool operator>=(const VersionType &other) const {
-    return major >= other.major ||
+    return major > other.major ||
            (major == other.major && minor >= other.minor);
   }
 };

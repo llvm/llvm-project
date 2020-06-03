@@ -1388,23 +1388,23 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   MVT VecT = Extract.getOperand(0).getSimpleValueType();
   if (VecT.getVectorElementType().getSizeInBits() > 32)
     return SDValue();
-  MVT ExtractedLaneT = static_cast<VTSDNode *>(Op.getOperand(1).getNode())
-                           ->getVT()
-                           .getSimpleVT();
+  MVT ExtractedLaneT =
+      cast<VTSDNode>(Op.getOperand(1).getNode())->getVT().getSimpleVT();
   MVT ExtractedVecT =
       MVT::getVectorVT(ExtractedLaneT, 128 / ExtractedLaneT.getSizeInBits());
   if (ExtractedVecT == VecT)
     return Op;
 
   // Bitcast vector to appropriate type to ensure ISel pattern coverage
-  const SDValue &Index = Extract.getOperand(1);
-  unsigned IndexVal =
-      static_cast<ConstantSDNode *>(Index.getNode())->getZExtValue();
+  const SDNode *Index = Extract.getOperand(1).getNode();
+  if (!isa<ConstantSDNode>(Index))
+    return SDValue();
+  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
   SDValue NewIndex =
-      DAG.getConstant(IndexVal * Scale, DL, Index.getValueType());
+      DAG.getConstant(IndexVal * Scale, DL, Index->getValueType(0));
   SDValue NewExtract = DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, Extract.getValueType(),
       DAG.getBitcast(ExtractedVecT, Extract.getOperand(0)), NewIndex);

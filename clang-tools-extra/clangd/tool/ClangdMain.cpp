@@ -764,6 +764,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Shall we allow to customize the file limit?
   RenameOpts.AllowCrossFile = CrossFileRename;
 
+  Opts.AsyncPreambleBuilds = AsyncPreamble;
+
   ClangdLSPServer LSPServer(
       *TransportLayer, FSProvider, CCOpts, RenameOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,

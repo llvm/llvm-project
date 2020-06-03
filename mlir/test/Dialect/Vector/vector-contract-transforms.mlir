@@ -319,6 +319,26 @@ func @transpose23(%arg0: vector<2x3xf32>) -> vector<3x2xf32> {
   return %0 : vector<3x2xf32>
 }
 
+
+// CHECK-LABEL: func @nop_shape_cast
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>
+// CHECK:      return %[[A]] : vector<16xf32>
+
+func @nop_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
+  %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: func @cancel_shape_cast
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>
+// CHECK:      return %[[A]] : vector<16xf32>
+
+func @cancel_shape_cast(%arg0: vector<16xf32>) -> vector<16xf32> {
+  %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<4x4xf32>
+  %1 = vector.shape_cast %0 : vector<4x4xf32> to vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
 // Shape up and downcasts for 2-D vectors, for supporting conversion to
 // llvm.matrix operations
 // CHECK-LABEL: func @shape_casts

@@ -157,6 +157,9 @@ public:
   /// Returns an iterator to the begining of the argument range describing gc
   /// values for the statepoint.
   const_op_iterator gc_args_begin() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
+      return Opt->Inputs.begin();
+
     // The current format has two length prefix bundles between call args and
     // start of gc args.  This will be removed in the near future.
     const Value *NumGCTransitionArgs = *actual_arg_end();
@@ -170,10 +173,16 @@ public:
   }
 
   /// Return an end iterator for the gc argument range
-  const_op_iterator gc_args_end() const { return arg_end(); }
+  const_op_iterator gc_args_end() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
+      return Opt->Inputs.end();
+
+    return arg_end();
+  }
 
   /// Return the operand index at which the gc args begin
   unsigned gcArgsStartIdx() const {
+    assert(!getOperandBundle(LLVMContext::OB_gc_live));
     return gc_args_begin() - op_begin();
   }
 
@@ -458,10 +467,14 @@ public:
   }
 
   Value *getBasePtr() const {
+    if (auto Opt = getStatepoint()->getOperandBundle(LLVMContext::OB_gc_live))
+      return *(Opt->Inputs.begin() + getBasePtrIndex());
     return *(getStatepoint()->arg_begin() + getBasePtrIndex());
   }
 
   Value *getDerivedPtr() const {
+    if (auto Opt = getStatepoint()->getOperandBundle(LLVMContext::OB_gc_live))
+      return *(Opt->Inputs.begin() + getDerivedPtrIndex());
     return *(getStatepoint()->arg_begin() + getDerivedPtrIndex());
   }
 };
