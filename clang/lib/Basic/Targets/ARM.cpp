@@ -314,7 +314,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
 
   // Maximum alignment for ARM NEON data types should be 64-bits (AAPCS)
   // as well the default alignment
-  if (IsAAPCS && (Triple.getEnvironment() != llvm::Triple::Android))
+  if (IsAAPCS && !Triple.isAndroid())
     DefaultAlignForAttributeAligned = MaxVectorAlign = 64;
 
   // Do force alignment of members that follow zero length bitfields.  If
