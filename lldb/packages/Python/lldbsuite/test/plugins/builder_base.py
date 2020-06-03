@@ -21,17 +21,18 @@ import sys
 # Our imports
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import configuration
 from lldbsuite.test_event import build_exception
 
 
 def getArchitecture():
     """Returns the architecture in effect the test suite is running with."""
-    return os.environ["ARCH"] if "ARCH" in os.environ else ""
+    return configuration.arch if configuration.arch else ""
 
 
 def getCompiler():
     """Returns the compiler in effect the test suite is running with."""
-    compiler = os.environ.get("CC", "clang")
+    compiler = configuration.compiler if configuration.compiler else "clang"
     compiler = lldbutil.which(compiler)
     return os.path.realpath(compiler)
 
@@ -86,8 +87,8 @@ def getArchSpec(architecture):
     used for the make system.
     """
     arch = architecture if architecture else None
-    if not arch and "ARCH" in os.environ:
-        arch = os.environ["ARCH"]
+    if not arch and configuration.arch:
+        arch = configuration.arch
 
     return ("ARCH=" + arch) if arch else ""
 
@@ -98,8 +99,8 @@ def getCCSpec(compiler):
     used for the make system.
     """
     cc = compiler if compiler else None
-    if not cc and "CC" in os.environ:
-        cc = os.environ["CC"]
+    if not cc and configuration.compiler:
+        cc = configuration.compiler
     if cc:
         return "CC=\"%s\"" % cc
     else:
@@ -128,9 +129,9 @@ def getModuleCacheSpec():
     Helper function to return the key-value string to specify the clang
     module cache used for the make system.
     """
-    if "CLANG_MODULE_CACHE_DIR" in os.environ:
+    if configuration.clang_module_cache_dir:
         return "CLANG_MODULE_CACHE_DIR={}".format(
-            os.environ["CLANG_MODULE_CACHE_DIR"])
+            configuration.clang_module_cache_dir)
     return "";
 
 def getCmdLine(d):
