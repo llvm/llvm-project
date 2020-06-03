@@ -332,7 +332,8 @@ void MCDwarfLineStr::emitSection(MCStreamer *MCOS) {
 }
 
 void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
-  int RefSize = 4; // FIXME: Support DWARF-64
+  int RefSize =
+      dwarf::getDwarfOffsetByteSize(MCOS->getContext().getDwarfFormat());
   size_t Offset = LineStrings.add(Path);
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
@@ -472,10 +473,20 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Create a symbol for the end of the section (to be set when we get there).
   MCSymbol *LineEndSym = context.createTempSymbol();
 
-  // The first 4 bytes is the total length of the information for this
-  // compilation unit (not including these 4 bytes for the length).
-  emitAbsValue(
-      *MCOS, MakeStartMinusEndExpr(context, *LineStartSym, *LineEndSym, 4), 4);
+  unsigned UnitLengthBytes =
+      dwarf::getUnitLengthFieldByteSize(context.getDwarfFormat());
+  unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(context.getDwarfFormat());
+
+  if (context.getDwarfFormat() == dwarf::DWARF64)
+    // Emit DWARF64 mark.
+    MCOS->emitInt32(dwarf::DW_LENGTH_DWARF64);
+
+  // The length field does not include itself and, in case of the 64-bit DWARF
+  // format, the DWARF64 mark.
+  emitAbsValue(*MCOS,
+               MakeStartMinusEndExpr(context, *LineStartSym, *LineEndSym,
+                                     UnitLengthBytes),
+               OffsetSize);
 
   // Next 2 bytes is the Version.
   unsigned LineTableVersion = context.getDwarfVersion();
@@ -483,7 +494,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Keep track of the bytes between the very start and where the header length
   // comes out.
-  unsigned PreHeaderLengthBytes = 4 + 2;
+  unsigned PreHeaderLengthBytes = UnitLengthBytes + 2;
 
   // In v5, we get address info next.
   if (LineTableVersion >= 5) {
@@ -495,12 +506,12 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Create a symbol for the end of the prologue (to be set when we get there).
   MCSymbol *ProEndSym = context.createTempSymbol(); // Lprologue_end
 
-  // Length of the prologue, is the next 4 bytes.  This is actually the length
-  // from after the length word, to the end of the prologue.
+  // Length of the prologue, is the next 4 bytes (8 bytes for DWARF64). This is
+  // actually the length from after the length word, to the end of the prologue.
   emitAbsValue(*MCOS,
                MakeStartMinusEndExpr(context, *LineStartSym, *ProEndSym,
-                                     (PreHeaderLengthBytes + 4)),
-               4);
+                                     (PreHeaderLengthBytes + OffsetSize)),
+               OffsetSize);
 
   // Parameters of the state machine, are next.
   MCOS->emitInt8(context.getAsmInfo()->getMinInstAlignment());
