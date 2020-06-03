@@ -116,8 +116,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 
 SPIRVDialect::SPIRVDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
-  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, PointerType,
-           RuntimeArrayType, StructType>();
+  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
+           PointerType, RuntimeArrayType, StructType>();
 
   addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
 
@@ -191,6 +191,42 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
   } else {
     parser.emitError(typeLoc, "cannot use ")
         << type << " to compose SPIR-V types";
+    return Type();
+  }
+
+  return type;
+}
+
+static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
+                                     DialectAsmParser &parser) {
+  Type type;
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  if (parser.parseType(type))
+    return Type();
+
+  if (auto t = type.dyn_cast<VectorType>()) {
+    if (t.getRank() != 1) {
+      parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
+      return Type();
+    }
+    if (t.getNumElements() > 4 || t.getNumElements() < 2) {
+      parser.emitError(typeLoc,
+                       "matrix columns size has to be less than or equal "
+                       "to 4 and greater than or equal 2, but found ")
+          << t.getNumElements();
+      return Type();
+    }
+
+    if (!t.getElementType().isa<FloatType>()) {
+      parser.emitError(typeLoc, "matrix columns' elements must be of "
+                                "Float type, got ")
+          << t.getElementType();
+      return Type();
+    }
+  } else {
+    parser.emitError(typeLoc, "matrix must be composed using vector "
+                              "type, got ")
+        << type;
     return Type();
   }
 
@@ -279,7 +315,7 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
     return Type();
 
   if (dims.size() != 2) {
-    parser.emitError(countLoc, "expected rows and columns size.");
+    parser.emitError(countLoc, "expected rows and columns size");
     return Type();
   }
 
@@ -348,6 +384,40 @@ static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
   if (parser.parseGreater())
     return Type();
   return RuntimeArrayType::get(elementType, stride);
+}
+
+// matrix-type ::= `!spv.matrix` `<` integer-literal `x` element-type `>`
+static Type parseMatrixType(SPIRVDialect const &dialect,
+                            DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 1> countDims;
+  llvm::SMLoc countLoc = parser.getCurrentLocation();
+  if (parser.parseDimensionList(countDims, /*allowDynamic=*/false))
+    return Type();
+  if (countDims.size() != 1) {
+    parser.emitError(countLoc, "expected single unsigned "
+                               "integer for number of columns");
+    return Type();
+  }
+
+  int64_t columnCount = countDims[0];
+  // According to the specification, Matrices can have 2, 3, or 4 columns
+  if (columnCount < 2 || columnCount > 4) {
+    parser.emitError(countLoc, "matrix is expected to have 2, 3, or 4 "
+                               "columns");
+    return Type();
+  }
+
+  Type columnType = parseAndVerifyMatrixType(dialect, parser);
+  if (!columnType)
+    return Type();
+
+  if (parser.parseGreater())
+    return Type();
+
+  return MatrixType::get(columnType, columnCount);
 }
 
 // Specialize this function to parse each of the parameters that define an
@@ -567,7 +637,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseRuntimeArrayType(*this, parser);
   if (keyword == "struct")
     return parseStructType(*this, parser);
-
+  if (keyword == "matrix")
+    return parseMatrixType(*this, parser);
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V type: ") << keyword;
   return Type();
 }
@@ -635,6 +706,11 @@ static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
   os << ">";
 }
 
+static void print(MatrixType type, DialectAsmPrinter &os) {
+  os << "matrix<" << type.getNumElements() << " x " << type.getElementType();
+  os << ">";
+}
+
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   switch (type.getKind()) {
   case TypeKind::Array:
@@ -654,6 +730,9 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
     return;
   case TypeKind::Struct:
     print(type.cast<StructType>(), os);
+    return;
+  case TypeKind::Matrix:
+    print(type.cast<MatrixType>(), os);
     return;
   default:
     llvm_unreachable("unhandled SPIR-V type");
