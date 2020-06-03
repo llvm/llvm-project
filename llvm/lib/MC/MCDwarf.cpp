@@ -954,11 +954,19 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 
   // First part: the header.
 
-  // The 4 byte total length of the information for this compilation unit, not
-  // including these 4 bytes.
+  unsigned UnitLengthBytes =
+      dwarf::getUnitLengthFieldByteSize(context.getDwarfFormat());
+  unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(context.getDwarfFormat());
+
+  if (context.getDwarfFormat() == dwarf::DWARF64)
+    // Emit DWARF64 mark.
+    MCOS->emitInt32(dwarf::DW_LENGTH_DWARF64);
+
+  // The 4 (8 for DWARF64) byte total length of the information for this
+  // compilation unit, not including the unit length field itself.
   const MCExpr *Length =
-      MakeStartMinusEndExpr(context, *InfoStart, *InfoEnd, 4);
-  emitAbsValue(*MCOS, Length, 4);
+      MakeStartMinusEndExpr(context, *InfoStart, *InfoEnd, UnitLengthBytes);
+  emitAbsValue(*MCOS, Length, OffsetSize);
 
   // The 2 byte DWARF version.
   MCOS->emitInt16(context.getDwarfVersion());
@@ -971,13 +979,14 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitInt8(dwarf::DW_UT_compile);
     MCOS->emitInt8(AddrSize);
   }
-  // The 4 byte offset to the debug abbrevs from the start of the .debug_abbrev,
-  // it is at the start of that section so this is zero.
-  if (AbbrevSectionSymbol == nullptr)
-    MCOS->emitInt32(0);
-  else
-    MCOS->emitSymbolValue(AbbrevSectionSymbol, 4,
+  // The 4 (8 for DWARF64) byte offset to the debug abbrevs from the start of
+  // the .debug_abbrev.
+  if (AbbrevSectionSymbol)
+    MCOS->emitSymbolValue(AbbrevSectionSymbol, OffsetSize,
                           AsmInfo.needsDwarfSectionOffsetDirective());
+  else
+    // Since the abbrevs are at the start of the section, the offset is zero.
+    MCOS->emitIntValue(0, OffsetSize);
   if (context.getDwarfVersion() <= 4)
     MCOS->emitInt8(AddrSize);
 
@@ -986,13 +995,14 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The DW_TAG_compile_unit DIE abbrev (1).
   MCOS->emitULEB128IntValue(1);
 
-  // DW_AT_stmt_list, a 4 byte offset from the start of the .debug_line section,
-  // which is at the start of that section so this is zero.
+  // DW_AT_stmt_list, a 4 (8 for DWARF64) byte offset from the start of the
+  // .debug_line section.
   if (LineSectionSymbol)
-    MCOS->emitSymbolValue(LineSectionSymbol, 4,
+    MCOS->emitSymbolValue(LineSectionSymbol, OffsetSize,
                           AsmInfo.needsDwarfSectionOffsetDirective());
   else
-    MCOS->emitInt32(0);
+    // The line table is at the start of the section, so the offset is zero.
+    MCOS->emitIntValue(0, OffsetSize);
 
   if (RangesSymbol) {
     // There are multiple sections containing code, so we must use
