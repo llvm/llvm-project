@@ -418,7 +418,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
         lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
         if (line_entry.IsValid()) {
           SetDefaultFileAndLine(line_entry.file, line_entry.line);
-          file_spec = last_file_sp->GetFileSpec();
+          file_spec = m_last_file_spec;
           line = m_last_line;
           return true;
         }

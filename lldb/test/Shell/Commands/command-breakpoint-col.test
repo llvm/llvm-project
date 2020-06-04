@@ -1,6 +1,6 @@
 # UNSUPPORTED: system-windows
 #
-# RUN: %clang -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -o 'help breakpoint set' -o 'breakpoint set -f main.c -l 2 -u 21' %t.out | FileCheck %s --check-prefix HELP --check-prefix CHECK
 # RUN: %lldb -b -o 'help _regexp-break' -o 'b main.c:2:21' %t.out | FileCheck %s --check-prefix HELP-REGEX --check-prefix CHECK
 # HELP: -u <column> ( --column <column> )
