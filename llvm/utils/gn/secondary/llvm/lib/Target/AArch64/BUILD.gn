@@ -107,7 +107,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
-    "AArch64LegalizerInfo.cpp",
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64MCInstLower.cpp",
     "AArch64MachineFunctionInfo.cpp",
