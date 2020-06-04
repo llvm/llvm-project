@@ -465,8 +465,6 @@ def parseOptionsAndInitTestdirs():
         configuration.clang_module_cache_dir = os.path.join(
             configuration.test_build_dir, 'module-cache-clang')
 
-    os.environ['CLANG_MODULE_CACHE_DIR'] = configuration.clang_module_cache_dir
-
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
 
@@ -525,7 +523,6 @@ def setupSysPath():
     os.environ["LLDB_TEST_SRC"] = lldbsuite.lldb_test_root
 
     # Set up the root build directory.
-    builddir = configuration.test_build_dir
     if not configuration.test_build_dir:
         raise Exception("test_build_dir is not set")
     os.environ["LLDB_BUILD"] = os.path.abspath(configuration.test_build_dir)
