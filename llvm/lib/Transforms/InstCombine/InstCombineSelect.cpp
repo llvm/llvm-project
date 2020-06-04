@@ -2413,7 +2413,7 @@ Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
   ArrayRef<int> Mask;
   if (match(TVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
       !is_contained(Mask, UndefMaskElem) &&
-      ShuffleVectorInst::isSelectMask(Mask)) {
+      cast<ShuffleVectorInst>(TVal)->isSelect()) {
     if (X == FVal) {
       // select Cond, (shuf_sel X, Y), X --> shuf_sel X, (select Cond, Y, X)
       Value *NewSel = Builder.CreateSelect(Cond, Y, X, "sel", &Sel);
@@ -2427,7 +2427,7 @@ Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
   }
   if (match(FVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
       !is_contained(Mask, UndefMaskElem) &&
-      ShuffleVectorInst::isSelectMask(Mask)) {
+      cast<ShuffleVectorInst>(FVal)->isSelect()) {
     if (X == TVal) {
       // select Cond, X, (shuf_sel X, Y) --> shuf_sel X, (select Cond, X, Y)
       Value *NewSel = Builder.CreateSelect(Cond, X, Y, "sel", &Sel);
