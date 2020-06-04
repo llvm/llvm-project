@@ -137,3 +137,17 @@ void check_VLA_extent() {
   clang_analyzer_eval(clang_analyzer_getExtent(&vla3m) == 2 * x * 4 * sizeof(int));
   // expected-warning@-1{{TRUE}}
 }
+
+// https://bugs.llvm.org/show_bug.cgi?id=46128
+// analyzer doesn't handle more than simple symbolic expressions.
+// Just don't crash.
+extern void foo(void);
+int a;
+void b() {
+  int c = a + 1;
+  for (;;) {
+    int d[c];
+    for (; 0 < c;)
+      foo();
+  }
+} // no-crash
