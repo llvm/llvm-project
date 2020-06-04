@@ -25,6 +25,20 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Represents an uzp1 instruction. Produced post-legalization from
+// G_SHUFFLE_VECTORs with appropriate masks.
+def G_UZP1 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$v1, type0:$v2);
+}
+
+// Represents an uzp2 instruction. Produced post-legalization from
+// G_SHUFFLE_VECTORs with appropriate masks.
+def G_UZP2 : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$v1, type0:$v2);
+}
+
 // Represents a zip1 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_ZIP1 : AArch64GenericInstruction {
@@ -39,5 +53,7 @@ def G_ZIP2 : AArch64GenericInstruction {
   let InOperandList = (ins type0:$v1, type0:$v2);
 }
 
+def : GINodeEquiv<G_UZP1, AArch64uzp1>;
+def : GINodeEquiv<G_UZP2, AArch64uzp2>;
 def : GINodeEquiv<G_ZIP1, AArch64zip1>;
 def : GINodeEquiv<G_ZIP2, AArch64zip2>;
