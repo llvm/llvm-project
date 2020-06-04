@@ -332,9 +332,6 @@ public:
   /// Returns false if no metadata was found.
   bool extractProfTotalWeight(uint64_t &TotalVal) const;
 
-  /// Sets the branch_weights metadata to \p W for CallInst.
-  void setProfWeight(uint64_t W);
-
   /// Set the debug location information for this instruction.
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 

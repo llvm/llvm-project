@@ -4955,11 +4955,8 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   NewCall->setCallingConv(Call.getCallingConv());
   NewCall->setAttributes(NewCallerPAL);
 
-  // Preserve the weight metadata for the new call instruction. The metadata
-  // is used by SamplePGO to check callsite's hotness.
-  uint64_t W;
-  if (Caller->extractProfTotalWeight(W))
-    NewCall->setProfWeight(W);
+  // Preserve prof metadata if any.
+  NewCall->copyMetadata(*Caller, {LLVMContext::MD_prof});
 
   // Insert a cast of the return type as necessary.
   Instruction *NC = NewCall;
