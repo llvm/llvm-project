@@ -109,7 +109,7 @@
 #endif
 
 #ifndef INDEXSTORE_OPTIONS
-# define INDEXSTORE_OPTIONS(_type, _name) _type _name; enum INDEXSTORE_OPTIONS_ATTRS
+# define INDEXSTORE_OPTIONS(_type, _name) typedef _type _name; enum INDEXSTORE_OPTIONS_ATTRS
 #endif
 
 INDEXSTORE_BEGIN_DECLS
