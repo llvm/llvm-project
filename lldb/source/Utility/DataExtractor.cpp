@@ -931,7 +931,7 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
 
     // Sign bit of byte is 2nd high order bit (0x40)
     if (shift < size && (byte & 0x40))
-      result |= -(1 << shift);
+      result |= -(static_cast<int64_t>(1) << shift);
 
     *offset_ptr += bytecount;
     return result;
