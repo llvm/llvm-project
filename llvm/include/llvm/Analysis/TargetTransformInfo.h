@@ -503,6 +503,9 @@ public:
     /// This value is used in the same manner to limit the size of the inner
     /// loop.
     unsigned UnrollAndJamInnerLoopThreshold;
+    /// Don't allow loop unrolling to simulate more than this number of
+    /// iterations when checking full unroll profitability
+    unsigned MaxIterationsCountToAnalyze;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
