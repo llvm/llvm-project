@@ -55,15 +55,6 @@ public:
   SmallVector<uint32_t, 0> ipiCounts;
 };
 
-/// Map from type index and item index in a type server PDB to the
-/// corresponding index in the destination PDB.
-struct CVIndexMap {
-  llvm::SmallVector<llvm::codeview::TypeIndex, 0> tpiMap;
-  llvm::SmallVector<llvm::codeview::TypeIndex, 0> ipiMap;
-  bool isTypeServerMap = false;
-  bool isPrecompiledTypeMap = false;
-};
-
 } // namespace coff
 } // namespace lld
 
