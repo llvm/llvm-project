@@ -127,7 +127,7 @@ llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
 /// In !NDEBUG builds, prints the message and location info to stderr.
 /// In NDEBUG builds, becomes an optimizer hint that the current location
 /// is not supposed to be reachable.  On compilers that don't support
-/// such hints, prints a reduced message instead.
+/// such hints, prints a reduced message instead and aborts the program.
 ///
 /// Use this instead of assert(0).  It conveys intent more clearly and
 /// allows compilers to omit some unnecessary code.
