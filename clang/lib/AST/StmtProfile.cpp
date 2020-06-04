@@ -609,6 +609,20 @@ void OMPClauseProfiler::VisitOMPReductionClause(
     if (E)
       Profiler->VisitStmt(E);
   }
+  if (C->getModifier() == clang::OMPC_REDUCTION_inscan) {
+    for (auto *E : C->copy_ops()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
+    for (auto *E : C->copy_array_temps()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
+    for (auto *E : C->copy_array_elems()) {
+      if (E)
+        Profiler->VisitStmt(E);
+    }
+  }
 }
 void OMPClauseProfiler::VisitOMPTaskReductionClause(
     const OMPTaskReductionClause *C) {
