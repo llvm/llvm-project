@@ -644,7 +644,7 @@ struct AddressSanitizer {
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
   bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
-  void maybeInsertDynamicShadowAtFunctionEntry(Function &F);
+  bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
 
 private:
@@ -2563,10 +2563,10 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   return false;
 }
 
-void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
+bool AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
   // Generate code only when dynamic addressing is needed.
   if (Mapping.Offset != kDynamicShadowSentinel)
-    return;
+    return false;
 
   IRBuilder<> IRB(&F.front().front());
   if (Mapping.InGlobal) {
@@ -2588,6 +2588,7 @@ void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
         kAsanShadowMemoryDynamicAddress, IntptrTy);
     LocalDynamicShadow = IRB.CreateLoad(IntptrTy, GlobalDynamicAddress);
   }
+  return true;
 }
 
 void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
@@ -2649,7 +2650,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   FunctionStateRAII CleanupObj(this);
 
-  maybeInsertDynamicShadowAtFunctionEntry(F);
+  FunctionModified |= maybeInsertDynamicShadowAtFunctionEntry(F);
 
   // We can't instrument allocas used with llvm.localescape. Only static allocas
   // can be passed to that intrinsic.
