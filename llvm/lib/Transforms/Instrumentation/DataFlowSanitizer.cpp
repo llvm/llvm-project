@@ -811,16 +811,25 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   if (ABIList.isIn(M, "skip"))
     return false;
 
+  const unsigned InitialGlobalSize = M.global_size();
+  const unsigned InitialModuleSize = M.size();
+
+  bool Changed = false;
+
   if (!GetArgTLSPtr) {
     Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
     ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS))
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
   }
   if (!GetRetvalTLSPtr) {
     RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
   }
 
   ExternalShadowMask =
@@ -1044,7 +1053,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
-  return false;
+  return Changed || !FnsToInstrument.empty() ||
+         M.global_size() != InitialGlobalSize || M.size() != InitialModuleSize;
 }
 
 Value *DFSanFunction::getArgTLSPtr() {
