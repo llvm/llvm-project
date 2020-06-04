@@ -820,6 +820,8 @@ uint64_t emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
   uint64_t BeginOffset = OS.tell();
   if (Name == ".debug_str")
     DWARFYAML::EmitDebugStr(OS, DWARF);
+  else if (Name == ".debug_aranges")
+    DWARFYAML::EmitDebugAranges(OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 

@@ -3,6 +3,6 @@ Lines executed:100.00% of 1
 ./test.h:creating 'test.h.gcov'
 
 File 'test.cpp'
-Lines executed:84.21% of 38
+Lines executed:81.40% of 43
 test.cpp:creating 'test.cpp.gcov'
 
