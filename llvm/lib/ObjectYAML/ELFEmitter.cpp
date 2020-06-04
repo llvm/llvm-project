@@ -165,9 +165,6 @@ template <class ELFT> class ELFState {
   void finalizeStrings();
   void writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream &OS);
   void writeSectionContent(Elf_Shdr &SHeader,
-                           const ELFYAML::NoBitsSection &Section,
-                           ContiguousBlobAccumulator &CBA);
-  void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
@@ -573,7 +570,9 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::MipsABIFlags>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::NoBitsSection>(Sec)) {
-      writeSectionContent(SHeader, *S, CBA);
+      // SHT_NOBITS sections do not have any content to write.
+      SHeader.sh_entsize = 0;
+      SHeader.sh_size = S->Size;
     } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec)) {
@@ -954,35 +953,6 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
         PHeader.p_align = std::max((uint64_t)PHeader.p_align, F.AddrAlign);
     }
   }
-}
-
-static bool shouldAllocateFileSpace(ArrayRef<ELFYAML::ProgramHeader> Phdrs,
-                                    const ELFYAML::NoBitsSection &S) {
-  for (const ELFYAML::ProgramHeader &PH : Phdrs) {
-    auto It = llvm::find_if(
-        PH.Chunks, [&](ELFYAML::Chunk *C) { return C->Name == S.Name; });
-    if (std::any_of(It, PH.Chunks.end(), [](ELFYAML::Chunk *C) {
-          return (isa<ELFYAML::Fill>(C) ||
-                  cast<ELFYAML::Section>(C)->Type != ELF::SHT_NOBITS);
-        }))
-      return true;
-  }
-  return false;
-}
-
-template <class ELFT>
-void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
-                                         const ELFYAML::NoBitsSection &S,
-                                         ContiguousBlobAccumulator &CBA) {
-  // SHT_NOBITS sections do not have any content to write.
-  SHeader.sh_entsize = 0;
-  SHeader.sh_size = S.Size;
-
-  // When a nobits section is followed by a non-nobits section or fill
-  // in the same segment, we allocate the file space for it. This behavior
-  // matches linkers.
-  if (shouldAllocateFileSpace(Doc.ProgramHeaders, S))
-    CBA.getOS().write_zeros(S.Size);
 }
 
 template <class ELFT>
