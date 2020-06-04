@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_TESTING_COMMANDLINEARGS_H
 #define LLVM_CLANG_TESTING_COMMANDLINEARGS_H
 
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
 
@@ -31,6 +33,8 @@ enum TestLanguage {
 };
 
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang);
+
+StringRef getFilenameForTesting(TestLanguage Lang);
 
 } // end namespace clang
 
