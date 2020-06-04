@@ -23,6 +23,105 @@ using namespace llvm;
 // Instruction Selector Implementation
 //===----------------------------------------------------------------------===//
 
+/// Convert a DAG integer condition code to a VE ICC condition.
+inline static VECC::CondCode intCondCode2Icc(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown integer condition code!");
+  case ISD::SETEQ:
+    return VECC::CC_IEQ;
+  case ISD::SETNE:
+    return VECC::CC_INE;
+  case ISD::SETLT:
+    return VECC::CC_IL;
+  case ISD::SETGT:
+    return VECC::CC_IG;
+  case ISD::SETLE:
+    return VECC::CC_ILE;
+  case ISD::SETGE:
+    return VECC::CC_IGE;
+  case ISD::SETULT:
+    return VECC::CC_IL;
+  case ISD::SETULE:
+    return VECC::CC_ILE;
+  case ISD::SETUGT:
+    return VECC::CC_IG;
+  case ISD::SETUGE:
+    return VECC::CC_IGE;
+  }
+}
+
+/// Convert a DAG floating point condition code to a VE FCC condition.
+inline static VECC::CondCode fpCondCode2Fcc(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown fp condition code!");
+  case ISD::SETFALSE:
+    return VECC::CC_AF;
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+    return VECC::CC_EQ;
+  case ISD::SETNE:
+  case ISD::SETONE:
+    return VECC::CC_NE;
+  case ISD::SETLT:
+  case ISD::SETOLT:
+    return VECC::CC_L;
+  case ISD::SETGT:
+  case ISD::SETOGT:
+    return VECC::CC_G;
+  case ISD::SETLE:
+  case ISD::SETOLE:
+    return VECC::CC_LE;
+  case ISD::SETGE:
+  case ISD::SETOGE:
+    return VECC::CC_GE;
+  case ISD::SETO:
+    return VECC::CC_NUM;
+  case ISD::SETUO:
+    return VECC::CC_NAN;
+  case ISD::SETUEQ:
+    return VECC::CC_EQNAN;
+  case ISD::SETUNE:
+    return VECC::CC_NENAN;
+  case ISD::SETULT:
+    return VECC::CC_LNAN;
+  case ISD::SETUGT:
+    return VECC::CC_GNAN;
+  case ISD::SETULE:
+    return VECC::CC_LENAN;
+  case ISD::SETUGE:
+    return VECC::CC_GENAN;
+  case ISD::SETTRUE:
+    return VECC::CC_AT;
+  }
+}
+
+/// getImmVal - get immediate representation of integer value
+inline static uint64_t getImmVal(const ConstantSDNode *N) {
+  return N->getSExtValue();
+}
+
+/// getFpImmVal - get immediate representation of floating point value
+inline static uint64_t getFpImmVal(const ConstantFPSDNode *N) {
+  const APInt &Imm = N->getValueAPF().bitcastToAPInt();
+  uint64_t Val = Imm.getZExtValue();
+  if (Imm.getBitWidth() == 32) {
+    // Immediate value of float place places at higher bits on VE.
+    Val <<= 32;
+  }
+  return Val;
+}
+
+/// convMImmVal - Convert a mimm integer immediate value to target immediate.
+inline static uint64_t convMImmVal(uint64_t Val) {
+  if (Val == 0)
+    return 0; // (0)1
+  if (Val & (1UL << 63))
+    return countLeadingOnes(Val);       // (m)1
+  return countLeadingZeros(Val) | 0x40; // (m)0
+}
+
 //===--------------------------------------------------------------------===//
 /// VEDAGToDAGISel - VE specific code to select VE machine
 /// instructions for SelectionDAG operations.
