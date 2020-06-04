@@ -496,13 +496,13 @@ public:
   void clear_error() { EC = std::error_code(); }
 };
 
-/// This returns a reference to a raw_ostream for standard output. Use it like:
-/// outs() << "foo" << "bar";
-raw_ostream &outs();
+/// This returns a reference to a raw_fd_ostream for standard output. Use it
+/// like: outs() << "foo" << "bar";
+raw_fd_ostream &outs();
 
-/// This returns a reference to a raw_ostream for standard error. Use it like:
-/// errs() << "foo" << "bar";
-raw_ostream &errs();
+/// This returns a reference to a raw_fd_ostream for standard error. Use it
+/// like: errs() << "foo" << "bar";
+raw_fd_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
 raw_ostream &nulls();

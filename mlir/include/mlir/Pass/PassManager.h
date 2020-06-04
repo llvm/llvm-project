@@ -19,7 +19,8 @@
 
 namespace llvm {
 class Any;
-raw_ostream &errs();
+class raw_fd_ostream;
+raw_fd_ostream &errs();
 } // end namespace llvm
 
 namespace mlir {
