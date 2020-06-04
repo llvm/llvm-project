@@ -654,10 +654,7 @@ private:
     // Add labels from an explicit list.  The list may have duplicates.
     for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       if (labelSet.count(label) == 0) {
-        // Fail for a nonconforming program unit that never ASSIGNs this label
-        // to the selector variable.  The front end should check that there is
-        // at least one such ASSIGN statement.
-        llvm_unreachable("invalid assigned goto target");
+        // Ignore labels with no ASSIGN statements for the selector variable.
         continue;
       }
       if (std::find(indexList.begin(), indexList.end(), label) ==
