@@ -12,12 +12,13 @@ define { i64, i64 } @PR46189(double %0, double %1, double %2, double %3, double 
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0,0]
 ; SSE-NEXT:    divpd %xmm3, %xmm5
 ; SSE-NEXT:    cvttpd2dq %xmm5, %xmm0
-; SSE-NEXT:    subsd %xmm2, %xmm1
-; SSE-NEXT:    addsd %xmm2, %xmm2
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    movapd %xmm1, %xmm3
+; SSE-NEXT:    subsd %xmm2, %xmm3
+; SSE-NEXT:    addsd %xmm2, %xmm1
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm1[0]
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm4 = xmm4[0,0]
-; SSE-NEXT:    divpd %xmm4, %xmm1
-; SSE-NEXT:    cvttpd2dq %xmm1, %xmm1
+; SSE-NEXT:    divpd %xmm4, %xmm3
+; SSE-NEXT:    cvttpd2dq %xmm3, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
@@ -32,9 +33,9 @@ define { i64, i64 } @PR46189(double %0, double %1, double %2, double %3, double 
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = xmm3[0,0]
 ; AVX-NEXT:    vdivpd %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vaddsd %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX-NEXT:    vsubsd %xmm2, %xmm1, %xmm3
+; AVX-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm3[0],xmm1[0]
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = xmm4[0,0]
 ; AVX-NEXT:    vdivpd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vcvttpd2dq %xmm1, %xmm1

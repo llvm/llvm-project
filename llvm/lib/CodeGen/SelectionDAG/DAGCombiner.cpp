@@ -20550,8 +20550,8 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG) {
 
   SDLoc DL(N);
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
-  SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, N0, IndexC);
-  SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, N1, IndexC);
+  SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
+  SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
   SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
 
   // If all lanes but 1 are undefined, no need to splat the scalar result.
