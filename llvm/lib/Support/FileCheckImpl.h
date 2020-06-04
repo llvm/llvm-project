@@ -64,8 +64,8 @@ public:
     return Value != Kind::NoFormat && Value == Other.Value;
   }
 
-  bool operator!=(const ExpressionFormat &other) const {
-    return !(*this == other);
+  bool operator!=(const ExpressionFormat &Other) const {
+    return !(*this == Other);
   }
 
   bool operator==(Kind OtherValue) const { return Value == OtherValue; }
@@ -119,8 +119,19 @@ public:
   template <class T>
   explicit ExpressionValue(T Val) : Value(Val), Negative(Val < 0) {}
 
+  bool operator==(const ExpressionValue &Other) const {
+    return Value == Other.Value && isNegative() == Other.isNegative();
+  }
+
+  bool operator!=(const ExpressionValue &Other) const {
+    return !(*this == Other);
+  }
+
   /// Returns true if value is signed and negative, false otherwise.
-  bool isNegative() const { return Negative; }
+  bool isNegative() const {
+    assert((Value != 0 || !Negative) && "Unexpected negative zero!");
+    return Negative;
+  }
 
   /// \returns the value as a signed integer or an error if the value is out of
   /// range.

@@ -7749,8 +7749,6 @@ public:
   iterator vector_end() { return VectorTypes.end(); }
 
   llvm::iterator_range<iterator> matrix_types() { return MatrixTypes; }
-  iterator matrix_begin() { return MatrixTypes.begin(); }
-  iterator matrix_end() { return MatrixTypes.end(); }
 
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }

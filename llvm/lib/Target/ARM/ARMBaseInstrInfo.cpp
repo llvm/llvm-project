@@ -5649,7 +5649,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
           C.setCallInfo(CallID, NumBytesForCall);
       };
 
-  auto Costs = std::make_unique<OutlinerCosts>(Subtarget);
+  OutlinerCosts Costs(Subtarget);
   unsigned FrameID = 0;
   unsigned NumBytesToCreateFrame = 0;
 
@@ -5657,14 +5657,14 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
     FrameID = MachineOutlinerTailCall;
-    NumBytesToCreateFrame = Costs->FrameTailCall;
-    SetCandidateCallInfo(MachineOutlinerTailCall, Costs->CallTailCall);
+    NumBytesToCreateFrame = Costs.FrameTailCall;
+    SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
   } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
              LastInstrOpcode == ARM::tBL || LastInstrOpcode == ARM::tBLXr ||
              LastInstrOpcode == ARM::tBLXi) {
     FrameID = MachineOutlinerThunk;
-    NumBytesToCreateFrame = Costs->FrameThunk;
-    SetCandidateCallInfo(MachineOutlinerThunk, Costs->CallThunk);
+    NumBytesToCreateFrame = Costs.FrameThunk;
+    SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
   } else
     return outliner::OutlinedFunction();
 

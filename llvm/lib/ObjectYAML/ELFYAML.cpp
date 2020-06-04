@@ -840,6 +840,7 @@ void MappingTraits<ELFYAML::SectionHeader>::mapping(
 void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
     IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
   IO.mapRequired("Sections", SectionHeader.Sections);
+  IO.mapOptional("Excluded", SectionHeader.Excluded);
 }
 
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
