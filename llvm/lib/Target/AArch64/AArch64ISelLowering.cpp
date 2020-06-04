@@ -14009,7 +14009,7 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  if (getTargetMachine().getOptLevel() == 0)
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
     return AtomicExpansionKind::None;
   return AtomicExpansionKind::LLSC;
 }
