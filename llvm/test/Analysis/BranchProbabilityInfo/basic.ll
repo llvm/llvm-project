@@ -317,6 +317,35 @@ if.end:
   ret i32 0
 }
 
+; CHECK-LABEL: test_invoke_code_profiled
+define void @test_invoke_code_profiled(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+; CHECK: edge entry -> invoke.to0 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge entry -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+  invoke i32 @InvokeCall() to label %invoke.to0 unwind label %lpad
+
+invoke.to0:
+; CHECK: edge invoke.to0 -> invoke.to1 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge invoke.to0 -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+  invoke i32 @InvokeCall() to label %invoke.to1 unwind label %lpad,
+     !prof !{!"branch_weights", i32 444}
+
+invoke.to1:
+; CHECK: invoke.to1 -> invoke.to2 probability is 0x55555555 / 0x80000000 = 66.67%
+; CHECK: invoke.to1 -> lpad probability is 0x2aaaaaab / 0x80000000 = 33.33%
+  invoke i32 @InvokeCall() to label %invoke.to2 unwind label %lpad,
+     !prof !{!"branch_weights", i32 222, i32 111}
+  ret void
+
+invoke.to2:
+  ret void
+
+lpad:
+  %ll = landingpad { i8*, i32 }
+          cleanup
+  ret void
+}
+
 declare i32 @__gxx_personality_v0(...)
 declare void  @ColdFunc()
 declare i32 @InvokeCall()
