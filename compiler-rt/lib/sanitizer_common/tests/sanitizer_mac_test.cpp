@@ -50,7 +50,7 @@ TEST(SanitizerMac, GetDarwinKernelVersion) {
   std::string expected(buf);
 
   // Prefix match
-  ASSERT_TRUE(expected.compare(0, actual.size(), actual) == 0);
+  ASSERT_EQ(expected.compare(0, actual.size(), actual), 0);
 }
 
 }  // namespace __sanitizer
