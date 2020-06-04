@@ -8958,7 +8958,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
   }
 
-  if (VT != MVT::i64)
+  if (VT != MVT::i64 || DCI.isBeforeLegalizeOps())
     return SDValue();
 
   // TODO: This could be a generic combine with a predicate for extracting the
