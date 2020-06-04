@@ -4,7 +4,6 @@
 ; format profile.
 ; It is expected to fail on certain architectures as gcc profile reader does
 ; not work.
-; XFAIL: host-byteorder-big-endian
 
 define void @test(void ()*) #0 !dbg !3 {
   %2 = alloca void ()*
