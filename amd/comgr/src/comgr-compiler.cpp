@@ -732,19 +732,24 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
 amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
   SmallVector<const char *, 128> Argv;
+  bool SawRocmPath = false;
 
   for (auto &Arg : Args)
     Argv.push_back(Arg);
 
-  for (auto &Option : ActionInfo->getOptions())
+  for (auto &Option : ActionInfo->getOptions()) {
     Argv.push_back(Option.c_str());
+    if (Option.rfind("--rocm-path", 0) == 0)
+      SawRocmPath = true;
+  }
 
   Argv.push_back(InputFilePath);
 
-  // Disable bitcode selection and linking by the driver.
-  // FIXME: We should let the driver take care of bitcode library
+  // By default, disable bitcode selection and linking by the driver.
+  // FIXME: We should always let the driver take care of bitcode library
   // selection and linking when we have a consistent path to use.
-  Argv.push_back("-nogpulib");
+  if (!SawRocmPath)
+    Argv.push_back("-nogpulib");
 
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
