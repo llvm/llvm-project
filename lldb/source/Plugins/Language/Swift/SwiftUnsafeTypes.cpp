@@ -90,7 +90,7 @@ bool SwiftUnsafeBufferPointer::Update() {
     argument_type = SwiftASTContext::GetGenericArgumentType(type, 0);
 
   if (!argument_type.IsValid())
-    return nullptr;
+    return false;
 
   m_elem_type = argument_type;
 
