@@ -254,6 +254,12 @@ static cl::opt<bool> EnableCallGraphProfile(
     "enable-npm-call-graph-profile", cl::init(true), cl::Hidden,
     cl::desc("Enable call graph profile pass for the new PM (default = on)"));
 
+/// Flag to enable inline deferral during PGO.
+static cl::opt<bool>
+    EnablePGOInlineDeferral("enable-npm-pgo-inline-deferral", cl::init(true),
+                            cl::Hidden,
+                            cl::desc("Enable inline deferral during PGO"));
+
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
   LoopVectorization = true;
@@ -831,6 +837,9 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level, ThinLTOPhase Phase,
   if (Phase == PassBuilder::ThinLTOPhase::PreLink && PGOOpt &&
       PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
+
+  if (PGOOpt)
+    IP.EnableDeferral = EnablePGOInlineDeferral;
 
   ModuleInlinerWrapperPass MIWP(IP, DebugLogging, UseInlineAdvisor,
                                 MaxDevirtIterations);
