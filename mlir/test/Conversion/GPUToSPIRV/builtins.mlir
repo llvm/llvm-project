@@ -178,3 +178,51 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+module attributes {gpu.container_module} {
+  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK: spv.globalVariable [[SUBGROUPID:@.*]] built_in("SubgroupId")
+  gpu.module @kernels {
+    gpu.func @builtin_subgroup_id() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+      // CHECK: [[ADDRESS:%.*]] = spv._address_of [[SUBGROUPID]]
+      // CHECK-NEXT: {{%.*}} = spv.Load "Input" [[ADDRESS]]
+      %0 = gpu.subgroup_id : index
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK: spv.globalVariable [[NUMSUBGROUPS:@.*]] built_in("NumSubgroups")
+  gpu.module @kernels {
+    gpu.func @builtin_num_subgroups() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+      // CHECK: [[ADDRESS:%.*]] = spv._address_of [[NUMSUBGROUPS]]
+      // CHECK-NEXT: {{%.*}} = spv.Load "Input" [[ADDRESS]]
+      %0 = gpu.num_subgroups : index
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK: spv.globalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize")
+  gpu.module @kernels {
+    gpu.func @builtin_subgroup_size() kernel
+      attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+      // CHECK: [[ADDRESS:%.*]] = spv._address_of [[SUBGROUPSIZE]]
+      // CHECK-NEXT: {{%.*}} = spv.Load "Input" [[ADDRESS]]
+      %0 = gpu.subgroup_size : index
+      gpu.return
+    }
+  }
+}

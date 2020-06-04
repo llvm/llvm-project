@@ -551,6 +551,16 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
         builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
     break;
   }
+  case spirv::BuiltIn::SubgroupId:
+  case spirv::BuiltIn::NumSubgroups:
+  case spirv::BuiltIn::SubgroupSize: {
+    auto ptrType = spirv::PointerType::get(builder.getIntegerType(32),
+                                           spirv::StorageClass::Input);
+    std::string name = getBuiltinVarName(builtin);
+    newVarOp =
+        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+    break;
+  }
   default:
     emitError(loc, "unimplemented builtin variable generation for ")
         << stringifyBuiltIn(builtin);

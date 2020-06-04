@@ -44,6 +44,10 @@ module attributes {gpu.container_module} {
       %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
       %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
+      %sgId = gpu.subgroup_id : index
+      %numSg = gpu.num_subgroups : index
+      %SgSi = gpu.subgroup_size : index
+
       %one = constant 1.0 : f32
       %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
 
