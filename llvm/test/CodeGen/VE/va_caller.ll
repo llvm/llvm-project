@@ -34,10 +34,10 @@ define i32 @caller() {
 ; CHECK-NEXT:    lea %s0, func@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, func@hi(, %s0)
-; CHECK-NEXT:    lea.sl %s0, 1086324736
+; CHECK-NEXT:    lea.sl %s6, 1086324736
 ; CHECK-NEXT:    stl %s18, 176(, %s11)
-; CHECK-NEXT:    or %s6, 0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s18
+; CHECK-NEXT:    # kill: def $sf6 killed $sf6 killed $sx6
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 0, %s18
 ; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
