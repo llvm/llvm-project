@@ -1107,14 +1107,8 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
                              "examing the current "
                              "thread's stack frames.",
                              "frame <subcommand> [<subcommand-options>]") {
-  // BEGIN SWIFT
-  if (false) {
-  // END SWIFT
   LoadSubCommand("diagnose",
                  CommandObjectSP(new CommandObjectFrameDiagnose(interpreter)));
-  // BEGIN SWIFT
-  }
-  // END SWIFT
   LoadSubCommand("info",
                  CommandObjectSP(new CommandObjectFrameInfo(interpreter)));
   LoadSubCommand("select",
