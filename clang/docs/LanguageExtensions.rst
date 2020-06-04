@@ -516,8 +516,8 @@ float matrices and add the result to a third 4x4 matrix.
 Half-Precision Floating Point
 =============================
 
-Clang supports two half-precision (16-bit) floating point types: ``__fp16`` and
-``_Float16``.  These types are supported in all language modes.
+Clang supports three half-precision (16-bit) floating point types: ``__fp16``,
+``_Float16`` and ``__bf16``.  These types are supported in all language modes.
 
 ``__fp16`` is supported on every target, as it is purely a storage format; see below.
 ``_Float16`` is currently only supported on the following targets, with further
@@ -528,6 +528,12 @@ targets pending ABI standardization:
 * SPIR
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
+
+``__bf16`` is purely a storage format; it is currently only supported on the following targets:
+* 32-bit ARM
+* 64-bit ARM (AArch64)
+
+The ``__bf16`` type is only available when supported in hardware.
 
 ``__fp16`` is a storage and interchange format only.  This means that values of
 ``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic

@@ -100,7 +100,7 @@
 using namespace clang;
 
 enum FloatingRank {
-  Float16Rank, HalfRank, FloatRank, DoubleRank, LongDoubleRank, Float128Rank
+  BFloat16Rank, Float16Rank, HalfRank, FloatRank, DoubleRank, LongDoubleRank, Float128Rank
 };
 
 /// \returns location that is relevant when searching for Doc comments related
@@ -1448,6 +1448,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // half type (OpenCL 6.1.1.1) / ARM NEON __fp16
   InitBuiltinType(HalfTy, BuiltinType::Half);
 
+  InitBuiltinType(BFloat16Ty, BuiltinType::BFloat16);
+
   // Builtin type used to help define __builtin_va_list.
   VaListTagDecl = nullptr;
 
@@ -1651,6 +1653,8 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
   switch (T->castAs<BuiltinType>()->getKind()) {
   default:
     llvm_unreachable("Not a floating point type!");
+  case BuiltinType::BFloat16:
+    return Target->getBFloat16Format();
   case BuiltinType::Float16:
   case BuiltinType::Half:
     return Target->getHalfFormat();
@@ -2044,6 +2048,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::SatULongFract:
       Width = Target->getLongFractWidth();
       Align = Target->getLongFractAlign();
+      break;
+    case BuiltinType::BFloat16:
+      Width = Target->getBFloat16Width();
+      Align = Target->getBFloat16Align();
       break;
     case BuiltinType::Float16:
     case BuiltinType::Half:
@@ -5984,6 +5992,7 @@ static FloatingRank getFloatingRank(QualType T) {
   case BuiltinType::Double:     return DoubleRank;
   case BuiltinType::LongDouble: return LongDoubleRank;
   case BuiltinType::Float128:   return Float128Rank;
+  case BuiltinType::BFloat16:   return BFloat16Rank;
   }
 }
 
@@ -5996,6 +6005,7 @@ QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
   FloatingRank EltRank = getFloatingRank(Size);
   if (Domain->isComplexType()) {
     switch (EltRank) {
+    case BFloat16Rank: llvm_unreachable("Complex bfloat16 is not supported");
     case Float16Rank:
     case HalfRank: llvm_unreachable("Complex half is not supported");
     case FloatRank:      return FloatComplexTy;
@@ -6008,6 +6018,7 @@ QualType ASTContext::getFloatingTypeOfSizeWithinDomain(QualType Size,
   assert(Domain->isRealFloatingType() && "Unknown domain!");
   switch (EltRank) {
   case Float16Rank:    return HalfTy;
+  case BFloat16Rank:   return BFloat16Ty;
   case HalfRank:       return HalfTy;
   case FloatRank:      return FloatTy;
   case DoubleRank:     return DoubleTy;
@@ -6985,6 +6996,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::LongDouble: return 'D';
     case BuiltinType::NullPtr:    return '*'; // like char*
 
+    case BuiltinType::BFloat16:
     case BuiltinType::Float16:
     case BuiltinType::Float128:
     case BuiltinType::Half:
@@ -9892,6 +9904,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Read the base type.
   switch (*Str++) {
   default: llvm_unreachable("Unknown builtin type letter!");
+  case 'y':
+    assert(HowLong == 0 && !Signed && !Unsigned &&
+           "Bad modifiers used with 'y'!");
+    Type = Context.BFloat16Ty;
+    break;
   case 'v':
     assert(HowLong == 0 && !Signed && !Unsigned &&
            "Bad modifiers used with 'v'!");

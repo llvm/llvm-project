@@ -142,7 +142,8 @@ namespace clang {
       Poly128,
       Float16,
       Float32,
-      Float64
+      Float64,
+      BFloat16
     };
 
     NeonTypeFlags(unsigned F) : Flags(F) {}

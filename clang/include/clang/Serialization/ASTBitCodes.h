@@ -1060,7 +1060,10 @@ namespace serialization {
       /// A placeholder type for incomplete matrix index operations.
       PREDEF_TYPE_INCOMPLETE_MATRIX_IDX = 72,
 
-    /// OpenCL image types with auto numeration
+      /// \brief The '__bf16' type
+      PREDEF_TYPE_BFLOAT16_ID = 73,
+
+      /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/OpenCLImageTypes.def"

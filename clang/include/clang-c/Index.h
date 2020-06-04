@@ -3253,8 +3253,9 @@ enum CXTypeKind {
   CXType_UShortAccum = 36,
   CXType_UAccum = 37,
   CXType_ULongAccum = 38,
+  CXType_BFloat16 = 39,
   CXType_FirstBuiltin = CXType_Void,
-  CXType_LastBuiltin = CXType_ULongAccum,
+  CXType_LastBuiltin = CXType_BFloat16,
 
   CXType_Complex = 100,
   CXType_Pointer = 101,
