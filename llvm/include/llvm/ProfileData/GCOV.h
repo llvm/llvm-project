@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -70,36 +71,51 @@ struct Options {
 class GCOVBuffer {
 public:
   GCOVBuffer(MemoryBuffer *B) : Buffer(B) {}
+  ~GCOVBuffer() { consumeError(cursor.takeError()); }
 
   /// readGCNOFormat - Check GCNO signature is valid at the beginning of buffer.
   bool readGCNOFormat() {
-    StringRef File = Buffer->getBuffer().slice(0, 4);
-    if (File != "oncg") {
-      errs() << "Unexpected file type: " << File << ".\n";
+    StringRef buf = Buffer->getBuffer();
+    StringRef magic = buf.substr(0, 4);
+    if (magic == "gcno") {
+      de = DataExtractor(buf.substr(4), false, 0);
+    } else if (magic == "oncg") {
+      de = DataExtractor(buf.substr(4), true, 0);
+    } else {
+      errs() << "unexpected magic: " << magic << "\n";
       return false;
     }
-    Cursor = 4;
     return true;
   }
 
   /// readGCDAFormat - Check GCDA signature is valid at the beginning of buffer.
   bool readGCDAFormat() {
-    StringRef File = Buffer->getBuffer().slice(0, 4);
-    if (File != "adcg") {
-      errs() << "Unexpected file type: " << File << ".\n";
+    StringRef buf = Buffer->getBuffer();
+    StringRef magic = buf.substr(0, 4);
+    if (magic == "gcda") {
+      de = DataExtractor(buf.substr(4), false, 0);
+    } else if (magic == "adcg") {
+      de = DataExtractor(buf.substr(4), true, 0);
+    } else {
+      errs() << "unexpected file type: " << magic << "\n";
       return false;
     }
-    Cursor = 4;
     return true;
   }
 
   /// readGCOVVersion - Read GCOV version.
   bool readGCOVVersion(GCOV::GCOVVersion &Version) {
-    StringRef Str = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    Cursor += 4;
-    int Major =
-        Str[3] >= 'A' ? (Str[3] - 'A') * 10 + Str[2] - '0' : Str[3] - '0';
-    int Minor = Str[1] - '0';
+    StringRef str = de.getBytes(cursor, 4);
+    int Major, Minor;
+    if (str.size() != 4)
+      return false;
+    if (de.isLittleEndian()) {
+      Major = str[3] >= 'A' ? (str[3] - 'A') * 10 + str[2] - '0' : str[3] - '0';
+      Minor = str[1] - '0';
+    } else {
+      Major = str[0] >= 'A' ? (str[0] - 'A') * 10 + str[1] - '0' : str[0] - '0';
+      Minor = str[3] - '0';
+    }
     if (Major >= 9) {
       // PR gcov-profile/84846, r269678
       Version = GCOV::V900;
@@ -120,67 +136,25 @@ public:
       Version = GCOV::V402;
       return true;
     }
-    Cursor -= 4;
-    errs() << "unexpected version: " << Str << "\n";
+    errs() << "unexpected version: " << str << "\n";
     return false;
   }
 
-  /// readFunctionTag - If cursor points to a function tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readFunctionTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\0' ||
-        Tag[3] != '\1') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readBlockTag - If cursor points to a block tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readBlockTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x41' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readEdgeTag - If cursor points to an edge tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readEdgeTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x43' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
-  }
-
-  /// readLineTag - If cursor points to a line tag then increment the
-  /// cursor and return true otherwise return false.
-  bool readLineTag() {
-    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\x45' ||
-        Tag[3] != '\x01') {
-      return false;
-    }
-    Cursor += 4;
-    return true;
+  uint32_t getWord() { return de.getU32(cursor); }
+  StringRef getString() {
+    uint32_t len;
+    if (!readInt(len) || len == 0)
+      return {};
+    return de.getBytes(cursor, len * 4).split('\0').first;
   }
 
   bool readInt(uint32_t &Val) {
-    if (Buffer->getBuffer().size() < Cursor + 4) {
-      errs() << "Unexpected end of memory buffer: " << Cursor + 4 << ".\n";
+    if (cursor.tell() + 4 > de.size()) {
+      Val = 0;
+      errs() << "unexpected end of memory buffer: " << cursor.tell() << "\n";
       return false;
     }
-    StringRef Str = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    Cursor += 4;
-    Val = *(const uint32_t *)(Str.data());
+    Val = de.getU32(cursor);
     return true;
   }
 
@@ -193,26 +167,18 @@ public:
   }
 
   bool readString(StringRef &Str) {
-    uint32_t Len;
-    if (!readInt(Len) || Len == 0)
+    uint32_t len;
+    if (!readInt(len) || len == 0)
       return false;
-    Len *= 4;
-    if (Buffer->getBuffer().size() < Cursor + Len) {
-      errs() << "Unexpected end of memory buffer: " << Cursor + Len << ".\n";
-      return false;
-    }
-    Str = Buffer->getBuffer().slice(Cursor, Cursor + Len).split('\0').first;
-    Cursor += Len;
-    return true;
+    Str = de.getBytes(cursor, len * 4).split('\0').first;
+    return bool(cursor);
   }
 
-  uint64_t getCursor() const { return Cursor; }
-  void advanceCursor(uint32_t n) { Cursor += n * 4; }
-  void setCursor(uint64_t c) { Cursor = c; }
+  DataExtractor de{ArrayRef<uint8_t>{}, false, 0};
+  DataExtractor::Cursor cursor{0};
 
 private:
   MemoryBuffer *Buffer;
-  uint64_t Cursor = 0;
 };
 
 /// GCOVFile - Collects coverage information for one pair of coverage file
@@ -259,7 +225,6 @@ public:
 
   GCOVFunction(GCOVFile &P) {}
 
-  bool readGCNO(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
   StringRef getName() const { return Name; }
   StringRef getFilename() const { return Filename; }
   size_t getNumBlocks() const { return Blocks.size(); }
