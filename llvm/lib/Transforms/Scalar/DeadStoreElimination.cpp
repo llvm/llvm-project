@@ -1859,6 +1859,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *SI
                           << '\n');
         NumNoopStores++;
+        MadeChange = true;
         continue;
       }
     }
@@ -2051,7 +2052,7 @@ public:
       PostDominatorTree &PDT =
           getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
 
-      eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI);
+      Changed = eliminateDeadStoresMemorySSA(F, AA, MSSA, DT, PDT, TLI);
     } else {
       MemoryDependenceResults &MD =
           getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
