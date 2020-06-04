@@ -38,7 +38,9 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
 # FIRST:        debug_line[0x00000000]
-# VERBOSE:      DW_LNE_set_address (0x000000000badbeef)
+# VERBOSE:        Address            Line   Column File   ISA Discriminator Flags
+# VERBOSE-NEXT:   ------------------ ------ ------ ------ --- ------------- -------------
+# VERBOSE-NEXT: DW_LNE_set_address (0x000000000badbeef)
 # VERBOSE-NEXT: DW_LNE_end_sequence
 # FIRST:        0x000000000badbeef {{.*}} end_sequence
 # NOFIRST-NOT:  debug_line[0x00000000]
@@ -51,6 +53,7 @@
 # RESERVED-NOT: prologue
 # RESERVED: warning: parsing line table prologue at offset 0x00000048: unsupported reserved unit length of value 0xfffffffe
 # RESERVED-NOT: prologue
+# RESERVED-NOT: Address
 # FATAL-NOT:  debug_line
 
 ## For non-fatal issues, the table data should be dumped:
