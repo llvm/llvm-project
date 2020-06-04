@@ -20,6 +20,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "UnknownExpression";
   case NodeKind::CxxNullPtrExpression:
     return OS << "CxxNullPtrExpression";
+  case NodeKind::IntegerLiteralExpression:
+    return OS << "IntegerLiteralExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -118,6 +120,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "IfStatement_elseKeyword";
   case syntax::NodeRole::IfStatement_elseStatement:
     return OS << "IfStatement_elseStatement";
+  case syntax::NodeRole::IntegerLiteralExpression_literalToken:
+    return OS << "IntegerLiteralExpression_literalToken";
   case syntax::NodeRole::CxxNullPtrExpression_keyword:
     return OS << "CxxNullPtrExpression_keyword";
   case syntax::NodeRole::UnaryOperatorExpression_operatorToken:
@@ -160,6 +164,11 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "ParametersAndQualifiers_trailingReturn";
   }
   llvm_unreachable("invalid role");
+}
+
+syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntegerLiteralExpression_literalToken));
 }
 
 syntax::Leaf *syntax::CxxNullPtrExpression::nullPtrKeyword() {

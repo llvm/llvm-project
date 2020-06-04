@@ -44,6 +44,7 @@ enum class NodeKind : uint16_t {
   PostfixUnaryOperatorExpression,
   BinaryOperatorExpression,
   CxxNullPtrExpression,
+  IntegerLiteralExpression,
 
   // Statements.
   UnknownStatement,
@@ -114,6 +115,7 @@ enum class NodeRole : uint8_t {
   BinaryOperatorExpression_operatorToken,
   BinaryOperatorExpression_rightHandSide,
   CxxNullPtrExpression_keyword,
+  IntegerLiteralExpression_literalToken,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -176,6 +178,16 @@ public:
     return N->kind() == NodeKind::CxxNullPtrExpression;
   }
   syntax::Leaf *nullPtrKeyword();
+};
+
+/// Expression for integer literals.
+class IntegerLiteralExpression final : public Expression {
+public:
+  IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
 };
 
 /// An abstract class for prefix and postfix unary operators.
