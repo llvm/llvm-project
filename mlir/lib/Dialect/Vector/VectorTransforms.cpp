@@ -1304,10 +1304,10 @@ public:
 
 /// Progressive lowering of ConstantMaskOp.
 /// One:
-///   %x = vector.constant_mask_op [a,b]
+///   %x = vector.constant_mask [a,b]
 /// is replaced by:
 ///   %z = zero-result
-///   %l = vector.constant_mask_op [b]
+///   %l = vector.constant_mask [b]
 ///   %4 = vector.insert %l, %z[0]
 ///   ..
 ///   %x = vector.insert %l, %..[a-1]
@@ -1351,6 +1351,17 @@ public:
   }
 };
 
+/// Progressive lowering of CreateMaskOp.
+/// One:
+///   %x = vector.create_mask %a, ... : vector<dx...>
+/// is replaced by:
+///   %l = vector.create_mask ... : vector<...>  ; one lower rank
+///   %0 = cmpi "slt", %ci, %a       |
+///   %1 = select %0, %l, %zeroes    |
+///   %r = vector.insert %1, %pr [i] | d-times
+///   %x = ....
+/// When rank == 1, the selection operator is not needed,
+/// and we can assign the true/false value right away.
 class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
 public:
   using OpRewritePattern<vector::CreateMaskOp>::OpRewritePattern;
