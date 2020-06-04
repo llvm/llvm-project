@@ -1228,6 +1228,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setTargetDAGCombine(ISD::SRA);
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::MUL);
+  setTargetDAGCombine(ISD::FMA);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::BUILD_VECTOR);
   if (Subtarget.hasFPCVT())
@@ -1532,6 +1533,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::FP_EXTEND_HALF:  return "PPCISD::FP_EXTEND_HALF";
   case PPCISD::MAT_PCREL_ADDR:  return "PPCISD::MAT_PCREL_ADDR";
   case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
+  case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   }
   return nullptr;
 }
@@ -14115,6 +14117,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return combineSRL(N, DCI);
   case ISD::MUL:
     return combineMUL(N, DCI);
+  case ISD::FMA:
+  case PPCISD::FNMSUB:
+    return combineFMALike(N, DCI);
   case PPCISD::SHL:
     if (isNullConstant(N->getOperand(0))) // 0 << V -> 0.
         return N->getOperand(0);
@@ -15779,6 +15784,85 @@ PPCTargetLowering::createFastISel(FunctionLoweringInfo &FuncInfo,
   return PPC::createFastISel(FuncInfo, LibInfo);
 }
 
+// 'Inverted' means the FMA opcode after negating one multiplicand.
+// For example, (fma -a b c) = (fnmsub a b c)
+static unsigned invertFMAOpcode(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Invalid FMA opcode for PowerPC!");
+  case ISD::FMA:
+    return PPCISD::FNMSUB;
+  case PPCISD::FNMSUB:
+    return ISD::FMA;
+  }
+}
+
+SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                                bool LegalOps, bool OptForSize,
+                                                NegatibleCost &Cost,
+                                                unsigned Depth) const {
+  if (Depth > SelectionDAG::MaxRecursionDepth)
+    return SDValue();
+
+  unsigned Opc = Op.getOpcode();
+  EVT VT = Op.getValueType();
+  SDNodeFlags Flags = Op.getNode()->getFlags();
+
+  switch (Opc) {
+  case PPCISD::FNMSUB:
+    // TODO: QPX subtarget is deprecated. No transformation here.
+    if (!Op.hasOneUse() || !isTypeLegal(VT) || Subtarget.hasQPX())
+      break;
+
+    const TargetOptions &Options = getTargetMachine().Options;
+    SDValue N0 = Op.getOperand(0);
+    SDValue N1 = Op.getOperand(1);
+    SDValue N2 = Op.getOperand(2);
+    SDLoc Loc(Op);
+
+    NegatibleCost N2Cost = NegatibleCost::Expensive;
+    SDValue NegN2 =
+        getNegatedExpression(N2, DAG, LegalOps, OptForSize, N2Cost, Depth + 1);
+
+    if (!NegN2)
+      return SDValue();
+
+    // (fneg (fnmsub a b c)) => (fnmsub (fneg a) b (fneg c))
+    // (fneg (fnmsub a b c)) => (fnmsub a (fneg b) (fneg c))
+    // These transformations may change sign of zeroes. For example,
+    // -(-ab-(-c))=-0 while -(-(ab-c))=+0 when a=b=c=1.
+    if (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) {
+      // Try and choose the cheaper one to negate.
+      NegatibleCost N0Cost = NegatibleCost::Expensive;
+      SDValue NegN0 = getNegatedExpression(N0, DAG, LegalOps, OptForSize,
+                                           N0Cost, Depth + 1);
+
+      NegatibleCost N1Cost = NegatibleCost::Expensive;
+      SDValue NegN1 = getNegatedExpression(N1, DAG, LegalOps, OptForSize,
+                                           N1Cost, Depth + 1);
+
+      if (NegN0 && N0Cost <= N1Cost) {
+        Cost = std::min(N0Cost, N2Cost);
+        return DAG.getNode(Opc, Loc, VT, NegN0, N1, NegN2, Flags);
+      } else if (NegN1) {
+        Cost = std::min(N1Cost, N2Cost);
+        return DAG.getNode(Opc, Loc, VT, N0, NegN1, NegN2, Flags);
+      }
+    }
+
+    // (fneg (fnmsub a b c)) => (fma a b (fneg c))
+    if (isOperationLegal(ISD::FMA, VT)) {
+      Cost = N2Cost;
+      return DAG.getNode(ISD::FMA, Loc, VT, N0, N1, NegN2, Flags);
+    }
+
+    break;
+  }
+
+  return TargetLowering::getNegatedExpression(Op, DAG, LegalOps, OptForSize,
+                                              Cost, Depth);
+}
+
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
 bool PPCTargetLowering::useLoadStackGuardNode() const {
   if (!Subtarget.isTargetLinux())
@@ -16183,6 +16267,45 @@ SDValue PPCTargetLowering::combineMUL(SDNode *N, DAGCombinerInfo &DCI) const {
   } else {
     return SDValue();
   }
+}
+
+// Combine fma-like op (like fnmsub) with fnegs to appropriate op. Do this
+// in combiner since we need to check SD flags and other subtarget features.
+SDValue PPCTargetLowering::combineFMALike(SDNode *N,
+                                          DAGCombinerInfo &DCI) const {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  SDNodeFlags Flags = N->getFlags();
+  EVT VT = N->getValueType(0);
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetOptions &Options = getTargetMachine().Options;
+  unsigned Opc = N->getOpcode();
+  bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
+  bool LegalOps = !DCI.isBeforeLegalizeOps();
+  SDLoc Loc(N);
+
+  // TODO: QPX subtarget is deprecated. No transformation here.
+  if (Subtarget.hasQPX() || !isOperationLegal(ISD::FMA, VT) ||
+      (VT.isVector() && !Subtarget.hasVSX()))
+    return SDValue();
+
+  // Allowing transformation to FNMSUB may change sign of zeroes when ab-c=0
+  // since (fnmsub a b c)=-0 while c-ab=+0.
+  if (!Flags.hasNoSignedZeros() && !Options.NoSignedZerosFPMath)
+    return SDValue();
+
+  // (fma (fneg a) b c) => (fnmsub a b c)
+  // (fnmsub (fneg a) b c) => (fma a b c)
+  if (SDValue NegN0 = getCheaperNegatedExpression(N0, DAG, LegalOps, CodeSize))
+    return DAG.getNode(invertFMAOpcode(Opc), Loc, VT, NegN0, N1, N2, Flags);
+
+  // (fma a (fneg b) c) => (fnmsub a b c)
+  // (fnmsub a (fneg b) c) => (fma a b c)
+  if (SDValue NegN1 = getCheaperNegatedExpression(N1, DAG, LegalOps, CodeSize))
+    return DAG.getNode(invertFMAOpcode(Opc), Loc, VT, N0, NegN1, N2, Flags);
+
+  return SDValue();
 }
 
 bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
