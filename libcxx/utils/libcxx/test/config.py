@@ -325,9 +325,6 @@ class Configuration(object):
         if not self.get_lit_bool('enable_filesystem', default=True):
             self.config.available_features.add('c++filesystem-disabled')
 
-        if self.get_lit_bool('has_libatomic', False):
-            self.config.available_features.add('libatomic')
-
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':

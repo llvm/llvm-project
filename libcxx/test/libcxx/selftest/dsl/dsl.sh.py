@@ -97,6 +97,24 @@ class TestHasCompileFlag(SetupConfigs):
         self.assertTrue(dsl.hasCompileFlag(self.config, '-O1 -Dhello'))
 
 
+class TestSourceBuilds(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.sourceBuilds
+    """
+    def test_valid_program_builds(self):
+        source = """int main(int, char**) { }"""
+        self.assertTrue(dsl.sourceBuilds(self.config, source))
+
+    def test_compilation_error_fails(self):
+        source = """in main(int, char**) { }"""
+        self.assertFalse(dsl.sourceBuilds(self.config, source))
+
+    def test_link_error_fails(self):
+        source = """extern void this_isnt_defined_anywhere();
+                    int main(int, char**) { this_isnt_defined_anywhere(); }"""
+        self.assertFalse(dsl.sourceBuilds(self.config, source))
+
+
 class TestHasLocale(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasLocale
