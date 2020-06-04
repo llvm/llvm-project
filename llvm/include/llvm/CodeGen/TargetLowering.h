@@ -3348,6 +3348,15 @@ public:
                                               const MachineRegisterInfo &MRI,
                                               unsigned Depth = 0) const;
 
+  /// Determine the known alignment for the pointer value \p R. This is can
+  /// typically be inferred from the number of low known 0 bits. However, for a
+  /// pointer with a non-integral address space, the alignment value may be
+  /// independent from the known low bits.
+  virtual Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis,
+                                                Register R,
+                                                const MachineRegisterInfo &MRI,
+                                                unsigned Depth = 0) const;
+
   /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
   /// Default implementation computes low bits based on alignment
   /// information. This should preserve known bits passed into it.
