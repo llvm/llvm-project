@@ -112,9 +112,10 @@ for arch in ${architectures}; do
     step "Building libc++abi.dylib for architecture ${arch}"
     mkdir -p "${build_dir}/${arch}"
     (cd "${build_dir}/${arch}" &&
-        xcrun --sdk "${sdk}" cmake "${llvm_root}/libcxxabi" \
+        xcrun --sdk "${sdk}" cmake "${llvm_root}/llvm" \
             -GNinja \
             -DCMAKE_MAKE_PROGRAM="$(xcrun --sdk "${sdk}" --find ninja)" \
+            -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
             -C "${cache}" \
             -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
             -DCMAKE_INSTALL_NAME_DIR="${install_name_dir}" \
