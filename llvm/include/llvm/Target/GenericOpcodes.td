@@ -19,6 +19,22 @@ class GenericInstruction : StandardPseudoInstruction {
   let isPreISelOpcode = 1;
 }
 
+// Provide a variant of an instruction with the same operands, but
+// different instruction flags. This is intended to provide a
+// convenient way to define strict floating point variants of ordinary
+// floating point instructions.
+class ConstrainedIntruction<GenericInstruction baseInst> :
+  GenericInstruction {
+  let OutOperandList = baseInst.OutOperandList;
+  let InOperandList =  baseInst.InOperandList;
+  let isCommutable = baseInst.isCommutable;
+
+  // TODO: Do we need a better way to mark reads from FP mode than
+  // hasSideEffects?
+  let hasSideEffects = 1;
+  let mayRaiseFPException = 1;
+}
+
 // Extend the underlying scalar type of an operation, leaving the high bits
 // unspecified.
 def G_ANYEXT : GenericInstruction {
@@ -1128,4 +1144,14 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// TODO: Add the other generic opcodes.
+//------------------------------------------------------------------------------
+// Constrained floating point ops
+//------------------------------------------------------------------------------
+
+def G_STRICT_FADD : ConstrainedIntruction<G_FADD>;
+def G_STRICT_FSUB : ConstrainedIntruction<G_FSUB>;
+def G_STRICT_FMUL : ConstrainedIntruction<G_FMUL>;
+def G_STRICT_FDIV : ConstrainedIntruction<G_FDIV>;
+def G_STRICT_FREM : ConstrainedIntruction<G_FREM>;
+def G_STRICT_FMA : ConstrainedIntruction<G_FMA>;
+def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;
