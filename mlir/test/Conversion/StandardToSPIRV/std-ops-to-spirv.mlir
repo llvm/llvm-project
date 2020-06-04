@@ -564,6 +564,15 @@ func @zexti2(%arg0 : i32) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: @zexti3
+func @zexti3(%arg0 : i1) -> i32 {
+  // CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, i32
+  %0 = std.zexti %arg0 : i1 to i32
+  return %0 : i32
+}
+
 // CHECK-LABEL: @trunci1
 func @trunci1(%arg0 : i64) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i64 to i16

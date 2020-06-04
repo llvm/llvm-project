@@ -445,6 +445,28 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts std.zexti to spv.Select if the type of source is i1.
+class ZeroExtendI1Pattern final : public SPIRVOpLowering<ZeroExtendIOp> {
+public:
+  using SPIRVOpLowering<ZeroExtendIOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(ZeroExtendIOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = operands.front().getType();
+    if (!srcType.isSignlessInteger() || srcType.getIntOrFloatBitWidth() != 1)
+      return failure();
+
+    auto dstType = this->typeConverter.convertType(op.getResult().getType());
+    Location loc = op.getLoc();
+    Value zero = rewriter.create<ConstantIntOp>(loc, 0, dstType);
+    Value one = rewriter.create<ConstantIntOp>(loc, 1, dstType);
+    rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
+        op, dstType, operands.front(), one, zero);
+    return success();
+  }
+};
+
 /// Converts type-casting standard operations to SPIR-V operations.
 template <typename StdOp, typename SPIRVOp>
 class TypeCastingOpPattern final : public SPIRVOpLowering<StdOp> {
@@ -455,9 +477,12 @@ public:
   matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     assert(operands.size() == 1);
+    auto srcType = operands.front().getType();
+    if (srcType.isSignlessInteger() && srcType.getIntOrFloatBitWidth() == 1)
+      return failure();
     auto dstType =
         this->typeConverter.convertType(operation.getResult().getType());
-    if (dstType == operands.front().getType()) {
+    if (dstType == srcType) {
       // Due to type conversion, we are seeing the same source and target type.
       // Then we can just erase this operation by forwarding its operand.
       rewriter.replaceOp(operation, operands.front());
@@ -1012,7 +1037,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       BoolCmpIOpPattern, ConstantCompositeOpPattern, ConstantScalarOpPattern,
       CmpFOpPattern, CmpIOpPattern, IntLoadOpPattern, LoadOpPattern,
       ReturnOpPattern, SelectOpPattern, IntStoreOpPattern, StoreOpPattern,
-      TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
+      ZeroExtendI1Pattern, TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
       TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
       TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
