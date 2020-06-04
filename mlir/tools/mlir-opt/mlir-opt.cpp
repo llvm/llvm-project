@@ -50,6 +50,7 @@ void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
+void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
@@ -121,6 +122,7 @@ void registerTestPasses() {
   registerTestDominancePass();
   registerTestFunc();
   registerTestGpuMemoryPromotionPass();
+  registerTestLinalgHoisting();
   registerTestLinalgTransforms();
   registerTestLivenessPass();
   registerTestLoopFusion();
