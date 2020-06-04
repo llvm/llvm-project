@@ -80,7 +80,15 @@ static Optional<std::string> findDylib(StringRef name) {
     if (fs::exists(path))
       return path;
   }
-  error("library not found for -l" + name);
+  return None;
+}
+
+static Optional<std::string> findArchive(StringRef name) {
+  for (StringRef dir : config->searchPaths) {
+    std::string path = (dir + "/lib" + name + ".a").str();
+    if (fs::exists(path))
+      return path;
+  }
   return None;
 }
 
@@ -286,10 +294,16 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_INPUT:
       addFile(arg->getValue());
       break;
-    case OPT_l:
-      if (Optional<std::string> path = findDylib(arg->getValue()))
+    case OPT_l: {
+      StringRef name = arg->getValue();
+      if (Optional<std::string> path = findDylib(name))
         addFile(*path);
+      else if (Optional<std::string> path = findArchive(name))
+        addFile(*path);
+      else
+        error("library not found for -l" + name);
       break;
+    }
     case OPT_platform_version: {
       handlePlatformVersion(it, end); // Can advance "it".
       break;
