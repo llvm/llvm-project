@@ -31,11 +31,12 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 class MockFSProvider : public FileSystemProvider {
 public:
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
-    return buildTestFS(Files);
+    return buildTestFS(Files, Timestamps);
   }
 
   // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
+  llvm::StringMap<time_t> Timestamps;
 };
 
 // A Compilation database that returns a fixed set of compile flags.

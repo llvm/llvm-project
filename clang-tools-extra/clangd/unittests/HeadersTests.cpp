@@ -44,20 +44,20 @@ private:
   std::unique_ptr<CompilerInstance> setupClang() {
     auto Cmd = CDB.getCompileCommand(MainFile);
     assert(static_cast<bool>(Cmd));
-    auto VFS = FS.getFileSystem();
-    VFS->setCurrentWorkingDirectory(Cmd->Directory);
 
     ParseInputs PI;
     PI.CompileCommand = *Cmd;
-    PI.FS = VFS;
+    PI.FSProvider = &FS;
     auto CI = buildCompilerInvocation(PI, IgnoreDiags);
     EXPECT_TRUE(static_cast<bool>(CI));
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
+    auto VFS = FS.getFileSystem();
+    VFS->setCurrentWorkingDirectory(Cmd->Directory);
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
-        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile), VFS,
-        IgnoreDiags);
+        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
+        std::move(VFS), IgnoreDiags);
 
     EXPECT_FALSE(Clang->getFrontendOpts().Inputs.empty());
     return Clang;
