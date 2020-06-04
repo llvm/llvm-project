@@ -111,7 +111,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MachineFunctionInfo.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
-    "AArch64PreLegalizerCombiner.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterBankInfo.cpp",
