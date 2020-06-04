@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Target/TargetMachine.h"
@@ -840,4 +841,49 @@ MipsInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_JALR,         "mips-jalr"}
   };
   return makeArrayRef(Flags);
+}
+
+Optional<ParamLoadedValue>
+MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
+  DIExpression *Expr =
+      DIExpression::get(MI.getMF()->getFunction().getContext(), {});
+
+  // TODO: Special MIPS instructions that need to be described separately.
+  if (auto RegImm = isAddImmediate(MI, Reg)) {
+    Register SrcReg = RegImm->Reg;
+    int64_t Offset = RegImm->Imm;
+    // When SrcReg is $zero, treat loaded value as immediate only.
+    // Ex. $a2 = ADDiu $zero, 10
+    if (SrcReg == Mips::ZERO || SrcReg == Mips::ZERO_64) {
+      return ParamLoadedValue(MI.getOperand(2), Expr);
+    }
+    Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, Offset);
+    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+  }
+
+  return TargetInstrInfo::describeLoadedValue(MI, Reg);
+}
+
+Optional<RegImmPair> MipsInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                                   Register Reg) const {
+  // TODO: Handle cases where Reg is a super- or sub-register of the
+  // destination register.
+  const MachineOperand &Op0 = MI.getOperand(0);
+  if (!Op0.isReg() || Reg != Op0.getReg())
+    return None;
+
+  switch (MI.getOpcode()) {
+  case Mips::ADDiu:
+  case Mips::DADDiu: {
+    const MachineOperand &Dop = MI.getOperand(0);
+    const MachineOperand &Sop1 = MI.getOperand(1);
+    const MachineOperand &Sop2 = MI.getOperand(2);
+    // Value is sum of register and immediate. Immediate value could be
+    // global string address which is not supported.
+    if (Dop.isReg() && Sop1.isReg() && Sop2.isImm())
+      return RegImmPair{Sop1.getReg(), Sop2.getImm()};
+    // TODO: Handle case where Sop1 is a frame-index.
+  }
+  }
+  return None;
 }
