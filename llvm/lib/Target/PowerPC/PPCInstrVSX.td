@@ -2416,21 +2416,27 @@ def : Pat<(v4i32 (or (and (vnot_ppc v4i32:$C), v4i32:$A),
                      (and v4i32:$B, v4i32:$C))),
           (v4i32 (XXSEL $A, $B, $C))>;
 
-// Additional fnmsub patterns: -a*b + c == -(a*b - c)
-def : Pat<(fma (fneg f64:$A), f64:$B, f64:$C),
+// Additional fnmsub pattern for PPC specific ISD opcode
+def : Pat<(PPCfnmsub f64:$A, f64:$B, f64:$C),
           (XSNMSUBADP $C, $A, $B)>;
-def : Pat<(fma f64:$A, (fneg f64:$B), f64:$C),
-          (XSNMSUBADP $C, $A, $B)>;
+def : Pat<(fneg (PPCfnmsub f64:$A, f64:$B, f64:$C)),
+          (XSMSUBADP $C, $A, $B)>;
+def : Pat<(PPCfnmsub f64:$A, f64:$B, (fneg f64:$C)),
+          (XSNMADDADP $C, $A, $B)>;
 
-def : Pat<(fma (fneg v2f64:$A), v2f64:$B, v2f64:$C),
+def : Pat<(PPCfnmsub v2f64:$A, v2f64:$B, v2f64:$C),
           (XVNMSUBADP $C, $A, $B)>;
-def : Pat<(fma v2f64:$A, (fneg v2f64:$B), v2f64:$C),
-          (XVNMSUBADP $C, $A, $B)>;
+def : Pat<(fneg (PPCfnmsub v2f64:$A, v2f64:$B, v2f64:$C)),
+          (XVMSUBADP $C, $A, $B)>;
+def : Pat<(PPCfnmsub v2f64:$A, v2f64:$B, (fneg v2f64:$C)),
+          (XVNMADDADP $C, $A, $B)>;
 
-def : Pat<(fma (fneg v4f32:$A), v4f32:$B, v4f32:$C),
+def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C),
           (XVNMSUBASP $C, $A, $B)>;
-def : Pat<(fma v4f32:$A, (fneg v4f32:$B), v4f32:$C),
-          (XVNMSUBASP $C, $A, $B)>;
+def : Pat<(fneg (PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C)),
+          (XVMSUBASP $C, $A, $B)>;
+def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, (fneg v4f32:$C)),
+          (XVNMADDASP $C, $A, $B)>;
 
 def : Pat<(v2f64 (bitconvert v4f32:$A)),
           (COPY_TO_REGCLASS $A, VSRC)>;
@@ -3003,11 +3009,13 @@ def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETUGT)),
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETNE)),
           (SELECT_VSSRC (CRXOR $lhs, $rhs), $tval, $fval)>;
 
-// Additional xsnmsubasp patterns: -a*b + c == -(a*b - c)
-def : Pat<(fma (fneg f32:$A), f32:$B, f32:$C),
+// Additional fnmsub pattern for PPC specific ISD opcode
+def : Pat<(PPCfnmsub f32:$A, f32:$B, f32:$C),
           (XSNMSUBASP $C, $A, $B)>;
-def : Pat<(fma f32:$A, (fneg f32:$B), f32:$C),
-          (XSNMSUBASP $C, $A, $B)>;
+def : Pat<(fneg (PPCfnmsub f32:$A, f32:$B, f32:$C)),
+          (XSMSUBASP $C, $A, $B)>;
+def : Pat<(PPCfnmsub f32:$A, f32:$B, (fneg f32:$C)),
+          (XSNMADDASP $C, $A, $B)>;
 
 // f32 neg
 // Although XSNEGDP is available in P7, we want to select it starting from P8,
@@ -3516,9 +3524,13 @@ def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
 
 // Any Power9 VSX subtarget.
 let Predicates = [HasVSX, HasP9Vector] in {
-// Additional fnmsub patterns: -a*b + c == -(a*b - c)
-def : Pat<(fma (fneg f128:$A), f128:$B, f128:$C), (XSNMSUBQP $C, $A, $B)>;
-def : Pat<(fma f128:$A, (fneg f128:$B), f128:$C), (XSNMSUBQP $C, $A, $B)>;
+// Additional fnmsub pattern for PPC specific ISD opcode
+def : Pat<(PPCfnmsub f128:$A, f128:$B, f128:$C),
+          (XSNMSUBQP $C, $A, $B)>;
+def : Pat<(fneg (PPCfnmsub f128:$A, f128:$B, f128:$C)),
+          (XSMSUBQP $C, $A, $B)>;
+def : Pat<(PPCfnmsub f128:$A, f128:$B, (fneg f128:$C)),
+          (XSNMADDQP $C, $A, $B)>;
 
 def : Pat<(f128 (sint_to_fp i64:$src)),
           (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;

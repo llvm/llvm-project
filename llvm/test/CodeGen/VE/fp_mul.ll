@@ -22,7 +22,6 @@ define float @func4(float %a) {
 ; CHECK-LABEL: func4:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 1084227584
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fmul.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fmul float %a, 5.000000e+00
@@ -43,7 +42,6 @@ define float @func7(float %a) {
 ; CHECK-LABEL: func7:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    lea.sl %s1, 2139095039
-; CHECK-NEXT:    or %s1, 0, %s1
 ; CHECK-NEXT:    fmul.s %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fmul float %a, 0x47EFFFFFE0000000
@@ -65,7 +63,7 @@ define double @func8(double %a) {
 define float @fmuls_ir(float %a) {
 ; CHECK-LABEL: fmuls_ir:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    fmul.s %s0, 0, %s0
+; CHECK-NEXT:    fmul.s %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = fmul float 0.e+00, %a
   ret float %r

@@ -68,7 +68,7 @@ public:
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
     if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero();
+      return !divisor->IsZero() && (*this)(division.left());
     } else {
       return false;
     }

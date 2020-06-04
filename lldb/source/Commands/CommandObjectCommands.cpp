@@ -1767,6 +1767,16 @@ public:
 
   ~CommandObjectCommandsScriptDelete() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_interpreter.HasCommands() || request.GetCursorIndex() != 0)
+      return;
+
+    for (const auto &c : m_interpreter.GetUserCommands())
+      request.TryCompleteCurrentArg(c.first, c.second->GetHelp());
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
 

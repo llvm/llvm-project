@@ -593,9 +593,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_0() 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 0)
   call void asm sideeffect "", ""()
@@ -614,9 +614,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_1() 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x1
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 1)
   call void asm sideeffect "", ""()
@@ -635,9 +635,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_2() 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x2
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 2)
   call void asm sideeffect "", ""()
@@ -656,9 +656,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_4() 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x4
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 4)
   call void asm sideeffect "", ""()
@@ -677,9 +677,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_8() 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x8
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 8)
   call void asm sideeffect "", ""()
@@ -698,9 +698,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_16()
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 1
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 1
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 16)
   call void asm sideeffect "", ""()
@@ -719,9 +719,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_32()
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 2
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 2
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 32)
   call void asm sideeffect "", ""()
@@ -740,9 +740,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_64()
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 4
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 4
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 64)
   call void asm sideeffect "", ""()
@@ -761,9 +761,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_128(
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x0
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 8
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 8
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 128)
   call void asm sideeffect "", ""()
@@ -782,9 +782,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_15()
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0xf
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 0
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 15)
   call void asm sideeffect "", ""()
@@ -803,9 +803,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_255(
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0xf
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 15
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 255)
   call void asm sideeffect "", ""()
@@ -825,9 +825,9 @@ define amdgpu_kernel void @test_setreg_full_both_round_mode_and_denorm_mode_597(
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_round_mode 0x5
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_denorm_mode 5
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
-; GFX10-NEXT:    s_denorm_mode 5
 ; GFX10-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.setreg(i32 14337, i32 597)
   call void asm sideeffect "", ""()

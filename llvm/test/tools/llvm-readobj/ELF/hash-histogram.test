@@ -271,7 +271,7 @@ ProgramHeaders:
 
 ## Case A: the 'nbuckets' field is set so that the GNU hash table goes past the end of the file.
 ##         The value of 1 for the NBUCKETS is no-op.
-# RUN: yaml2obj --docnum=6 -D MASKWORDS=4294967295 -D NBUCKETS=1 %s -o %t7
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=0x80000000 -D NBUCKETS=1 %s -o %t7
 # RUN: llvm-readelf --elf-hash-histogram %t7 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t7 --check-prefix=ERR5 --implicit-check-not="Histogram"
 
@@ -279,7 +279,7 @@ ProgramHeaders:
 
 ## Case B: the 'maskwords' field is set so that the GNU hash table goes past the end of the file.
 ##         The value of 1 for the MASKWORDS is no-op.
-# RUN: yaml2obj --docnum=6 -D MASKWORDS=1 -D NBUCKETS=4294967295 %s -o %t8
+# RUN: yaml2obj --docnum=6 -D MASKWORDS=1 -D NBUCKETS=0x80000000 %s -o %t8
 # RUN: llvm-readelf --elf-hash-histogram %t8 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t8 --check-prefix=ERR5 --implicit-check-not="Histogram"
 

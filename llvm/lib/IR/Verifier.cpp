@@ -4173,23 +4173,28 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
   // Check consistency of !prof branch_weights metadata.
   if (ProfName.equals("branch_weights")) {
-    unsigned ExpectedNumOperands = 0;
-    if (BranchInst *BI = dyn_cast<BranchInst>(&I))
-      ExpectedNumOperands = BI->getNumSuccessors();
-    else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
-      ExpectedNumOperands = SI->getNumSuccessors();
-    else if (isa<CallInst>(&I) || isa<InvokeInst>(&I))
-      ExpectedNumOperands = 1;
-    else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
-      ExpectedNumOperands = IBI->getNumDestinations();
-    else if (isa<SelectInst>(&I))
-      ExpectedNumOperands = 2;
-    else
-      CheckFailed("!prof branch_weights are not allowed for this instruction",
-                  MD);
+    if (isa<InvokeInst>(&I)) {
+      Assert(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
+             "Wrong number of InvokeInst branch_weights operands", MD);
+    } else {
+      unsigned ExpectedNumOperands = 0;
+      if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+        ExpectedNumOperands = BI->getNumSuccessors();
+      else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
+        ExpectedNumOperands = SI->getNumSuccessors();
+      else if (isa<CallInst>(&I))
+        ExpectedNumOperands = 1;
+      else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
+        ExpectedNumOperands = IBI->getNumDestinations();
+      else if (isa<SelectInst>(&I))
+        ExpectedNumOperands = 2;
+      else
+        CheckFailed("!prof branch_weights are not allowed for this instruction",
+                    MD);
 
-    Assert(MD->getNumOperands() == 1 + ExpectedNumOperands,
-           "Wrong number of operands", MD);
+      Assert(MD->getNumOperands() == 1 + ExpectedNumOperands,
+             "Wrong number of operands", MD);
+    }
     for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
       auto &MDO = MD->getOperand(i);
       Assert(MDO, "second operand should not be null", MD);

@@ -336,10 +336,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     NewCS->setAttributes(
         AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
                            CallPAL.getRetAttributes(), ArgAttrVec));
-    NewCS->setDebugLoc(CB.getDebugLoc());
-    uint64_t W;
-    if (CB.extractProfTotalWeight(W))
-      NewCS->setProfWeight(W);
+    NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
     Args.clear();
     ArgAttrVec.clear();
 
