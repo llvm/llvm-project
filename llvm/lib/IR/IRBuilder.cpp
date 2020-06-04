@@ -575,11 +575,10 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
   return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
 }
 
-template <typename T0, typename T1>
+template <typename T0>
 static std::vector<Value *>
 getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
-                  Value *ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs,
-                  ArrayRef<T1> GCArgs) {
+                  Value *ActualCallee, uint32_t Flags, ArrayRef<T0> CallArgs) {
   std::vector<Value *> Args;
   Args.push_back(B.getInt64(ID));
   Args.push_back(B.getInt32(NumPatchBytes));
@@ -591,15 +590,15 @@ getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
   // They will be removed from the signature of gc.statepoint shortly.
   Args.push_back(B.getInt32(0));
   Args.push_back(B.getInt32(0));
-  Args.insert(Args.end(), GCArgs.begin(), GCArgs.end());
-
+  // GC args are now encoded in the gc-live operand bundle
   return Args;
 }
 
-template<typename T1, typename T2>
+template<typename T1, typename T2, typename T3>
 static std::vector<OperandBundleDef>
 getStatepointBundles(Optional<ArrayRef<T1>> TransitionArgs,
-                     Optional<ArrayRef<T2>> DeoptArgs) {
+                     Optional<ArrayRef<T2>> DeoptArgs,
+                     ArrayRef<T3> GCArgs) {
   std::vector<OperandBundleDef> Rval;
   if (DeoptArgs) {
     SmallVector<Value*, 16> DeoptValues;
@@ -611,6 +610,11 @@ getStatepointBundles(Optional<ArrayRef<T1>> TransitionArgs,
     TransitionValues.insert(TransitionValues.end(),
                             TransitionArgs->begin(), TransitionArgs->end());
     Rval.emplace_back("gc-transition", TransitionValues);
+  }
+  if (GCArgs.size()) {
+    SmallVector<Value*, 16> LiveValues;
+    LiveValues.insert(LiveValues.end(), GCArgs.begin(), GCArgs.end());
+    Rval.emplace_back("gc-live", LiveValues);
   }
   return Rval;
 }
@@ -636,10 +640,11 @@ static CallInst *CreateGCStatepointCallCommon(
 
   std::vector<Value *> Args =
       getStatepointArgs(*Builder, ID, NumPatchBytes, ActualCallee, Flags,
-                        CallArgs, GCArgs);
+                        CallArgs);
 
   return Builder->CreateCall(FnStatepoint, Args,
-                             getStatepointBundles(TransitionArgs, DeoptArgs),
+                             getStatepointBundles(TransitionArgs, DeoptArgs,
+                                                  GCArgs),
                              Name);
 }
 
@@ -690,10 +695,11 @@ static InvokeInst *CreateGCStatepointInvokeCommon(
 
   std::vector<Value *> Args =
       getStatepointArgs(*Builder, ID, NumPatchBytes, ActualInvokee, Flags,
-                        InvokeArgs, GCArgs);
+                        InvokeArgs);
 
   return Builder->CreateInvoke(FnStatepoint, NormalDest, UnwindDest, Args,
-                               getStatepointBundles(TransitionArgs, DeoptArgs),
+                               getStatepointBundles(TransitionArgs, DeoptArgs,
+                                                    GCArgs),
                                Name);
 }
 
