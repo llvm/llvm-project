@@ -202,7 +202,7 @@ TEST(Matcher, UnresolvedLookupExpr) {
                                    "}",
                                    unresolvedLookupExpr(),
                                    /*ExpectMatch=*/true,
-                                   "-fno-delayed-template-parsing"));
+                                   {"-fno-delayed-template-parsing"}));
 }
 
 TEST(Matcher, ADLCall) {
@@ -789,50 +789,29 @@ TEST(Matcher, Initializers) {
     "  struct point ptarray[10] = "
     "      { [2].y = 1.0, [2].x = 2.0, [0].x = 1.0 }; }";
   EXPECT_TRUE(matchesConditionally(
-    ToMatch,
-    initListExpr(
-      has(
-        cxxConstructExpr(
-          requiresZeroInitialization())),
-      has(
-        initListExpr(
-          hasType(asString("struct point")),
-          has(floatLiteral(equals(1.0))),
-          has(implicitValueInitExpr(
-            hasType(asString("double")))))),
-      has(
-        initListExpr(
-          hasType(asString("struct point")),
-          has(floatLiteral(equals(2.0))),
-          has(floatLiteral(equals(1.0)))))
-    ), true, "-std=gnu++98"));
+      ToMatch,
+      initListExpr(
+          has(cxxConstructExpr(requiresZeroInitialization())),
+          has(initListExpr(
+              hasType(asString("struct point")), has(floatLiteral(equals(1.0))),
+              has(implicitValueInitExpr(hasType(asString("double")))))),
+          has(initListExpr(hasType(asString("struct point")),
+                           has(floatLiteral(equals(2.0))),
+                           has(floatLiteral(equals(1.0)))))),
+      true, {"-std=gnu++03"}));
 
-  EXPECT_TRUE(matchesC99(ToMatch,
-                         initListExpr(
-                           hasSyntacticForm(
-                             initListExpr(
-                               has(
-                                 designatedInitExpr(
-                                   designatorCountIs(2),
-                                   hasDescendant(floatLiteral(
-                                     equals(1.0))),
-                                   hasDescendant(integerLiteral(
-                                     equals(2))))),
-                               has(
-                                 designatedInitExpr(
-                                   designatorCountIs(2),
-                                   hasDescendant(floatLiteral(
-                                     equals(2.0))),
-                                   hasDescendant(integerLiteral(
-                                     equals(2))))),
-                               has(
-                                 designatedInitExpr(
-                                   designatorCountIs(2),
-                                   hasDescendant(floatLiteral(
-                                     equals(1.0))),
-                                   hasDescendant(integerLiteral(
-                                     equals(0)))))
-                             )))));
+  EXPECT_TRUE(matchesC99(
+      ToMatch,
+      initListExpr(hasSyntacticForm(initListExpr(
+          has(designatedInitExpr(designatorCountIs(2),
+                                 hasDescendant(floatLiteral(equals(1.0))),
+                                 hasDescendant(integerLiteral(equals(2))))),
+          has(designatedInitExpr(designatorCountIs(2),
+                                 hasDescendant(floatLiteral(equals(2.0))),
+                                 hasDescendant(integerLiteral(equals(2))))),
+          has(designatedInitExpr(
+              designatorCountIs(2), hasDescendant(floatLiteral(equals(1.0))),
+              hasDescendant(integerLiteral(equals(0))))))))));
 }
 
 TEST(Matcher, ParenListExpr) {
@@ -1475,9 +1454,9 @@ TEST(TypeMatching, MatchesTemplateSpecializationType) {
 }
 
 TEST(TypeMatching, MatchesDeucedTemplateSpecializationType) {
-  EXPECT_TRUE(matches("template <typename T> class A{ public: A(T) {} }; A a(1);",
-                      deducedTemplateSpecializationType(),
-                      LanguageMode::Cxx17OrLater));
+  EXPECT_TRUE(
+      matches("template <typename T> class A{ public: A(T) {} }; A a(1);",
+              deducedTemplateSpecializationType(), langCxx17OrLater()));
 }
 
 TEST(TypeMatching, MatchesRecordType) {
