@@ -451,7 +451,8 @@ def FeatureAtomicFaddInsts : SubtargetFeature<"atomic-fadd-insts",
   "HasAtomicFaddInsts",
   "true",
   "Has buffer_atomic_add_f32, buffer_atomic_pk_add_f16, global_atomic_add_f32, "
-  "global_atomic_pk_add_f16 instructions"
+  "global_atomic_pk_add_f16 instructions",
+  [FeatureFlatGlobalInsts]
 >;
 
 def FeatureDoesNotSupportSRAMECC : SubtargetFeature<"no-sram-ecc-support",
