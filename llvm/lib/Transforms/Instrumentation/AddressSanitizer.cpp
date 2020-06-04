@@ -2036,11 +2036,15 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
   assert(ExtendedGlobals.size() == MetadataInitializers.size());
   auto &DL = M.getDataLayout();
 
+  SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
     Constant *Initializer = MetadataInitializers[i];
     GlobalVariable *G = ExtendedGlobals[i];
     GlobalVariable *Metadata =
         CreateMetadataGlobal(M, Initializer, G->getName());
+    MDNode *MD = MDNode::get(M.getContext(), ValueAsMetadata::get(G));
+    Metadata->setMetadata(LLVMContext::MD_associated, MD);
+    MetadataGlobals[i] = Metadata;
 
     // The MSVC linker always inserts padding when linking incrementally. We
     // cope with that by aligning each struct to its size, which must be a power
@@ -2052,6 +2056,11 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
 
     SetComdatForGlobalMetadata(G, Metadata, "");
   }
+
+  // Update llvm.compiler.used, adding the new metadata globals. This is
+  // needed so that during LTO these variables stay alive.
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
 }
 
 void ModuleAddressSanitizer::InstrumentGlobalsELF(
