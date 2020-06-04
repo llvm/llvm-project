@@ -3112,7 +3112,8 @@ void Verifier::visitCallBase(CallBase &Call) {
   // "preallocated" operand bundle, and at most one "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-      FoundPtrauthBundle = false, FoundPreallocatedBundle = false;
+       FoundPtrauthBundle = false,
+       FoundPreallocatedBundle = false, FoundGCLiveBundle = false;;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3159,6 +3160,10 @@ void Verifier::visitCallBase(CallBase &Call) {
              "\"preallocated\" argument must be a token from "
              "llvm.call.preallocated.setup",
              Call);
+    } else if (Tag == LLVMContext::OB_gc_live) {
+      Assert(!FoundGCLiveBundle, "Multiple gc-live operand bundles",
+             Call);
+      FoundGCLiveBundle = true;
     }
   }
 
@@ -4766,45 +4771,53 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     const int BaseIndex = cast<ConstantInt>(Base)->getZExtValue();
     const int DerivedIndex = cast<ConstantInt>(Derived)->getZExtValue();
-    // Check the bounds
-    Assert(0 <= BaseIndex && BaseIndex < (int)StatepointCall.arg_size(),
-           "gc.relocate: statepoint base index out of bounds", Call);
-    Assert(0 <= DerivedIndex && DerivedIndex < (int)StatepointCall.arg_size(),
-           "gc.relocate: statepoint derived index out of bounds", Call);
 
-    // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
-    // section of the statepoint's argument.
-    Assert(StatepointCall.arg_size() > 0,
-           "gc.statepoint: insufficient arguments");
-    Assert(isa<ConstantInt>(StatepointCall.getArgOperand(3)),
-           "gc.statement: number of call arguments must be constant integer");
-    const unsigned NumCallArgs =
+    // Check the bounds
+    if (auto Opt = StatepointCall.getOperandBundle(LLVMContext::OB_gc_live)) {
+      Assert(0 <= BaseIndex && BaseIndex < (int)Opt->Inputs.size(),
+             "gc.relocate: statepoint base index out of bounds", Call);
+      Assert(0 <= DerivedIndex && DerivedIndex < (int)Opt->Inputs.size(),
+             "gc.relocate: statepoint derived index out of bounds", Call);
+    } else {
+      Assert(0 <= BaseIndex && BaseIndex < (int)StatepointCall.arg_size(),
+             "gc.relocate: statepoint base index out of bounds", Call);
+      Assert(0 <= DerivedIndex && DerivedIndex < (int)StatepointCall.arg_size(),
+             "gc.relocate: statepoint derived index out of bounds", Call);
+
+      // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
+      // section of the statepoint's argument.
+      Assert(StatepointCall.arg_size() > 0,
+             "gc.statepoint: insufficient arguments");
+      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(3)),
+             "gc.statement: number of call arguments must be constant integer");
+      const unsigned NumCallArgs =
         cast<ConstantInt>(StatepointCall.getArgOperand(3))->getZExtValue();
-    Assert(StatepointCall.arg_size() > NumCallArgs + 5,
-           "gc.statepoint: mismatch in number of call arguments");
-    Assert(isa<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5)),
-           "gc.statepoint: number of transition arguments must be "
-           "a constant integer");
-    const int NumTransitionArgs =
-        cast<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5))
-            ->getZExtValue();
-    const int DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
-    Assert(isa<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart)),
-           "gc.statepoint: number of deoptimization arguments must be "
-           "a constant integer");
-    const int NumDeoptArgs =
-        cast<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart))
-            ->getZExtValue();
-    const int GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
-    const int GCParamArgsEnd = StatepointCall.arg_size();
-    Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
-           "gc.relocate: statepoint base index doesn't fall within the "
-           "'gc parameters' section of the statepoint call",
-           Call);
-    Assert(GCParamArgsStart <= DerivedIndex && DerivedIndex < GCParamArgsEnd,
-           "gc.relocate: statepoint derived index doesn't fall within the "
-           "'gc parameters' section of the statepoint call",
-           Call);
+      Assert(StatepointCall.arg_size() > NumCallArgs + 5,
+             "gc.statepoint: mismatch in number of call arguments");
+      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5)),
+             "gc.statepoint: number of transition arguments must be "
+             "a constant integer");
+      const int NumTransitionArgs =
+          cast<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5))
+              ->getZExtValue();
+      const int DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
+      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart)),
+             "gc.statepoint: number of deoptimization arguments must be "
+             "a constant integer");
+      const int NumDeoptArgs =
+          cast<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart))
+              ->getZExtValue();
+      const int GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
+      const int GCParamArgsEnd = StatepointCall.arg_size();
+      Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
+             "gc.relocate: statepoint base index doesn't fall within the "
+             "'gc parameters' section of the statepoint call",
+             Call);
+      Assert(GCParamArgsStart <= DerivedIndex && DerivedIndex < GCParamArgsEnd,
+             "gc.relocate: statepoint derived index doesn't fall within the "
+             "'gc parameters' section of the statepoint call",
+             Call);
+    }
 
     // Relocated value must be either a pointer type or vector-of-pointer type,
     // but gc_relocate does not need to return the same pointer type as the
