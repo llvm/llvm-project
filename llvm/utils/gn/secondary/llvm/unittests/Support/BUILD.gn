@@ -78,6 +78,7 @@ unittest("SupportTests") {
     "ThreadPool.cpp",
     "Threading.cpp",
     "TimerTest.cpp",
+    "ToolOutputFileTest.cpp",
     "TrailingObjectsTest.cpp",
     "TrigramIndexTest.cpp",
     "TypeNameTest.cpp",
