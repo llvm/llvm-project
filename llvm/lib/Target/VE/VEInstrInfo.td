@@ -1161,7 +1161,7 @@ def : Pat<(i64 imm:$val),
 
 // floating point
 def : Pat<(f32 fpimm:$val),
-          (COPY_TO_REGCLASS (LEASLzii 0, 0, (LOFP32 $val)), F32)>;
+          (EXTRACT_SUBREG (LEASLzii 0, 0, (LOFP32 $val)), sub_f32)>;
 def : Pat<(f64 fplozero:$val),
           (LEASLzii 0, 0, (HIFP32 $val))>;
 def : Pat<(f64 fplomsbzero:$val),
