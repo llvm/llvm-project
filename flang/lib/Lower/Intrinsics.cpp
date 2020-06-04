@@ -115,7 +115,10 @@ struct IntrinsicLibrary {
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIchar(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIEOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genLenTrim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMerge(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -165,7 +168,10 @@ static constexpr IntrinsicHanlder handlers[]{
     {"conjg", &I::genConjg},
     {"dble", &I::genConversion},
     {"floor", &I::genFloor},
+    {"iand", &I::genIAnd},
     {"ichar", &I::genIchar},
+    {"ieor", &I::genIEOr},
+    {"ior", &I::genIOr},
     {"len_trim", &I::genLenTrim},
     {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
@@ -733,6 +739,14 @@ mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
   return builder.createHere<fir::ConvertOp>(resultType, floor);
 }
 
+// IAND
+mlir::Value IntrinsicLibrary::genIAnd(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  return builder.createHere<mlir::AndOp>(args[0], args[1]);
+}
+
 // ICHAR
 mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -748,6 +762,22 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
   auto charAddr = builder.createHere<fir::ConvertOp>(refType, dataAndLen.first);
   auto charVal = builder.createHere<fir::LoadOp>(charType, charAddr);
   return builder.createHere<fir::ConvertOp>(resultType, charVal);
+}
+
+// IEOR
+mlir::Value IntrinsicLibrary::genIEOr(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  return builder.createHere<mlir::XOrOp>(args[0], args[1]);
+}
+
+// IOR
+mlir::Value IntrinsicLibrary::genIOr(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  return builder.createHere<mlir::OrOp>(args[0], args[1]);
 }
 
 // LEN_TRIM
