@@ -44,10 +44,12 @@ define <2 x i32> @foo3(<2 x i1> %vec_bool, i1 %bool, <2 x i32> %V) {
   ret <2 x i32> %sel1
 }
 
+; Four variations of (select (select-shuffle)) with a common operand.
+
 define <4 x i8> @sel_shuf_commute0(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_commute0(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[BLEND]], <4 x i8> [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[SEL]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %blend = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
@@ -55,10 +57,12 @@ define <4 x i8> @sel_shuf_commute0(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
   ret <4 x i8> %r
 }
 
+; Weird types are ok.
+
 define <5 x i9> @sel_shuf_commute1(<5 x i9> %x, <5 x i9> %y, <5 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_commute1(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <5 x i9> [[X:%.*]], <5 x i9> [[Y:%.*]], <5 x i32> <i32 0, i32 6, i32 2, i32 8, i32 9>
-; CHECK-NEXT:    [[R:%.*]] = select <5 x i1> [[CMP:%.*]], <5 x i9> [[BLEND]], <5 x i9> [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <5 x i1> [[CMP:%.*]], <5 x i9> [[X:%.*]], <5 x i9> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <5 x i9> [[SEL]], <5 x i9> [[Y]], <5 x i32> <i32 0, i32 6, i32 2, i32 8, i32 9>
 ; CHECK-NEXT:    ret <5 x i9> [[R]]
 ;
   %blend = shufflevector <5 x i9> %x, <5 x i9> %y, <5 x i32> <i32 0, i32 6, i32 2, i32 8, i32 9>
@@ -68,8 +72,8 @@ define <5 x i9> @sel_shuf_commute1(<5 x i9> %x, <5 x i9> %y, <5 x i1> %cmp) {
 
 define <4 x float> @sel_shuf_commute2(<4 x float> %x, <4 x float> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_commute2(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x float> [[X]], <4 x float> [[BLEND]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[SEL]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %blend = shufflevector <4 x float> %x, <4 x float> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
@@ -77,10 +81,12 @@ define <4 x float> @sel_shuf_commute2(<4 x float> %x, <4 x float> %y, <4 x i1> %
   ret <4 x float> %r
 }
 
+; Scalar condition is ok.
+
 define <4 x i8> @sel_shuf_commute3(<4 x i8> %x, <4 x i8> %y, i1 %cmp) {
 ; CHECK-LABEL: @sel_shuf_commute3(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP:%.*]], <4 x i8> [[Y]], <4 x i8> [[BLEND]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[SEL]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %blend = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
@@ -89,6 +95,8 @@ define <4 x i8> @sel_shuf_commute3(<4 x i8> %x, <4 x i8> %y, i1 %cmp) {
 }
 
 declare void @use(<4 x i8>)
+
+; Negative test - extra use would require another instruction.
 
 define <4 x i8> @sel_shuf_use(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_use(
@@ -103,6 +111,8 @@ define <4 x i8> @sel_shuf_use(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
   ret <4 x i8> %r
 }
 
+; Negative test - undef in shuffle mask prevents transform.
+
 define <4 x i8> @sel_shuf_undef(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_undef(
 ; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 undef>
@@ -114,6 +124,8 @@ define <4 x i8> @sel_shuf_undef(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
   ret <4 x i8> %r
 }
 
+; Negative test - not a "select shuffle"
+
 define <4 x i8> @sel_shuf_not(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_not(
 ; CHECK-NEXT:    [[NOTBLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 6>
@@ -124,6 +136,8 @@ define <4 x i8> @sel_shuf_not(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
   %r = select <4 x i1> %cmp, <4 x i8> %notblend, <4 x i8> %y
   ret <4 x i8> %r
 }
+
+; Negative test - must shuffle one of the select operands
 
 define <4 x i8> @sel_shuf_no_common_operand(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp, <4 x i8> %z) {
 ; CHECK-LABEL: @sel_shuf_no_common_operand(

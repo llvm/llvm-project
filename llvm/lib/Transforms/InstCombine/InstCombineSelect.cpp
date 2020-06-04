@@ -2403,6 +2403,43 @@ Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
     return &Sel;
   }
 
+  // A select of a "select shuffle" with a common operand can be rearranged
+  // to select followed by "select shuffle". Because of poison, this only works
+  // in the case of a shuffle with no undefined mask elements.
+  Value *Cond = Sel.getCondition();
+  Value *TVal = Sel.getTrueValue();
+  Value *FVal = Sel.getFalseValue();
+  Value *X, *Y;
+  ArrayRef<int> Mask;
+  if (match(TVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
+      !is_contained(Mask, UndefMaskElem) &&
+      ShuffleVectorInst::isSelectMask(Mask)) {
+    if (X == FVal) {
+      // select Cond, (shuf_sel X, Y), X --> shuf_sel X, (select Cond, Y, X)
+      Value *NewSel = Builder.CreateSelect(Cond, Y, X, "sel", &Sel);
+      return new ShuffleVectorInst(X, NewSel, Mask);
+    }
+    if (Y == FVal) {
+      // select Cond, (shuf_sel X, Y), Y --> shuf_sel (select Cond, X, Y), Y
+      Value *NewSel = Builder.CreateSelect(Cond, X, Y, "sel", &Sel);
+      return new ShuffleVectorInst(NewSel, Y, Mask);
+    }
+  }
+  if (match(FVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
+      !is_contained(Mask, UndefMaskElem) &&
+      ShuffleVectorInst::isSelectMask(Mask)) {
+    if (X == TVal) {
+      // select Cond, X, (shuf_sel X, Y) --> shuf_sel X, (select Cond, X, Y)
+      Value *NewSel = Builder.CreateSelect(Cond, X, Y, "sel", &Sel);
+      return new ShuffleVectorInst(X, NewSel, Mask);
+    }
+    if (Y == TVal) {
+      // select Cond, Y, (shuf_sel X, Y) --> shuf_sel (select Cond, Y, X), Y
+      Value *NewSel = Builder.CreateSelect(Cond, Y, X, "sel", &Sel);
+      return new ShuffleVectorInst(NewSel, Y, Mask);
+    }
+  }
+
   return nullptr;
 }
 
