@@ -187,8 +187,14 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [], // Enumerations
       [
+          FunctionSpec<"ceil", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"ceilf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
+          FunctionSpec<"floor", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"floorf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"cosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -197,6 +203,9 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"round", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+
+          FunctionSpec<"trunc", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"truncf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
 

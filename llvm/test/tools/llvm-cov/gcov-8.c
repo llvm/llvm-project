@@ -22,7 +22,7 @@ int main() {                                      // GCOV:      1: [[@LINE]]:int
 // RUN: llvm-cov gcov gcov-8.c | FileCheck %s
 // CHECK:      File 'gcov-8.c'
 // CHECK-NEXT: Lines executed:77.78% of 9
-// CHECK-NEXT: gcov-8.c:creating 'gcov-8.c.gcov'
+// CHECK-NEXT: Creating 'gcov-8.c.gcov'
 
 // RUN: FileCheck --input-file=%t/gcov-8.c.gcov --check-prefix=HEADER %s
 // RUN: FileCheck --input-file=%t/gcov-8.c.gcov --check-prefix=GCOV %s

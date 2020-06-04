@@ -1,8 +1,0 @@
-File './test.h'
-Lines executed:0.00% of 1
-./test.h:creating 'test.h.gcov'
-
-File 'test.cpp'
-Lines executed:0.00% of 43
-test.cpp:creating 'test.cpp.gcov'
-
