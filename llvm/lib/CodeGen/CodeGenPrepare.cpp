@@ -413,7 +413,7 @@ class TypePromotionTransaction;
         bool HasPromoted, TypePromotionTransaction &TPT,
         SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
     bool splitBranchCondition(Function &F, bool &ModifiedDT);
-    bool simplifyOffsetableRelocate(Instruction &I);
+    bool simplifyOffsetableRelocate(GCStatepointInst &I);
 
     bool tryToSinkFreeOperands(Instruction *I);
     bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0,
@@ -573,11 +573,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   }
 
   if (!DisableGCOpts) {
-    SmallVector<Instruction *, 2> Statepoints;
+    SmallVector<GCStatepointInst *, 2> Statepoints;
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        if (isa<GCStatepointInst>(I))
-          Statepoints.push_back(&I);
+        if (auto *SP = dyn_cast<GCStatepointInst>(&I))
+          Statepoints.push_back(SP);
     for (auto &I : Statepoints)
       EverMadeChange |= simplifyOffsetableRelocate(*I);
   }
@@ -1087,10 +1087,9 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
 // %base' = gc.relocate(%tok, i32 4, i32 4)
 // %ptr' = gep %base' + 15
 // %val = load %ptr'
-bool CodeGenPrepare::simplifyOffsetableRelocate(Instruction &I) {
+bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
   bool MadeChange = false;
   SmallVector<GCRelocateInst *, 2> AllRelocateCalls;
-
   for (auto *U : I.users())
     if (GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U))
       // Collect all the relocate calls associated with a statepoint
