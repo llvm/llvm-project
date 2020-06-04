@@ -1320,13 +1320,11 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
 /// statepoint.
 /// Inputs:
 ///   liveVariables - list of variables to be relocated.
-///   liveStart - index of the first live variable.
 ///   basePtrs - base pointers.
 ///   statepointToken - statepoint instruction to which relocates should be
 ///   bound.
 ///   Builder - Llvm IR builder to be used to construct new calls.
 static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
-                              const int LiveStart,
                               ArrayRef<Value *> BasePtrs,
                               Instruction *StatepointToken,
                               IRBuilder<> &Builder) {
@@ -1366,9 +1364,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
 
   for (unsigned i = 0; i < LiveVariables.size(); i++) {
     // Generate the gc.relocate call and save the result
-    Value *BaseIdx =
-      Builder.getInt32(LiveStart + FindIndex(LiveVariables, BasePtrs[i]));
-    Value *LiveIdx = Builder.getInt32(LiveStart + i);
+    Value *BaseIdx = Builder.getInt32(FindIndex(LiveVariables, BasePtrs[i]));
+    Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
     if (!TypeToDeclMap.count(Ty))
@@ -1604,9 +1601,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     Instruction *ExceptionalToken = UnwindBlock->getLandingPadInst();
     Result.UnwindToken = ExceptionalToken;
 
-    const unsigned LiveStartIdx = Token->gcArgsStartIdx();
-    CreateGCRelocates(LiveVariables, LiveStartIdx, BasePtrs, ExceptionalToken,
-                      Builder);
+    CreateGCRelocates(LiveVariables, BasePtrs, ExceptionalToken, Builder);
 
     // Generate gc relocates and returns for normal block
     BasicBlock *NormalDest = II->getNormalDest();
@@ -1652,8 +1647,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   Result.StatepointToken = Token;
 
   // Second, create a gc.relocate for every live variable
-  const unsigned LiveStartIdx = Token->gcArgsStartIdx();
-  CreateGCRelocates(LiveVariables, LiveStartIdx, BasePtrs, Token, Builder);
+  CreateGCRelocates(LiveVariables, BasePtrs, Token, Builder);
 }
 
 // Replace an existing gc.statepoint with a new one and a set of gc.relocates
