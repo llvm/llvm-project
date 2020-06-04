@@ -3344,11 +3344,9 @@ public:
   /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
   /// Default implementation computes low bits based on alignment
   /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(const SDValue FIOp,
+  virtual void computeKnownBitsForFrameIndex(int FIOp,
                                              KnownBits &Known,
-                                             const APInt &DemandedElts,
-                                             const SelectionDAG &DAG,
-                                             unsigned Depth = 0) const;
+                                             const MachineFunction &MF) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts

@@ -2826,17 +2826,10 @@ void TargetLowering::computeKnownBitsForTargetInstr(
   Known.resetAll();
 }
 
-void TargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
-                                                   KnownBits &Known,
-                                                   const APInt &DemandedElts,
-                                                   const SelectionDAG &DAG,
-                                                   unsigned Depth) const {
-  assert(isa<FrameIndexSDNode>(Op) && "expected FrameIndex");
-
-  if (MaybeAlign Alignment = DAG.InferPtrAlign(Op)) {
-    // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2(*Alignment));
-  }
+void TargetLowering::computeKnownBitsForFrameIndex(
+  const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
+  // The low bits are known zero if the pointer is aligned.
+  Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
 }
 
 /// This method can be implemented by targets that want to expose additional
