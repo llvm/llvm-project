@@ -1,11 +1,11 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN %s
 
 # GCN-LABEL: name: test{{$}}
 # GCN: S_WAITCNT -16257
 # GCN: DS_READ2_B32
 # GCN: DS_READ2_B32
 # GCN: S_WAITCNT 383{{$}}
-# GCN-NEXT: $vgpr1 = V_ADD_U32_e32 1, killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_OR_B32_e32 1, killed $vgpr1, implicit $exec
 # GCN-NEXT: $vgpr1 = V_MAX_U32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
 # GCN-NEXT: S_WAITCNT 127{{$}}
 # GCN-NEXT: $vgpr1 = V_MAX_U32_e32 killed $vgpr2, killed $vgpr1, implicit $exec
@@ -25,7 +25,7 @@ body:             |
     S_WAITCNT -16257
     renamable $vgpr0_vgpr1 = DS_READ2_B32 renamable $vgpr13, 0, 1, 0, implicit $m0, implicit $exec
     renamable $vgpr2_vgpr3 = DS_READ2_B32 renamable $vgpr13, 2, 3, 0, implicit $m0, implicit $exec
-    renamable $vgpr1 = V_ADD_U32_e32 1, killed $vgpr1, implicit $exec
+    renamable $vgpr1 = V_OR_B32_e32 1, killed $vgpr1, implicit $exec
     renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
     renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr2, killed $vgpr1, implicit $exec
     renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr3, killed $vgpr1, implicit $exec
