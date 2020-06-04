@@ -1770,14 +1770,11 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-
     if (!m_interpreter.HasCommands() || request.GetCursorIndex() != 0)
       return;
-    const auto &user_dict = m_interpreter.GetUserCommands();
 
-    for (auto pos = user_dict.begin(); pos != user_dict.end(); ++pos) {
-      request.TryCompleteCurrentArg(pos->first, pos->second->GetHelp());
-    }
+    for (const auto &c : m_interpreter.GetUserCommands())
+      request.TryCompleteCurrentArg(c.first, c.second->GetHelp());
   }
 
 protected:
