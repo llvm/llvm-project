@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
 
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
@@ -13,7 +13,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: sgpr_32, preferred-register: '' }
   - { id: 1, class: sgpr_32, preferred-register: '' }
   - { id: 2, class: sgpr_32, preferred-register: '' }
@@ -27,7 +27,7 @@ registers:
   - { id: 10, class: sreg_32, preferred-register: '' }
   - { id: 11, class: vgpr_32, preferred-register: '' }
   - { id: 12, class: vgpr_32, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$sgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr1', virtual-reg: '%1' }
   - { reg: '$sgpr2', virtual-reg: '%2' }
@@ -35,7 +35,7 @@ liveins:
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
-  
+
     %3 = COPY $vgpr0
     %2 = COPY $sgpr2
     %1 = COPY $sgpr1
