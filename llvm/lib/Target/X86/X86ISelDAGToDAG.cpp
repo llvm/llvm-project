@@ -40,6 +40,10 @@ static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
     cl::desc("Enable setting constant bits to reduce size of mask immediates"),
     cl::Hidden);
 
+static cl::opt<bool> EnablePromoteAnyextLoad(
+    "x86-promote-anyext-load", cl::init(true),
+    cl::desc("Enable promoting aligned anyext load to wider load"), cl::Hidden);
+
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
 //===----------------------------------------------------------------------===//
