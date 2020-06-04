@@ -400,7 +400,7 @@ syntax::Leaf *syntax::ArraySubscript::rbracket() {
       findChild(syntax::NodeRole::CloseParen));
 }
 
-syntax::Leaf *syntax::TrailingReturnType::arrow() {
+syntax::Leaf *syntax::TrailingReturnType::arrowToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::TrailingReturnType_arrow));
 }
