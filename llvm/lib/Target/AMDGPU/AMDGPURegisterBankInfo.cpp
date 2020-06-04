@@ -1154,6 +1154,56 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
+  MachineInstr &MI,
+  const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
+  MachineRegisterInfo &MRI) const {
+  const MachineFunction &MF = *MI.getMF();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const auto &TFI = *ST.getFrameLowering();
+
+  // Guard in case the stack growth direction ever changes with scratch
+  // instructions.
+  if (TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register AllocSize = MI.getOperand(1).getReg();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+  const RegisterBank *SizeBank = getRegBank(AllocSize, MRI, *TRI);
+
+  // TODO: Need to emit a wave reduction to get the maximum size.
+  if (SizeBank != &AMDGPU::SGPRRegBank)
+    return false;
+
+  LLT PtrTy = MRI.getType(Dst);
+  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  Register SPReg = Info->getStackPtrOffsetReg();
+  ApplyRegBankMapping ApplyBank(*this, MRI, &AMDGPU::SGPRRegBank);
+  GISelObserverWrapper Observer(&ApplyBank);
+
+  MachineIRBuilder B(MI);
+  B.setChangeObserver(Observer);
+
+  auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
+  auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
+
+  auto SPCopy = B.buildCopy(PtrTy, SPReg);
+  if (Alignment > TFI.getStackAlign()) {
+    auto PtrAdd = B.buildPtrAdd(PtrTy, SPCopy, ScaledSize);
+    B.buildMaskLowPtrBits(Dst, PtrAdd,
+                          Log2(Alignment) + ST.getWavefrontSizeLog2());
+  } else {
+    B.buildPtrAdd(Dst, SPCopy, ScaledSize);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPURegisterBankInfo::applyMappingImage(
     MachineInstr &MI, const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
     MachineRegisterInfo &MRI, int RsrcIdx) const {
@@ -2811,6 +2861,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     break;
   }
+  case AMDGPU::G_DYN_STACKALLOC:
+    applyMappingDynStackAlloc(MI, OpdMapper, MRI);
+    return;
   default:
     break;
   }
@@ -3313,6 +3366,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // currently assumes VALU uses.
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+    break;
+  }
+  case AMDGPU::G_DYN_STACKALLOC: {
+    // Result is always uniform, and a wave reduction is needed for the source.
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
+    unsigned SrcBankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);
+    OpdsMapping[1] = AMDGPU::getValueMapping(SrcBankID, 32);
     break;
   }
   case AMDGPU::G_INSERT: {
