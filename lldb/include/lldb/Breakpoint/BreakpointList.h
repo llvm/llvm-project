@@ -168,7 +168,8 @@ public:
   }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointList);
+  BreakpointList(const BreakpointList &) = delete;
+  const BreakpointList &operator=(const BreakpointList &) = delete;
 };
 
 } // namespace lldb_private

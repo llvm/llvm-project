@@ -815,16 +815,10 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 void
 SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
                                      const BasicBlock *EHPadBB /*= nullptr*/) {
-  ImmutableStatepoint ISP(&I);
   assert(I.getCallingConv() != CallingConv::AnyReg &&
          "anyregcc is not supported on statepoints!");
 
 #ifndef NDEBUG
-  // If this is a malformed statepoint, report it early to simplify debugging.
-  // This should catch any IR level mistake that's made when constructing or
-  // transforming statepoints.
-  ISP.verify();
-
   // Check that the associated GCStrategy expects to encounter statepoints.
   assert(GFI->getStrategy().useStatepoints() &&
          "GCStrategy does not expect to encounter statepoints");
@@ -877,23 +871,9 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SI.StatepointInstr = &I;
   SI.ID = I.getID();
 
-  if (auto Opt = I.getOperandBundle(LLVMContext::OB_deopt)) {
-    assert(ISP.deopt_operands().empty() &&
-           "can't list both deopt operands and deopt bundle");
-    auto &Inputs = Opt->Inputs;
-    SI.DeoptState = ArrayRef<const Use>(Inputs.begin(), Inputs.end());
-  } else {
-    SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
-  }
-  if (auto Opt = I.getOperandBundle(LLVMContext::OB_gc_transition)) {
-    assert(ISP.gc_transition_args().empty() &&
-           "can't list both gc_transition operands and bundle");
-    auto &Inputs = Opt->Inputs;
-    SI.GCTransitionArgs = ArrayRef<const Use>(Inputs.begin(), Inputs.end());
-  } else {
-    SI.GCTransitionArgs = ArrayRef<const Use>(ISP.gc_transition_args_begin(),
-                                              ISP.gc_transition_args_end());
-  }
+  SI.DeoptState = ArrayRef<const Use>(I.deopt_begin(), I.deopt_end());
+  SI.GCTransitionArgs = ArrayRef<const Use>(I.gc_transition_args_begin(),
+                                            I.gc_transition_args_end());
 
   SI.StatepointFlags = I.getFlags();
   SI.NumPatchBytes = I.getNumPatchBytes();

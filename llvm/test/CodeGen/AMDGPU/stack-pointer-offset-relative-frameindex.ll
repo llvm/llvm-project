@@ -15,7 +15,7 @@
 define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <4 x i32> addrspace(1)* %input, <4 x float> addrspace(1)* %output, i32 %i) {
 ; GCN-LABEL: kernel_background_evaluate:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s6, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GCN-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s38, -1
@@ -26,8 +26,6 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x400000
-; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GCN-NEXT:    s_mov_b32 s32, 0xc0000
 ; GCN-NEXT:    v_add_nc_u32_e64 v40, 4, 0x4000
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
@@ -35,7 +33,9 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo

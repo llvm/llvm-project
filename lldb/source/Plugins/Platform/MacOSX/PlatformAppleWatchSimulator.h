@@ -80,7 +80,9 @@ protected:
   const char *GetSDKDirectoryAsCString();
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAppleWatchSimulator);
+  PlatformAppleWatchSimulator(const PlatformAppleWatchSimulator &) = delete;
+  const PlatformAppleWatchSimulator &
+  operator=(const PlatformAppleWatchSimulator &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMAPPLEWATCHSIMULATOR_H

@@ -840,6 +840,7 @@ void MappingTraits<ELFYAML::SectionHeader>::mapping(
 void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
     IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
   IO.mapRequired("Sections", SectionHeader.Sections);
+  IO.mapOptional("Excluded", SectionHeader.Excluded);
 }
 
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
@@ -1654,6 +1655,9 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.mapOptional("DWARF", Object.DWARF);
+  if (Object.DWARF)
+    Object.DWARF->IsLittleEndian =
+        Object.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
   IO.setContext(nullptr);
 }
 

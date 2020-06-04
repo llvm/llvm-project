@@ -998,8 +998,23 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Diag(Tok, diag::warn_cxx98_compat_nullptr);
     return Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
 
+  case tok::annot_uneval_primary_expr:
   case tok::annot_primary_expr:
     Res = getExprAnnotation(Tok);
+    if (SavedKind == tok::annot_uneval_primary_expr) {
+      if (Expr *E = Res.get()) {
+        if (!E->isTypeDependent() && !E->containsErrors()) {
+          // TransformToPotentiallyEvaluated expects that it will still be in a
+          // (temporary) unevaluated context and then looks through that context
+          // to build it in the surrounding context. So we need to push an
+          // unevaluated context to balance things out.
+          EnterExpressionEvaluationContext Unevaluated(
+              Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+              Sema::ReuseLambdaContextDecl);
+          Res = Actions.TransformToPotentiallyEvaluated(Res.get());
+        }
+      }
+    }
     ConsumeAnnotationToken();
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);

@@ -85,8 +85,8 @@ defm END_FUNCTION : NRI<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 
-let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-
+let hasCtrlDep = 1, isBarrier = 1 in {
+let isTerminator = 1 in {
 let isReturn = 1 in {
 
 defm RETURN : I<(outs), (ins variable_ops), (outs), (ins),
@@ -99,8 +99,21 @@ defm FALLTHROUGH_RETURN : I<(outs), (ins variable_ops), (outs), (ins), []>;
 
 } // isReturn = 1
 
+let isTrap = 1 in
 defm UNREACHABLE : NRI<(outs), (ins), [(trap)], "unreachable", 0x00>;
-} // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+
+} // isTerminator = 1
+
+// debugtrap explicitly returns despite trapping because it is supposed to just
+// get the attention of the debugger. Unfortunately, because UNREACHABLE is a
+// terminator, lowering debugtrap to UNREACHABLE can create an invalid
+// MachineBasicBlock when there is additional code after it. Lower it to this
+// non-terminator version instead.
+// TODO: Actually execute the debugger statement when running on the Web
+let isTrap = 1 in
+defm DEBUG_UNREACHABLE : NRI<(outs), (ins), [(debugtrap)], "unreachable", 0x00>;
+
+} // hasCtrlDep = 1, isBarrier = 1
 
 //===----------------------------------------------------------------------===//
 // Exception handling instructions

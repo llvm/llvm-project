@@ -76,7 +76,10 @@ protected:
   bool m_skip_acks;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationReplayServer);
+  GDBRemoteCommunicationReplayServer(
+      const GDBRemoteCommunicationReplayServer &) = delete;
+  const GDBRemoteCommunicationReplayServer &
+  operator=(const GDBRemoteCommunicationReplayServer &) = delete;
 };
 
 } // namespace process_gdb_remote

@@ -225,14 +225,18 @@ define double @test_FMSUB_ASSOC_EXT2(float %A, float %B, float %C,
 define double @test_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-LABEL: test_FMSUB_ASSOC_EXT3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 1, 2, 5
-; CHECK-NEXT:    fnmsub 1, 3, 4, 0
+; CHECK-NEXT:    fneg 0, 1
+; CHECK-NEXT:    fmadd 0, 0, 2, 5
+; CHECK-NEXT:    fneg 1, 3
+; CHECK-NEXT:    fmadd 1, 1, 4, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_FMSUB_ASSOC_EXT3:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 1, 2, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 1, 3, 4
+; CHECK-VSX-NEXT:    xsnegdp 1, 1
+; CHECK-VSX-NEXT:    xsnegdp 0, 3
+; CHECK-VSX-NEXT:    xsmaddmdp 1, 2, 5
+; CHECK-VSX-NEXT:    xsmaddadp 1, 0, 4
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -246,15 +250,19 @@ define double @test_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 define double @test_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-LABEL: test_FMSUB_ASSOC_EXT4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 3, 4, 5
-; CHECK-NEXT:    fnmsub 1, 1, 2, 0
+; CHECK-NEXT:    fneg 0, 3
+; CHECK-NEXT:    fmadd 0, 0, 4, 5
+; CHECK-NEXT:    fneg 1, 1
+; CHECK-NEXT:    fmadd 1, 1, 2, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_FMSUB_ASSOC_EXT4:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 3, 4, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 3, 1, 2
-; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    xsnegdp 0, 3
+; CHECK-VSX-NEXT:    xsnegdp 1, 1
+; CHECK-VSX-NEXT:    xsmaddmdp 0, 4, 5
+; CHECK-VSX-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-VSX-NEXT:    fmr 1, 0
 ; CHECK-VSX-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul float %A, %B          ; <float> [#uses=1]
@@ -503,14 +511,18 @@ define double @test_reassoc_FMSUB_ASSOC_EXT2(float %A, float %B, float %C,
 define double @test_reassoc_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
 ; CHECK-LABEL: test_reassoc_FMSUB_ASSOC_EXT3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 1, 2, 5
-; CHECK-NEXT:    fnmsub 1, 3, 4, 0
+; CHECK-NEXT:    fneg 0, 1
+; CHECK-NEXT:    fmadd 0, 0, 2, 5
+; CHECK-NEXT:    fneg 1, 3
+; CHECK-NEXT:    fmadd 1, 1, 4, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_reassoc_FMSUB_ASSOC_EXT3:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 1, 2, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 1, 3, 4
+; CHECK-VSX-NEXT:    xsnegdp 1, 1
+; CHECK-VSX-NEXT:    xsnegdp 0, 3
+; CHECK-VSX-NEXT:    xsmaddmdp 1, 2, 5
+; CHECK-VSX-NEXT:    xsmaddadp 1, 0, 4
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -521,18 +533,45 @@ define double @test_reassoc_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
   ret double %J
 }
 
+; fnmsub/xsnmsubadp may affect the sign of zero, we need nsz flag
+; to ensure generating them
+define double @test_fast_FMSUB_ASSOC_EXT3(float %A, float %B, double %C,
+; CHECK-LABEL: test_fast_FMSUB_ASSOC_EXT3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fnmsub 0, 1, 2, 5
+; CHECK-NEXT:    fnmsub 1, 3, 4, 0
+; CHECK-NEXT:    blr
+;
+; CHECK-VSX-LABEL: test_fast_FMSUB_ASSOC_EXT3:
+; CHECK-VSX:       # %bb.0:
+; CHECK-VSX-NEXT:    xsnmsubmdp 1, 2, 5
+; CHECK-VSX-NEXT:    xsnmsubadp 1, 3, 4
+; CHECK-VSX-NEXT:    blr
+                                             double %D, double %E) {
+  %F = fmul reassoc float %A, %B
+  %G = fpext float %F to double
+  %H = fmul reassoc double %C, %D
+  %I = fadd reassoc nsz double %H, %G
+  %J = fsub reassoc nsz double %E, %I
+  ret double %J
+}
+
 define double @test_reassoc_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
 ; CHECK-LABEL: test_reassoc_FMSUB_ASSOC_EXT4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 3, 4, 5
-; CHECK-NEXT:    fnmsub 1, 1, 2, 0
+; CHECK-NEXT:    fneg 0, 3
+; CHECK-NEXT:    fmadd 0, 0, 4, 5
+; CHECK-NEXT:    fneg 1, 1
+; CHECK-NEXT:    fmadd 1, 1, 2, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_reassoc_FMSUB_ASSOC_EXT4:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 3, 4, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 3, 1, 2
-; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    xsnegdp 0, 3
+; CHECK-VSX-NEXT:    xsnegdp 1, 1
+; CHECK-VSX-NEXT:    xsmaddmdp 0, 4, 5
+; CHECK-VSX-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-VSX-NEXT:    fmr 1, 0
 ; CHECK-VSX-NEXT:    blr
                                  float %D, double %E) {
   %F = fmul reassoc float %A, %B          ; <float> [#uses=1]
@@ -540,5 +579,27 @@ define double @test_reassoc_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
   %H = fadd reassoc float %F, %G          ; <float> [#uses=1]
   %I = fpext float %H to double   ; <double> [#uses=1]
   %J = fsub reassoc double %E, %I         ; <double> [#uses=1]
+  ret double %J
+}
+
+define double @test_fast_FMSUB_ASSOC_EXT4(float %A, float %B, float %C,
+; CHECK-LABEL: test_fast_FMSUB_ASSOC_EXT4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fnmsub 0, 3, 4, 5
+; CHECK-NEXT:    fnmsub 1, 1, 2, 0
+; CHECK-NEXT:    blr
+;
+; CHECK-VSX-LABEL: test_fast_FMSUB_ASSOC_EXT4:
+; CHECK-VSX:       # %bb.0:
+; CHECK-VSX-NEXT:    xsnmsubmdp 3, 4, 5
+; CHECK-VSX-NEXT:    xsnmsubadp 3, 1, 2
+; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    blr
+                                          float %D, double %E) {
+  %F = fmul reassoc float %A, %B
+  %G = fmul reassoc float %C, %D
+  %H = fadd reassoc nsz float %F, %G
+  %I = fpext float %H to double
+  %J = fsub reassoc nsz double %E, %I
   ret double %J
 }

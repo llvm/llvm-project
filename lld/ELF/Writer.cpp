@@ -1980,7 +1980,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (sym->isUndefined() && !sym->isWeak())
         if (auto *f = dyn_cast_or_null<SharedFile>(sym->file))
           if (f->allNeededIsKnown)
-            error(toString(f) + ": undefined reference to " + toString(*sym));
+            errorOrWarn(toString(f) + ": undefined reference to " +
+                        toString(*sym) + " [--no-allow-shlib-undefined]");
   }
 
   // Now that we have defined all possible global symbols including linker-

@@ -677,9 +677,8 @@ bb:
 
 define <4 x i8> @select_cond_with_eq_true_false_elts(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @select_cond_with_eq_true_false_elts(
-; CHECK-NEXT:    [[TVAL:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[SPLAT]], <4 x i8> [[TVAL]], <4 x i8> [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[SEL]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %tval = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -692,9 +691,9 @@ define <4 x i8> @select_cond_with_eq_true_false_elts(<4 x i8> %x, <4 x i8> %y, <
 
 define <4 x i8> @select_cond_with_eq_true_false_elts2(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @select_cond_with_eq_true_false_elts2(
-; CHECK-NEXT:    [[TVAL:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[COND]], <4 x i8> [[TVAL]], <4 x i8> [[X]]
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> undef, <4 x i32> <i32 undef, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND]], <4 x i8> [[Y:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[SEL]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %tval = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -734,13 +733,12 @@ define <4 x i8> @select_cond_with_undef_true_false_elts(<4 x i8> %x, <4 x i8> %y
   ret <4 x i8> %r
 }
 
-; The insert can not be safely eliminated because cmp[0] might be poison.
+; The insert can be safely eliminated because the shuffle blocks poison from cmp[0].
 
 define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poison_blocker) {
 ; CHECK-LABEL: @select_cond_(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i1> [[CMP:%.*]], i1 [[POISON_BLOCKER:%.*]], i32 0
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[MIN:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[INS]], <4 x i8> [[VECINS]], <4 x i8> [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[MIN:%.*]], <4 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[SEL]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %ins = insertelement <4 x i1> %cmp, i1 %poison_blocker, i32 0

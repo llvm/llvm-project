@@ -45,4 +45,25 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   return Args;
 }
 
+StringRef getFilenameForTesting(TestLanguage Lang) {
+  switch (Lang) {
+  case Lang_C89:
+  case Lang_C99:
+    return "input.c";
+
+  case Lang_CXX03:
+  case Lang_CXX11:
+  case Lang_CXX14:
+  case Lang_CXX17:
+  case Lang_CXX20:
+    return "input.cc";
+
+  case Lang_OpenCL:
+    return "input.cl";
+
+  case Lang_OBJCXX:
+    return "input.mm";
+  }
+}
+
 } // end namespace clang

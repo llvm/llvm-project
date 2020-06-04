@@ -181,9 +181,6 @@ public:
                                int64_t &Offset1,
                                int64_t &Offset2) const override;
 
-  unsigned getOperandSizeInBytes(const MachineInstr &LdSt,
-                                 const MachineOperand *MOp) const;
-
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
@@ -705,6 +702,9 @@ public:
                         [&MRI, this](const MachineOperand &MO) {
       return MO.isReg() && RI.isVGPR(MRI, MO.getReg());});
   }
+
+  /// Return true if the instruction modifies the mode register.q
+  static bool modifiesModeRegister(const MachineInstr &MI);
 
   /// Whether we must prevent this instruction from executing with EXEC = 0.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;

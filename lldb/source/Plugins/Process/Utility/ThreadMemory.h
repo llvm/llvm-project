@@ -100,7 +100,8 @@ protected:
   lldb::addr_t m_register_data_addr;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ThreadMemory);
+  ThreadMemory(const ThreadMemory &) = delete;
+  const ThreadMemory &operator=(const ThreadMemory &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H

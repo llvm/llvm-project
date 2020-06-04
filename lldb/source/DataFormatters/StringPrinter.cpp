@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 
 #include <ctype.h>
@@ -30,9 +31,7 @@ using StringElementType = StringPrinter::StringElementType;
 /// DecodedCharBuffer stores the decoded contents of a single character. It
 /// avoids managing memory on the heap by copying decoded bytes into an in-line
 /// buffer.
-struct DecodedCharBuffer {
-  static constexpr unsigned MaxLength = 16;
-
+class DecodedCharBuffer {
 public:
   DecodedCharBuffer(std::nullptr_t) {}
 
@@ -50,6 +49,8 @@ public:
   size_t GetSize() const { return m_size; }
 
 private:
+  static constexpr unsigned MaxLength = 16;
+
   size_t m_size = 0;
   uint8_t m_data[MaxLength] = {0};
 };
@@ -92,7 +93,7 @@ static bool isprint32(char32_t codepoint) {
   return true;
 }
 
-DecodedCharBuffer attemptASCIIEscape(char32_t c,
+DecodedCharBuffer attemptASCIIEscape(llvm::UTF32 c,
                                      StringPrinter::EscapeStyle escape_style) {
   const bool is_swift_escape_style =
       escape_style == StringPrinter::EscapeStyle::Swift;
@@ -141,7 +142,10 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::ASCII>(
   DecodedCharBuffer retval = attemptASCIIEscape(*buffer, escape_style);
   if (retval.GetSize())
     return retval;
-  if (isprint(*buffer))
+
+  // Use llvm's locale-independent isPrint(char), instead of the libc
+  // implementation which may give different results on different platforms.
+  if (llvm::isPrint(*buffer))
     return {buffer, 1};
 
   unsigned escaped_len;
@@ -161,60 +165,30 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::ASCII>(
   return {data, escaped_len};
 }
 
-static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1) {
-  return (c0 - 192) * 64 + (c1 - 128);
-}
-static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1,
-                                       unsigned char c2) {
-  return (c0 - 224) * 4096 + (c1 - 128) * 64 + (c2 - 128);
-}
-static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1,
-                                       unsigned char c2, unsigned char c3) {
-  return (c0 - 240) * 262144 + (c2 - 128) * 4096 + (c2 - 128) * 64 + (c3 - 128);
-}
-
 template <>
 DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
     uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next,
     StringPrinter::EscapeStyle escape_style) {
-  const unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
-
-  // If the utf8 encoded length is invalid, or if there aren't enough bytes to
-  // print, this is some kind of corrupted string.
-  if (utf8_encoded_len == 0 || utf8_encoded_len > 4)
-    return nullptr;
-  if ((buffer_end - buffer) < utf8_encoded_len)
-    // There's no room in the buffer for the utf8 sequence.
-    return nullptr;
-
-  char32_t codepoint = 0;
-  switch (utf8_encoded_len) {
-  case 1:
-    // this is just an ASCII byte - ask ASCII
+  // If the utf8 encoded length is invalid (i.e., not in the closed interval
+  // [1;4]), or if there aren't enough bytes to print, or if the subsequence
+  // isn't valid utf8, fall back to printing an ASCII-escaped subsequence.
+  if (!llvm::isLegalUTF8Sequence(buffer, buffer_end))
     return GetPrintableImpl<StringElementType::ASCII>(buffer, buffer_end, next,
                                                       escape_style);
-  case 2:
-    codepoint = ConvertUTF8ToCodePoint((unsigned char)*buffer,
-                                       (unsigned char)*(buffer + 1));
-    break;
-  case 3:
-    codepoint = ConvertUTF8ToCodePoint((unsigned char)*buffer,
-                                       (unsigned char)*(buffer + 1),
-                                       (unsigned char)*(buffer + 2));
-    break;
-  case 4:
-    codepoint = ConvertUTF8ToCodePoint(
-        (unsigned char)*buffer, (unsigned char)*(buffer + 1),
-        (unsigned char)*(buffer + 2), (unsigned char)*(buffer + 3));
-    break;
-  }
 
-  // We couldn't figure out how to print this codepoint.
-  if (!codepoint)
-    return nullptr;
+  // Convert the valid utf8 sequence to a utf32 codepoint. This cannot fail.
+  llvm::UTF32 codepoint = 0;
+  const llvm::UTF8 *buffer_for_conversion = buffer;
+  llvm::ConversionResult result = llvm::convertUTF8Sequence(
+      &buffer_for_conversion, buffer_end, &codepoint, llvm::strictConversion);
+  assert(result == llvm::conversionOK &&
+         "Failed to convert legal utf8 sequence");
+  (void)result;
 
   // The UTF8 helper always advances by the utf8 encoded length.
+  const unsigned utf8_encoded_len = buffer_for_conversion - buffer;
   next = buffer + utf8_encoded_len;
+
   DecodedCharBuffer retval = attemptASCIIEscape(codepoint, escape_style);
   if (retval.GetSize())
     return retval;
@@ -227,11 +201,11 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
   switch (escape_style) {
   case StringPrinter::EscapeStyle::CXX:
     // Prints 10 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\U%08x", (unsigned)codepoint);
+    escaped_len = sprintf((char *)data, "\\U%08x", codepoint);
     break;
   case StringPrinter::EscapeStyle::Swift:
     // Prints up to 12 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\u{%x}", (unsigned)codepoint);
+    escaped_len = sprintf((char *)data, "\\u{%x}", codepoint);
     break;
   }
   lldbassert(escaped_len > 0 && "unknown string escape style");

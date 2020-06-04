@@ -413,7 +413,7 @@ class TypePromotionTransaction;
         bool HasPromoted, TypePromotionTransaction &TPT,
         SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
     bool splitBranchCondition(Function &F, bool &ModifiedDT);
-    bool simplifyOffsetableRelocate(Instruction &I);
+    bool simplifyOffsetableRelocate(GCStatepointInst &I);
 
     bool tryToSinkFreeOperands(Instruction *I);
     bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0,
@@ -573,11 +573,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   }
 
   if (!DisableGCOpts) {
-    SmallVector<Instruction *, 2> Statepoints;
+    SmallVector<GCStatepointInst *, 2> Statepoints;
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        if (isa<GCStatepointInst>(I))
-          Statepoints.push_back(&I);
+        if (auto *SP = dyn_cast<GCStatepointInst>(&I))
+          Statepoints.push_back(SP);
     for (auto &I : Statepoints)
       EverMadeChange |= simplifyOffsetableRelocate(*I);
   }
@@ -786,7 +786,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
   BlockFrequency PredFreq = BFI->getBlockFreq(Pred);
   BlockFrequency BBFreq = BFI->getBlockFreq(BB);
 
-  for (auto SameValueBB : SameIncomingValueBBs)
+  for (auto *SameValueBB : SameIncomingValueBBs)
     if (SameValueBB->getUniquePredecessor() == Pred &&
         DestBB == findDestBlockOfMergeableEmptyBlock(SameValueBB))
       BBFreq += BFI->getBlockFreq(SameValueBB);
@@ -962,7 +962,7 @@ static bool getGEPSmallConstantIntOffsetV(GetElementPtrInst *GEP,
                                           SmallVectorImpl<Value *> &OffsetV) {
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     // Only accept small constant integer operands
-    auto Op = dyn_cast<ConstantInt>(GEP->getOperand(i));
+    auto *Op = dyn_cast<ConstantInt>(GEP->getOperand(i));
     if (!Op || Op->getZExtValue() > 20)
       return false;
   }
@@ -986,7 +986,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
   // be skipped by optimization and we do not care about them.
   for (auto R = RelocatedBase->getParent()->getFirstInsertionPt();
        &*R != RelocatedBase; ++R)
-    if (auto RI = dyn_cast<GCRelocateInst>(R))
+    if (auto *RI = dyn_cast<GCRelocateInst>(R))
       if (RI->getStatepoint() == RelocatedBase->getStatepoint())
         if (RI->getBasePtrIndex() == RelocatedBase->getBasePtrIndex()) {
           RelocatedBase->moveBefore(RI);
@@ -1010,7 +1010,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
     }
 
     Value *Base = ToReplace->getBasePtr();
-    auto Derived = dyn_cast<GetElementPtrInst>(ToReplace->getDerivedPtr());
+    auto *Derived = dyn_cast<GetElementPtrInst>(ToReplace->getDerivedPtr());
     if (!Derived || Derived->getPointerOperand() != Base)
       continue;
 
@@ -1087,10 +1087,9 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
 // %base' = gc.relocate(%tok, i32 4, i32 4)
 // %ptr' = gep %base' + 15
 // %val = load %ptr'
-bool CodeGenPrepare::simplifyOffsetableRelocate(Instruction &I) {
+bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
   bool MadeChange = false;
   SmallVector<GCRelocateInst *, 2> AllRelocateCalls;
-
   for (auto *U : I.users())
     if (GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U))
       // Collect all the relocate calls associated with a statepoint
@@ -2074,8 +2073,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       Type *ScalableVectorTy =
           VectorType::get(Type::getInt8Ty(II->getContext()), 1, true);
       if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinSize() == 8) {
-        auto Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
-        auto One = ConstantInt::getSigned(II->getType(), 1);
+        auto *Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
+        auto *One = ConstantInt::getSigned(II->getType(), 1);
         auto *CGep =
             ConstantExpr::getGetElementPtr(ScalableVectorTy, Null, One);
         II->replaceAllUsesWith(ConstantExpr::getPtrToInt(CGep, II->getType()));
@@ -3205,7 +3204,7 @@ public:
     SmallPtrSet<Value *, 32> Visited;
     WorkList.push_back(Val);
     while (!WorkList.empty()) {
-      auto P = WorkList.pop_back_val();
+      auto *P = WorkList.pop_back_val();
       if (!Visited.insert(P).second)
         continue;
       if (auto *PI = dyn_cast<Instruction>(P))
@@ -3254,13 +3253,13 @@ public:
 
   void destroyNewNodes(Type *CommonType) {
     // For safe erasing, replace the uses with dummy value first.
-    auto Dummy = UndefValue::get(CommonType);
-    for (auto I : AllPhiNodes) {
+    auto *Dummy = UndefValue::get(CommonType);
+    for (auto *I : AllPhiNodes) {
       I->replaceAllUsesWith(Dummy);
       I->eraseFromParent();
     }
     AllPhiNodes.clear();
-    for (auto I : AllSelectNodes) {
+    for (auto *I : AllSelectNodes) {
       I->replaceAllUsesWith(Dummy);
       I->eraseFromParent();
     }
@@ -3601,7 +3600,7 @@ private:
         // Must be a Phi node then.
         auto *PHI = cast<PHINode>(V);
         // Fill the Phi node with values from predecessors.
-        for (auto B : predecessors(PHI->getParent())) {
+        for (auto *B : predecessors(PHI->getParent())) {
           Value *PV = cast<PHINode>(Current)->getIncomingValueForBlock(B);
           assert(Map.find(PV) != Map.end() && "No predecessor Value!");
           PHI->addIncoming(ST.Get(Map[PV]), B);
@@ -3940,7 +3939,7 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
   // We can get through binary operator, if it is legal. In other words, the
   // binary operator must have a nuw or nsw flag.
   const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst);
-  if (BinOp && isa<OverflowingBinaryOperator>(BinOp) &&
+  if (isa_and_nonnull<OverflowingBinaryOperator>(BinOp) &&
       ((!IsSExt && BinOp->hasNoUnsignedWrap()) ||
        (IsSExt && BinOp->hasNoSignedWrap())))
     return true;
@@ -5438,7 +5437,7 @@ bool CodeGenPrepare::tryToPromoteExts(
   bool Promoted = false;
 
   // Iterate over all the extensions to try to promote them.
-  for (auto I : Exts) {
+  for (auto *I : Exts) {
     // Early check if we directly have ext(load).
     if (isa<LoadInst>(I->getOperand(0))) {
       ProfitablyMovedExts.push_back(I);
@@ -5499,7 +5498,7 @@ bool CodeGenPrepare::tryToPromoteExts(
     SmallVector<Instruction *, 2> NewlyMovedExts;
     (void)tryToPromoteExts(TPT, NewExts, NewlyMovedExts, TotalCreatedInstsCost);
     bool NewPromoted = false;
-    for (auto ExtInst : NewlyMovedExts) {
+    for (auto *ExtInst : NewlyMovedExts) {
       Instruction *MovedExt = cast<Instruction>(ExtInst);
       Value *ExtOperand = MovedExt->getOperand(0);
       // If we have reached to a load, we need this extra profitability check
@@ -5628,7 +5627,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
     int64_t BaseOffset = LargeOffsetGEPs.begin()->second;
     Value *NewBaseGEP = nullptr;
 
-    auto LargeOffsetGEP = LargeOffsetGEPs.begin();
+    auto *LargeOffsetGEP = LargeOffsetGEPs.begin();
     while (LargeOffsetGEP != LargeOffsetGEPs.end()) {
       GetElementPtrInst *GEP = LargeOffsetGEP->first;
       int64_t Offset = LargeOffsetGEP->second;
@@ -5835,7 +5834,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
   bool Promoted = false;
   SmallPtrSet<Instruction *, 1> UnhandledExts;
   bool AllSeenFirst = true;
-  for (auto I : SpeculativelyMovedExts) {
+  for (auto *I : SpeculativelyMovedExts) {
     Value *HeadOfChain = I->getOperand(0);
     DenseMap<Value *, Instruction *>::iterator AlreadySeen =
         SeenChainsForSExt.find(HeadOfChain);
@@ -5853,7 +5852,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
     TPT.commit();
     if (HasPromoted)
       Promoted = true;
-    for (auto I : SpeculativelyMovedExts) {
+    for (auto *I : SpeculativelyMovedExts) {
       Value *HeadOfChain = I->getOperand(0);
       SeenChainsForSExt[HeadOfChain] = nullptr;
       ValToSExtendedUses[HeadOfChain].push_back(I);
@@ -5864,7 +5863,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
     // This is the first chain visited from the header, keep the current chain
     // as unhandled. Defer to promote this until we encounter another SExt
     // chain derived from the same header.
-    for (auto I : SpeculativelyMovedExts) {
+    for (auto *I : SpeculativelyMovedExts) {
       Value *HeadOfChain = I->getOperand(0);
       SeenChainsForSExt[HeadOfChain] = Inst;
     }
@@ -5872,7 +5871,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
   }
 
   if (!AllSeenFirst && !UnhandledExts.empty())
-    for (auto VisitedSExt : UnhandledExts) {
+    for (auto *VisitedSExt : UnhandledExts) {
       if (RemovedInsts.count(VisitedSExt))
         continue;
       TypePromotionTransaction TPT(RemovedInsts);
@@ -5883,7 +5882,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
       TPT.commit();
       if (HasPromoted)
         Promoted = true;
-      for (auto I : Chains) {
+      for (auto *I : Chains) {
         Value *HeadOfChain = I->getOperand(0);
         // Mark this as handled.
         SeenChainsForSExt[HeadOfChain] = nullptr;
@@ -6429,7 +6428,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     FT = FalseBlock;
   }
   IRBuilder<> IB(SI);
-  auto CondFr = IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
+  auto *CondFr = IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
   IB.CreateCondBr(CondFr, TT, FT, SI);
 
   SmallPtrSet<const Instruction *, 2> INS;
@@ -7627,7 +7626,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
     LLVM_DEBUG(dbgs() << "Before branch condition splitting\n"; BB.dump());
 
     // Create a new BB.
-    auto TmpBB =
+    auto *TmpBB =
         BasicBlock::Create(BB.getContext(), BB.getName() + ".cond.split",
                            BB.getParent(), BB.getNextNode());
 

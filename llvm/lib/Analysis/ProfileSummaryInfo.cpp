@@ -71,8 +71,7 @@ static cl::opt<bool> PartialProfile(
     cl::desc("Specify the current profile is used as a partial profile."));
 
 cl::opt<bool> ScalePartialSampleProfileWorkingSetSize(
-    "scale-partial-sample-profile-working-set-size", cl::Hidden,
-    cl::init(false),
+    "scale-partial-sample-profile-working-set-size", cl::Hidden, cl::init(true),
     cl::desc(
         "If true, scale the working set size of the partial sample profile "
         "by the partial profile ratio to reflect the size of the program "

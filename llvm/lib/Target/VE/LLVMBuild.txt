@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -23,6 +23,7 @@ name = VE
 parent = Target
 has_asmparser = 1
 has_asmprinter = 1
+has_disassembler = 1
 
 [component_1]
 type = Library

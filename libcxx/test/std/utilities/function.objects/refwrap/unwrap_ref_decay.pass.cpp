@@ -14,7 +14,7 @@
 // template <class T>
 // using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <functional>
 #include <type_traits>

@@ -264,17 +264,6 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
-unsigned SIInstrInfo::getOperandSizeInBytes(const MachineInstr &LdSt,
-                                            const MachineOperand *MOp) const {
-  assert(MOp && "Unexpected null machine operand!");
-  const MachineRegisterInfo &MRI = LdSt.getParent()->getParent()->getRegInfo();
-  const Register Reg = MOp->getReg();
-  const TargetRegisterClass *DstRC = Register::isVirtualRegister(Reg)
-                                         ? MRI.getRegClass(Reg)
-                                         : RI.getPhysRegClass(Reg);
-  return (RI.getRegSizeInBits(*DstRC) / 8);
-}
-
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -284,7 +273,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
 
   unsigned Opc = LdSt.getOpcode();
   OffsetIsScalable = false;
-  const MachineOperand *BaseOp, *OffsetOp, *MOp;
+  const MachineOperand *BaseOp, *OffsetOp;
+  int DataOpIdx;
 
   if (isDS(LdSt)) {
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
@@ -299,10 +289,10 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       BaseOps.push_back(BaseOp);
       Offset = OffsetOp->getImm();
       // Get appropriate operand, and compute width accordingly.
-      MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdst);
-      if (!MOp)
-        MOp = getNamedOperand(LdSt, AMDGPU::OpName::data0);
-      Width = getOperandSizeInBytes(LdSt, MOp);
+      DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+      if (DataOpIdx == -1)
+        DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+      Width = getOpSize(LdSt, DataOpIdx);
     } else {
       // The 2 offset instructions use offset0 and offset1 instead. We can treat
       // these as a load with a single offset if the 2 offsets are consecutive.
@@ -335,14 +325,14 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       BaseOps.push_back(BaseOp);
       Offset = EltSize * Offset0;
       // Get appropriate operand(s), and compute width accordingly.
-      MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdst);
-      if (!MOp) {
-        MOp = getNamedOperand(LdSt, AMDGPU::OpName::data0);
-        Width = getOperandSizeInBytes(LdSt, MOp);
-        MOp = getNamedOperand(LdSt, AMDGPU::OpName::data1);
-        Width += getOperandSizeInBytes(LdSt, MOp);
+      DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+      if (DataOpIdx == -1) {
+        DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+        Width = getOpSize(LdSt, DataOpIdx);
+        DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
+        Width += getOpSize(LdSt, DataOpIdx);
       } else {
-        Width = getOperandSizeInBytes(LdSt, MOp);
+        Width = getOpSize(LdSt, DataOpIdx);
       }
     }
     return true;
@@ -368,33 +358,27 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       BaseOps.push_back(RSrc);
       BaseOps.push_back(SOffset);
       Offset = OffsetImm->getImm();
-      // Get appropriate operand, and compute width accordingly.
-      MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdst);
-      if (!MOp)
-        MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdata);
-      Width = getOperandSizeInBytes(LdSt, MOp);
-      return true;
-    }
-
-    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-    if (!BaseOp) // e.g. BUFFER_WBINVL1_VOL
-      return false;
-    BaseOps.push_back(BaseOp);
-
-    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    if (BaseOp)
+    } else {
+      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+      if (!BaseOp) // e.g. BUFFER_WBINVL1_VOL
+        return false;
       BaseOps.push_back(BaseOp);
 
-    const MachineOperand *OffsetImm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset);
-    Offset = OffsetImm->getImm();
-    if (SOffset) // soffset can be an inline immediate.
-      Offset += SOffset->getImm();
+      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+      if (BaseOp)
+        BaseOps.push_back(BaseOp);
+
+      const MachineOperand *OffsetImm =
+          getNamedOperand(LdSt, AMDGPU::OpName::offset);
+      Offset = OffsetImm->getImm();
+      if (SOffset) // soffset can be an inline immediate.
+        Offset += SOffset->getImm();
+    }
     // Get appropriate operand, and compute width accordingly.
-    MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdst);
-    if (!MOp)
-      MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdata);
-    Width = getOperandSizeInBytes(LdSt, MOp);
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+    if (DataOpIdx == -1)
+      DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
 
@@ -406,8 +390,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
     Offset = OffsetOp ? OffsetOp->getImm() : 0;
     // Get appropriate operand, and compute width accordingly.
-    MOp = getNamedOperand(LdSt, AMDGPU::OpName::sdst);
-    Width = getOperandSizeInBytes(LdSt, MOp);
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst);
+    Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
 
@@ -421,10 +405,10 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       BaseOps.push_back(BaseOp);
     Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
     // Get appropriate operand, and compute width accordingly.
-    MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdst);
-    if (!MOp)
-      MOp = getNamedOperand(LdSt, AMDGPU::OpName::vdata);
-    Width = getOperandSizeInBytes(LdSt, MOp);
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+    if (DataOpIdx == -1)
+      DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
 
@@ -3039,6 +3023,20 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_GWS_BARRIER;
 }
 
+bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
+  // Skip the full operand and register alias search modifiesRegister
+  // does. There's only a handful of instructions that touch this, it's only an
+  // implicit def, and doesn't alias any other registers.
+  if (const MCPhysReg *ImpDef = MI.getDesc().getImplicitDefs()) {
+    for (; ImpDef && *ImpDef; ++ImpDef) {
+      if (*ImpDef == AMDGPU::MODE)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
@@ -3063,6 +3061,10 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
+
+  // A mode change is a scalar operation that influences vector instructions.
+  if (modifiesModeRegister(MI))
+    return true;
 
   // These are like SALU instructions in terms of effects, so it's questionable
   // whether we should return true for those.

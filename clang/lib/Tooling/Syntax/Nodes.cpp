@@ -18,6 +18,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "TranslationUnit";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
+  case NodeKind::CxxNullPtrExpression:
+    return OS << "CxxNullPtrExpression";
+  case NodeKind::IntegerLiteralExpression:
+    return OS << "IntegerLiteralExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -106,6 +110,12 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "CloseParen";
   case syntax::NodeRole::IntroducerKeyword:
     return OS << "IntroducerKeyword";
+  case syntax::NodeRole::LiteralToken:
+    return OS << "LiteralToken";
+  case syntax::NodeRole::ArrowToken:
+    return OS << "ArrowToken";
+  case syntax::NodeRole::ExternKeyword:
+    return OS << "ExternKeyword";
   case syntax::NodeRole::BodyStatement:
     return OS << "BodyStatement";
   case syntax::NodeRole::CaseStatement_value:
@@ -116,14 +126,12 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "IfStatement_elseKeyword";
   case syntax::NodeRole::IfStatement_elseStatement:
     return OS << "IfStatement_elseStatement";
-  case syntax::NodeRole::UnaryOperatorExpression_operatorToken:
-    return OS << "UnaryOperatorExpression_operatorToken";
+  case syntax::NodeRole::OperatorExpression_operatorToken:
+    return OS << "OperatorExpression_operatorToken";
   case syntax::NodeRole::UnaryOperatorExpression_operand:
     return OS << "UnaryOperatorExpression_operand";
   case syntax::NodeRole::BinaryOperatorExpression_leftHandSide:
     return OS << "BinaryOperatorExpression_leftHandSide";
-  case syntax::NodeRole::BinaryOperatorExpression_operatorToken:
-    return OS << "BinaryOperatorExpression_operatorToken";
   case syntax::NodeRole::BinaryOperatorExpression_rightHandSide:
     return OS << "BinaryOperatorExpression_rightHandSide";
   case syntax::NodeRole::ReturnStatement_value:
@@ -140,14 +148,10 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "SimpleDeclaration_declarator";
   case syntax::NodeRole::TemplateDeclaration_declaration:
     return OS << "TemplateDeclaration_declaration";
-  case syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword:
-    return OS << "ExplicitTemplateInstantiation_externKeyword";
   case syntax::NodeRole::ExplicitTemplateInstantiation_declaration:
     return OS << "ExplicitTemplateInstantiation_declaration";
   case syntax::NodeRole::ArraySubscript_sizeExpression:
     return OS << "ArraySubscript_sizeExpression";
-  case syntax::NodeRole::TrailingReturnType_arrow:
-    return OS << "TrailingReturnType_arrow";
   case syntax::NodeRole::TrailingReturnType_declarator:
     return OS << "TrailingReturnType_declarator";
   case syntax::NodeRole::ParametersAndQualifiers_parameter:
@@ -158,6 +162,16 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
   llvm_unreachable("invalid role");
 }
 
+syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::CxxNullPtrExpression::nullPtrKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
 syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
   return llvm::cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::BinaryOperatorExpression_leftHandSide));
@@ -165,7 +179,7 @@ syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
 
 syntax::Leaf *syntax::UnaryOperatorExpression::operatorToken() {
   return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::UnaryOperatorExpression_operatorToken));
+      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
 }
 
 syntax::Expression *syntax::UnaryOperatorExpression::operand() {
@@ -175,7 +189,7 @@ syntax::Expression *syntax::UnaryOperatorExpression::operand() {
 
 syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {
   return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::BinaryOperatorExpression_operatorToken));
+      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
 }
 
 syntax::Expression *syntax::BinaryOperatorExpression::rhs() {
@@ -349,7 +363,7 @@ syntax::Leaf *syntax::ExplicitTemplateInstantiation::templateKeyword() {
 
 syntax::Leaf *syntax::ExplicitTemplateInstantiation::externKeyword() {
   return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword));
+      findChild(syntax::NodeRole::ExternKeyword));
 }
 
 syntax::Declaration *syntax::ExplicitTemplateInstantiation::declaration() {
@@ -382,9 +396,9 @@ syntax::Leaf *syntax::ArraySubscript::rbracket() {
       findChild(syntax::NodeRole::CloseParen));
 }
 
-syntax::Leaf *syntax::TrailingReturnType::arrow() {
+syntax::Leaf *syntax::TrailingReturnType::arrowToken() {
   return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::TrailingReturnType_arrow));
+      findChild(syntax::NodeRole::ArrowToken));
 }
 
 syntax::SimpleDeclarator *syntax::TrailingReturnType::declarator() {

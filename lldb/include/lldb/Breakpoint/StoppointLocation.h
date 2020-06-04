@@ -77,7 +77,8 @@ protected:
 
 private:
   // For StoppointLocation only
-  DISALLOW_COPY_AND_ASSIGN(StoppointLocation);
+  StoppointLocation(const StoppointLocation &) = delete;
+  const StoppointLocation &operator=(const StoppointLocation &) = delete;
   StoppointLocation() = delete;
 };
 

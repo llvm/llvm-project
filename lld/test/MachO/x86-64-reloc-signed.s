@@ -4,18 +4,18 @@
 # RUN: llvm-objdump -D %t | FileCheck %s
 
 # CHECK:      <_main>:
-# CHECK-NEXT:   movl {{.*}}  # 2000 <_s>
+# CHECK-NEXT:   movl {{.*}}  # 100001000 <_s>
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # 2002 <_s+0x2>
+# CHECK-NEXT:   movl {{.*}}  # 100001002 <_s+0x2>
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # 2000 <_s>
+# CHECK-NEXT:   movb {{.*}}  # 100001000 <_s>
 # CHECK-NEXT:   callq {{.*}}
 # CHECK:      <__not_text>:
-# CHECK-NEXT:   movl {{.*}}  # 2005
+# CHECK-NEXT:   movl {{.*}}  # 100001005
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # 2007
+# CHECK-NEXT:   movl {{.*}}  # 100001007
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # 2005
+# CHECK-NEXT:   movb {{.*}}  # 100001005
 # CHECK-NEXT:   callq {{.*}}
 
 .section __TEXT,__text

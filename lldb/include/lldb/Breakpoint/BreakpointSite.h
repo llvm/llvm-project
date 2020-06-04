@@ -225,7 +225,8 @@ private:
                  const lldb::BreakpointLocationSP &owner, lldb::addr_t m_addr,
                  bool use_hardware);
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointSite);
+  BreakpointSite(const BreakpointSite &) = delete;
+  const BreakpointSite &operator=(const BreakpointSite &) = delete;
 };
 
 } // namespace lldb_private

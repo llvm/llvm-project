@@ -53,7 +53,6 @@ entry:
 define void @MemsetNonConst(i32 %size) {
 ; CHECK-LABEL: MemsetNonConst dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:
@@ -69,7 +68,6 @@ entry:
 define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-LABEL: MemsetNonConstInBounds dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: z[]: empty-set{{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NOT: ]:

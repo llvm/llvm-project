@@ -187,6 +187,7 @@ private:
 
       JITTargetAddress SectionAddress = S.getAddress();
 
+      // Skip relocations virtual sections.
       if (S.isVirtual()) {
         if (S.relocation_begin() != S.relocation_end())
           return make_error<JITLinkError>("Virtual section contains "
@@ -194,6 +195,21 @@ private:
         continue;
       }
 
+      // Skip relocations for debug symbols.
+      {
+        auto &NSec =
+            getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+        if (!NSec.GraphSection) {
+          LLVM_DEBUG({
+            dbgs() << "Skipping relocations for MachO section " << NSec.SegName
+                   << "/" << NSec.SectName
+                   << " which has no associated graph section\n";
+          });
+          continue;
+        }
+      }
+
+      // Add relocations for section.
       for (auto RelItr = S.relocation_begin(), RelEnd = S.relocation_end();
            RelItr != RelEnd; ++RelItr) {
 

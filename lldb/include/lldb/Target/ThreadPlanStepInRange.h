@@ -105,7 +105,9 @@ private:
   bool m_virtual_step; // true if we've just done a "virtual step", i.e. just
                        // moved the inline stack depth.
   ConstString m_step_into_target;
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepInRange);
+  ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
+  const ThreadPlanStepInRange &
+  operator=(const ThreadPlanStepInRange &) = delete;
 };
 
 } // namespace lldb_private

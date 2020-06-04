@@ -89,11 +89,6 @@ namespace llvm {
     FRE,
     FRSQRTE,
 
-    // VMADDFP, VNMSUBFP - The VMADDFP and VNMSUBFP instructions, taking
-    // three v4f32 operands and producing a v4f32 result.
-    VMADDFP,
-    VNMSUBFP,
-
     /// VPERM - The PPC VPERM Instruction.
     ///
     VPERM,
@@ -152,6 +147,9 @@ namespace llvm {
     SRL,
     SRA,
     SHL,
+
+    /// FNMSUB - Negated multiply-subtract instruction.
+    FNMSUB,
 
     /// EXTSWSLI = The PPC extswsli instruction, which does an extend-sign
     /// word and shift left immediate.
@@ -678,6 +676,10 @@ namespace llvm {
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }
+
+    SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
+                                 bool OptForSize, NegatibleCost &Cost,
+                                 unsigned Depth = 0) const override;
 
     /// getSetCCResultType - Return the ISD::SETCC ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -1207,6 +1209,7 @@ namespace llvm {
     SDValue combineSRL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineADD(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineFMALike(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineABS(SDNode *N, DAGCombinerInfo &DCI) const;

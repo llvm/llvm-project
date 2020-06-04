@@ -253,6 +253,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
   // Exception handling intrinsics
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -1279,11 +1280,8 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   for (auto MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
-  // TODO: For now, we just pick something arbitrary for a default case for now.
-  // We really want to sniff out the guard and put in the real default case (and
-  // delete the guard).
-  Ops.push_back(DAG.getBasicBlock(MBBs[0]));
-
+  // Do not add the default case for now. It will be added in
+  // WebAssemblyFixBrTableDefaults.
   return DAG.getNode(WebAssemblyISD::BR_TABLE, DL, MVT::Other, Ops);
 }
 
@@ -1391,23 +1389,23 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   MVT VecT = Extract.getOperand(0).getSimpleValueType();
   if (VecT.getVectorElementType().getSizeInBits() > 32)
     return SDValue();
-  MVT ExtractedLaneT = static_cast<VTSDNode *>(Op.getOperand(1).getNode())
-                           ->getVT()
-                           .getSimpleVT();
+  MVT ExtractedLaneT =
+      cast<VTSDNode>(Op.getOperand(1).getNode())->getVT().getSimpleVT();
   MVT ExtractedVecT =
       MVT::getVectorVT(ExtractedLaneT, 128 / ExtractedLaneT.getSizeInBits());
   if (ExtractedVecT == VecT)
     return Op;
 
   // Bitcast vector to appropriate type to ensure ISel pattern coverage
-  const SDValue &Index = Extract.getOperand(1);
-  unsigned IndexVal =
-      static_cast<ConstantSDNode *>(Index.getNode())->getZExtValue();
+  const SDNode *Index = Extract.getOperand(1).getNode();
+  if (!isa<ConstantSDNode>(Index))
+    return SDValue();
+  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
   SDValue NewIndex =
-      DAG.getConstant(IndexVal * Scale, DL, Index.getValueType());
+      DAG.getConstant(IndexVal * Scale, DL, Index->getValueType(0));
   SDValue NewExtract = DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, Extract.getValueType(),
       DAG.getBitcast(ExtractedVecT, Extract.getOperand(0)), NewIndex);

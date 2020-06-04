@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 // shared_timed_mutex was introduced in macosx10.12
 // UNSUPPORTED: with_system_cxx_lib=macosx10.11

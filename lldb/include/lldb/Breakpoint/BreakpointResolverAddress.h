@@ -71,7 +71,9 @@ protected:
   // to a Section+Offset address in this module, whenever that module gets
   // around to being loaded.
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
+  BreakpointResolverAddress(const BreakpointResolverAddress &) = delete;
+  const BreakpointResolverAddress &
+  operator=(const BreakpointResolverAddress &) = delete;
 };
 
 } // namespace lldb_private

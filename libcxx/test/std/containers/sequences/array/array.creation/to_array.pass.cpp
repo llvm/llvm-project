@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <array>
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // template <typename T, size_t Size>
 // constexpr auto to_array(T (&arr)[Size])

@@ -53,7 +53,8 @@ private:
   mutable std::recursive_mutex m_mutex;
 
   // For ThreadSafeValue only
-  DISALLOW_COPY_AND_ASSIGN(ThreadSafeValue);
+  ThreadSafeValue(const ThreadSafeValue &) = delete;
+  const ThreadSafeValue &operator=(const ThreadSafeValue &) = delete;
 };
 
 } // namespace lldb_private

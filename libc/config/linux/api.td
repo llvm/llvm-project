@@ -149,14 +149,20 @@ def MathAPI : PublicAPI<"math.h"> {
     FloatT,
   ];
   let Functions = [
+   "ceil",
+   "ceilf",
    "cosf",
    "fabs",
    "fabsf",
+   "floor",
+   "floorf",
    "expf",
    "exp2f",
    "round",
    "sincosf",
    "sinf",
+   "trunc",
+   "truncf",
   ];
 }
 

@@ -525,11 +525,11 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
   auto PtrsTy = cast<VectorType>(Ptrs->getType());
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
   unsigned NumElts = PtrsTy->getNumElements();
-  Type *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
+  auto *DataTy = FixedVectorType::get(PtrTy->getElementType(), NumElts);
 
   if (!Mask)
-    Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
-                                     NumElts));
+    Mask = Constant::getAllOnesValue(
+        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
 
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
@@ -564,8 +564,8 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
 #endif
 
   if (!Mask)
-    Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
-                                     NumElts));
+    Mask = Constant::getAllOnesValue(
+        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
@@ -994,12 +994,13 @@ Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
 
   // First insert it into an undef vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();
-  Value *Undef = UndefValue::get(VectorType::get(V->getType(), NumElts));
+  Value *Undef = UndefValue::get(FixedVectorType::get(V->getType(), NumElts));
   V = CreateInsertElement(Undef, V, ConstantInt::get(I32Ty, 0),
                           Name + ".splatinsert");
 
   // Shuffle the value across the desired number of elements.
-  Value *Zeros = ConstantAggregateZero::get(VectorType::get(I32Ty, NumElts));
+  Value *Zeros =
+      ConstantAggregateZero::get(FixedVectorType::get(I32Ty, NumElts));
   return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
 }
 

@@ -608,10 +608,23 @@ public:
     return true;
   }
 
+  bool WalkUpFromIntegerLiteral(IntegerLiteral *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::IntegerLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::CxxNullPtrExpression, S);
+    return true;
+  }
+
   bool WalkUpFromUnaryOperator(UnaryOperator *S) {
-    Builder.markChildToken(
-        S->getOperatorLoc(),
-        syntax::NodeRole::UnaryOperatorExpression_operatorToken);
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::OperatorExpression_operatorToken);
     Builder.markExprChild(S->getSubExpr(),
                           syntax::NodeRole::UnaryOperatorExpression_operand);
 
@@ -630,9 +643,8 @@ public:
   bool WalkUpFromBinaryOperator(BinaryOperator *S) {
     Builder.markExprChild(
         S->getLHS(), syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
-    Builder.markChildToken(
-        S->getOperatorLoc(),
-        syntax::NodeRole::BinaryOperatorExpression_operatorToken);
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::OperatorExpression_operatorToken);
     Builder.markExprChild(
         S->getRHS(), syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
     Builder.foldNode(Builder.getExprRange(S),
@@ -647,7 +659,7 @@ public:
           syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
       Builder.markChildToken(
           S->getOperatorLoc(),
-          syntax::NodeRole::BinaryOperatorExpression_operatorToken);
+          syntax::NodeRole::OperatorExpression_operatorToken);
       Builder.markExprChild(
           S->getArg(1),
           syntax::NodeRole::BinaryOperatorExpression_rightHandSide);
@@ -967,7 +979,7 @@ private:
     const auto *Arrow = Return.begin() - 1;
     assert(Arrow->kind() == tok::arrow);
     auto Tokens = llvm::makeArrayRef(Arrow, Return.end());
-    Builder.markChildToken(Arrow, syntax::NodeRole::TrailingReturnType_arrow);
+    Builder.markChildToken(Arrow, syntax::NodeRole::ArrowToken);
     if (ReturnDeclarator)
       Builder.markChild(ReturnDeclarator,
                         syntax::NodeRole::TrailingReturnType_declarator);
@@ -982,9 +994,7 @@ private:
       syntax::SimpleDeclaration *InnerDeclaration, Decl *From) {
     assert(!ExternKW || ExternKW->kind() == tok::kw_extern);
     assert(TemplateKW && TemplateKW->kind() == tok::kw_template);
-    Builder.markChildToken(
-        ExternKW,
-        syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword);
+    Builder.markChildToken(ExternKW, syntax::NodeRole::ExternKeyword);
     Builder.markChildToken(TemplateKW, syntax::NodeRole::IntroducerKeyword);
     Builder.markChild(
         InnerDeclaration,
@@ -1044,17 +1054,18 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
   if (!Child)
     return;
 
-  syntax::Tree *ChildNode = Mapping.find(Child);
-  assert(ChildNode != nullptr);
-
-  // This is an expression in a statement position, consume the trailing
-  // semicolon and form an 'ExpressionStatement' node.
-  if (isa<Expr>(Child)) {
-    setRole(ChildNode, NodeRole::ExpressionStatement_expression);
+  syntax::Tree *ChildNode;
+  if (Expr *ChildExpr = dyn_cast<Expr>(Child)) {
+    // This is an expression in a statement position, consume the trailing
+    // semicolon and form an 'ExpressionStatement' node.
+    markExprChild(ChildExpr, NodeRole::ExpressionStatement_expression);
     ChildNode = new (allocator()) syntax::ExpressionStatement;
     // (!) 'getStmtRange()' ensures this covers a trailing semicolon.
     Pending.foldChildren(Arena, getStmtRange(Child), ChildNode);
+  } else {
+    ChildNode = Mapping.find(Child);
   }
+  assert(ChildNode != nullptr);
   setRole(ChildNode, Role);
 }
 

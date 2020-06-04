@@ -45,12 +45,12 @@ entry:
 ; COMMON-NEXT:          .weak	.foo_weak
 ; COMMON-NEXT:          .align	4
 ; COMMON-NEXT:          .csect foo_weak[DS]
-; BIT32-NEXT:           .long	.foo_weak               # @foo_weak
-; BIT32-NEXT:           .long	TOC[TC0]
-; BIT32-NEXT:           .long	0
-; BIT64-NEXT:           .llong	.foo_weak               # @foo_weak
-; BIT64-NEXT:           .llong	TOC[TC0]
-; BIT64-NEXT:           .llong	0
+; BIT32-NEXT:           .vbyte	4, .foo_weak               # @foo_weak
+; BIT32-NEXT:           .vbyte	4, TOC[TC0]
+; BIT32-NEXT:           .vbyte	4, 0
+; BIT64-NEXT:           .vbyte	8, .foo_weak               # @foo_weak
+; BIT64-NEXT:           .vbyte	8, TOC[TC0]
+; BIT64-NEXT:           .vbyte	8, 0
 ; COMMON-NEXT:          .csect .text[PR]
 ; COMMON-NEXT:  .foo_weak:
 
@@ -58,12 +58,12 @@ entry:
 ; COMMON-NEXT:          .weak	.foo_ref_weak
 ; COMMON-NEXT:          .align	4
 ; COMMON-NEXT:          .csect foo_ref_weak[DS]
-; BIT32-NEXT:           .long	.foo_ref_weak           # @foo_ref_weak
-; BIT32-NEXT:           .long	TOC[TC0]
-; BIT32-NEXT:           .long	0
-; BIT64-NEXT:           .llong	.foo_ref_weak           # @foo_ref_weak
-; BIT64-NEXT:           .llong	TOC[TC0]
-; BIT64-NEXT:           .llong	0
+; BIT32-NEXT:           .vbyte	4, .foo_ref_weak           # @foo_ref_weak
+; BIT32-NEXT:           .vbyte	4, TOC[TC0]
+; BIT32-NEXT:           .vbyte	4, 0
+; BIT64-NEXT:           .vbyte	8, .foo_ref_weak           # @foo_ref_weak
+; BIT64-NEXT:           .vbyte	8, TOC[TC0]
+; BIT64-NEXT:           .vbyte	8, 0
 ; COMMON-NEXT:          .csect .text[PR]
 ; COMMON-NEXT:  .foo_ref_weak:
 
@@ -71,12 +71,12 @@ entry:
 ; COMMON-NEXT:          .globl  .main
 ; COMMON-NEXT:          .align	4
 ; COMMON-NEXT:          .csect main[DS]
-; BIT32-NEXT:           .long	.main                   # @main
-; BIT32-NEXT:           .long	TOC[TC0]
-; BIT32-NEXT:           .long	0
-; BIT64-NEXT:           .llong	.main                   # @main
-; BIT64-NEXT:           .llong	TOC[TC0]
-; BIT64-NEXT:           .llong	0
+; BIT32-NEXT:           .vbyte	4, .main                   # @main
+; BIT32-NEXT:           .vbyte	4, TOC[TC0]
+; BIT32-NEXT:           .vbyte	4, 0
+; BIT64-NEXT:           .vbyte	8, .main                   # @main
+; BIT64-NEXT:           .vbyte	8, TOC[TC0]
+; BIT64-NEXT:           .vbyte	8, 0
 ; COMMON-NEXT:          .csect .text[PR]
 ; COMMON-NEXT:  .main:
 
@@ -85,16 +85,16 @@ entry:
 ; BIT32-NEXT:           .align	2
 ; BIT64-NEXT:           .align	3
 ; COMMON-NEXT:  foo_weak_p:
-; BIT32-NEXT:           .long	foo_ref_weak[DS]
-; BIT64-NEXT:           .llong	foo_ref_weak[DS]
+; BIT32-NEXT:           .vbyte	4, foo_ref_weak[DS]
+; BIT64-NEXT:           .vbyte	8, foo_ref_weak[DS]
 ; COMMON-NEXT:          .weak	b
 ; COMMON-NEXT:          .align	2
 ; COMMON-NEXT:  b:
-; COMMON-NEXT:          .long	0                       # 0x0
+; COMMON-NEXT:          .vbyte	4, 0                       # 0x0
 ; COMMON-NEXT:          .toc
-; COMMON-NEXT:  LC0:
+; COMMON-NEXT:  L..C0:
 ; COMMON-NEXT:          .tc foo_weak_p[TC],foo_weak_p
-; COMMON-NEXT:  LC1:
+; COMMON-NEXT:  L..C1:
 ; COMMON-NEXT:          .tc b[TC],b
 
 

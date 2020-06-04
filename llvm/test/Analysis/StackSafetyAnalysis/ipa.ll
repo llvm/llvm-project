@@ -317,7 +317,6 @@ define i32 @TestRecursiveNoOffset(i32* %p, i32 %size) {
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @RecursiveNoOffset(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [0,1)){{$}}
-; CHECK-NEXT: size[]: empty-set, @RecursiveNoOffset(arg1, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: sum[4]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NOT: ]:
@@ -333,7 +332,6 @@ entry:
 define void @TestRecursiveWithOffset(i32 %size) {
 ; CHECK-LABEL: @TestRecursiveWithOffset dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: empty-set, @RecursiveWithOffset(arg0, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: sum[64]: empty-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
 ; GLOBAL-NEXT: sum[64]: full-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
@@ -434,14 +432,12 @@ entry:
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: [0,4), @RecursiveNoOffset(arg0, [4,5)){{$}}
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [4,5)){{$}}
-; CHECK-NEXT: size[]: empty-set, @RecursiveNoOffset(arg1, [-1,0)){{$}}
 ; CHECK-NEXT: acc[]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
 
 ; CHECK-LABEL: @RecursiveWithOffset{{$}}
 ; CHECK-NEXT: args uses:
-; CHECK-NEXT: size[]: empty-set, @RecursiveWithOffset(arg0, [-1,0)){{$}}
 ; LOCAL-NEXT: acc[]: [0,4), @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; GLOBAL-NEXT: acc[]: full-set, @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; CHECK-NEXT: allocas uses:

@@ -478,6 +478,46 @@ TEST_F(FileCheckTest, ExpressionValueSubtraction) {
   expectOperationValueResult(operator-, 10, 11, -1);
 }
 
+TEST_F(FileCheckTest, ExpressionValueEquality) {
+  // Test negative and positive value.
+  EXPECT_FALSE(ExpressionValue(5) == ExpressionValue(-3));
+  EXPECT_TRUE(ExpressionValue(5) != ExpressionValue(-3));
+  EXPECT_FALSE(ExpressionValue(-2) == ExpressionValue(6));
+  EXPECT_TRUE(ExpressionValue(-2) != ExpressionValue(6));
+  EXPECT_FALSE(ExpressionValue(-7) == ExpressionValue(7));
+  EXPECT_TRUE(ExpressionValue(-7) != ExpressionValue(7));
+  EXPECT_FALSE(ExpressionValue(4) == ExpressionValue(-4));
+  EXPECT_TRUE(ExpressionValue(4) != ExpressionValue(-4));
+  EXPECT_FALSE(ExpressionValue(MaxUint64) == ExpressionValue(-1));
+  EXPECT_TRUE(ExpressionValue(MaxUint64) != ExpressionValue(-1));
+
+  // Test both negative values.
+  EXPECT_FALSE(ExpressionValue(-2) == ExpressionValue(-7));
+  EXPECT_TRUE(ExpressionValue(-2) != ExpressionValue(-7));
+  EXPECT_TRUE(ExpressionValue(-3) == ExpressionValue(-3));
+  EXPECT_FALSE(ExpressionValue(-3) != ExpressionValue(-3));
+  EXPECT_FALSE(ExpressionValue(MinInt64) == ExpressionValue(-1));
+  EXPECT_TRUE(ExpressionValue(MinInt64) != ExpressionValue(-1));
+  EXPECT_FALSE(ExpressionValue(MinInt64) == ExpressionValue(-0));
+  EXPECT_TRUE(ExpressionValue(MinInt64) != ExpressionValue(-0));
+
+  // Test both positive values.
+  EXPECT_FALSE(ExpressionValue(8) == ExpressionValue(9));
+  EXPECT_TRUE(ExpressionValue(8) != ExpressionValue(9));
+  EXPECT_TRUE(ExpressionValue(1) == ExpressionValue(1));
+  EXPECT_FALSE(ExpressionValue(1) != ExpressionValue(1));
+
+  // Check the signedness of zero doesn't affect equality.
+  EXPECT_TRUE(ExpressionValue(0) == ExpressionValue(0));
+  EXPECT_FALSE(ExpressionValue(0) != ExpressionValue(0));
+  EXPECT_TRUE(ExpressionValue(0) == ExpressionValue(-0));
+  EXPECT_FALSE(ExpressionValue(0) != ExpressionValue(-0));
+  EXPECT_TRUE(ExpressionValue(-0) == ExpressionValue(0));
+  EXPECT_FALSE(ExpressionValue(-0) != ExpressionValue(0));
+  EXPECT_TRUE(ExpressionValue(-0) == ExpressionValue(-0));
+  EXPECT_FALSE(ExpressionValue(-0) != ExpressionValue(-0));
+}
+
 TEST_F(FileCheckTest, Literal) {
   SourceMgr SM;
 

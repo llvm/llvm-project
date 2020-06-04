@@ -23,7 +23,8 @@ namespace lldb_private {
 
 class HostNativeThreadBase {
   friend class ThreadLauncher;
-  DISALLOW_COPY_AND_ASSIGN(HostNativeThreadBase);
+  HostNativeThreadBase(const HostNativeThreadBase &) = delete;
+  const HostNativeThreadBase &operator=(const HostNativeThreadBase &) = delete;
 
 public:
   HostNativeThreadBase();

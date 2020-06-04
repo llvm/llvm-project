@@ -97,7 +97,8 @@ protected:
   CompletionRequest &m_request;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Completer);
+  Completer(const Completer &) = delete;
+  const Completer &operator=(const Completer &) = delete;
 };
 } // namespace
 
@@ -154,7 +155,8 @@ private:
   const char *m_file_name;
   const char *m_dir_name;
 
-  DISALLOW_COPY_AND_ASSIGN(SourceFileCompleter);
+  SourceFileCompleter(const SourceFileCompleter &) = delete;
+  const SourceFileCompleter &operator=(const SourceFileCompleter &) = delete;
 };
 } // namespace
 
@@ -226,7 +228,8 @@ private:
   typedef std::set<ConstString> collection;
   collection m_match_set;
 
-  DISALLOW_COPY_AND_ASSIGN(SymbolCompleter);
+  SymbolCompleter(const SymbolCompleter &) = delete;
+  const SymbolCompleter &operator=(const SymbolCompleter &) = delete;
 };
 } // namespace
 
@@ -273,7 +276,8 @@ private:
   const char *m_file_name;
   const char *m_dir_name;
 
-  DISALLOW_COPY_AND_ASSIGN(ModuleCompleter);
+  ModuleCompleter(const ModuleCompleter &) = delete;
+  const ModuleCompleter &operator=(const ModuleCompleter &) = delete;
 };
 } // namespace
 

@@ -15,20 +15,20 @@ entry:
 ;CHECK-NEXT:     .globl  foo_ptr
 ;CHECK-NEXT:     .align  2
 ;CHECK-NEXT:     foo_ptr:
-;CHECK-NEXT:     .long   foo[DS]
+;CHECK-NEXT:     .vbyte	4, foo[DS]
 ;CHECK-NEXT:     .globl  bar_ptr1
 ;CHECK-NEXT:     .align  2
 ;CHECK-NEXT:     bar_ptr1:
-;CHECK-NEXT:     .long   bar[DS]
+;CHECK-NEXT:     .vbyte	4, bar[DS]
 ;CHECK-NEXT:     .extern foo[DS]
 
 ;CHECK64:         .csect .data[RW],3
 ;CHECK64-NEXT:         .globl  foo_ptr
 ;CHECK64-NEXT:         .align  3
 ;CHECK64-NEXT:    foo_ptr:
-;CHECK64-NEXT:         .llong  foo[DS]
+;CHECK64-NEXT:         .vbyte	8, foo[DS]
 ;CHECK64-NEXT:         .globl  bar_ptr1
 ;CHECK64-NEXT:         .align  3
 ;CHECK64-NEXT:    bar_ptr1:
-;CHECK64-NEXT:         .llong  bar[DS]
+;CHECK64-NEXT:         .vbyte	8, bar[DS]
 ;CHECK64-NEXT:         .extern foo[DS]

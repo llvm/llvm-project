@@ -42,12 +42,12 @@ declare i32 @bar_extern(i32*)
 ; COMMON-NEXT:	    .globl	.foo
 ; COMMON-NEXT:	    .align	4
 ; COMMON-NEXT:	    .csect foo[DS]
-; BIT32-NEXT:       .long	.foo                    # @foo
-; BIT32-NEXT:       .long	TOC[TC0]
-; BIT32-NEXT:       .long	0
-; BIT64-NEXT:       .llong	.foo                    # @foo
-; BIT64-NEXT:       .llong	TOC[TC0]
-; BIT64-NEXT:       .llong	0
+; BIT32-NEXT:       .vbyte	4, .foo                    # @foo
+; BIT32-NEXT:       .vbyte	4, TOC[TC0]
+; BIT32-NEXT:       .vbyte	4, 0
+; BIT64-NEXT:       .vbyte	8, .foo                    # @foo
+; BIT64-NEXT:       .vbyte	8, TOC[TC0]
+; BIT64-NEXT:       .vbyte	8, 0
 ; COMMON-NEXT:      .csect .text[PR]
 ; COMMON-NEXT: .foo:
 
@@ -55,12 +55,12 @@ declare i32 @bar_extern(i32*)
 ; COMMON-NEXT:      .globl	.main
 ; COMMON-NEXT:      .align	4
 ; COMMON-NEXT:      .csect main[DS]
-; BIT32-NEXT:       .long	.main                   # @main
-; BIT32-NEXT:       .long	TOC[TC0]
-; BIT32-NEXT:       .long	0
-; BIT64-NEXT:       .llong	.main                   # @main
-; BIT64-NEXT:       .llong	TOC[TC0]
-; BIT64-NEXT:       .llong	0
+; BIT32-NEXT:       .vbyte	4, .main                   # @main
+; BIT32-NEXT:       .vbyte	4, TOC[TC0]
+; BIT32-NEXT:       .vbyte	4, 0
+; BIT64-NEXT:       .vbyte	8, .main                   # @main
+; BIT64-NEXT:       .vbyte	8, TOC[TC0]
+; BIT64-NEXT:       .vbyte	8, 0
 ; COMMON-NEXT:      .csect .text[PR]
 ; COMMON-NEXT: .main:
 
@@ -69,17 +69,17 @@ declare i32 @bar_extern(i32*)
 ; BIT32-NEXT:       .align	2
 ; BIT64-NEXT:       .align	3
 ; COMMON-NEXT: bar_p:
-; BIT32-NEXT:       .long	bar_ref[DS]
-; BIT64-NEXT:       .llong	bar_ref[DS]
+; BIT32-NEXT:       .vbyte	4, bar_ref[DS]
+; BIT64-NEXT:       .vbyte	8, bar_ref[DS]
 ; COMMON-NEXT:	    .extern	b_e[UA]
 ; COMMON-NEXT:      .extern .bar_ref
 ; COMMON-NEXT:      .extern bar_ref[DS]
 ; COMMON-NEXT:	    .extern	.bar_extern
 ; COMMON-NEXT:      .extern     bar_extern[DS]
 ; COMMON-NEXT:	    .toc
-; COMMON-NEXT: LC0:
+; COMMON-NEXT: L..C0:
 ; COMMON-NEXT:      .tc b_e[TC],b_e[UA]
-; COMMON-NEXT: LC1:
+; COMMON-NEXT: L..C1:
 ; COMMON-NEXT:      .tc bar_p[TC],bar_p
 
 ; CHECKSYM:       Symbols [

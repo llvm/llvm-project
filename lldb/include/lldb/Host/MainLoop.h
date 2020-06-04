@@ -86,7 +86,8 @@ private:
     int m_signo;
 
     friend class MainLoop;
-    DISALLOW_COPY_AND_ASSIGN(SignalHandle);
+    SignalHandle(const SignalHandle &) = delete;
+    const SignalHandle &operator=(const SignalHandle &) = delete;
   };
 
   struct SignalInfo {

@@ -54,7 +54,10 @@ protected:
                         std::string &connect_url);
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(PlatformAndroidRemoteGDBServer);
+  PlatformAndroidRemoteGDBServer(const PlatformAndroidRemoteGDBServer &) =
+      delete;
+  const PlatformAndroidRemoteGDBServer &
+  operator=(const PlatformAndroidRemoteGDBServer &) = delete;
 };
 
 } // namespace platform_android

@@ -226,7 +226,9 @@ private:
   void *m_decompression_scratch = nullptr;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
+  GDBRemoteCommunication(const GDBRemoteCommunication &) = delete;
+  const GDBRemoteCommunication &
+  operator=(const GDBRemoteCommunication &) = delete;
 };
 
 } // namespace process_gdb_remote

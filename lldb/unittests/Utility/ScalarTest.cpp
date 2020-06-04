@@ -188,6 +188,16 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }
 
+TEST(ScalarTest, LongLongAssigmentOperator) {
+  Scalar ull;
+  ull = std::numeric_limits<unsigned long long>::max();
+  EXPECT_EQ(std::numeric_limits<unsigned long long>::max(), ull.ULongLong());
+
+  Scalar sll;
+  sll = std::numeric_limits<signed long long>::max();
+  EXPECT_EQ(std::numeric_limits<signed long long>::max(), sll.SLongLong());
+}
+
 TEST(ScalarTest, Division) {
   Scalar lhs(5.0);
   Scalar rhs(2.0);

@@ -922,6 +922,7 @@ define <4 x i32> @fshr_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) nounw
 define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X32-SSE2-LABEL: PR45265:
 ; X32-SSE2:       # %bb.0:
+; X32-SSE2-NEXT:    pushl %ebx
 ; X32-SSE2-NEXT:    pushl %edi
 ; X32-SSE2-NEXT:    pushl %esi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -929,24 +930,27 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X32-SSE2-NEXT:    leal (%eax,%eax,2), %edx
 ; X32-SSE2-NEXT:    movzwl 8(%ecx,%edx,4), %esi
 ; X32-SSE2-NEXT:    movsbl 10(%ecx,%edx,4), %edi
-; X32-SSE2-NEXT:    shll $16, %edi
-; X32-SSE2-NEXT:    orl %edi, %esi
+; X32-SSE2-NEXT:    movl %edi, %ebx
+; X32-SSE2-NEXT:    shll $16, %ebx
+; X32-SSE2-NEXT:    orl %esi, %ebx
 ; X32-SSE2-NEXT:    movl 4(%ecx,%edx,4), %ecx
-; X32-SSE2-NEXT:    shrdl $8, %esi, %ecx
+; X32-SSE2-NEXT:    shrdl $8, %ebx, %ecx
 ; X32-SSE2-NEXT:    xorl %eax, %ecx
 ; X32-SSE2-NEXT:    sarl $31, %eax
 ; X32-SSE2-NEXT:    sarl $31, %edi
-; X32-SSE2-NEXT:    shldl $24, %esi, %edi
+; X32-SSE2-NEXT:    shldl $24, %ebx, %edi
 ; X32-SSE2-NEXT:    xorl %eax, %edi
 ; X32-SSE2-NEXT:    orl %edi, %ecx
 ; X32-SSE2-NEXT:    jne .LBB44_1
 ; X32-SSE2-NEXT:  # %bb.2:
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
+; X32-SSE2-NEXT:    popl %ebx
 ; X32-SSE2-NEXT:    jmp _Z3foov # TAILCALL
 ; X32-SSE2-NEXT:  .LBB44_1:
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
+; X32-SSE2-NEXT:    popl %ebx
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: PR45265:

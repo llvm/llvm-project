@@ -185,7 +185,8 @@ protected:
   Process *m_process;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
+  LanguageRuntime(const LanguageRuntime &) = delete;
+  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

@@ -595,16 +595,9 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
         msg = "Nonsequence derived type object '%s'"
               " is not allowed in an equivalence set"_err_en_US;
       }
-    } else if (symbol.IsObjectArray()) {
-      for (const ShapeSpec &spec : symbol.get<ObjectEntityDetails>().shape()) {
-        auto &lbound{spec.lbound().GetExplicit()};
-        auto &ubound{spec.ubound().GetExplicit()};
-        if ((lbound && !evaluate::ToInt64(*lbound)) ||
-            (ubound && !evaluate::ToInt64(*ubound))) {
-          msg = "Automatic array '%s'"
-                " is not allowed in an equivalence set"_err_en_US;
-        }
-      }
+    } else if (IsAutomaticObject(symbol)) {
+      msg = "Automatic object '%s'"
+            " is not allowed in an equivalence set"_err_en_US;
     }
   }
   if (!msg.text().empty()) {

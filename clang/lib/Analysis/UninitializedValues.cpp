@@ -268,6 +268,7 @@ public:
     Init,
     Use,
     SelfInit,
+    ConstRefUse,
     Ignore
   };
 
@@ -413,14 +414,16 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
     return;
   }
 
-  // If a value is passed by const pointer or by const reference to a function,
+  // If a value is passed by const pointer to a function,
   // we should not assume that it is initialized by the call, and we
   // conservatively do not assume that it is used.
+  // If a value is passed by const reference to a function,
+  // it should already be initialized.
   for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end();
        I != E; ++I) {
     if ((*I)->isGLValue()) {
       if ((*I)->getType().isConstQualified())
-        classify((*I), Ignore);
+        classify((*I), ConstRefUse);
     } else if (isPointerToConst((*I)->getType())) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
@@ -469,6 +472,7 @@ public:
         handler(handler) {}
 
   void reportUse(const Expr *ex, const VarDecl *vd);
+  void reportConstRefUse(const Expr *ex, const VarDecl *vd);
 
   void VisitBinaryOperator(BinaryOperator *bo);
   void VisitBlockExpr(BlockExpr *be);
@@ -667,6 +671,12 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
     handler.handleUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
 }
 
+void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
+  Value v = vals[vd];
+  if (isAlwaysUninit(v))
+    handler.handleConstRefUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
+}
+
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
   // This represents an initialization of the 'element' value.
   if (const auto *DS = dyn_cast<DeclStmt>(FS->getElement())) {
@@ -734,7 +744,10 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *dr) {
     vals[cast<VarDecl>(dr->getDecl())] = Initialized;
     break;
   case ClassifyRefs::SelfInit:
-      handler.handleSelfInit(cast<VarDecl>(dr->getDecl()));
+    handler.handleSelfInit(cast<VarDecl>(dr->getDecl()));
+    break;
+  case ClassifyRefs::ConstRefUse:
+    reportConstRefUse(dr, cast<VarDecl>(dr->getDecl()));
     break;
   }
 }
@@ -867,6 +880,12 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadAnyUse = true;
   }
 
+  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
+                                         const UninitUse &use) override {
+    hadUse[currentBlock] = true;
+    hadAnyUse = true;
+  }
+  
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer
   /// are handled by handleUseOfUninitVariable.

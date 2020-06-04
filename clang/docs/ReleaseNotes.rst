@@ -54,6 +54,10 @@ Improvements to Clang's diagnostics
 - -Wpointer-to-int-cast is a new warning group. This group warns about C-style
   casts of pointers to a integer type too small to hold all possible values.
 
+- -Wuninitialized-const-reference is a new warning controlled by 
+  -Wuninitialized. It warns on cases where uninitialized variables are passed
+  as const reference arguments to a function.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

@@ -194,7 +194,9 @@ private:
   llvm::Optional<std::string> DoGetUserName(UserIDResolver::id_t uid) override;
   llvm::Optional<std::string> DoGetGroupName(UserIDResolver::id_t uid) override;
 
-  DISALLOW_COPY_AND_ASSIGN(PlatformRemoteGDBServer);
+  PlatformRemoteGDBServer(const PlatformRemoteGDBServer &) = delete;
+  const PlatformRemoteGDBServer &
+  operator=(const PlatformRemoteGDBServer &) = delete;
 };
 
 } // namespace platform_gdb_server

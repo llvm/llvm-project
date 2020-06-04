@@ -47,9 +47,13 @@ struct TestVectorContractionConversion
   TestVectorContractionConversion(const TestVectorContractionConversion &pass) {
   }
 
-  Option<bool> lowerToLLVMMatrixIntrinsics{
+  Option<bool> lowerToFlatMatrix{
       *this, "vector-lower-matrix-intrinsics",
       llvm::cl::desc("Lower vector.contract to llvm.intr.matrix.multiply"),
+      llvm::cl::init(false)};
+  Option<bool> lowerToFlatTranspose{
+      *this, "vector-flat-transpose",
+      llvm::cl::desc("Lower 2-D vector.transpose to vector.flat_transpose"),
       llvm::cl::init(false)};
   Option<bool> lowerToOuterProduct{
       *this, "vector-outerproduct",
@@ -67,10 +71,14 @@ struct TestVectorContractionConversion
       return;
     }
 
-    VectorContractLowering lowering = VectorContractLowering::FMA;
-    if (lowerToLLVMMatrixIntrinsics)
-      lowering = VectorContractLowering::Matmul;
-    VectorTransformsOptions options{lowering};
+    VectorContractLowering contractLowering = VectorContractLowering::FMA;
+    if (lowerToFlatMatrix)
+      contractLowering = VectorContractLowering::Matmul;
+    VectorTransposeLowering transposeLowering =
+        VectorTransposeLowering::EltWise;
+    if (lowerToFlatTranspose)
+      transposeLowering = VectorTransposeLowering::Flat;
+    VectorTransformsOptions options{contractLowering, transposeLowering};
     populateVectorContractLoweringPatterns(patterns, &getContext(), options);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }

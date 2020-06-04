@@ -69,8 +69,26 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_u);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  const char *Crt1 = "crt1.o";
+  const char *Entry = NULL;
+  if (const Arg *A = Args.getLastArg(options::OPT_mexec_model_EQ)) {
+    StringRef CM = A->getValue();
+    if (CM == "command") {
+      // Use default values.
+    } else if (CM == "reactor") {
+      Crt1 = "crt1-reactor.o";
+      Entry = "_initialize";
+    } else {
+      ToolChain.getDriver().Diag(diag::err_drv_invalid_argument_to_option)
+          << CM << A->getOption().getName();
+    }
+  }
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt1.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt1)));
+  if (Entry) {
+    CmdArgs.push_back(Args.MakeArgString("--entry"));
+    CmdArgs.push_back(Args.MakeArgString(Entry));
+  }
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

@@ -243,28 +243,25 @@ defm V_CEIL_F32 : VOP1Inst <"v_ceil_f32", VOP_F32_F32, fceil>;
 defm V_RNDNE_F32 : VOP1Inst <"v_rndne_f32", VOP_F32_F32, frint>;
 defm V_FLOOR_F32 : VOP1Inst <"v_floor_f32", VOP_F32_F32, ffloor>;
 
-let SchedRW = [WriteQuarterRate32] in {
+let SchedRW = [WriteTrans32] in {
 defm V_EXP_F32 : VOP1Inst <"v_exp_f32", VOP_F32_F32, fexp2>;
 defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, flog2>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
 defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, fsqrt>;
-} // End SchedRW = [WriteQuarterRate32]
+} // End SchedRW = [WriteTrans32]
 
-let SchedRW = [WriteDouble] in {
+let SchedRW = [WriteTrans64] in {
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
-} // End SchedRW = [WriteDouble];
-
-let SchedRW = [WriteDouble] in {
 defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, fsqrt>;
-} // End SchedRW = [WriteDouble]
+} // End SchedRW = [WriteTrans64]
 
-let SchedRW = [WriteQuarterRate32] in {
+let SchedRW = [WriteTrans32] in {
 defm V_SIN_F32 : VOP1Inst <"v_sin_f32", VOP_F32_F32, AMDGPUsin>;
 defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
-} // End SchedRW = [WriteQuarterRate32]
+} // End SchedRW = [WriteTrans32]
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
 defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, bitreverse>;
@@ -345,7 +342,7 @@ defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_MOVRELSD>;
 defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
 
 let SubtargetPredicate = isGFX6GFX7 in {
-  let SchedRW = [WriteQuarterRate32] in {
+  let SchedRW = [WriteTrans32] in {
     defm V_LOG_CLAMP_F32 :
       VOP1Inst<"v_log_clamp_f32", VOP_F32_F32, int_amdgcn_log_clamp>;
     defm V_RCP_CLAMP_F32 :
@@ -356,7 +353,7 @@ let SubtargetPredicate = isGFX6GFX7 in {
       VOP1Inst<"v_rsq_clamp_f32", VOP_F32_F32, AMDGPUrsq_clamp>;
     defm V_RSQ_LEGACY_F32 :
       VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, int_amdgcn_rsq_legacy>;
-  } // End SchedRW = [WriteQuarterRate32]
+  } // End SchedRW = [WriteTrans32]
 
   let SchedRW = [WriteDouble] in {
     defm V_RCP_CLAMP_F64 :
@@ -367,10 +364,10 @@ let SubtargetPredicate = isGFX6GFX7 in {
 } // End SubtargetPredicate = isGFX6GFX7
 
 let SubtargetPredicate = isGFX7GFX8GFX9 in {
-  let SchedRW = [WriteQuarterRate32] in {
+  let SchedRW = [WriteTrans32] in {
     defm V_LOG_LEGACY_F32 : VOP1Inst<"v_log_legacy_f32", VOP_F32_F32>;
     defm V_EXP_LEGACY_F32 : VOP1Inst<"v_exp_legacy_f32", VOP_F32_F32>;
-  } // End SchedRW = [WriteQuarterRate32]
+  } // End SchedRW = [WriteTrans32]
 } // End SubtargetPredicate = isGFX7GFX8GFX9
 
 let SubtargetPredicate = isGFX7Plus in {
@@ -390,7 +387,7 @@ defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP1_F16_I16, sint_to_fp>;
 } // End FPDPRounding = 1
 defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16, fp_to_uint>;
 defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16, fp_to_sint>;
-let SchedRW = [WriteQuarterRate32] in {
+let SchedRW = [WriteTrans32] in {
 defm V_RCP_F16 : VOP1Inst <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
 defm V_SQRT_F16 : VOP1Inst <"v_sqrt_f16", VOP_F16_F16, fsqrt>;
 defm V_RSQ_F16 : VOP1Inst <"v_rsq_f16", VOP_F16_F16, AMDGPUrsq>;
@@ -398,7 +395,7 @@ defm V_LOG_F16 : VOP1Inst <"v_log_f16", VOP_F16_F16, flog2>;
 defm V_EXP_F16 : VOP1Inst <"v_exp_f16", VOP_F16_F16, fexp2>;
 defm V_SIN_F16 : VOP1Inst <"v_sin_f16", VOP_F16_F16, AMDGPUsin>;
 defm V_COS_F16 : VOP1Inst <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
-} // End SchedRW = [WriteQuarterRate32]
+} // End SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
 defm V_FREXP_EXP_I16_F16 : VOP1Inst <"v_frexp_exp_i16_f16", VOP_I16_F16, int_amdgcn_frexp_exp>;
 defm V_FLOOR_F16 : VOP1Inst <"v_floor_f16", VOP_F16_F16, ffloor>;

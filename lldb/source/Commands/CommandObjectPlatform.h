@@ -22,7 +22,9 @@ public:
   ~CommandObjectPlatform() override;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatform);
+  CommandObjectPlatform(const CommandObjectPlatform &) = delete;
+  const CommandObjectPlatform &
+  operator=(const CommandObjectPlatform &) = delete;
 };
 
 } // namespace lldb_private

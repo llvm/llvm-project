@@ -2681,8 +2681,8 @@ static Error checkGNUHashTable(const ELFFile<ELFT> *Obj,
   uint64_t TableOffset = TableData - Obj->base();
   if (IsHeaderValid)
     *IsHeaderValid = TableOffset + /*Header size:*/ 16 < Obj->getBufSize();
-  if (TableOffset + 16 + GnuHashTable->nbuckets * 4 +
-          GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
+  if (TableOffset + 16 + (uint64_t)GnuHashTable->nbuckets * 4 +
+          (uint64_t)GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
       Obj->getBufSize())
     return createError("unable to dump the SHT_GNU_HASH "
                        "section at 0x" +

@@ -59,7 +59,9 @@ private:
   std::vector<lldb::break_id_t> m_break_ids; // This is the breakpoint we are
                                              // using to stop us at m_address.
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadPlanRunToAddress);
+  ThreadPlanRunToAddress(const ThreadPlanRunToAddress &) = delete;
+  const ThreadPlanRunToAddress &
+  operator=(const ThreadPlanRunToAddress &) = delete;
 };
 
 } // namespace lldb_private

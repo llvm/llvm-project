@@ -24,8 +24,38 @@ def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
 }
 
+// Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
+// target-specific opcode.
+def shuffle_matchdata : GIDefMatchData<"ShuffleVectorPseudo">;
+
+def rev : GICombineRule<
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return matchREV(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+>;
+
+def zip : GICombineRule<
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return matchZip(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+>;
+
+def uzp : GICombineRule<
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return matchUZP(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+>;
+
+// Combines which replace a G_SHUFFLE_VECTOR with a target-specific pseudo
+// instruction.
+def shuffle_vector_pseudos : GICombineGroup<[rev, zip, uzp]>;
+
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
-                       [erase_undef_store, combines_for_extload]> {
+                       [erase_undef_store, combines_for_extload,
+                        shuffle_vector_pseudos]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

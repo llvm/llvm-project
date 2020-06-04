@@ -67,7 +67,8 @@ public:
     ProcessRunLock *m_lock;
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(ProcessRunLocker);
+    ProcessRunLocker(const ProcessRunLocker &) = delete;
+    const ProcessRunLocker &operator=(const ProcessRunLocker &) = delete;
   };
 
 protected:
@@ -75,7 +76,8 @@ protected:
   bool m_running;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(ProcessRunLock);
+  ProcessRunLock(const ProcessRunLock &) = delete;
+  const ProcessRunLock &operator=(const ProcessRunLock &) = delete;
 };
 
 } // namespace lldb_private

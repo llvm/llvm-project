@@ -128,19 +128,9 @@ echo "@@@@@@"
 echo "@@@ Building libc++ and libc++abi using the Apple script (to make sure they work) @@@"
 "${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh"      \
     --llvm-root "${MONOREPO_ROOT}"                              \
-    --build-dir "${LLVM_BUILD_DIR}/apple-build-cxx"             \
-    --install-dir "${LLVM_BUILD_DIR}/apple-install-cxx"         \
-    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols-cxx"         \
-    --sdk macosx                                                \
-    --architectures "x86_64"                                    \
-    --version 999.99.99                                         \
-    --cache "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
-
-"${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxxabi.sh"   \
-    --llvm-root "${MONOREPO_ROOT}"                              \
-    --build-dir "${LLVM_BUILD_DIR}/apple-build-cxxabi"          \
-    --install-dir "${LLVM_BUILD_DIR}/apple-install-cxxabi"      \
-    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols-cxxabi"      \
+    --build-dir "${LLVM_BUILD_DIR}/apple-build"                 \
+    --install-dir "${LLVM_BUILD_DIR}/apple-install"             \
+    --symbols-dir "${LLVM_BUILD_DIR}/apple-symbols"             \
     --sdk macosx                                                \
     --architectures "x86_64"                                    \
     --version 999.99.99                                         \

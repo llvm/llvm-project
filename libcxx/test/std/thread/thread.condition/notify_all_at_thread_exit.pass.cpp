@@ -10,7 +10,7 @@
 
 // notify_all_at_thread_exit(...) requires move semantics to transfer the
 // unique_lock.
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // <condition_variable>
 

@@ -22,7 +22,7 @@ int main() {                                      // GCOV:      1: [[@LINE]]:int
 // RUN: llvm-cov gcov gcov-9.c | FileCheck %s
 // CHECK:      File 'gcov-9.c'
 // CHECK-NEXT: Lines executed:77.78% of 9
-// CHECK-NEXT: gcov-9.c:creating 'gcov-9.c.gcov'
+// CHECK-NEXT: Creating 'gcov-9.c.gcov'
 
 // RUN: FileCheck --input-file=%t/gcov-9.c.gcov --check-prefix=HEADER %s
 // RUN: FileCheck --input-file=%t/gcov-9.c.gcov --check-prefix=GCOV %s
@@ -32,5 +32,3 @@ int main() {                                      // GCOV:      1: [[@LINE]]:int
 // HEADER-NEXT:  -:    0:Data:gcov-9.gcda
 // HEADER-NEXT:  -:    0:Runs:1{{$}}
 // HEADER-NEXT:  -:    1:/// Test that llvm-cov
-
-// XFAIL: host-byteorder-big-endian

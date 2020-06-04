@@ -398,11 +398,9 @@ public:
 
   void finalizeLowering(MachineFunction &MF) const override;
 
-  void computeKnownBitsForFrameIndex(const SDValue Op,
+  void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
-                                     const APInt &DemandedElts,
-                                     const SelectionDAG &DAG,
-                                     unsigned Depth = 0) const override;
+                                     const MachineFunction &MF) const override;
 
   bool isSDNodeSourceOfDivergence(const SDNode *N,
     FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
