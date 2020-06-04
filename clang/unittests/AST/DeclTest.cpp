@@ -112,7 +112,7 @@ TEST(Decl, Availability) {
   };
 
   AvailabilityVerifier Verifier;
-  EXPECT_TRUE(Verifier.match(CodeStr, Matcher, Args, Lang_C));
+  EXPECT_TRUE(Verifier.match(CodeStr, Matcher, Args, Lang_C99));
 }
 
 TEST(Decl, AsmLabelAttr) {
