@@ -122,7 +122,7 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
 
 INITIALIZE_PASS(WebAssemblyFixBrTableDefaults, DEBUG_TYPE,
                 "Removes range checks and sets br_table default targets", false,
-                false);
+                false)
 
 FunctionPass *llvm::createWebAssemblyFixBrTableDefaults() {
   return new WebAssemblyFixBrTableDefaults();
