@@ -288,7 +288,7 @@ static unsigned getYMMtoXMMStoreOpcode(unsigned StoreOpcode) {
   return 0;
 }
 
-static int getAddrOffset(MachineInstr *MI) {
+static int getAddrOffset(const MachineInstr *MI) {
   const MCInstrDesc &Descl = MI->getDesc();
   int AddrOffset = X86II::getMemoryOperandNo(Descl.TSFlags);
   assert(AddrOffset != -1 && "Expected Memory Operand");
@@ -311,11 +311,11 @@ static MachineOperand &getDispOperand(MachineInstr *MI) {
 // TODO: Consider expanding to other addressing modes in the future
 static bool isRelevantAddressingMode(MachineInstr *MI) {
   int AddrOffset = getAddrOffset(MI);
-  MachineOperand &Base = getBaseOperand(MI);
-  MachineOperand &Disp = getDispOperand(MI);
-  MachineOperand &Scale = MI->getOperand(AddrOffset + X86::AddrScaleAmt);
-  MachineOperand &Index = MI->getOperand(AddrOffset + X86::AddrIndexReg);
-  MachineOperand &Segment = MI->getOperand(AddrOffset + X86::AddrSegmentReg);
+  const MachineOperand &Base = getBaseOperand(MI);
+  const MachineOperand &Disp = getDispOperand(MI);
+  const MachineOperand &Scale = MI->getOperand(AddrOffset + X86::AddrScaleAmt);
+  const MachineOperand &Index = MI->getOperand(AddrOffset + X86::AddrIndexReg);
+  const MachineOperand &Segment = MI->getOperand(AddrOffset + X86::AddrSegmentReg);
 
   if (!((Base.isReg() && Base.getReg() != X86::NoRegister) || Base.isFI()))
     return false;
@@ -498,7 +498,7 @@ void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
 static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
-  auto StorePrevNonDbgInstr =
+  auto *StorePrevNonDbgInstr =
       prev_nodbg(MachineBasicBlock::instr_iterator(StoreInst),
                  LoadInst->getParent()->instr_begin())
           .getNodePtr();
@@ -564,7 +564,7 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
 }
 
 unsigned X86AvoidSFBPass::getRegSizeInBytes(MachineInstr *LoadInst) {
-  auto TRC = TII->getRegClass(TII->get(LoadInst->getOpcode()), 0, TRI,
+  const auto *TRC = TII->getRegClass(TII->get(LoadInst->getOpcode()), 0, TRI,
                               *LoadInst->getParent()->getParent());
   return TRI->getRegSizeInBits(*TRC) / 8;
 }
@@ -617,8 +617,8 @@ void X86AvoidSFBPass::breakBlockedCopies(
 
 static bool hasSameBaseOpValue(MachineInstr *LoadInst,
                                MachineInstr *StoreInst) {
-  MachineOperand &LoadBase = getBaseOperand(LoadInst);
-  MachineOperand &StoreBase = getBaseOperand(StoreInst);
+  const MachineOperand &LoadBase = getBaseOperand(LoadInst);
+  const MachineOperand &StoreBase = getBaseOperand(StoreInst);
   if (LoadBase.isReg() != StoreBase.isReg())
     return false;
   if (LoadBase.isReg())
@@ -692,7 +692,7 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
 
     SmallVector<MachineInstr *, 2> PotentialBlockers =
         findPotentialBlockers(LoadInst);
-    for (auto PBInst : PotentialBlockers) {
+    for (auto *PBInst : PotentialBlockers) {
       if (!isPotentialBlockingStoreInst(PBInst->getOpcode(),
                                         LoadInst->getOpcode()) ||
           !isRelevantAddressingMode(PBInst))
@@ -728,7 +728,7 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
     ForRemoval.push_back(LoadInst);
     ForRemoval.push_back(StoreInst);
   }
-  for (auto RemovedInst : ForRemoval) {
+  for (auto *RemovedInst : ForRemoval) {
     RemovedInst->eraseFromParent();
   }
   ForRemoval.clear();
