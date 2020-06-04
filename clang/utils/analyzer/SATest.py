@@ -9,6 +9,16 @@ from ProjectMap import ProjectInfo, ProjectMap
 
 import argparse
 import sys
+import os
+
+from subprocess import check_call
+
+SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
+PROJECTS_DIR = os.path.join(SCRIPTS_DIR, "projects")
+DEFAULT_LLVM_DIR = os.path.realpath(os.path.join(SCRIPTS_DIR,
+                                                 os.path.pardir,
+                                                 os.path.pardir,
+                                                 os.path.pardir))
 
 
 def add(parser, args):
@@ -76,6 +86,37 @@ def update(parser, args):
     project_map = ProjectMap()
     for project in project_map.projects:
         SATestUpdateDiffs.update_reference_results(project)
+
+
+def docker(parser, args):
+    if len(args.rest) > 0:
+        if args.rest[0] != "--":
+            parser.error("REST arguments should start with '--'")
+        args.rest = args.rest[1:]
+
+    if args.build_image:
+        docker_build_image()
+    else:
+        docker_run(args)
+
+
+def docker_build_image():
+    check_call("docker build --tag satest-image {}".format(SCRIPTS_DIR),
+               shell=True)
+
+
+def docker_run(args):
+    check_call("docker run --rm --name satest "
+               "-v {llvm}:/llvm-project "
+               "-v {build}:/build "
+               "-v {clang}:/analyzer "
+               "-v {scripts}:/scripts "
+               "-v {projects}:/projects "
+               "satest-image:latest {args}"
+               .format(llvm=args.llvm_project_dir, build=args.build_dir,
+                       clang=args.clang_dir, scripts=SCRIPTS_DIR,
+                       projects=PROJECTS_DIR, args=' '.join(args.rest)),
+               shell=True)
 
 
 def main():
@@ -179,6 +220,27 @@ def main():
         "run of SATest build. Assumes that SATest build was just run.")
     # TODO: add option to decide whether we should use git
     upd_parser.set_defaults(func=update)
+
+    # docker subcommand
+    dock_parser = subparsers.add_parser(
+        "docker",
+        help="Run regression system in the docker.")
+
+    dock_parser.add_argument("--build-image", action="store_true",
+                             help="Build docker image for running tests.")
+    dock_parser.add_argument("--llvm-project-dir", action="store",
+                             default=DEFAULT_LLVM_DIR,
+                             help="Path to LLVM source code. Defaults "
+                             "to the repo where this script is located. ")
+    dock_parser.add_argument("--build-dir", action="store", default="",
+                             help="Path to a directory where docker should "
+                             "build LLVM code.")
+    dock_parser.add_argument("--clang-dir", action="store", default="",
+                             help="Path to find/install LLVM installation.")
+    dock_parser.add_argument("rest", nargs=argparse.REMAINDER, default=[],
+                             help="Additionall args that will be forwarded "
+                             "to the docker's entrypoint.")
+    dock_parser.set_defaults(func=docker)
 
     args = parser.parse_args()
     args.func(parser, args)
