@@ -2,6 +2,7 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: echo '!19 = !{!"%/t/exit-block.ll", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
+; XFAIL: host-byteorder-big-endian
 
 ; By default, the exit block is the second.
 ; RUN: opt -insert-gcov-profiling -disable-output %t/2
