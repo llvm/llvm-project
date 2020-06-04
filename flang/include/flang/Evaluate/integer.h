@@ -805,7 +805,9 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-            for (int to{j + k}; xy != 0; ++to) {
+            // && to < (2 * parts) was added to avoid GCC < 8 build failure
+            // on -Werror=array-bounds
+            for (int to{ j + k }; xy != 0 && to < (2 * parts); ++to) {
               xy += product[to];
               product[to] = xy & partMask;
               xy >>= partBits;
