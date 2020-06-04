@@ -109,7 +109,11 @@ public:
 
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
-    return isRefCounted(llvm::dyn_cast_or_null<CXXRecordDecl>(RD));
+    auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
+    if (CXXRD)
+      return isRefCounted(CXXRD);
+
+    return false;
   }
 
   void reportBug(const FieldDecl *Member, const Type *MemberType,
