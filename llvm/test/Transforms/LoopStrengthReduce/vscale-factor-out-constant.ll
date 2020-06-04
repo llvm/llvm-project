@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-LABEL: test
 ; FIXME: Handle VectorType in SCEVExpander::expandAddToGEP.
 ; The generated IR is not ideal with base 'scalar_vector' cast to i8*, and do ugly getelementptr over casted base.
-; CHECK: uglygep
+; : uglygep
 define void @test(i32* %a, i32 %v, i64 %n) {
 entry:
   %scalar_vector = alloca <vscale x 4 x i32>, align 16
