@@ -197,7 +197,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
              "getTypeAllocSize(EVT(LocVT).getTypeForEVT(State.getContext())),"
              " ";
       if (Align)
-        O << Align;
+        O << "Align(" << Align << ")";
       else
         O << "\n" << IndentStr
           << "  State.getMachineFunction().getDataLayout()."
@@ -224,8 +224,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
       O << "\n" << IndentStr << "};\n";
 
       O << IndentStr << "unsigned Offset" << ++Counter
-        << " = State.AllocateStack("
-        << Size << ", " << Align << ", "
+        << " = State.AllocateStack(" << Size << ", Align(" << Align << "), "
         << "ShadowRegList" << ShadowRegListNumber << ");\n";
       O << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
         << Counter << ", LocVT, LocInfo));\n";
