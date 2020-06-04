@@ -1237,8 +1237,11 @@ SDValue DAGCombiner::PromoteIntBinOp(SDValue Op) {
     SDValue RV =
         DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getNode(Opc, DL, PVT, NN0, NN1));
 
-    // We are always replacing N0/N1's use in N and only need
-    // additional replacements if there are additional uses.
+    // We are always replacing N0/N1's use in N and only need additional
+    // replacements if there are additional uses.
+    // Note: We are checking uses of the *nodes* (SDNode) rather than values
+    //       (SDValue) here because the node may reference multiple values
+    //       (for example, the chain value of a load node).
     Replace0 &= !N0->hasOneUse();
     Replace1 &= (N0 != N1) && !N1->hasOneUse();
 
