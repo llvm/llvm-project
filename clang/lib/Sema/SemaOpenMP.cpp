@@ -6918,221 +6918,344 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
   return Res;
 }
 
-/// Build the expression to calculate the number of iterations.
-Expr *OpenMPIterationSpaceChecker::buildNumIterations(
-    Scope *S, ArrayRef<LoopIterationSpace> ResultIterSpaces, bool LimitedType,
-    llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
+/// Calculate number of iterations, transforming to unsigned, if number of
+/// iterations may be larger than the original type.
+static Expr *
+calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
+                  Expr *Lower, Expr *Upper, Expr *Step, QualType LCTy,
+                  bool TestIsStrictOp, bool RoundToStep,
+                  llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
+  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
+  if (!NewStep.isUsable())
+    return nullptr;
+  llvm::APSInt LRes, URes, SRes;
+  bool IsLowerConst = Lower->isIntegerConstantExpr(LRes, SemaRef.Context);
+  bool IsStepConst = Step->isIntegerConstantExpr(SRes, SemaRef.Context);
+  bool NoNeedToConvert = IsLowerConst && !RoundToStep &&
+                         ((!TestIsStrictOp && LRes.isNonNegative()) ||
+                          (TestIsStrictOp && LRes.isStrictlyPositive()));
+  bool NeedToReorganize = false;
+  // Check if any subexpressions in Lower -Step [+ 1] lead to overflow.
+  if (!NoNeedToConvert && IsLowerConst &&
+      (TestIsStrictOp || (RoundToStep && IsStepConst))) {
+    NoNeedToConvert = true;
+    if (RoundToStep) {
+      unsigned BW = LRes.getBitWidth() > SRes.getBitWidth()
+                        ? LRes.getBitWidth()
+                        : SRes.getBitWidth();
+      LRes = LRes.extend(BW + 1);
+      LRes.setIsSigned(true);
+      SRes = SRes.extend(BW + 1);
+      SRes.setIsSigned(true);
+      LRes -= SRes;
+      NoNeedToConvert = LRes.trunc(BW).extend(BW + 1) == LRes;
+      LRes = LRes.trunc(BW);
+    }
+    if (TestIsStrictOp) {
+      unsigned BW = LRes.getBitWidth();
+      LRes = LRes.extend(BW + 1);
+      LRes.setIsSigned(true);
+      ++LRes;
+      NoNeedToConvert =
+          NoNeedToConvert && LRes.trunc(BW).extend(BW + 1) == LRes;
+      // truncate to the original bitwidth.
+      LRes = LRes.trunc(BW);
+    }
+    NeedToReorganize = NoNeedToConvert;
+  }
+  bool IsUpperConst = Upper->isIntegerConstantExpr(URes, SemaRef.Context);
+  if (NoNeedToConvert && IsLowerConst && IsUpperConst &&
+      (!RoundToStep || IsStepConst)) {
+    unsigned BW = LRes.getBitWidth() > URes.getBitWidth() ? LRes.getBitWidth()
+                                                          : URes.getBitWidth();
+    LRes = LRes.extend(BW + 1);
+    LRes.setIsSigned(true);
+    URes = URes.extend(BW + 1);
+    URes.setIsSigned(true);
+    URes -= LRes;
+    NoNeedToConvert = URes.trunc(BW).extend(BW + 1) == URes;
+    NeedToReorganize = NoNeedToConvert;
+  }
+  // If the boundaries are not constant or (Lower - Step [+ 1]) is not constant
+  // or less than zero (Upper - (Lower - Step [+ 1]) may overflow) - promote to
+  // unsigned.
+  if ((!NoNeedToConvert || (LRes.isNegative() && !IsUpperConst)) &&
+      !LCTy->isDependentType() && LCTy->isIntegerType()) {
+    QualType LowerTy = Lower->getType();
+    QualType UpperTy = Upper->getType();
+    uint64_t LowerSize = SemaRef.Context.getTypeSize(LowerTy);
+    uint64_t UpperSize = SemaRef.Context.getTypeSize(UpperTy);
+    if ((LowerSize <= UpperSize && UpperTy->hasSignedIntegerRepresentation()) ||
+        (LowerSize > UpperSize && LowerTy->hasSignedIntegerRepresentation())) {
+      QualType CastType = SemaRef.Context.getIntTypeForBitwidth(
+          LowerSize > UpperSize ? LowerSize : UpperSize, /*Signed=*/0);
+      Upper =
+          SemaRef
+              .PerformImplicitConversion(
+                  SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Upper).get(),
+                  CastType, Sema::AA_Converting)
+              .get();
+      Lower = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Lower).get();
+      NewStep = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, NewStep.get());
+    }
+  }
+  if (!Lower || !Upper || NewStep.isInvalid())
+    return nullptr;
+
   ExprResult Diff;
-  QualType VarType = LCDecl->getType().getNonReferenceType();
-  if (VarType->isIntegerType() || VarType->isPointerType() ||
-      SemaRef.getLangOpts().CPlusPlus) {
-    Expr *LBVal = LB;
-    Expr *UBVal = UB;
-    // LB = TestIsLessOp.getValue() ? min(LB(MinVal), LB(MaxVal)) :
-    // max(LB(MinVal), LB(MaxVal))
-    if (InitDependOnLC) {
-      const LoopIterationSpace &IS =
-          ResultIterSpaces[ResultIterSpaces.size() - 1 -
-                           InitDependOnLC.getValueOr(
-                               CondDependOnLC.getValueOr(0))];
-      if (!IS.MinValue || !IS.MaxValue)
-        return nullptr;
-      // OuterVar = Min
-      ExprResult MinValue =
-          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
-      if (!MinValue.isUsable())
-        return nullptr;
+  // If need to reorganize, then calculate the form as Upper - (Lower - Step [+
+  // 1]).
+  if (NeedToReorganize) {
+    Diff = Lower;
 
-      ExprResult LBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
-                                               IS.CounterVar, MinValue.get());
-      if (!LBMinVal.isUsable())
+    if (RoundToStep) {
+      // Lower - Step
+      Diff =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Diff.get(), NewStep.get());
+      if (!Diff.isUsable())
         return nullptr;
-      // OuterVar = Min, LBVal
-      LBMinVal =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMinVal.get(), LBVal);
-      if (!LBMinVal.isUsable())
-        return nullptr;
-      // (OuterVar = Min, LBVal)
-      LBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMinVal.get());
-      if (!LBMinVal.isUsable())
-        return nullptr;
-
-      // OuterVar = Max
-      ExprResult MaxValue =
-          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
-      if (!MaxValue.isUsable())
-        return nullptr;
-
-      ExprResult LBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
-                                               IS.CounterVar, MaxValue.get());
-      if (!LBMaxVal.isUsable())
-        return nullptr;
-      // OuterVar = Max, LBVal
-      LBMaxVal =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMaxVal.get(), LBVal);
-      if (!LBMaxVal.isUsable())
-        return nullptr;
-      // (OuterVar = Max, LBVal)
-      LBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMaxVal.get());
-      if (!LBMaxVal.isUsable())
-        return nullptr;
-
-      Expr *LBMin = tryBuildCapture(SemaRef, LBMinVal.get(), Captures).get();
-      Expr *LBMax = tryBuildCapture(SemaRef, LBMaxVal.get(), Captures).get();
-      if (!LBMin || !LBMax)
-        return nullptr;
-      // LB(MinVal) < LB(MaxVal)
-      ExprResult MinLessMaxRes =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_LT, LBMin, LBMax);
-      if (!MinLessMaxRes.isUsable())
-        return nullptr;
-      Expr *MinLessMax =
-          tryBuildCapture(SemaRef, MinLessMaxRes.get(), Captures).get();
-      if (!MinLessMax)
-        return nullptr;
-      if (TestIsLessOp.getValue()) {
-        // LB(MinVal) < LB(MaxVal) ? LB(MinVal) : LB(MaxVal) - min(LB(MinVal),
-        // LB(MaxVal))
-        ExprResult MinLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
-                                                      MinLessMax, LBMin, LBMax);
-        if (!MinLB.isUsable())
-          return nullptr;
-        LBVal = MinLB.get();
-      } else {
-        // LB(MinVal) < LB(MaxVal) ? LB(MaxVal) : LB(MinVal) - max(LB(MinVal),
-        // LB(MaxVal))
-        ExprResult MaxLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
-                                                      MinLessMax, LBMax, LBMin);
-        if (!MaxLB.isUsable())
-          return nullptr;
-        LBVal = MaxLB.get();
-      }
     }
-    // UB = TestIsLessOp.getValue() ? max(UB(MinVal), UB(MaxVal)) :
-    // min(UB(MinVal), UB(MaxVal))
-    if (CondDependOnLC) {
-      const LoopIterationSpace &IS =
-          ResultIterSpaces[ResultIterSpaces.size() - 1 -
-                           InitDependOnLC.getValueOr(
-                               CondDependOnLC.getValueOr(0))];
-      if (!IS.MinValue || !IS.MaxValue)
-        return nullptr;
-      // OuterVar = Min
-      ExprResult MinValue =
-          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
-      if (!MinValue.isUsable())
-        return nullptr;
 
-      ExprResult UBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
-                                               IS.CounterVar, MinValue.get());
-      if (!UBMinVal.isUsable())
-        return nullptr;
-      // OuterVar = Min, UBVal
-      UBMinVal =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMinVal.get(), UBVal);
-      if (!UBMinVal.isUsable())
-        return nullptr;
-      // (OuterVar = Min, UBVal)
-      UBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMinVal.get());
-      if (!UBMinVal.isUsable())
-        return nullptr;
-
-      // OuterVar = Max
-      ExprResult MaxValue =
-          SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
-      if (!MaxValue.isUsable())
-        return nullptr;
-
-      ExprResult UBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
-                                               IS.CounterVar, MaxValue.get());
-      if (!UBMaxVal.isUsable())
-        return nullptr;
-      // OuterVar = Max, UBVal
-      UBMaxVal =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMaxVal.get(), UBVal);
-      if (!UBMaxVal.isUsable())
-        return nullptr;
-      // (OuterVar = Max, UBVal)
-      UBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMaxVal.get());
-      if (!UBMaxVal.isUsable())
-        return nullptr;
-
-      Expr *UBMin = tryBuildCapture(SemaRef, UBMinVal.get(), Captures).get();
-      Expr *UBMax = tryBuildCapture(SemaRef, UBMaxVal.get(), Captures).get();
-      if (!UBMin || !UBMax)
-        return nullptr;
-      // UB(MinVal) > UB(MaxVal)
-      ExprResult MinGreaterMaxRes =
-          SemaRef.BuildBinOp(S, DefaultLoc, BO_GT, UBMin, UBMax);
-      if (!MinGreaterMaxRes.isUsable())
-        return nullptr;
-      Expr *MinGreaterMax =
-          tryBuildCapture(SemaRef, MinGreaterMaxRes.get(), Captures).get();
-      if (!MinGreaterMax)
-        return nullptr;
-      if (TestIsLessOp.getValue()) {
-        // UB(MinVal) > UB(MaxVal) ? UB(MinVal) : UB(MaxVal) - max(UB(MinVal),
-        // UB(MaxVal))
-        ExprResult MaxUB = SemaRef.ActOnConditionalOp(
-            DefaultLoc, DefaultLoc, MinGreaterMax, UBMin, UBMax);
-        if (!MaxUB.isUsable())
-          return nullptr;
-        UBVal = MaxUB.get();
-      } else {
-        // UB(MinVal) > UB(MaxVal) ? UB(MaxVal) : UB(MinVal) - min(UB(MinVal),
-        // UB(MaxVal))
-        ExprResult MinUB = SemaRef.ActOnConditionalOp(
-            DefaultLoc, DefaultLoc, MinGreaterMax, UBMax, UBMin);
-        if (!MinUB.isUsable())
-          return nullptr;
-        UBVal = MinUB.get();
-      }
-    }
-    // Upper - Lower
-    Expr *UBExpr = TestIsLessOp.getValue() ? UBVal : LBVal;
-    Expr *LBExpr = TestIsLessOp.getValue() ? LBVal : UBVal;
-    Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures).get();
-    Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures).get();
-    if (!Upper || !Lower)
+    // Lower - Step [+ 1]
+    if (TestIsStrictOp)
+      Diff = SemaRef.BuildBinOp(
+          S, DefaultLoc, BO_Add, Diff.get(),
+          SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
+    if (!Diff.isUsable())
       return nullptr;
 
+    Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
+    if (!Diff.isUsable())
+      return nullptr;
+
+    // Upper - (Lower - Step [+ 1]).
+    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Diff.get());
+    if (!Diff.isUsable())
+      return nullptr;
+  } else {
     Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
 
-    if (!Diff.isUsable() && VarType->getAsCXXRecordDecl()) {
+    if (!Diff.isUsable() && LCTy->getAsCXXRecordDecl()) {
       // BuildBinOp already emitted error, this one is to point user to upper
       // and lower bound, and to tell what is passed to 'operator-'.
       SemaRef.Diag(Upper->getBeginLoc(), diag::err_omp_loop_diff_cxx)
           << Upper->getSourceRange() << Lower->getSourceRange();
       return nullptr;
     }
+
+    if (!Diff.isUsable())
+      return nullptr;
+
+    // Upper - Lower [- 1]
+    if (TestIsStrictOp)
+      Diff = SemaRef.BuildBinOp(
+          S, DefaultLoc, BO_Sub, Diff.get(),
+          SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
+    if (!Diff.isUsable())
+      return nullptr;
+
+    if (RoundToStep) {
+      // Upper - Lower [- 1] + Step
+      Diff =
+          SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(), NewStep.get());
+      if (!Diff.isUsable())
+        return nullptr;
+    }
   }
-
-  if (!Diff.isUsable())
-    return nullptr;
-
-  // Upper - Lower [- 1]
-  if (TestIsStrictOp)
-    Diff = SemaRef.BuildBinOp(
-        S, DefaultLoc, BO_Sub, Diff.get(),
-        SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
-  if (!Diff.isUsable())
-    return nullptr;
-
-  // Upper - Lower [- 1] + Step
-  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
-  if (!NewStep.isUsable())
-    return nullptr;
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(), NewStep.get());
-  if (!Diff.isUsable())
-    return nullptr;
 
   // Parentheses (for dumping/debugging purposes only).
   Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
   if (!Diff.isUsable())
     return nullptr;
 
-  // (Upper - Lower [- 1] + Step) / Step
+  // (Upper - Lower [- 1] + Step) / Step or (Upper - Lower) / Step
   Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
+  if (!Diff.isUsable())
+    return nullptr;
+
+  return Diff.get();
+}
+
+/// Build the expression to calculate the number of iterations.
+Expr *OpenMPIterationSpaceChecker::buildNumIterations(
+    Scope *S, ArrayRef<LoopIterationSpace> ResultIterSpaces, bool LimitedType,
+    llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) const {
+  QualType VarType = LCDecl->getType().getNonReferenceType();
+  if (!VarType->isIntegerType() && !VarType->isPointerType() &&
+      !SemaRef.getLangOpts().CPlusPlus)
+    return nullptr;
+  Expr *LBVal = LB;
+  Expr *UBVal = UB;
+  // LB = TestIsLessOp.getValue() ? min(LB(MinVal), LB(MaxVal)) :
+  // max(LB(MinVal), LB(MaxVal))
+  if (InitDependOnLC) {
+    const LoopIterationSpace &IS =
+        ResultIterSpaces[ResultIterSpaces.size() - 1 -
+                         InitDependOnLC.getValueOr(
+                             CondDependOnLC.getValueOr(0))];
+    if (!IS.MinValue || !IS.MaxValue)
+      return nullptr;
+    // OuterVar = Min
+    ExprResult MinValue =
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
+    if (!MinValue.isUsable())
+      return nullptr;
+
+    ExprResult LBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                             IS.CounterVar, MinValue.get());
+    if (!LBMinVal.isUsable())
+      return nullptr;
+    // OuterVar = Min, LBVal
+    LBMinVal =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMinVal.get(), LBVal);
+    if (!LBMinVal.isUsable())
+      return nullptr;
+    // (OuterVar = Min, LBVal)
+    LBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMinVal.get());
+    if (!LBMinVal.isUsable())
+      return nullptr;
+
+    // OuterVar = Max
+    ExprResult MaxValue =
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
+    if (!MaxValue.isUsable())
+      return nullptr;
+
+    ExprResult LBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                             IS.CounterVar, MaxValue.get());
+    if (!LBMaxVal.isUsable())
+      return nullptr;
+    // OuterVar = Max, LBVal
+    LBMaxVal =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, LBMaxVal.get(), LBVal);
+    if (!LBMaxVal.isUsable())
+      return nullptr;
+    // (OuterVar = Max, LBVal)
+    LBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, LBMaxVal.get());
+    if (!LBMaxVal.isUsable())
+      return nullptr;
+
+    Expr *LBMin = tryBuildCapture(SemaRef, LBMinVal.get(), Captures).get();
+    Expr *LBMax = tryBuildCapture(SemaRef, LBMaxVal.get(), Captures).get();
+    if (!LBMin || !LBMax)
+      return nullptr;
+    // LB(MinVal) < LB(MaxVal)
+    ExprResult MinLessMaxRes =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_LT, LBMin, LBMax);
+    if (!MinLessMaxRes.isUsable())
+      return nullptr;
+    Expr *MinLessMax =
+        tryBuildCapture(SemaRef, MinLessMaxRes.get(), Captures).get();
+    if (!MinLessMax)
+      return nullptr;
+    if (TestIsLessOp.getValue()) {
+      // LB(MinVal) < LB(MaxVal) ? LB(MinVal) : LB(MaxVal) - min(LB(MinVal),
+      // LB(MaxVal))
+      ExprResult MinLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
+                                                    MinLessMax, LBMin, LBMax);
+      if (!MinLB.isUsable())
+        return nullptr;
+      LBVal = MinLB.get();
+    } else {
+      // LB(MinVal) < LB(MaxVal) ? LB(MaxVal) : LB(MinVal) - max(LB(MinVal),
+      // LB(MaxVal))
+      ExprResult MaxLB = SemaRef.ActOnConditionalOp(DefaultLoc, DefaultLoc,
+                                                    MinLessMax, LBMax, LBMin);
+      if (!MaxLB.isUsable())
+        return nullptr;
+      LBVal = MaxLB.get();
+    }
+  }
+  // UB = TestIsLessOp.getValue() ? max(UB(MinVal), UB(MaxVal)) :
+  // min(UB(MinVal), UB(MaxVal))
+  if (CondDependOnLC) {
+    const LoopIterationSpace &IS =
+        ResultIterSpaces[ResultIterSpaces.size() - 1 -
+                         InitDependOnLC.getValueOr(
+                             CondDependOnLC.getValueOr(0))];
+    if (!IS.MinValue || !IS.MaxValue)
+      return nullptr;
+    // OuterVar = Min
+    ExprResult MinValue =
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MinValue);
+    if (!MinValue.isUsable())
+      return nullptr;
+
+    ExprResult UBMinVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                             IS.CounterVar, MinValue.get());
+    if (!UBMinVal.isUsable())
+      return nullptr;
+    // OuterVar = Min, UBVal
+    UBMinVal =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMinVal.get(), UBVal);
+    if (!UBMinVal.isUsable())
+      return nullptr;
+    // (OuterVar = Min, UBVal)
+    UBMinVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMinVal.get());
+    if (!UBMinVal.isUsable())
+      return nullptr;
+
+    // OuterVar = Max
+    ExprResult MaxValue =
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, IS.MaxValue);
+    if (!MaxValue.isUsable())
+      return nullptr;
+
+    ExprResult UBMaxVal = SemaRef.BuildBinOp(S, DefaultLoc, BO_Assign,
+                                             IS.CounterVar, MaxValue.get());
+    if (!UBMaxVal.isUsable())
+      return nullptr;
+    // OuterVar = Max, UBVal
+    UBMaxVal =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_Comma, UBMaxVal.get(), UBVal);
+    if (!UBMaxVal.isUsable())
+      return nullptr;
+    // (OuterVar = Max, UBVal)
+    UBMaxVal = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, UBMaxVal.get());
+    if (!UBMaxVal.isUsable())
+      return nullptr;
+
+    Expr *UBMin = tryBuildCapture(SemaRef, UBMinVal.get(), Captures).get();
+    Expr *UBMax = tryBuildCapture(SemaRef, UBMaxVal.get(), Captures).get();
+    if (!UBMin || !UBMax)
+      return nullptr;
+    // UB(MinVal) > UB(MaxVal)
+    ExprResult MinGreaterMaxRes =
+        SemaRef.BuildBinOp(S, DefaultLoc, BO_GT, UBMin, UBMax);
+    if (!MinGreaterMaxRes.isUsable())
+      return nullptr;
+    Expr *MinGreaterMax =
+        tryBuildCapture(SemaRef, MinGreaterMaxRes.get(), Captures).get();
+    if (!MinGreaterMax)
+      return nullptr;
+    if (TestIsLessOp.getValue()) {
+      // UB(MinVal) > UB(MaxVal) ? UB(MinVal) : UB(MaxVal) - max(UB(MinVal),
+      // UB(MaxVal))
+      ExprResult MaxUB = SemaRef.ActOnConditionalOp(
+          DefaultLoc, DefaultLoc, MinGreaterMax, UBMin, UBMax);
+      if (!MaxUB.isUsable())
+        return nullptr;
+      UBVal = MaxUB.get();
+    } else {
+      // UB(MinVal) > UB(MaxVal) ? UB(MaxVal) : UB(MinVal) - min(UB(MinVal),
+      // UB(MaxVal))
+      ExprResult MinUB = SemaRef.ActOnConditionalOp(
+          DefaultLoc, DefaultLoc, MinGreaterMax, UBMax, UBMin);
+      if (!MinUB.isUsable())
+        return nullptr;
+      UBVal = MinUB.get();
+    }
+  }
+  Expr *UBExpr = TestIsLessOp.getValue() ? UBVal : LBVal;
+  Expr *LBExpr = TestIsLessOp.getValue() ? LBVal : UBVal;
+  Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures).get();
+  Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures).get();
+  if (!Upper || !Lower)
+    return nullptr;
+
+  ExprResult Diff =
+      calculateNumIters(SemaRef, S, DefaultLoc, Lower, Upper, Step, VarType,
+                        TestIsStrictOp, /*RoundToStep=*/true, Captures);
   if (!Diff.isUsable())
     return nullptr;
 
@@ -7206,33 +7329,11 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
     MaxExpr = Upper;
 
   // Build minimum/maximum value based on number of iterations.
-  ExprResult Diff;
   QualType VarType = LCDecl->getType().getNonReferenceType();
 
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
-  if (!Diff.isUsable())
-    return std::make_pair(nullptr, nullptr);
-
-  // Upper - Lower [- 1]
-  if (TestIsStrictOp)
-    Diff = SemaRef.BuildBinOp(
-        S, DefaultLoc, BO_Sub, Diff.get(),
-        SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
-  if (!Diff.isUsable())
-    return std::make_pair(nullptr, nullptr);
-
-  // Upper - Lower [- 1] + Step
-  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
-  if (!NewStep.isUsable())
-    return std::make_pair(nullptr, nullptr);
-
-  // Parentheses (for dumping/debugging purposes only).
-  Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
-  if (!Diff.isUsable())
-    return std::make_pair(nullptr, nullptr);
-
-  // (Upper - Lower [- 1]) / Step
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
+  ExprResult Diff =
+      calculateNumIters(SemaRef, S, DefaultLoc, Lower, Upper, Step, VarType,
+                        TestIsStrictOp, /*RoundToStep=*/false, Captures);
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
@@ -7242,23 +7343,10 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Mul, Diff.get(), NewStep.get());
-  if (!Diff.isUsable())
+  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
+  if (!NewStep.isUsable())
     return std::make_pair(nullptr, nullptr);
-
-  // Convert to the original type or ptrdiff_t, if original type is pointer.
-  if (!VarType->isAnyPointerType() &&
-      !SemaRef.Context.hasSameType(Diff.get()->getType(), VarType)) {
-    Diff = SemaRef.PerformImplicitConversion(
-        Diff.get(), VarType, Sema::AA_Converting, /*AllowExplicit=*/true);
-  } else if (VarType->isAnyPointerType() &&
-             !SemaRef.Context.hasSameType(
-                 Diff.get()->getType(),
-                 SemaRef.Context.getUnsignedPointerDiffType())) {
-    Diff = SemaRef.PerformImplicitConversion(
-        Diff.get(), SemaRef.Context.getUnsignedPointerDiffType(),
-        Sema::AA_Converting, /*AllowExplicit=*/true);
-  }
+  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Mul, Diff.get(), NewStep.get());
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
@@ -7267,27 +7355,54 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
   if (!Diff.isUsable())
     return std::make_pair(nullptr, nullptr);
 
+  // Convert to the ptrdiff_t, if original type is pointer.
+  if (VarType->isAnyPointerType() &&
+      !SemaRef.Context.hasSameType(
+          Diff.get()->getType(),
+          SemaRef.Context.getUnsignedPointerDiffType())) {
+    Diff = SemaRef.PerformImplicitConversion(
+        Diff.get(), SemaRef.Context.getUnsignedPointerDiffType(),
+        Sema::AA_Converting, /*AllowExplicit=*/true);
+  }
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
   if (TestIsLessOp.getValue()) {
     // MinExpr = Lower;
     // MaxExpr = Lower + (((Upper - Lower [- 1]) / Step) * Step)
-    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Lower, Diff.get());
+    Diff = SemaRef.BuildBinOp(
+        S, DefaultLoc, BO_Add,
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Lower).get(),
+        Diff.get());
     if (!Diff.isUsable())
       return std::make_pair(nullptr, nullptr);
-    Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue*/ false);
-    if (!Diff.isUsable())
-      return std::make_pair(nullptr, nullptr);
-    MaxExpr = Diff.get();
   } else {
     // MaxExpr = Upper;
     // MinExpr = Upper - (((Upper - Lower [- 1]) / Step) * Step)
-    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Diff.get());
+    Diff = SemaRef.BuildBinOp(
+        S, DefaultLoc, BO_Sub,
+        SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Upper).get(),
+        Diff.get());
     if (!Diff.isUsable())
       return std::make_pair(nullptr, nullptr);
-    Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue*/ false);
-    if (!Diff.isUsable())
-      return std::make_pair(nullptr, nullptr);
-    MinExpr = Diff.get();
   }
+
+  // Convert to the original type.
+  if (SemaRef.Context.hasSameType(Diff.get()->getType(), VarType))
+    Diff = SemaRef.PerformImplicitConversion(Diff.get(), VarType,
+                                             Sema::AA_Converting,
+                                             /*AllowExplicit=*/true);
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  Diff = SemaRef.ActOnFinishFullExpr(Diff.get(), /*DiscardedValue=*/false);
+  if (!Diff.isUsable())
+    return std::make_pair(nullptr, nullptr);
+
+  if (TestIsLessOp.getValue())
+    MaxExpr = Diff.get();
+  else
+    MinExpr = Diff.get();
 
   return std::make_pair(MinExpr, MaxExpr);
 }
@@ -7394,44 +7509,23 @@ Expr *OpenMPIterationSpaceChecker::buildOrderedLoopData(
     if (!Cnt)
       return nullptr;
   }
-  ExprResult Diff;
   QualType VarType = LCDecl->getType().getNonReferenceType();
-  if (VarType->isIntegerType() || VarType->isPointerType() ||
-      SemaRef.getLangOpts().CPlusPlus) {
-    // Upper - Lower
-    Expr *Upper = TestIsLessOp.getValue()
-                      ? Cnt
-                      : tryBuildCapture(SemaRef, LB, Captures).get();
-    Expr *Lower = TestIsLessOp.getValue()
-                      ? tryBuildCapture(SemaRef, LB, Captures).get()
-                      : Cnt;
-    if (!Upper || !Lower)
-      return nullptr;
-
-    Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Sub, Upper, Lower);
-
-    if (!Diff.isUsable() && VarType->getAsCXXRecordDecl()) {
-      // BuildBinOp already emitted error, this one is to point user to upper
-      // and lower bound, and to tell what is passed to 'operator-'.
-      SemaRef.Diag(Upper->getBeginLoc(), diag::err_omp_loop_diff_cxx)
-          << Upper->getSourceRange() << Lower->getSourceRange();
-      return nullptr;
-    }
-  }
-
-  if (!Diff.isUsable())
+  if (!VarType->isIntegerType() && !VarType->isPointerType() &&
+      !SemaRef.getLangOpts().CPlusPlus)
+    return nullptr;
+  // Upper - Lower
+  Expr *Upper = TestIsLessOp.getValue()
+                    ? Cnt
+                    : tryBuildCapture(SemaRef, LB, Captures).get();
+  Expr *Lower = TestIsLessOp.getValue()
+                    ? tryBuildCapture(SemaRef, LB, Captures).get()
+                    : Cnt;
+  if (!Upper || !Lower)
     return nullptr;
 
-  // Parentheses (for dumping/debugging purposes only).
-  Diff = SemaRef.ActOnParenExpr(DefaultLoc, DefaultLoc, Diff.get());
-  if (!Diff.isUsable())
-    return nullptr;
-
-  ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
-  if (!NewStep.isUsable())
-    return nullptr;
-  // (Upper - Lower) / Step
-  Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
+  ExprResult Diff = calculateNumIters(SemaRef, S, DefaultLoc, Lower, Upper,
+                                      Step, VarType, /*TestIsStrictOp=*/false,
+                                      /*RoundToStep=*/false, Captures);
   if (!Diff.isUsable())
     return nullptr;
 
