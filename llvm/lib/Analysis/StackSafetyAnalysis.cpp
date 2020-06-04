@@ -37,8 +37,11 @@ STATISTIC(NumAllocaTotal, "Number of total allocas");
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
 
-static cl::opt<int> StackSafetyPrint("stack-safety-print", cl::init(0),
-                                     cl::Hidden);
+static cl::opt<bool> StackSafetyPrint("stack-safety-print", cl::init(false),
+                                      cl::Hidden);
+
+static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
+                                    cl::Hidden);
 
 namespace {
 
@@ -667,7 +670,7 @@ StackSafetyGlobalInfo::StackSafetyGlobalInfo() = default;
 StackSafetyGlobalInfo::StackSafetyGlobalInfo(
     Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI)
     : M(M), GetSSI(GetSSI) {
-  if (StackSafetyPrint > 1)
+  if (StackSafetyRun)
     getInfo();
 }
 
