@@ -608,6 +608,15 @@ public:
     return true;
   }
 
+  bool WalkUpFromIntegerLiteral(IntegerLiteral *S) {
+    Builder.markChildToken(
+        S->getLocation(),
+        syntax::NodeRole::IntegerLiteralExpression_literalToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::IntegerLiteralExpression, S);
+    return true;
+  }
+
   bool WalkUpFromCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *S) {
     Builder.markChildToken(S->getLocation(),
                            syntax::NodeRole::CxxNullPtrExpression_keyword);
