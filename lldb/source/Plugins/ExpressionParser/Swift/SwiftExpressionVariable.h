@@ -113,7 +113,9 @@ public:
   //----------------------------------------------------------------------
   /// Members
   //----------------------------------------------------------------------
-  DISALLOW_COPY_AND_ASSIGN(SwiftExpressionVariable);
+  SwiftExpressionVariable(const SwiftExpressionVariable &) = delete;
+  const SwiftExpressionVariable &
+  operator=(const SwiftExpressionVariable &) = delete;
 };
 
 } // namespace lldb_private

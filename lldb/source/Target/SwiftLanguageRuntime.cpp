@@ -303,7 +303,9 @@ public:
                : false;
   }
 
-  DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntimeStub);
+  SwiftLanguageRuntimeStub(const SwiftLanguageRuntimeStub &) = delete;
+  const SwiftLanguageRuntimeStub &
+  operator=(const SwiftLanguageRuntimeStub &) = delete;
 };
 
 static bool HasReflectionInfo(ObjectFile *obj_file) {

@@ -79,7 +79,9 @@ struct SwiftOptionalSummaryProvider : public TypeSummaryImpl {
   virtual bool DoesPrintValue(ValueObject *valobj) const;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(SwiftOptionalSummaryProvider);
+  SwiftOptionalSummaryProvider(const SwiftOptionalSummaryProvider &) = delete;
+  const SwiftOptionalSummaryProvider &
+  operator=(const SwiftOptionalSummaryProvider &) = delete;
 };
 
 bool SwiftOptional_SummaryProvider(ValueObject &valobj, Stream &stream);

@@ -345,7 +345,8 @@ public:
 
   bool IsABIStable();
 
-  DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
+  SwiftLanguageRuntime(const SwiftLanguageRuntime &) = delete;
+  const SwiftLanguageRuntime &operator=(const SwiftLanguageRuntime &) = delete;
 
   static AppleObjCRuntimeV2 *GetObjCRuntime(lldb_private::Process &process);
 protected:
