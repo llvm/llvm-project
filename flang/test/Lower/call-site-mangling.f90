@@ -2,9 +2,9 @@
 
 subroutine sub()
   real :: x
-  ! CHECK-LABEL: fir.call @_QPasubroutine()
+  ! CHECK: fir.call @_QPasubroutine()
   call AsUbRoUtInE();
-  ! CHECK-LABEL: fir.call @_QPfoo()
+  ! CHECK: fir.call @_QPfoo()
   x = foo()
 end subroutine
 
@@ -20,18 +20,18 @@ end module
 subroutine sub1()
   use testMod
   real :: x
-  ! CHECK-LABEL: fir.call @_QMtestmodPsub()
+  ! CHECK: fir.call @_QMtestmodPsub()
   call Sub();
-  ! CHECK-LABEL: fir.call @_QMtestmodPfoo()
+  ! CHECK: fir.call @_QMtestmodPfoo()
   x = foo()
 end subroutine
 
 subroutine sub2()
   use testMod, localfoo => foo, localsub => sub
   real :: x
-  ! CHECK-LABEL: fir.call @_QMtestmodPsub()
+  ! CHECK: fir.call @_QMtestmodPsub()
   call localsub();
-  ! CHECK-LABEL: fir.call @_QMtestmodPfoo()
+  ! CHECK: fir.call @_QMtestmodPfoo()
   x = localfoo()
 end subroutine
 
@@ -39,9 +39,9 @@ end subroutine
 
 subroutine sub3()
   real :: x
-  ! CHECK-LABEL: fir.call @_QFsub3Psub()
+  ! CHECK: fir.call @_QFsub3Psub()
   call sub();
-  ! CHECK-LABEL: fir.call @_QFsub3Pfoo()
+  ! CHECK: fir.call @_QFsub3Pfoo()
   x = foo()
 contains
   subroutine sub()
@@ -50,3 +50,30 @@ contains
   function foo()
   end function
 end subroutine
+
+function foo1()
+  real :: bar1
+  ! CHECK: fir.call @_QPbar1()
+  foo1 = bar1()
+end function
+
+function foo2()
+  ! CHECK: fir.call @_QPbar2()
+  foo2 = bar2()
+end function
+
+function foo3()
+  interface
+  real function bar3()
+  end function
+  end interface
+  ! CHECK: fir.call @_QPbar3()
+  foo3 = bar3()
+end function
+
+function foo4()
+  external :: bar4
+  ! CHECK: fir.call @_QPbar4()
+  foo4 = bar4()
+end function
+

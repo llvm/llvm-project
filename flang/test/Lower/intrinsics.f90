@@ -36,12 +36,54 @@ subroutine aimag_test(a, b)
   b = aimag(a)
 end subroutine
 
+! AINT
+! CHECK-LABEL: aint_test
+subroutine aint_test(a, b)
+  real :: a, b
+  ! CHECK: call @llvm.trunc.f32
+  b = aint(a)
+end subroutine
+
+! ANINT
+! CHECK-LABEL: anint_test
+subroutine anint_test(a, b)
+  real :: a, b
+  ! CHECK: call @llvm.round.f32
+  b = anint(a)
+end subroutine
+
 ! DBLE
 ! CHECK-LABEL: dble_test
 subroutine dble_test(a)
   real :: a
   ! CHECK: fir.convert {{.*}} : (f32) -> f64
   print *, dble(a)
+end subroutine
+
+! DIM
+! CHECK-LABEL: dim_testr
+subroutine dim_testr(x, y, z)
+  real :: x, y, z
+  ! CHECK-DAG: %[[x:.*]] = fir.load %arg0
+  ! CHECK-DAG: %[[y:.*]] = fir.load %arg1
+  ! CHECK-DAG: %[[zero:.*]] = constant 0.0
+  ! CHECK-DAG: %[[diff:.*]] = fir.subf %[[x]], %[[y]]
+  ! CHECK: %[[cmp:.*]] = fir.cmpf "ogt", %[[diff]], %[[zero]]
+  ! CHECK: %[[res:.*]] = select %[[cmp]], %[[diff]], %[[zero]]
+  ! CHECK: fir.store %[[res]] to %arg2
+  z = dim(x, y)
+end subroutine
+! CHECK-LABEL: dim_testi
+subroutine dim_testi(i, j, k)
+  integer :: i, j, k
+  ! CHECK-DAG: %[[i:.*]] = fir.load %arg0
+  ! CHECK-DAG: %[[j:.*]] = fir.load %arg1
+  ! CHECK-DAG: %[[zero:.*]] = constant 0
+  ! CHECK-DAG: %[[diff:.*]] = subi %[[i]], %[[j]]
+  ! CHECK: %[[cmp:.*]] = cmpi "sgt", %[[diff]], %[[zero]]
+  ! CHECK: %[[res:.*]] = select %[[cmp]], %[[diff]], %[[zero]]
+  ! CHECK: fir.store %[[res]] to %arg2
+  k = dim(i, j)
 end subroutine
 
 ! CEILING

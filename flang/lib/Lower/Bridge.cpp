@@ -1805,6 +1805,11 @@ private:
   }
 
   void instantiateVar(const Fortran::lower::pft::Variable &var) {
+    if (Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
+      mlir::emitError(toLocation(),
+                      "Common blocks not yet handled in lowering");
+      exit(1);
+    }
     if (var.isGlobal())
       instantiateGlobal(var);
     else

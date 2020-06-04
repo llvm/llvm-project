@@ -36,16 +36,11 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
 
 mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
   const auto &proc = procRef.proc();
-  if (const auto *symbol = proc.GetSymbol()) {
-    // FIXME: If the callee is defined in the same file but after the current
-    // unit we do cannot get its location here and the funcOp is created at the
-    // wrong location (i.e, the caller location).
-    if (const auto *details =
-            symbol->detailsIf<Fortran::semantics::ProcEntityDetails>())
-      if (const auto *interfaceSymbol = details->interface().symbol())
-        symbol = interfaceSymbol;
+  // FIXME: If the callee is defined in the same file but after the current
+  // unit we do cannot get its location here and the funcOp is created at the
+  // wrong location (i.e, the caller location).
+  if (const auto *symbol = proc.GetSymbol())
     return converter.genLocation(symbol->name());
-  }
   // Unknown location for intrinsics.
   return converter.genLocation();
 }
