@@ -8,12 +8,13 @@ during an expression is not changed by running the expression
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class TestStopReasonAfterExpression(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows
     def test_thread_state_after_expr(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.cpp")
