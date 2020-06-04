@@ -139,7 +139,11 @@ def buildDsym(
                     ["MAKE_DSYM=YES",
                      getArchSpec(architecture),
                      getCCSpec(compiler),
-                     "all", getCmdLine(dictionary)])
+                     getDsymutilSpec(),
+                     getSDKRootSpec(),
+                     getModuleCacheSpec(),
+                     "all",
+                     getCmdLine(dictionary)])
 
     triple = construct_triple(
         configuration.lldb_platform_name,
