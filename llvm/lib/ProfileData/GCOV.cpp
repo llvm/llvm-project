@@ -823,7 +823,7 @@ void FileInfo::printFileCoverage(raw_ostream &OS) const {
     OS << "File '" << Coverage.Name << "'\n";
     printCoverage(OS, Coverage);
     if (!Options.NoOutput)
-      OS << Coverage.Name << ":creating '" << Filename << "'\n";
+      OS << "Creating '" << Filename << "'\n";
     OS << "\n";
   }
 }
