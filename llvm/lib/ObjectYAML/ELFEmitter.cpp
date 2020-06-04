@@ -128,6 +128,8 @@ template <class ELFT> class ELFState {
   NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
+  StringSet<> ExcludedSectionHeaders;
+
   uint64_t LocationCounter = 0;
   bool HasError = false;
   yaml::ErrorHandler ErrHandler;
@@ -229,6 +231,8 @@ template <class ELFT> class ELFState {
   BumpPtrAllocator StringAlloc;
   uint64_t alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
                          llvm::Optional<llvm::yaml::Hex64> Offset);
+
+  uint64_t getSectionNameOffset(StringRef Name);
 
 public:
   static bool writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
@@ -350,7 +354,8 @@ void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream 
 
   if (Doc.Header.SHStrNdx)
     Header.e_shstrndx = *Doc.Header.SHStrNdx;
-  else if (!Doc.SectionHeaders || !Doc.SectionHeaders->Sections.empty())
+  else if ((!Doc.SectionHeaders || !Doc.SectionHeaders->Sections.empty()) &&
+           !ExcludedSectionHeaders.count(".shstrtab"))
     Header.e_shstrndx = SN2I.get(".shstrtab");
   else
     Header.e_shstrndx = 0;
@@ -397,18 +402,32 @@ void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
 template <class ELFT>
 unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
                                         StringRef LocSym) {
+  assert(LocSec.empty() || LocSym.empty());
+
   unsigned Index;
-  if (SN2I.lookup(S, Index) || to_integer(S, Index))
+  if (!SN2I.lookup(S, Index) && !to_integer(S, Index)) {
+    if (!LocSym.empty())
+      reportError("unknown section referenced: '" + S + "' by YAML symbol '" +
+                  LocSym + "'");
+    else
+      reportError("unknown section referenced: '" + S + "' by YAML section '" +
+                  LocSec + "'");
+    return 0;
+  }
+
+  if (!Doc.SectionHeaders || !Doc.SectionHeaders->Excluded)
     return Index;
 
-  assert(LocSec.empty() || LocSym.empty());
-  if (!LocSym.empty())
-    reportError("unknown section referenced: '" + S + "' by YAML symbol '" +
-                LocSym + "'");
-  else
-    reportError("unknown section referenced: '" + S + "' by YAML section '" +
-                LocSec + "'");
-  return 0;
+  assert(!Doc.SectionHeaders->Sections.empty());
+  if (Index >= Doc.SectionHeaders->Sections.size()) {
+    if (LocSym.empty())
+      reportError("unable to link '" + LocSec + "' to excluded section '" + S +
+                  "'");
+    else
+      reportError("excluded section referenced: '" + S + "'  by symbol '" +
+                  LocSym + "'");
+  }
+  return Index;
 }
 
 template <class ELFT>
@@ -499,6 +518,15 @@ StringRef llvm::ELFYAML::dropUniqueSuffix(StringRef S) {
 }
 
 template <class ELFT>
+uint64_t ELFState<ELFT>::getSectionNameOffset(StringRef Name) {
+  // If a section is excluded from section headers, we do not save its name in
+  // the string table.
+  if (ExcludedSectionHeaders.count(Name))
+    return 0;
+  return DotShStrtab.getOffset(Name);
+}
+
+template <class ELFT>
 void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                                         ContiguousBlobAccumulator &CBA) {
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
@@ -531,7 +559,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                   "implicit sections should already have been handled above.");
 
     SHeader.sh_name =
-        DotShStrtab.getOffset(ELFYAML::dropUniqueSuffix(Sec->Name));
+        getSectionNameOffset(ELFYAML::dropUniqueSuffix(Sec->Name));
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
@@ -716,7 +744,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   }
 
   zero(SHeader);
-  SHeader.sh_name = DotShStrtab.getOffset(IsStatic ? ".symtab" : ".dynsym");
+  SHeader.sh_name = getSectionNameOffset(IsStatic ? ".symtab" : ".dynsym");
 
   if (YAMLSec)
     SHeader.sh_type = YAMLSec->Type;
@@ -733,10 +761,13 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
     // added implicitly and we should be able to leave the Link zeroed if
     // .dynstr is not defined.
     unsigned Link = 0;
-    if (IsStatic)
-      Link = SN2I.get(".strtab");
-    else
-      SN2I.lookup(".dynstr", Link);
+    if (IsStatic) {
+      if (!ExcludedSectionHeaders.count(".strtab"))
+        Link = SN2I.get(".strtab");
+    } else {
+      if (!ExcludedSectionHeaders.count(".dynstr"))
+        SN2I.lookup(".dynstr", Link);
+    }
     SHeader.sh_link = Link;
   }
 
@@ -777,7 +808,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
                                              ContiguousBlobAccumulator &CBA,
                                              ELFYAML::Section *YAMLSec) {
   zero(SHeader);
-  SHeader.sh_name = DotShStrtab.getOffset(Name);
+  SHeader.sh_name = getSectionNameOffset(Name);
   SHeader.sh_type = YAMLSec ? YAMLSec->Type : ELF::SHT_STRTAB;
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 1;
 
@@ -832,7 +863,7 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
                                             ContiguousBlobAccumulator &CBA,
                                             ELFYAML::Section *YAMLSec) {
   zero(SHeader);
-  SHeader.sh_name = DotShStrtab.getOffset(ELFYAML::dropUniqueSuffix(Name));
+  SHeader.sh_name = getSectionNameOffset(ELFYAML::dropUniqueSuffix(Name));
   SHeader.sh_type = YAMLSec ? YAMLSec->Type : ELF::SHT_PROGBITS;
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 1;
   SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign,
@@ -866,9 +897,8 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   else if (Name == ".debug_str")
     SHeader.sh_flags = ELF::SHF_MERGE | ELF::SHF_STRINGS;
 
-  unsigned Link = 0;
-  if (YAMLSec && !YAMLSec->Link.empty() && SN2I.lookup(YAMLSec->Link, Link))
-    SHeader.sh_link = Link;
+  if (YAMLSec && !YAMLSec->Link.empty())
+    SHeader.sh_link = toSectionIndex(YAMLSec->Link, Name);
 
   assignSectionAddress(SHeader, YAMLSec);
 }
@@ -992,7 +1022,8 @@ void ELFState<ELFT>::writeSectionContent(
 
   // For relocation section set link to .symtab by default.
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+      SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
   if (!Section.RelocatableSec.empty())
@@ -1065,7 +1096,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
          "Section type is not SHT_GROUP");
 
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+      SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
   SHeader.sh_entsize = 4;
@@ -1190,7 +1222,8 @@ void ELFState<ELFT>::writeSectionContent(
     SHeader.sh_entsize = 16;
 
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+      SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
   raw_ostream &OS = CBA.getOS();
@@ -1218,7 +1251,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::HashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".dynsym") &&
+      SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
   raw_ostream &OS = CBA.getOS();
@@ -1408,7 +1442,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::AddrsigSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".symtab") &&
+      SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
   raw_ostream &OS = CBA.getOS();
@@ -1474,7 +1509,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::GnuHashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   unsigned Link = 0;
-  if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
+  if (Section.Link.empty() && !ExcludedSectionHeaders.count(".dynsym") &&
+      SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
   raw_ostream &OS = CBA.getOS();
@@ -1556,12 +1592,20 @@ DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
   DenseMap<StringRef, size_t> Ret;
   size_t SecNdx = 0;
   StringSet<> Seen;
-  for (const ELFYAML::SectionHeader &Hdr : Doc.SectionHeaders->Sections) {
+
+  auto AddSection = [&](const ELFYAML::SectionHeader &Hdr) {
     if (!Ret.try_emplace(Hdr.Name, ++SecNdx).second)
       reportError("repeated section name: '" + Hdr.Name +
                   "' in the section header description");
     Seen.insert(Hdr.Name);
-  }
+  };
+
+  for (const ELFYAML::SectionHeader &Hdr : Doc.SectionHeaders->Sections)
+    AddSection(Hdr);
+
+  if (Doc.SectionHeaders->Excluded)
+    for (const ELFYAML::SectionHeader &Hdr : *Doc.SectionHeaders->Excluded)
+      AddSection(Hdr);
 
   for (const ELFYAML::Section *S : Doc.getSections()) {
     // Ignore special first SHT_NULL section.
@@ -1569,7 +1613,7 @@ DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
       continue;
     if (!Seen.count(S->Name))
       reportError("section '" + S->Name +
-                  "' should be present in the 'Sections' list");
+                  "' should be present in the 'Sections' or 'Excluded' lists");
     Seen.erase(S->Name);
   }
 
@@ -1579,21 +1623,36 @@ DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
   return Ret;
 }
 
+static bool hasSectionHeader(const ELFYAML::Object &Doc, size_t SecNdx) {
+  if (!Doc.SectionHeaders)
+    return true;
+  return SecNdx < Doc.SectionHeaders->Sections.size();
+}
+
 template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
-  // A YAML description can have an explicit section header declaration that allows
-  // to change the order of section headers.
+  // A YAML description can have an explicit section header declaration that
+  // allows to change the order of section headers.
   DenseMap<StringRef, size_t> ReorderMap = buildSectionHeaderReorderMap();
 
+  if (HasError)
+    return;
+
+  // Build excluded section headers map.
+  if (Doc.SectionHeaders && Doc.SectionHeaders->Excluded)
+    for (const ELFYAML::SectionHeader &Hdr : *Doc.SectionHeaders->Excluded)
+      if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
+        llvm_unreachable("buildSectionIndex() failed");
+
   size_t SecNdx = -1;
-  for (const std::unique_ptr<ELFYAML::Chunk> &C : Doc.Chunks) {
-    if (!isa<ELFYAML::Section>(C.get()))
-      continue;
+  for (const ELFYAML::Section *S : Doc.getSections()) {
     ++SecNdx;
 
-    size_t Index = ReorderMap.empty() ? SecNdx : ReorderMap.lookup(C->Name);
-    if (!SN2I.addName(C->Name, Index))
+    size_t Index = ReorderMap.empty() ? SecNdx : ReorderMap.lookup(S->Name);
+    if (!SN2I.addName(S->Name, Index))
       llvm_unreachable("buildSectionIndex() failed");
-    DotShStrtab.add(ELFYAML::dropUniqueSuffix(C->Name));
+
+    if (!ExcludedSectionHeaders.count(S->Name))
+      DotShStrtab.add(ELFYAML::dropUniqueSuffix(S->Name));
   }
 
   DotShStrtab.finalize();
@@ -1662,6 +1721,9 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
 
   State.buildSectionIndex();
   State.buildSymbolIndexes();
+
+  if (State.HasError)
+    return false;
 
   std::vector<Elf_Phdr> PHeaders;
   State.initProgramHeaders(PHeaders);
