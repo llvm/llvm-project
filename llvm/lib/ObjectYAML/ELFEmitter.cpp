@@ -1623,12 +1623,6 @@ DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
   return Ret;
 }
 
-static bool hasSectionHeader(const ELFYAML::Object &Doc, size_t SecNdx) {
-  if (!Doc.SectionHeaders)
-    return true;
-  return SecNdx < Doc.SectionHeaders->Sections.size();
-}
-
 template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
   // A YAML description can have an explicit section header declaration that
   // allows to change the order of section headers.
