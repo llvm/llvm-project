@@ -664,8 +664,7 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   // C++17 [expr.prim.lambda]p21:
   //   The closure type associated with a lambda-expression has no default
   //   constructor and a deleted copy assignment operator.
-  if (getLambdaCaptureDefault() != LCD_None ||
-      getLambdaData().NumCaptures != 0)
+  if (getLambdaCaptureDefault() != LCD_None || capture_size() != 0)
     return false;
   return getASTContext().getLangOpts().CPlusPlus20;
 }
@@ -1365,6 +1364,24 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
     data().HasTrivialSpecialMembers |= SMKind;
   else
     data().DeclaredNonTrivialSpecialMembers |= SMKind;
+}
+
+void CXXRecordDecl::setCaptures(ArrayRef<LambdaCapture> Captures) {
+  ASTContext &Context = getASTContext();
+  CXXRecordDecl::LambdaDefinitionData &Data = getLambdaData();
+
+  // Copy captures.
+  Data.NumCaptures = Captures.size();
+  Data.NumExplicitCaptures = 0;
+  Data.Captures = (LambdaCapture *)Context.Allocate(sizeof(LambdaCapture) *
+                                                    Captures.size());
+  LambdaCapture *ToCapture = Data.Captures;
+  for (unsigned I = 0, N = Captures.size(); I != N; ++I) {
+    if (Captures[I].isExplicit())
+      ++Data.NumExplicitCaptures;
+
+    *ToCapture++ = Captures[I];
+  }
 }
 
 void CXXRecordDecl::setTrivialForCallFlags(CXXMethodDecl *D) {
