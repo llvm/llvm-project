@@ -160,14 +160,14 @@ public:
     return Triple::UnknownObjectFormat;
   }
 
-  static std::error_code checkOffset(MemoryBufferRef M, uintptr_t Addr,
-                                     const uint64_t Size) {
+  static Error checkOffset(MemoryBufferRef M, uintptr_t Addr,
+                           const uint64_t Size) {
     if (Addr + Size < Addr || Addr + Size < Size ||
         Addr + Size > uintptr_t(M.getBufferEnd()) ||
         Addr < uintptr_t(M.getBufferStart())) {
-      return object_error::unexpected_eof;
+      return errorCodeToError(object_error::unexpected_eof);
     }
-    return std::error_code();
+    return Error::success();
   }
 };
 
