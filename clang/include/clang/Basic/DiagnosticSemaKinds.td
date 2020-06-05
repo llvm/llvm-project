@@ -10770,6 +10770,14 @@ def err_matrix_separate_incomplete_index: Error<
 def err_matrix_subscript_comma: Error<
   "comma expressions are not allowed as indices in matrix subscript expressions">;
 
+def warn_mismatched_import : Warning<
+  "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
+  "previous declaration">,
+  InGroup<IgnoredAttributes>;
+def warn_import_on_definition : Warning<
+  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  InGroup<IgnoredAttributes>;
+
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;
 def err_preserve_field_info_not_const: Error<
