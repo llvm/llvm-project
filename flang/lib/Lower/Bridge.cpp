@@ -221,7 +221,10 @@ public:
           Fortran::common::visitors{
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
-              [&](Fortran::lower::pft::BlockDataUnit &) { TODO(); },
+              [&](Fortran::lower::pft::BlockDataUnit &) { 
+                mlir::emitError(toLocation(), "BLOCK DATA not handled");
+                exit(1);
+              },
           },
           u);
     }
@@ -641,8 +644,8 @@ private:
     if (iter == symbolLabelMap.end()) {
       // Fail for a nonconforming program unit that does not have any ASSIGN
       // statements.  The front end should check for this.
-      llvm_unreachable("no assigned goto targets");
-      return;
+      mlir::emitError(loc, "(semantics issue) no assigned goto targets");
+      exit(1);
     }
     auto labelSet = iter->second;
     llvm::SmallVector<int64_t, 10> indexList;
