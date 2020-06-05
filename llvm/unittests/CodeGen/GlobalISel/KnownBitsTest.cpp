@@ -431,3 +431,35 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
   EXPECT_EQ(16u, Info.computeNumSignBits(CopyLoadUShort));
   EXPECT_EQ(17u, Info.computeNumSignBits(CopyLoadSShort));
 }
+
+TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {
+  StringRef MIRString =
+    "  %5:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.dispatch.ptr)\n"
+    "  %6:_(p4) = COPY %5\n"
+    "  %7:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.queue.ptr)\n"
+    "  %8:_(p4) = COPY %7\n"
+    "  %9:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)\n"
+    "  %10:_(p4) = COPY %9\n"
+    "  %11:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.implicitarg.ptr)\n"
+    "  %12:_(p4) = COPY %11\n"
+    "  %13:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.implicit.buffer.ptr)\n"
+    "  %14:_(p4) = COPY %13\n";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyDispatchPtr = Copies[Copies.size() - 5];
+  Register CopyQueuePtr = Copies[Copies.size() - 4];
+  Register CopyKernargSegmentPtr = Copies[Copies.size() - 3];
+  Register CopyImplicitArgPtr = Copies[Copies.size() - 2];
+  Register CopyImplicitBufferPtr = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+
+  EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyDispatchPtr));
+  EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyQueuePtr));
+  EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyKernargSegmentPtr));
+  EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyImplicitArgPtr));
+  EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyImplicitBufferPtr));
+}
