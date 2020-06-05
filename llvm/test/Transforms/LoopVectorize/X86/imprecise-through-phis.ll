@@ -110,11 +110,7 @@ define double @sumIfVector(double* nocapture readonly %arr) {
 ; AVX-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; AVX-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; AVX:       middle.block:
-; AVX-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x double> [[PREDPHI]], <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; AVX-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[PREDPHI]], [[RDX_SHUF]]
-; AVX-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x double> [[BIN_RDX]], <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; AVX-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x double> [[BIN_RDX]], [[RDX_SHUF1]]
-; AVX-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[BIN_RDX2]], i32 0
+; AVX-NEXT:    [[TMP8:%.*]] = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double 0.000000e+00, <4 x double> [[PREDPHI]])
 ; AVX-NEXT:    [[CMP_N:%.*]] = icmp eq i32 32, 32
 ; AVX-NEXT:    br i1 [[CMP_N]], label [[DONE:%.*]], label [[SCALAR_PH]]
 ; AVX:       scalar.ph:
