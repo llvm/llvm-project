@@ -386,7 +386,6 @@ static llvm::json::Object
 createCopyAssignmentDefinitionData(const CXXRecordDecl *RD) {
   llvm::json::Object Ret;
 
-  FIELD2("simple", hasSimpleCopyAssignment);
   FIELD2("trivial", hasTrivialCopyAssignment);
   FIELD2("nonTrivial", hasNonTrivialCopyAssignment);
   FIELD2("hasConstParam", hasCopyAssignmentWithConstParam);
