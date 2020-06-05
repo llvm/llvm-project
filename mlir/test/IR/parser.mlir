@@ -446,7 +446,7 @@ func @verbose_terminators() -> (i1, i17) {
   "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
-  %true = constant 1 : i1
+  %true = constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
   "std.return"(%true, %a) : (i1, i17) -> ()
 
@@ -502,10 +502,10 @@ func @constants() -> (i32, i23, i23, i1, i1) {
   // CHECK: %{{.*}} = constant 17 : i23
   %z = constant 17 : i23
 
-  // CHECK: %{{.*}} = constant 1 : i1
-  %t = constant 1 : i1
-  // CHECK: %{{.*}} = constant 0 : i1
-  %f = constant 0 : i1
+  // CHECK: %{{.*}} = constant true
+  %t = constant true
+  // CHECK: %{{.*}} = constant false
+  %f = constant false
 
   // The trick to parse type declarations should not interfere with hex
   // literals.
@@ -1245,7 +1245,7 @@ func @pretty_names() {
 }
 
 func @unreachable_dominance_violation_ok() -> i1 {
-  %c = constant 0 : i1       // CHECK: [[VAL:%.*]] = constant 0 : i1
+  %c = constant false       // CHECK: [[VAL:%.*]] = constant false
   return %c : i1    // CHECK:   return [[VAL]] : i1
 ^bb1:         // CHECK: ^bb1:   // no predecessors
   // %1 is not dominated by it's definition, but block is not reachable.

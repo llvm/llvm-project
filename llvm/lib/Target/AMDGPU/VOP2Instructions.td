@@ -71,8 +71,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
 
   let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
 
-  // FIXME: Set this
-  // let mayRaiseFPException = ReadsModeReg;
+  let mayRaiseFPException = ReadsModeReg;
 
   let VOP2 = 1;
   let VALU = 1;
@@ -467,11 +466,11 @@ defm V_CNDMASK_B32 : VOP2eInst <"v_cndmask_b32", VOP2e_I32_I32_I32_I1>;
 def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
 
 let isCommutable = 1 in {
-defm V_ADD_F32 : VOP2Inst <"v_add_f32", VOP_F32_F32_F32, fadd>;
+defm V_ADD_F32 : VOP2Inst <"v_add_f32", VOP_F32_F32_F32, any_fadd>;
 defm V_SUB_F32 : VOP2Inst <"v_sub_f32", VOP_F32_F32_F32, fsub>;
 defm V_SUBREV_F32 : VOP2Inst <"v_subrev_f32", VOP_F32_F32_F32, null_frag, "v_sub_f32">;
 defm V_MUL_LEGACY_F32 : VOP2Inst <"v_mul_legacy_f32", VOP_F32_F32_F32, AMDGPUfmul_legacy>;
-defm V_MUL_F32 : VOP2Inst <"v_mul_f32", VOP_F32_F32_F32, fmul>;
+defm V_MUL_F32 : VOP2Inst <"v_mul_f32", VOP_F32_F32_F32, any_fmul>;
 defm V_MUL_I32_I24 : VOP2Inst <"v_mul_i32_i24", VOP_I32_I32_I32_ARITH, AMDGPUmul_i24>;
 defm V_MUL_HI_I32_I24 : VOP2Inst <"v_mul_hi_i32_i24", VOP_PAT_GEN<VOP_I32_I32_I32, 2>, AMDGPUmulhi_i24>;
 defm V_MUL_U32_U24 : VOP2Inst <"v_mul_u32_u24", VOP_I32_I32_I32_ARITH, AMDGPUmul_u24>;
@@ -489,12 +488,14 @@ defm V_AND_B32 : VOP2Inst <"v_and_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, and>;
 defm V_OR_B32 : VOP2Inst <"v_or_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, or>;
 defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
 
+let mayRaiseFPException = 0 in {
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1 in {
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
 }
 
 def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
+}
 
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
@@ -629,11 +630,15 @@ defm V_ASHRREV_I16 : VOP2Inst <"v_ashrrev_i16", VOP_I16_I16_I16, ashr_rev>;
 
 let isCommutable = 1 in {
 let FPDPRounding = 1 in {
-defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP_F16_F16_F16, fadd>;
+defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP_F16_F16_F16, any_fadd>;
 defm V_SUB_F16 : VOP2Inst <"v_sub_f16", VOP_F16_F16_F16, fsub>;
 defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP_F16_F16_F16, null_frag, "v_sub_f16">;
-defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, fmul>;
+defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, any_fmul>;
+
+let mayRaiseFPException = 0 in {
 def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
+}
+
 } // End FPDPRounding = 1
 defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16_ARITH, add>;
 defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16_ARITH, sub>;

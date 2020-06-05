@@ -149,3 +149,29 @@ define <4 x i8> @sel_shuf_no_common_operand(<4 x i8> %x, <4 x i8> %y, <4 x i1> %
   %r = select <4 x i1> %cmp, <4 x i8> %z, <4 x i8> %blend
   ret <4 x i8> %r
 }
+
+; Negative test - don't crash (this is not a select shuffle because it changes vector length)
+
+define <2 x i8> @sel_shuf_narrowing_commute1(<4 x i8> %x, <4 x i8> %y, <2 x i8> %x2, <2 x i1> %cmp) {
+; CHECK-LABEL: @sel_shuf_narrowing_commute1(
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 5>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i8> [[BLEND]], <2 x i8> [[X2:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %blend = shufflevector <4 x i8> %x, <4 x i8> %y, <2 x i32> <i32 0, i32 5>
+  %r = select <2 x i1> %cmp, <2 x i8> %blend, <2 x i8> %x2
+  ret <2 x i8> %r
+}
+
+; Negative test - don't crash (this is not a select shuffle because it changes vector length)
+
+define <2 x i8> @sel_shuf_narrowing_commute2(<4 x i8> %x, <4 x i8> %y, <2 x i8> %x2, <2 x i1> %cmp) {
+; CHECK-LABEL: @sel_shuf_narrowing_commute2(
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 5>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i8> [[X2:%.*]], <2 x i8> [[BLEND]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %blend = shufflevector <4 x i8> %x, <4 x i8> %y, <2 x i32> <i32 0, i32 5>
+  %r = select <2 x i1> %cmp, <2 x i8> %x2, <2 x i8> %blend
+  ret <2 x i8> %r
+}

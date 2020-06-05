@@ -183,7 +183,7 @@ func @conflicting_constant(%arg0 : i32) -> (i32, i32) {
 
 // CHECK-LABEL: func @complex_inner_if(
 func @complex_inner_if(%arg0 : i32) -> i32 attributes { sym_visibility = "private" } {
-  // CHECK-DAG: %[[TRUE:.*]] = constant 1 : i1
+  // CHECK-DAG: %[[TRUE:.*]] = constant true
   // CHECK-DAG: %[[CST:.*]] = constant 1 : i32
   // CHECK: cond_br %[[TRUE]], ^bb1
 

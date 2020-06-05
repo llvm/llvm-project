@@ -1028,8 +1028,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
-  getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
-    .legalFor({{S32, LocalPtr}});
+  if (ST.hasLDSFPAtomics()) {
+    getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
+      .legalFor({{S32, LocalPtr}});
+  }
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling

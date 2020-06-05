@@ -221,6 +221,7 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       NumRecomposed++;
       // Note that we have left ((X / Y) * Y) around.
       // If it had other uses we could rewrite it as X - X % Y
+      Changed = true;
     }
 
     assert((!E.isRemExpanded() || !HasDivRemOp) &&

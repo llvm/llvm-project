@@ -608,6 +608,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Elaborated);
     TKIND(Pipe);
     TKIND(Attributed);
+    TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
 #undef IMAGE_TYPE

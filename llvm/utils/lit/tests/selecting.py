@@ -22,14 +22,14 @@
 # RUN: %{lit} --filter 'O[A-Z]E' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # CHECK-FILTER: Testing: 2 of 5 tests
-# CHECK-FILTER: Excluded Tests : 3
+# CHECK-FILTER: Excluded: 3
 
 
 # Check that maximum counts work
 #
 # RUN: %{lit} --max-tests 3 %{inputs}/discovery | FileCheck --check-prefix=CHECK-MAX %s
 # CHECK-MAX: Testing: 3 of 5 tests
-# CHECK-MAX: Excluded Tests : 2
+# CHECK-MAX: Excluded: 2
 
 
 # Check that sharding partitions the testsuite in a way that distributes the
@@ -40,7 +40,7 @@
 # RUN: FileCheck --check-prefix=CHECK-SHARD0-OUT < %t.out %s
 # CHECK-SHARD0-ERR: note: Selecting shard 1/3 = size 2/5 = tests #(3*k)+1 = [1, 4]
 # CHECK-SHARD0-OUT: Testing: 2 of 5 tests
-# CHECK-SHARD0-OUT: Excluded Tests : 3
+# CHECK-SHARD0-OUT: Excluded: 3
 #
 # RUN: %{lit} --num-shards 3 --run-shard 2 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD1-ERR < %t.err %s

@@ -644,7 +644,7 @@ struct AddressSanitizer {
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
   bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
-  void maybeInsertDynamicShadowAtFunctionEntry(Function &F);
+  bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
 
 private:
@@ -2036,11 +2036,15 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
   assert(ExtendedGlobals.size() == MetadataInitializers.size());
   auto &DL = M.getDataLayout();
 
+  SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
     Constant *Initializer = MetadataInitializers[i];
     GlobalVariable *G = ExtendedGlobals[i];
     GlobalVariable *Metadata =
         CreateMetadataGlobal(M, Initializer, G->getName());
+    MDNode *MD = MDNode::get(M.getContext(), ValueAsMetadata::get(G));
+    Metadata->setMetadata(LLVMContext::MD_associated, MD);
+    MetadataGlobals[i] = Metadata;
 
     // The MSVC linker always inserts padding when linking incrementally. We
     // cope with that by aligning each struct to its size, which must be a power
@@ -2052,6 +2056,11 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
 
     SetComdatForGlobalMetadata(G, Metadata, "");
   }
+
+  // Update llvm.compiler.used, adding the new metadata globals. This is
+  // needed so that during LTO these variables stay alive.
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
 }
 
 void ModuleAddressSanitizer::InstrumentGlobalsELF(
@@ -2072,10 +2081,23 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
     SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
   }
 
+  // This should never be called when there are no globals, by the logic that
+  // computes the UniqueModuleId string, which is "" when there are no globals.
+  // It's important that this path is only used when there are actually some
+  // globals, because that means that there will certainly be a live
+  // `asan_globals` input section at link time and thus `__start_asan_globals`
+  // and `__stop_asan_globals` symbols will definitely be defined at link time.
+  // This means there's no need for the references to them to be weak, which
+  // enables better code generation because ExternalWeakLinkage implies
+  // isInterposable() and thus requires GOT indirection for PIC.  Since these
+  // are known-defined hidden/dso_local symbols, direct PIC accesses without
+  // dynamic relocation are always sufficient.
+  assert(!MetadataGlobals.empty());
+  assert(!UniqueModuleId.empty());
+
   // Update llvm.compiler.used, adding the new metadata globals. This is
   // needed so that during LTO these variables stay alive.
-  if (!MetadataGlobals.empty())
-    appendToCompilerUsed(M, MetadataGlobals);
+  appendToCompilerUsed(M, MetadataGlobals);
 
   // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
   // to look up the loaded image that contains it. Second, we can store in it
@@ -2088,15 +2110,18 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
       ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
   RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
 
-  // Create start and stop symbols.
-  GlobalVariable *StartELFMetadata = new GlobalVariable(
-      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
-      "__start_" + getGlobalMetadataSection());
-  StartELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
-  GlobalVariable *StopELFMetadata = new GlobalVariable(
-      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
-      "__stop_" + getGlobalMetadataSection());
-  StopELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
+  // Create start and stop symbols.  These are known to be defined by
+  // the linker, see comment above.
+  auto MakeStartStopGV = [&](const char *Prefix) {
+    GlobalVariable *StartStop =
+        new GlobalVariable(M, IntptrTy, false, GlobalVariable::ExternalLinkage,
+                           nullptr, Prefix + getGlobalMetadataSection());
+    StartStop->setVisibility(GlobalVariable::HiddenVisibility);
+    assert(StartStop->isImplicitDSOLocal());
+    return StartStop;
+  };
+  GlobalVariable *StartELFMetadata = MakeStartStopGV("__start_");
+  GlobalVariable *StopELFMetadata = MakeStartStopGV("__stop_");
 
   // Create a call to register the globals with the runtime.
   IRB.CreateCall(AsanRegisterElfGlobals,
@@ -2547,10 +2572,10 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   return false;
 }
 
-void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
+bool AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
   // Generate code only when dynamic addressing is needed.
   if (Mapping.Offset != kDynamicShadowSentinel)
-    return;
+    return false;
 
   IRBuilder<> IRB(&F.front().front());
   if (Mapping.InGlobal) {
@@ -2572,6 +2597,7 @@ void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
         kAsanShadowMemoryDynamicAddress, IntptrTy);
     LocalDynamicShadow = IRB.CreateLoad(IntptrTy, GlobalDynamicAddress);
   }
+  return true;
 }
 
 void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
@@ -2633,7 +2659,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   FunctionStateRAII CleanupObj(this);
 
-  maybeInsertDynamicShadowAtFunctionEntry(F);
+  FunctionModified |= maybeInsertDynamicShadowAtFunctionEntry(F);
 
   // We can't instrument allocas used with llvm.localescape. Only static allocas
   // can be passed to that intrinsic.

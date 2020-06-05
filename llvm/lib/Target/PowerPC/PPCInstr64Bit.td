@@ -145,9 +145,9 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
       // it does use R2 then it is just a caller saved register. Therefore it is
       // safe to emit only the bl and not the nop for this instruction. The
       // linker will not try to restore R2 after the call.
-      def BL8_NOTOC : IForm_and_DForm_4_zero<18, 0, 1, 24, (outs),
-                                             (ins calltarget:$func),
-                                             "bl $func", IIC_BrB, []>;
+      def BL8_NOTOC : IForm<18, 0, 1, (outs),
+                            (ins calltarget:$func),
+                            "bl $func", IIC_BrB, []>;
     }
   }
   let Uses = [CTR8, RM] in {

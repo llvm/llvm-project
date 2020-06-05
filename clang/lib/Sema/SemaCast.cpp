@@ -2789,6 +2789,20 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // Can't cast to or from bfloat
+  if (DestType->isBFloat16Type() && !SrcType->isBFloat16Type()) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_cast_to_bfloat16)
+        << SrcExpr.get()->getSourceRange();
+    SrcExpr = ExprError();
+    return;
+  }
+  if (SrcType->isBFloat16Type() && !DestType->isBFloat16Type()) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_cast_from_bfloat16)
+        << SrcExpr.get()->getSourceRange();
+    SrcExpr = ExprError();
+    return;
+  }
+
   // If either type is a pointer, the other type has to be either an
   // integer or a pointer.
   if (!DestType->isArithmeticType()) {

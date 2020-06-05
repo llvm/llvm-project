@@ -99,8 +99,8 @@ define  i32 addrspace(1)* @test5(i32 %a, i32 addrspace(1)* %p) gc "statepoint-ex
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 0, i32 addrspace(1)* %p, i32 addrspace(1)* %p) ["deopt"(i32 %a)]
-  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 8, i32 8)
+  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %p), "deopt"(i32 %a)]
+  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 0, i32 0)
   ret i32 addrspace(1)* %p2
 }
 

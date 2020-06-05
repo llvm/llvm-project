@@ -44,6 +44,7 @@ void LexicalScopes::reset() {
   AbstractScopeMap.clear();
   InlinedLexicalScopeMap.clear();
   AbstractScopesList.clear();
+  DominatedBlocks.clear();
 }
 
 /// initialize - Scan machine function and constuct lexical scope nest.
@@ -302,8 +303,6 @@ void LexicalScopes::getMachineBasicBlocks(
       MBBs.insert(&*CurMBBIt);
 }
 
-/// dominates - Return true if DebugLoc's lexical scope dominates at least one
-/// machine instruction's lexical scope in a given machine basic block.
 bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
   assert(MF && "Unexpected uninitialized LexicalScopes object!");
   LexicalScope *Scope = getOrCreateLexicalScope(DL);
@@ -315,11 +314,17 @@ bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
     return true;
 
   // Fetch all the blocks in DLs scope. Because the range / block list also
-  // contain any subscopes, any instruction that DL dominates can be found
-  // in the block set.
-  SmallPtrSet<const MachineBasicBlock *, 32> Set;
-  getMachineBasicBlocks(DL, Set);
-  return Set.count(MBB) != 0;
+  // contain any subscopes, any instruction that DL dominates can be found in
+  // the block set.
+  //
+  // Cache the set of fetched blocks to avoid repeatedly recomputing the set in
+  // the LiveDebugValues pass.
+  std::unique_ptr<BlockSetT> &Set = DominatedBlocks[DL];
+  if (!Set) {
+    Set = std::make_unique<BlockSetT>();
+    getMachineBasicBlocks(DL, *Set);
+  }
+  return Set->count(MBB) != 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

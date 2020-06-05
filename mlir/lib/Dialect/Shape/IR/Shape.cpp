@@ -18,6 +18,10 @@
 using namespace mlir;
 using namespace mlir::shape;
 
+namespace {
+#include "IR/ShapeCanonicalization.inc"
+}
+
 ShapeDialect::ShapeDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
@@ -35,13 +39,13 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  if (auto shapeType = type.dyn_cast<ShapeType>()) {
+  if (auto shapeType = type.dyn_cast<ShapeType>())
     return builder.create<ConstShapeOp>(loc, type,
                                         value.cast<DenseIntElementsAttr>());
-  }
-  if (auto sizeType = type.dyn_cast<SizeType>()) {
+  if (auto sizeType = type.dyn_cast<SizeType>())
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
-  }
+  if (auto witnessType = type.dyn_cast<WitnessType>())
+    return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
   return nullptr;
 }
 
@@ -98,6 +102,16 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
 // AnyOp
 //===----------------------------------------------------------------------===//
 
+// TODO: Canonicalization should be implemented for shapes that can be
+// determined through mixtures of the known dimensions of the inputs.
+OpFoldResult AnyOp::fold(ArrayRef<Attribute> operands) {
+  // Only the last operand is checked because AnyOp is commutative.
+  if (operands.back())
+    return operands.back();
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // AssumingOp
 //===----------------------------------------------------------------------===//
@@ -140,6 +154,68 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
   p.printOptionalAttrDict(op.getAttrs());
+}
+
+namespace {
+// Removes AssumingOp with a passing witness and inlines the region.
+struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
+  using OpRewritePattern<AssumingOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AssumingOp op,
+                                PatternRewriter &rewriter) const override {
+    auto witness = op.witness().getDefiningOp<ConstWitnessOp>();
+    if (!witness || !witness.passingAttr())
+      return failure();
+
+    auto *blockBeforeAssuming = rewriter.getInsertionBlock();
+    auto *assumingBlock = op.getBody();
+    auto initPosition = rewriter.getInsertionPoint();
+    auto *blockAfterAssuming =
+        rewriter.splitBlock(blockBeforeAssuming, initPosition);
+
+    // Remove the AssumingOp and AssumingYieldOp.
+    auto &yieldOp = assumingBlock->back();
+    rewriter.inlineRegionBefore(op.doRegion(), blockAfterAssuming);
+    rewriter.replaceOp(op, yieldOp.getOperands());
+    rewriter.eraseOp(&yieldOp);
+
+    // Merge blocks together as there was no branching behavior from the
+    // AssumingOp.
+    rewriter.mergeBlocks(assumingBlock, blockBeforeAssuming);
+    rewriter.mergeBlocks(blockAfterAssuming, blockBeforeAssuming);
+    return success();
+  }
+};
+}; // namespace
+
+void AssumingOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                             MLIRContext *context) {
+  // If taking a passing witness, inline region
+  patterns.insert<AssumingWithTrue>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// AssumingAllOp
+//===----------------------------------------------------------------------===//
+OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
+  // Iterate in reverse to first handle all constant operands. They are
+  // guaranteed to be the tail of the inputs because this is commutative.
+  for (int idx = operands.size() - 1; idx >= 0; idx--) {
+    Attribute a = operands[idx];
+    // Cannot fold if any inputs are not constant;
+    if (!a)
+      return nullptr;
+
+    // We do not need to keep statically known values after handling them in
+    // this method.
+    getOperation()->eraseOperand(idx);
+
+    // Always false if any input is statically known false
+    if (!a.cast<BoolAttr>().getValue())
+      return a;
+  }
+  // If this is reached, all inputs were statically known passing.
+  return BoolAttr::get(true, getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -224,10 +300,63 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
 OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 
 //===----------------------------------------------------------------------===//
+// CstrBroadcastableOp
+//===----------------------------------------------------------------------===//
+
+void CstrBroadcastableOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  // If inputs are equal, return passing witness
+  patterns.insert<CstrBroadcastableEqOps>(context);
+}
+
+OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0] || !operands[1])
+    return nullptr;
+  auto lhsShape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(
+      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape;
+  if (OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
+    return BoolAttr::get(true, getContext());
+
+  // Because a failing witness result here represents an eventual assertion
+  // failure, we do not replace it with a constant witness.
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// CstrEqOp
+//===----------------------------------------------------------------------===//
+
+void CstrEqOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                           MLIRContext *context) {
+  // If inputs are equal, return passing witness
+  patterns.insert<CstrEqEqOps>(context);
+}
+
+OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
+  if (llvm::all_of(operands,
+                   [&](Attribute a) { return a && a == operands[0]; }))
+    return BoolAttr::get(true, getContext());
+
+  // Because a failing witness result here represents an eventual assertion
+  // failure, we do not try to replace it with a constant witness. Similarly, we
+  // cannot if there are any non-const inputs.
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstSizeOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
+
+//===----------------------------------------------------------------------===//
+// ConstWitnessOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstWitnessOp::fold(ArrayRef<Attribute>) { return passingAttr(); }
 
 //===----------------------------------------------------------------------===//
 // IndexToSizeOp
@@ -350,6 +479,89 @@ OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);
+}
+
+//===----------------------------------------------------------------------===//
+// ReduceOp
+//===----------------------------------------------------------------------===//
+
+void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
+                     ValueRange initVals) {
+  result.addOperands(shape);
+  result.addOperands(initVals);
+
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArgument(builder.getIndexType());
+  bodyBlock.addArgument(SizeType::get(builder.getContext()));
+
+  for (Type initValType : initVals.getTypes()) {
+    bodyBlock.addArgument(initValType);
+    result.addTypes(initValType);
+  }
+}
+
+static LogicalResult verify(ReduceOp op) {
+  // Verify block arg types.
+  Block &block = op.body().front();
+
+  auto blockArgsCount = op.initVals().size() + 2;
+  if (block.getNumArguments() != blockArgsCount)
+    return op.emitOpError() << "ReduceOp body is expected to have "
+                            << blockArgsCount << " arguments";
+
+  if (block.getArgument(0).getType() != IndexType::get(op.getContext()))
+    return op.emitOpError(
+        "argument 0 of ReduceOp body is expected to be of IndexType");
+
+  if (block.getArgument(1).getType() != SizeType::get(op.getContext()))
+    return op.emitOpError(
+        "argument 1 of ReduceOp body is expected to be of SizeType");
+
+  for (auto type : llvm::enumerate(op.initVals()))
+    if (block.getArgument(type.index() + 2).getType() != type.value().getType())
+      return op.emitOpError()
+             << "type mismatch between argument " << type.index() + 2
+             << " of ReduceOp body and initial value " << type.index();
+  return success();
+}
+
+static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
+  auto *ctx = parser.getBuilder().getContext();
+  // Parse operands.
+  SmallVector<OpAsmParser::OperandType, 3> operands;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/-1,
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Resolve operands.
+  auto initVals = llvm::makeArrayRef(operands).drop_front();
+  if (parser.resolveOperand(operands.front(), ShapeType::get(ctx),
+                            result.operands) ||
+      parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+
+  // Parse the body.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, /*args=*/{}, /*argTypes=*/{}))
+    return failure();
+
+  // Parse attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ReduceOp op) {
+  p << op.getOperationName() << '(' << op.shape() << ", " << op.initVals()
+    << ") ";
+  p.printOptionalArrowTypeList(op.getResultTypes());
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
 }
 
 namespace mlir {

@@ -140,6 +140,12 @@ void RTLsTy::LoadRTLs() {
     *((void **)&R.run_team_region_async) =
         dlsym(dynlib_handle, "__tgt_rtl_run_target_team_region_async");
     *((void **)&R.synchronize) = dlsym(dynlib_handle, "__tgt_rtl_synchronize");
+    *((void **)&R.data_exchange) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_exchange");
+    *((void **)&R.data_exchange_async) =
+        dlsym(dynlib_handle, "__tgt_rtl_data_exchange_async");
+    *((void **)&R.is_data_exchangable) =
+        dlsym(dynlib_handle, "__tgt_rtl_is_data_exchangable");
 
     // No devices are supported by this RTL?
     if (!(R.NumberOfDevices = R.number_of_devices())) {

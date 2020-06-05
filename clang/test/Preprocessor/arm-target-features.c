@@ -7,6 +7,9 @@
 // CHECK-V8A: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-V8A-NOT: #define __ARM_FP 0x
 // CHECK-V8A-NOT: #define __ARM_FEATURE_DOTPROD
+// CHECK-V8A-NOT: #define __ARM_BF16_FORMAT_ALTERNATIVE
+// CHECK-V8A-NOT: #define __ARM_FEATURE_BF16
+// CHECK-V8A-NOT: #define __ARM_FEATURE_BF16_VECTOR_ARITHMETIC
 
 // RUN: %clang -target armv8a-none-linux-gnueabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8A-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8a-none-linux-gnueabihf -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8A-ALLOW-FP-INSTR %s
@@ -848,3 +851,9 @@
 
 // RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
 // CHECK-SOFTVFP-NOT: #define __ARM_FP 0x
+
+// ================== Check BFloat16 Extensions.
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// CHECK-BFLOAT: #define __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-BFLOAT: #define __ARM_FEATURE_BF16 1
+// CHECK-BFLOAT: #define __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1

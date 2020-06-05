@@ -2031,6 +2031,7 @@ bool llvm::runIPSCCP(
     while (!GV->use_empty()) {
       StoreInst *SI = cast<StoreInst>(GV->user_back());
       SI->eraseFromParent();
+      MadeChanges = true;
     }
     M.getGlobalList().erase(GV);
     ++IPNumGlobalConst;

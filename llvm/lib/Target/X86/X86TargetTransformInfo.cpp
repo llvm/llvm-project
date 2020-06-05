@@ -2961,6 +2961,20 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 MaybeAlign Alignment, unsigned AddressSpace,
                                 TTI::TargetCostKind CostKind,
                                 const Instruction *I) {
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput) {
+    if (isa_and_nonnull<StoreInst>(I)) {
+      Value *Ptr = I->getOperand(1);
+      // Store instruction with index and scale costs 2 Uops.
+      // Check the preceding GEP to identify non-const indices.
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+        if (!all_of(GEP->indices(), [](Value *V) { return isa<Constant>(V); }))
+          return TTI::TCC_Basic * 2;
+      }
+    }
+    return TTI::TCC_Basic;
+  }
+
   // Handle non-power-of-two vectors such as <3 x float>
   if (VectorType *VTy = dyn_cast<VectorType>(Src)) {
     unsigned NumElem = VTy->getNumElements();
@@ -3805,22 +3819,6 @@ int X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
     break;
   }
   return X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
-}
-
-unsigned
-X86TTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                        TTI::TargetCostKind CostKind) {
-  if (isa<StoreInst>(U)) {
-    Value *Ptr = U->getOperand(1);
-    // Store instruction with index and scale costs 2 Uops.
-    // Check the preceding GEP to identify non-const indices.
-    if (auto GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
-      if (!all_of(GEP->indices(), [](Value *V) { return isa<Constant>(V); }))
-        return TTI::TCC_Basic * 2;
-    }
-    return TTI::TCC_Basic;
-  }
-  return BaseT::getUserCost(U, Operands, CostKind);
 }
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later

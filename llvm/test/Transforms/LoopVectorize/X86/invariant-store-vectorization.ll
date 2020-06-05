@@ -59,15 +59,7 @@ define i32 @inv_val_store_to_inv_address_with_reduction(i32* %a, i64 %n, i32* %b
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <16 x i32> [[TMP12]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX12:%.*]] = add <16 x i32> [[TMP13]], [[BIN_RDX11]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i32> [[BIN_RDX12]], <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX13:%.*]] = add <16 x i32> [[BIN_RDX12]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF14:%.*]] = shufflevector <16 x i32> [[BIN_RDX13]], <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX15:%.*]] = add <16 x i32> [[BIN_RDX13]], [[RDX_SHUF14]]
-; CHECK-NEXT:    [[RDX_SHUF16:%.*]] = shufflevector <16 x i32> [[BIN_RDX15]], <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX17:%.*]] = add <16 x i32> [[BIN_RDX15]], [[RDX_SHUF16]]
-; CHECK-NEXT:    [[RDX_SHUF18:%.*]] = shufflevector <16 x i32> [[BIN_RDX17]], <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX19:%.*]] = add <16 x i32> [[BIN_RDX17]], [[RDX_SHUF18]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i32> [[BIN_RDX19]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX12]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

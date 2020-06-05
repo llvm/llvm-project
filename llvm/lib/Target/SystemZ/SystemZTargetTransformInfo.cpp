@@ -1029,6 +1029,10 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                     const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
   if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
     // Store the load or its truncated or extended value in FoldedValue.
     const Instruction *FoldedValue = nullptr;

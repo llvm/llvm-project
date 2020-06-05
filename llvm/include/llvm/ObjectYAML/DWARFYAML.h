@@ -64,7 +64,8 @@ struct ARangeDescriptor {
 };
 
 struct ARange {
-  InitialLength Length;
+  dwarf::DwarfFormat Format;
+  uint64_t Length;
   uint16_t Version;
   uint32_t CuOffset;
   uint8_t AddrSize;
@@ -261,6 +262,13 @@ template <> struct MappingTraits<DWARFYAML::LineTable> {
 
 template <> struct MappingTraits<DWARFYAML::InitialLength> {
   static void mapping(IO &IO, DWARFYAML::InitialLength &DWARF);
+};
+
+template <> struct ScalarEnumerationTraits<dwarf::DwarfFormat> {
+  static void enumeration(IO &IO, dwarf::DwarfFormat &Format) {
+    IO.enumCase(Format, "DWARF32", dwarf::DWARF32);
+    IO.enumCase(Format, "DWARF64", dwarf::DWARF64);
+  }
 };
 
 #define HANDLE_DW_TAG(unused, name, unused2, unused3, unused4)                 \

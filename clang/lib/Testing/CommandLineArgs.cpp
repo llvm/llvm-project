@@ -64,6 +64,7 @@ StringRef getFilenameForTesting(TestLanguage Lang) {
   case Lang_OBJCXX:
     return "input.mm";
   }
+  llvm_unreachable("Unhandled TestLanguage enum");
 }
 
 } // end namespace clang

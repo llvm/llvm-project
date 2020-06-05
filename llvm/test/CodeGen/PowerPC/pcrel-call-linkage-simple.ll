@@ -36,3 +36,27 @@ entry:
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
 
+
+; CHECK-S-LABEL: callerNoTail
+; CHECK-S:     bl callee@notoc
+; CHECK-S-NOT: nop
+; CHECK-S:     bl callee@notoc
+; CHECK-S-NOT: nop
+; CHECK-S:     blr
+
+; CHECK-O-LABEL: callerNoTail
+; CHECK-O:      bl
+; CHECK-O-NEXT: R_PPC64_REL24_NOTOC callee
+; CHECK-O-NOT:  nop
+; CHECK-O:      bl
+; CHECK-O-NEXT: R_PPC64_REL24_NOTOC callee
+; CHECK-O-NOT:  nop
+; CHECK-O:      blr
+define dso_local signext i32 @callerNoTail() local_unnamed_addr {
+entry:
+  %call1 = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
+  %call2 = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
+  %add = add i32 %call1, %call2
+  ret i32 %add
+}
+

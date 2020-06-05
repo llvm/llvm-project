@@ -543,7 +543,7 @@ StackSafetyDataFlowAnalysis<CalleeTy>::run() {
 
 const Function *findCalleeInModule(const GlobalValue *GV) {
   while (GV) {
-    if (GV->isInterposable() || !GV->isDSOLocal())
+    if (GV->isDeclaration() || GV->isInterposable() || !GV->isDSOLocal())
       return nullptr;
     if (const Function *F = dyn_cast<Function>(GV))
       return F;

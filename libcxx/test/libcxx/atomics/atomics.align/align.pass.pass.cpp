@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads, c++03
-// REQUIRES: libatomic
-// FILE_DEPENDENCIES: %t.exe
-// RUN: %{build} -latomic
-// RUN: %{run}
-//
+// REQUIRES: non-lockfree-atomics
+
 // GCC currently fails because it needs -fabi-version=6 to fix mangling of
 // std::atomic when used with __attribute__((vector(X))).
 // XFAIL: gcc

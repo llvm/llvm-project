@@ -215,7 +215,7 @@ def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
       AffineExpr i, r_j;
       bindDims(context, i, r_j);
       return SmallVector<AffineMap, 8>{
-        AffineMap::get(2, 0, {i, r_j}, context), 
+        AffineMap::get(2, 0, {i, r_j}, context),
         AffineMap::get(2, 0, {r_j}, context),
         AffineMap::get(2, 0, {i}, context)
       };
@@ -314,6 +314,12 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
       if (!padding().hasValue()) return 0;
       return padding().getValue().getValue<int64_t>({i, 0});
     }
+
+    int64_t getHighPad(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!padding().hasValue()) return 0;
+      return padding().getValue().getValue<int64_t>({i, 1});
+    }
   }];
 }
 
@@ -356,6 +362,11 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     unsigned getNumInputFeatureDimensions() { return 1; }
 
     unsigned getNumOutputFeatureDimensions() { return 1; }
+
+    unsigned getNumSpatialDimensions() {
+      return getOutputShapedType(0).getRank() - getNumBatchDimensions() -
+             getNumOutputFeatureDimensions();
+    }
 
     llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
       // Outer parallel loops are always the number of output dimensions; i.e.

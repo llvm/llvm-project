@@ -215,6 +215,7 @@ def OP_UNAVAILABLE : Operation {
 // f: float
 // h: half-float
 // d: double
+// b: bfloat16
 //
 // Typespec modifiers
 // ------------------
@@ -236,6 +237,7 @@ def OP_UNAVAILABLE : Operation {
 // S: change to signed integer category.
 // U: change to unsigned integer category.
 // F: change to floating category.
+// B: change to BFloat16
 // P: change to polynomial category.
 // p: change polynomial to equivalent integer category. Otherwise nop.
 //

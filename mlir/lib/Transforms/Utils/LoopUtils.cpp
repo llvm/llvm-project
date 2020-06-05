@@ -220,7 +220,12 @@ LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
 /// their body into the containing Block.
 void mlir::promoteSingleIterationLoops(FuncOp f) {
   // Gathers all innermost loops through a post order pruned walk.
-  f.walk([](AffineForOp forOp) { promoteIfSingleIteration(forOp); });
+  f.walk([](Operation *op) {
+    if (auto forOp = dyn_cast<AffineForOp>(op))
+      promoteIfSingleIteration(forOp);
+    else if (auto forOp = dyn_cast<scf::ForOp>(op))
+      promoteIfSingleIteration(forOp);
+  });
 }
 
 /// Generates an affine.for op with the specified lower and upper bounds

@@ -1531,7 +1531,7 @@ func @forward_reference_type_check() -> (i8) {
 // -----
 
 func @dominance_error_in_unreachable_op() -> i1 {
-  %c = constant 0 : i1
+  %c = constant false
   return %c : i1
 ^bb0:
   "dummy" () ({  // unreachable

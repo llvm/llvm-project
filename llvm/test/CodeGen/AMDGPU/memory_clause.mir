@@ -337,7 +337,7 @@ body:             |
 # GCN:      dead early-clobber %4:vreg_128, dead early-clobber %3:vreg_128, dead early-clobber %5:vgpr_32 = BUNDLE %0, %2, %1, implicit $exec {
 # GCN-NEXT:   dead %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT:   dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT:   dead %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: }
 
 ---
@@ -357,7 +357,7 @@ body:             |
     %2 = IMPLICIT_DEF
     %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, 0, implicit $exec
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 
 # GCN-LABEL: {{^}}name: atomic{{$}}

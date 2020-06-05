@@ -3695,7 +3695,7 @@ private:
   /// Creates a new TypoExpr AST node.
   TypoExpr *createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
                               TypoDiagnosticGenerator TDG,
-                              TypoRecoveryCallback TRC);
+                              TypoRecoveryCallback TRC, SourceLocation TypoLoc);
 
   // The set of known/encountered (unique, canonicalized) NamespaceDecls.
   //
@@ -11685,6 +11685,8 @@ public:
   CUDAFunctionTarget CurrentCUDATarget() {
     return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
   }
+
+  static bool IsCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
 
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.

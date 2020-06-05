@@ -1432,13 +1432,6 @@ Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
 /// possible that code has been made unnecessary - do we canonicalize IR to
 /// overflow/saturating intrinsics or not?).
 Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
-  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
-  ConstantInt *CI;
-
-  // Make sure that the RHS operand is a constant.
-  if (!match(Op1, m_ConstantInt(CI)))
-    return nullptr;
-
   // Match the following pattern, which is a common idiom when writing
   // overflow-safe integer arithmetic functions. The source performs an addition
   // in wider type and explicitly checks for overflow using comparisons against
@@ -1451,12 +1444,34 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   // sum = a + b
   // if (sum+128 >u 255)  ...  -> llvm.sadd.with.overflow.i8
   CmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
   Value *A, *B;
-  ConstantInt *CI2; // I = icmp ugt (add (add A, B), CI2), CI
-  if (Pred == ICmpInst::ICMP_UGT &&
+  ConstantInt *CI, *CI2; // I = icmp ugt (add (add A, B), CI2), CI
+  if (Pred == ICmpInst::ICMP_UGT && match(Op1, m_ConstantInt(CI)) &&
       match(Op0, m_Add(m_Add(m_Value(A), m_Value(B)), m_ConstantInt(CI2))))
     if (Instruction *Res = processUGT_ADDCST_ADD(Cmp, A, B, CI2, CI, *this))
       return Res;
+
+  // icmp(phi(C1, C2, ...), C) -> phi(icmp(C1, C), icmp(C2, C), ...).
+  Constant *C = dyn_cast<Constant>(Op1);
+  if (!C)
+    return nullptr;
+
+  if (auto *Phi = dyn_cast<PHINode>(Op0))
+    if (all_of(Phi->operands(), [](Value *V) { return isa<Constant>(V); })) {
+      Type *Ty = Cmp.getType();
+      Builder.SetInsertPoint(Phi);
+      PHINode *NewPhi =
+          Builder.CreatePHI(Ty, Phi->getNumOperands());
+      for (BasicBlock *Predecessor : predecessors(Phi->getParent())) {
+        auto *Input =
+            cast<Constant>(Phi->getIncomingValueForBlock(Predecessor));
+        auto *BoolInput = ConstantExpr::getCompare(Pred, Input, C);
+        NewPhi->addIncoming(BoolInput, Predecessor);
+      }
+      NewPhi->takeName(&Cmp);
+      return replaceInstUsesWith(Cmp, NewPhi);
+    }
 
   return nullptr;
 }

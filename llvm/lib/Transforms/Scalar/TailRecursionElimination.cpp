@@ -818,7 +818,7 @@ bool TailRecursionEliminator::eliminate(Function &F,
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
   if (F.getFunctionType()->isVarArg())
-    return false;
+    return MadeChange;
 
   // If false, we cannot perform TRE on tail calls marked with the 'tail'
   // attribute, because doing so would cause the stack size to increase (real

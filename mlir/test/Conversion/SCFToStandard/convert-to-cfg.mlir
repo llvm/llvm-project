@@ -153,19 +153,19 @@ func @simple_if_yield(%arg0: i1) -> (i1, i1) {
 // CHECK:   cond_br %{{.*}}, ^[[then:.*]], ^[[else:.*]]
   %0:2 = scf.if %arg0 -> (i1, i1) {
 // CHECK: ^[[then]]:
-// CHECK:   %[[v0:.*]] = constant 0
-// CHECK:   %[[v1:.*]] = constant 1
+// CHECK:   %[[v0:.*]] = constant false
+// CHECK:   %[[v1:.*]] = constant true
 // CHECK:   br ^[[dom:.*]](%[[v0]], %[[v1]] : i1, i1)
-    %c0 = constant 0 : i1
-    %c1 = constant 1 : i1
+    %c0 = constant false
+    %c1 = constant true
     scf.yield %c0, %c1 : i1, i1
   } else {
 // CHECK: ^[[else]]:
-// CHECK:   %[[v2:.*]] = constant 0
-// CHECK:   %[[v3:.*]] = constant 1
+// CHECK:   %[[v2:.*]] = constant false
+// CHECK:   %[[v3:.*]] = constant true
 // CHECK:   br ^[[dom]](%[[v3]], %[[v2]] : i1, i1)
-    %c0 = constant 0 : i1
-    %c1 = constant 1 : i1
+    %c0 = constant false
+    %c1 = constant true
     scf.yield %c1, %c0 : i1, i1
   }
 // CHECK: ^[[dom]](%[[arg1:.*]]: i1, %[[arg2:.*]]: i1):
@@ -180,12 +180,12 @@ func @nested_if_yield(%arg0: i1) -> (index) {
 // CHECK:   cond_br %{{.*}}, ^[[first_then:.*]], ^[[first_else:.*]]
   %0 = scf.if %arg0 -> i1 {
 // CHECK: ^[[first_then]]:
-    %1 = constant 1 : i1
+    %1 = constant true
 // CHECK:   br ^[[first_dom:.*]]({{.*}})
     scf.yield %1 : i1
   } else {
 // CHECK: ^[[first_else]]:
-    %2 = constant 0 : i1
+    %2 = constant false
 // CHECK:   br ^[[first_dom]]({{.*}})
     scf.yield %2 : i1
   }

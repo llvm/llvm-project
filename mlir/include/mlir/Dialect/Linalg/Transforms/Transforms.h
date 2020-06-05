@@ -400,8 +400,7 @@ enum class LinalgLoweringType {
   AffineLoops = 2,
   ParallelLoops = 3
 };
-template <typename OpTy>
-struct LinalgLoweringPattern : public RewritePattern {
+template <typename OpTy> struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(MLIRContext *context, LinalgLoweringType loweringType,
                         LinalgMarker marker = LinalgMarker(),
                         PatternBenefit benefit = 1)

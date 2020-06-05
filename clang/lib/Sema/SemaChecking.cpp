@@ -1961,6 +1961,9 @@ static unsigned RFT(unsigned t, bool shift = false, bool ForceQuad = false) {
   case NeonTypeFlags::Float64:
     assert(!shift && "cannot shift float types!");
     return (1 << IsQuad) - 1;
+  case NeonTypeFlags::BFloat16:
+    assert(!shift && "cannot shift float types!");
+    return (4 << IsQuad) - 1;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
@@ -2000,6 +2003,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.FloatTy;
   case NeonTypeFlags::Float64:
     return Context.DoubleTy;
+  case NeonTypeFlags::BFloat16:
+    return Context.BFloat16Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
