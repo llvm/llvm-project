@@ -512,7 +512,7 @@ private:
       assert(func.getType() == ty);
       return func;
     }
-    return builder->createFunction(name, ty);
+    return builder->createFunction(toLocation(), name, ty);
   }
 
   /// Lowering of CALL statement
@@ -580,6 +580,7 @@ private:
     mlir::Value expr = genExprValue(
         *Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t)));
     auto exprType = expr.getType();
+    auto loc = toLocation();
     if (exprType.isSignlessInteger()) {
       // Arithmetic expression has Integer type.  Generate a SelectCaseOp
       // with ranges {(-inf:-1], 0=default, [1:inf)}.
@@ -588,31 +589,31 @@ private:
       llvm::SmallVector<mlir::Value, 3> valueList;
       llvm::SmallVector<mlir::Block *, 3> blockList;
       attrList.push_back(fir::UpperBoundAttr::get(context));
-      valueList.push_back(builder->createIntegerConstant(exprType, -1));
+      valueList.push_back(builder->createIntegerConstant(loc, exprType, -1));
       blockList.push_back(blockOfLabel(eval, std::get<1>(stmt.t)));
       attrList.push_back(fir::LowerBoundAttr::get(context));
-      valueList.push_back(builder->createIntegerConstant(exprType, 1));
+      valueList.push_back(builder->createIntegerConstant(loc, exprType, 1));
       blockList.push_back(blockOfLabel(eval, std::get<3>(stmt.t)));
       attrList.push_back(mlir::UnitAttr::get(context)); // 0 is the "default"
       blockList.push_back(blockOfLabel(eval, std::get<2>(stmt.t)));
-      builder->create<fir::SelectCaseOp>(toLocation(), expr, attrList,
-                                         valueList, blockList);
+      builder->create<fir::SelectCaseOp>(loc, expr, attrList, valueList,
+                                         blockList);
       return;
     }
     // Arithmetic expression has Real type.  Generate
     //   sum = expr + expr  [ raise an exception if expr is a NaN ]
     //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
     assert(eval.localBlocks.size() == 1 && "missing arithmetic if block");
-    mlir::Value sum = builder->create<fir::AddfOp>(toLocation(), expr, expr);
+    mlir::Value sum = builder->create<fir::AddfOp>(loc, expr, expr);
     mlir::Value zero = builder->create<mlir::ConstantOp>(
-        toLocation(), exprType, builder->getFloatAttr(exprType, 0.0));
-    mlir::Value cond1 = builder->create<mlir::CmpFOp>(
-        toLocation(), mlir::CmpFPredicate::OLT, sum, zero);
+        loc, exprType, builder->getFloatAttr(exprType, 0.0));
+    mlir::Value cond1 =
+        builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OLT, sum, zero);
     genFIRConditionalBranch(cond1, blockOfLabel(eval, std::get<1>(stmt.t)),
                             eval.localBlocks[0]);
     startBlock(eval.localBlocks[0]);
-    mlir::Value cond2 = builder->create<mlir::CmpFOp>(
-        toLocation(), mlir::CmpFPredicate::OGT, sum, zero);
+    mlir::Value cond2 =
+        builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OGT, sum, zero);
     genFIRConditionalBranch(cond2, blockOfLabel(eval, std::get<3>(stmt.t)),
                             blockOfLabel(eval, std::get<2>(stmt.t)));
   }
@@ -632,9 +633,10 @@ private:
         eval.getOwningProcedure()->assignSymbolLabelMap;
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
     auto variable = lookupSymbol(symbol);
+    auto loc = toLocation();
     if (!variable)
-      variable = createTemp(toLocation(), symbol);
-    auto selectExpr = builder->create<fir::LoadOp>(toLocation(), variable);
+      variable = createTemp(loc, symbol);
+    auto selectExpr = builder->create<fir::LoadOp>(loc, variable);
     auto iter = symbolLabelMap.find(symbol);
     if (iter == symbolLabelMap.end()) {
       // Fail for a nonconforming program unit that does not have any ASSIGN
@@ -672,8 +674,7 @@ private:
     // Add a nop/fallthrough branch to the switch for a nonconforming program
     // unit that violates the program requirement above.
     blockList.push_back(eval.lexicalSuccessor->block); // default
-    builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
-                                   blockList);
+    builder->create<fir::SelectOp>(loc, selectExpr, indexList, blockList);
   }
 
   /// Generate FIR for a DO construct.  There are six variants:
@@ -744,58 +745,58 @@ private:
 
   /// Generate FIR to begin a structured or unstructured increment loop.
   void genFIRIncrementLoopBegin(IncrementLoopInfo &info) {
-    auto location = toLocation();
+    auto loc = toLocation();
     mlir::Type type =
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    info.stepValue =
-        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
-        : info.isStructured()
-            ? builder->create<mlir::ConstantIndexOp>(location, 1)
-            : builder->createIntegerConstant(info.loopVariableType, 1);
+    info.stepValue = info.stepExpr.has_value()
+                         ? genFIRLoopIndex(*info.stepExpr, type)
+                         : info.isStructured()
+                               ? builder->create<mlir::ConstantIndexOp>(loc, 1)
+                               : builder->createIntegerConstant(
+                                     loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
-    info.loopVariable = createTemp(location, *info.loopVariableSym);
+    info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
     // Structured loop - generate fir.loop.
     if (info.isStructured()) {
       info.insertionPoint = builder->saveInsertionPoint();
-      info.doLoop = builder->create<fir::LoopOp>(location, lowerValue,
-                                                 upperValue, info.stepValue);
+      info.doLoop = builder->create<fir::LoopOp>(loc, lowerValue, upperValue,
+                                                 info.stepValue);
       builder->setInsertionPointToStart(info.doLoop.getBody());
       // Always store iteration ssa-value to the LCV to avoid missing any
       // aliasing of the LCV.
-      auto lcv = builder->createConvert(location, info.loopVariableType,
+      auto lcv = builder->createConvert(loc, info.loopVariableType,
                                         info.doLoop.getInductionVar());
-      builder->create<fir::StoreOp>(location, lcv, info.loopVariable);
+      builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
       return;
     }
 
     // Unstructured loop preheader code - initialize tripVariable, loopVariable.
-    auto distance =
-        builder->create<mlir::SubIOp>(location, upperValue, lowerValue);
+    auto distance = builder->create<mlir::SubIOp>(loc, upperValue, lowerValue);
     auto adjusted =
-        builder->create<mlir::AddIOp>(location, distance, info.stepValue);
+        builder->create<mlir::AddIOp>(loc, distance, info.stepValue);
     auto tripCount =
-        builder->create<mlir::SignedDivIOp>(location, adjusted, info.stepValue);
-    info.tripVariable =
-        builder->createTemporary(location, info.loopVariableType);
-    builder->create<fir::StoreOp>(location, tripCount, info.tripVariable);
-    builder->create<fir::StoreOp>(location, lowerValue, info.loopVariable);
+        builder->create<mlir::SignedDivIOp>(loc, adjusted, info.stepValue);
+    info.tripVariable = builder->createTemporary(loc, info.loopVariableType);
+    builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
+    builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
 
     // Unstructured loop header code - generate loop condition.
     startBlock(info.headerBlock);
     mlir::Value tripVariable =
-        builder->create<fir::LoadOp>(location, info.tripVariable);
-    mlir::Value zero = builder->createIntegerConstant(info.loopVariableType, 0);
+        builder->create<fir::LoadOp>(loc, info.tripVariable);
+    mlir::Value zero =
+        builder->createIntegerConstant(loc, info.loopVariableType, 0);
     mlir::Value cond = builder->create<mlir::CmpIOp>(
-        location, mlir::CmpIPredicate::sgt, tripVariable, zero);
+        loc, mlir::CmpIPredicate::sgt, tripVariable, zero);
     genFIRConditionalBranch(cond, info.bodyBlock, info.successorBlock);
   }
 
   /// Generate FIR to end a structured or unstructured increment loop.
   void genFIRIncrementLoopEnd(IncrementLoopInfo &info) {
-    mlir::Location location = toLocation();
+    auto loc = toLocation();
     if (info.isStructured()) {
       // End fir.loop.
       builder->restoreInsertionPoint(info.insertionPoint);
@@ -804,18 +805,18 @@ private:
 
     // Unstructured loop - increment loopVariable.
     mlir::Value loopVariable =
-        builder->create<fir::LoadOp>(location, info.loopVariable);
+        builder->create<fir::LoadOp>(loc, info.loopVariable);
     loopVariable =
-        builder->create<mlir::AddIOp>(location, loopVariable, info.stepValue);
-    builder->create<fir::StoreOp>(location, loopVariable, info.loopVariable);
+        builder->create<mlir::AddIOp>(loc, loopVariable, info.stepValue);
+    builder->create<fir::StoreOp>(loc, loopVariable, info.loopVariable);
 
     // Unstructured loop - decrement tripVariable.
     mlir::Value tripVariable =
-        builder->create<fir::LoadOp>(location, info.tripVariable);
+        builder->create<fir::LoadOp>(loc, info.tripVariable);
     mlir::Value one = builder->create<mlir::ConstantOp>(
-        location, builder->getIntegerAttr(info.loopVariableType, 1));
-    tripVariable = builder->create<mlir::SubIOp>(location, tripVariable, one);
-    builder->create<fir::StoreOp>(location, tripVariable, info.tripVariable);
+        loc, builder->getIntegerAttr(info.loopVariableType, 1));
+    tripVariable = builder->create<mlir::SubIOp>(loc, tripVariable, one);
+    builder->create<fir::StoreOp>(loc, tripVariable, info.tripVariable);
     genBranch(info.headerBlock);
   }
 
@@ -945,12 +946,13 @@ private:
     llvm::SmallVector<mlir::Block *, 10> blockList;
     auto *defaultBlock = eval.parentConstruct->constructExit->block;
     using CaseValue = Fortran::parser::Scalar<Fortran::parser::ConstantExpr>;
+    auto loc = toLocation();
     auto addValue = [&](const CaseValue &caseValue) {
       const auto *expr = Fortran::semantics::GetExpr(caseValue.thing);
       const auto v = Fortran::evaluate::ToInt64(*expr);
-      valueList.push_back(v ? builder->createIntegerConstant(selectType, *v)
-                            : builder->createConvert(toLocation(), selectType,
-                                                     genExprValue(*expr)));
+      valueList.push_back(
+          v ? builder->createIntegerConstant(loc, selectType, *v)
+            : builder->createConvert(loc, selectType, genExprValue(*expr)));
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -1105,8 +1107,9 @@ private:
     if (!endBlock && !eorBlock && !errBlock)
       return;
 
+    auto loc = toLocation();
     auto indexType = builder->getIndexType();
-    auto selector = builder->createHere<fir::ConvertOp>(indexType, iostat);
+    auto selector = builder->createConvert(loc, indexType, iostat);
     llvm::SmallVector<int64_t, 5> indexList;
     llvm::SmallVector<mlir::Block *, 4> blockList;
     if (eorBlock) {
@@ -1126,7 +1129,7 @@ private:
       // Fallthrough successor statement is the default successor.
       blockList.push_back(eval.lexicalSuccessor->block);
     }
-    builder->createHere<fir::SelectOp>(selector, indexList, blockList);
+    builder->create<fir::SelectOp>(loc, selector, indexList, blockList);
   }
 
   //===--------------------------------------------------------------------===//
@@ -1142,18 +1145,19 @@ private:
   /// For each pointer object, reset the pointer to a disassociated status.
   /// We do this by setting each pointer to null.
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
+    auto loc = toLocation();
     for (auto &po : stmt.v) {
       std::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::Name &sym) {
                 auto ty = genType(*sym.symbol);
                 auto load = builder->create<fir::LoadOp>(
-                    toLocation(), lookupSymbol(*sym.symbol));
+                    loc, lookupSymbol(*sym.symbol));
                 auto idxTy = builder->getIndexType();
                 auto zero = builder->create<mlir::ConstantOp>(
-                    toLocation(), idxTy, builder->getIntegerAttr(idxTy, 0));
-                auto cast = builder->createConvert(toLocation(), ty, zero);
-                builder->create<fir::StoreOp>(toLocation(), cast, load);
+                    loc, idxTy, builder->getIntegerAttr(idxTy, 0));
+                auto cast = builder->createConvert(loc, ty, zero);
+                builder->create<fir::StoreOp>(loc, cast, load);
               },
               [&](const Fortran::parser::StructureComponent &) { TODO(); },
           },
@@ -1185,11 +1189,12 @@ private:
 
   fir::LoopOp createLoopNest(llvm::SmallVectorImpl<mlir::Value> &lcvs,
                              const Fortran::evaluate::Shape &shape) {
-    llvm::SmallVector<mlir::Value, 8> extents;
-    auto idxTy = builder->getIndexType();
-    auto zero = builder->createIntegerConstant(idxTy, 0);
-    auto one = builder->createIntegerConstant(idxTy, 1);
     auto loc = toLocation();
+    auto idxTy = builder->getIndexType();
+    auto zero = builder->createIntegerConstant(loc, idxTy, 0);
+    auto one = builder->createIntegerConstant(loc, idxTy, 1);
+    llvm::SmallVector<mlir::Value, 8> extents;
+
     for (auto s : shape) {
       if (s.has_value()) {
         auto ub = builder->createConvert(
@@ -1385,11 +1390,12 @@ private:
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
     auto variable = lookupSymbol(symbol);
+    auto loc = toLocation();
     if (!variable)
-      variable = createTemp(toLocation(), symbol);
+      variable = createTemp(loc, symbol);
     const auto labelValue = builder->createIntegerConstant(
-        genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(toLocation(), labelValue, variable);
+        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
+    builder->create<fir::StoreOp>(loc, labelValue, variable);
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
@@ -1436,13 +1442,14 @@ private:
       genExitRoutine();
       return;
     }
+    auto loc = toLocation();
     if (stmt.v) {
       // Alternate return statement -- assign alternate return index.
       auto expr = Fortran::semantics::GetExpr(*stmt.v);
       assert(expr && "missing alternate return expression");
-      auto altReturnIndex = builder->createConvert(
-          toLocation(), builder->getIndexType(), genExprValue(*expr));
-      builder->create<fir::StoreOp>(toLocation(), altReturnIndex,
+      auto altReturnIndex = builder->createConvert(loc, builder->getIndexType(),
+                                                   genExprValue(*expr));
+      builder->create<fir::StoreOp>(loc, altReturnIndex,
                                     getAltReturnResult(*funit));
     }
     // Branch to the last block of the SUBROUTINE, which has the actual return.
@@ -1451,7 +1458,7 @@ private:
       funit->finalBlock = builder->createBlock(&builder->getRegion());
       builder->restoreInsertionPoint(insPt);
     }
-    builder->create<mlir::BranchOp>(toLocation(), funit->finalBlock);
+    builder->create<mlir::BranchOp>(loc, funit->finalBlock);
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {
@@ -1505,6 +1512,7 @@ private:
     std::string globalName = mangleName(sym);
     fir::GlobalOp global;
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
+    auto loc = toLocation();
     if (builder->getNamedGlobal(globalName))
       return;
     if (const auto *details =
@@ -1514,7 +1522,6 @@ private:
           TODO(); // Derived type / polymorphic
         }
         auto symTy = genType(var);
-        auto loc = toLocation();
         global = builder->createGlobal(
             loc, symTy, globalName, isConst,
             [&](Fortran::lower::FirOpBuilder &builder) {
@@ -1523,10 +1530,10 @@ private:
               builder.create<fir::HasValueOp>(loc, castTo);
             });
       } else {
-        global = builder->createGlobal(toLocation(), genType(var), globalName);
+        global = builder->createGlobal(loc, genType(var), globalName);
       }
-      auto addrOf = builder->create<fir::AddrOfOp>(
-          toLocation(), global.resultType(), global.getSymbol());
+      auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
+                                                   global.getSymbol());
       SymbolBoxAnalyzer sia(sym);
       sia.analyze();
       if (sia.isTrivial()) {
@@ -1538,17 +1545,17 @@ private:
       if (sia.isChar) {
         auto c = sia.getCharLenConst();
         assert(c.hasValue());
-        len = builder->createIntegerConstant(idxTy, *c);
+        len = builder->createIntegerConstant(loc, idxTy, *c);
       }
       llvm::SmallVector<mlir::Value, 8> extents;
       llvm::SmallVector<mlir::Value, 8> lbounds;
       if (sia.isArray) {
         assert(sia.staticSize);
         for (auto i : sia.staticShape)
-          extents.push_back(builder->createIntegerConstant(idxTy, i));
+          extents.push_back(builder->createIntegerConstant(loc, idxTy, i));
         if (!sia.lboundIsAllOnes())
           for (auto i : sia.staticLBound)
-            lbounds.push_back(builder->createIntegerConstant(idxTy, i));
+            lbounds.push_back(builder->createIntegerConstant(loc, idxTy, i));
       }
       if (sia.isChar && sia.isArray) {
         localSymbols.addCharSymbolWithBounds(sym, addrOf, len, extents,
@@ -1586,7 +1593,8 @@ private:
     auto local = builder->allocateLocal(loc, ty, nm, shape, var.isTarget());
     // Set local pointer/allocatable to null.
     if (var.isHeapAlloc() || var.isPointer()) {
-      auto zero = builder->createIntegerConstant(builder->getIndexType(), 0);
+      auto zero =
+          builder->createIntegerConstant(loc, builder->getIndexType(), 0);
       auto null = builder->createConvert(loc, ty, zero);
       builder->create<fir::StoreOp>(loc, null, local);
     }
@@ -1594,12 +1602,11 @@ private:
   }
 
   /// Instantiate a local variable. Precondition: Each variable will be visited
-  /// such that if it depends on other variables, the variables upon which it
-  /// depends will already have been visited.
+  /// such that if it's properties depend on other variables, the variables upon
+  /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var) {
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
-    builder->setLocation(loc);
     auto idxTy = builder->getIndexType();
     const auto isDummy = Fortran::semantics::IsDummy(sym);
     const auto isResult = Fortran::semantics::IsFunctionResult(sym);
@@ -1658,7 +1665,7 @@ private:
       } else {
         // local CHARACTER variable
         if (auto c = sia.getCharLenConst()) {
-          len = builder->createIntegerConstant(idxTy, *c);
+          len = builder->createIntegerConstant(loc, idxTy, *c);
         } else {
           auto e = sia.getCharLenExpr();
           assert(e && "CHARACTER variable must have LEN parameter");
@@ -1683,7 +1690,7 @@ private:
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value, 8> shape;
           for (auto i : sia.staticShape)
-            shape.push_back(builder->createIntegerConstant(idxTy, i));
+            shape.push_back(builder->createIntegerConstant(loc, idxTy, i));
           if (sia.isChar) {
             if (isDummy || isResult) {
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
@@ -1717,8 +1724,8 @@ private:
       }
       // construct constants and populate `bounds`
       for (const auto &i : llvm::zip(sia.staticLBound, sia.staticShape)) {
-        auto fst = builder->createIntegerConstant(idxTy, std::get<0>(i));
-        auto snd = builder->createIntegerConstant(idxTy, std::get<1>(i));
+        auto fst = builder->createIntegerConstant(loc, idxTy, std::get<0>(i));
+        auto snd = builder->createIntegerConstant(loc, idxTy, std::get<1>(i));
         lbounds.emplace_back(fst);
         extents.emplace_back(snd);
       }
@@ -1733,7 +1740,7 @@ private:
           auto ub = genExprValue(Fortran::semantics::SomeExpr{*high});
           auto ty = ub.getType();
           auto diff = builder->create<mlir::SubIOp>(loc, ty, ub, lb);
-          auto one = builder->createIntegerConstant(ty, 1);
+          auto one = builder->createIntegerConstant(loc, ty, 1);
           auto sz = builder->create<mlir::AddIOp>(loc, ty, diff, one);
           auto idx = builder->createConvert(loc, idxTy, sz);
           lbounds.emplace_back(lb);
@@ -1851,12 +1858,13 @@ private:
       // Attach it to the subroutine symbol in the localSymbols map.
       // Initialize it to zero, the "fallthrough" alternate return value.
       const auto &symbol = funit.getSubprogramSymbol();
+      auto loc = toLocation();
       const auto altResult = builder->createTemporary(
-          toLocation(), builder->getIndexType(), symbol.name().ToString());
+          loc, builder->getIndexType(), symbol.name().ToString());
       addSymbol(symbol, altResult);
       const auto zero =
-          builder->createIntegerConstant(builder->getIndexType(), 0);
-      builder->create<fir::StoreOp>(toLocation(), zero, altResult);
+          builder->createIntegerConstant(loc, builder->getIndexType(), 0);
+      builder->create<fir::StoreOp>(loc, zero, altResult);
     }
   }
 
