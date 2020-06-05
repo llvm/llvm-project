@@ -1025,7 +1025,7 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
 
   auto value = GetResourceDir(
       platform_sdk_path, swift_stdlib_os_dir, GetSwiftResourceDir().GetPath(),
-      PlatformDarwin::GetXcodeContentsDirectory().GetPath(),
+      HostInfo::GetXcodeContentsDirectory().GetPath(),
       PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
       PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
   g_resource_dir_cache.insert({key, value});
