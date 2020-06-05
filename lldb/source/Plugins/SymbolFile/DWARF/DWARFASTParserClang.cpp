@@ -13,8 +13,8 @@
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
 #include "SymbolFileDWARF.h"
-#include "SymbolFileDWARFDwo.h"
 #include "SymbolFileDWARFDebugMap.h"
+#include "SymbolFileDWARFDwo.h"
 #include "UniqueDWARFASTType.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
