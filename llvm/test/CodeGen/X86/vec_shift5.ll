@@ -121,12 +121,12 @@ define <2 x i64> @test8() {
 define <8 x i16> @test9() {
 ; X32-LABEL: test9:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test9:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X64-NEXT:    retq
   %1 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> <i16 15, i16 8, i16 undef, i16 undef, i16 31, i16 undef, i16 64, i16 128>, i32 3)
   ret <8 x i16> %1
@@ -135,12 +135,12 @@ define <8 x i16> @test9() {
 define <4 x i32> @test10() {
 ; X32-LABEL: test10:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,1,u,4>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [0,1,0,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test10:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,1,u,4>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,1,0,4]
 ; X64-NEXT:    retq
   %1 = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> <i32 undef, i32 8, i32 undef, i32 32>, i32 3)
   ret <4 x i32> %1
@@ -154,7 +154,7 @@ define <2 x i64> @test11() {
 ;
 ; X64-LABEL: test11:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,3>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0]
 ; X64-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> <i64 undef, i64 31>, i32 3)
   ret <2 x i64> %1
@@ -163,12 +163,12 @@ define <2 x i64> @test11() {
 define <8 x i16> @test12() {
 ; X32-LABEL: test12:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test12:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X64-NEXT:    retq
   %1 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> <i16 15, i16 8, i16 undef, i16 undef, i16 31, i16 undef, i16 64, i16 128>, i32 3)
   ret <8 x i16> %1
@@ -177,12 +177,12 @@ define <8 x i16> @test12() {
 define <4 x i32> @test13() {
 ; X32-LABEL: test13:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,1,u,4>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [0,1,0,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test13:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,1,u,4>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,1,0,4]
 ; X64-NEXT:    retq
   %1 = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> <i32 undef, i32 8, i32 undef, i32 32>, i32 3)
   ret <4 x i32> %1
@@ -191,12 +191,12 @@ define <4 x i32> @test13() {
 define <8 x i16> @test14() {
 ; X32-LABEL: test14:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test14:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <1,1,u,u,3,u,8,16>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [1,1,0,0,3,0,8,16]
 ; X64-NEXT:    retq
   %1 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> <i16 15, i16 8, i16 undef, i16 undef, i16 31, i16 undef, i16 64, i16 128>, i32 3)
   ret <8 x i16> %1
@@ -205,12 +205,12 @@ define <8 x i16> @test14() {
 define <4 x i32> @test15() {
 ; X32-LABEL: test15:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,64,u,256>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [0,64,0,256]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test15:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,64,u,256>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,64,0,256]
 ; X64-NEXT:    retq
   %1 = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> <i32 undef, i32 8, i32 undef, i32 32>, i32 3)
   ret <4 x i32> %1
@@ -224,7 +224,7 @@ define <2 x i64> @test16() {
 ;
 ; X64-LABEL: test16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,248>
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,248,0,0,0,0,0,0,0]
 ; X64-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> <i64 undef, i64 31>, i32 3)
   ret <2 x i64> %1

@@ -23319,7 +23319,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // Must produce 0s in the correct bits.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
@@ -23331,7 +23332,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // Must produce 0s in the correct bits.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
@@ -23343,7 +23345,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // All shifted in bits must be the same so use 0.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
