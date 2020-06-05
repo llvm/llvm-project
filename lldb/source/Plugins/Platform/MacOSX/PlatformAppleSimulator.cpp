@@ -15,6 +15,7 @@
 #include <mutex>
 #include <thread>
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
@@ -77,7 +78,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   // simulator
   PlatformAppleSimulator::LoadCoreSimulator();
 
-  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+  std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
   CoreSimulatorSupport::DeviceSet devices =
       CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
           developer_dir.c_str());
@@ -124,7 +125,7 @@ Status PlatformAppleSimulator::ConnectRemote(Args &args) {
     const char *arg_cstr = args.GetArgumentAtIndex(0);
     if (arg_cstr) {
       std::string arg_str(arg_cstr);
-      std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+      std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
       CoreSimulatorSupport::DeviceSet devices =
           CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
               developer_dir.c_str());
@@ -214,7 +215,7 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
   if (!m_core_simulator_framework_path.hasValue()) {
-    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+    if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
       std::string developer_dir = fspec.GetPath();
       StreamString cs_path;
       cs_path.Printf(
@@ -247,7 +248,7 @@ CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
   if (!m_device.hasValue()) {
     const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id =
         CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone;
-    std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+    std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
                    developer_dir.c_str())
                    .GetFanciest(dev_id);
