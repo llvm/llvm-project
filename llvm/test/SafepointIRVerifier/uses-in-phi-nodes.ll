@@ -81,12 +81,12 @@ define void @test.poisoned.cmp.ok(i8 addrspace(1)* %arg) gc "statepoint-example"
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
-  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 7, i32 7) ; arg, arg
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg)]
+  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 0, i32 0) ; arg, arg
   br label %merge
 
  right:
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
+  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg)]
   br label %merge
 
  merge:
@@ -103,13 +103,13 @@ define void @test.poisoned.cmp.fail.0(i8 addrspace(1)* %arg) gc "statepoint-exam
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
-  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 7, i32 7) ; arg, arg
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg)]
+  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 0, i32 0) ; arg, arg
   br label %merge
 
  right:
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
-  %arg.relocated2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token2, i32 7, i32 7) ; arg, arg
+  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg), "deopt"(i32 -1, i32 0, i32 0, i32 0)]
+  %arg.relocated2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token2, i32 0, i32 0) ; arg, arg
   br label %merge
 
  merge:
@@ -129,13 +129,13 @@ define void @test.poisoned.cmp.fail.1(i8 addrspace(1)* %arg) gc "statepoint-exam
   br i1 undef, label %left, label %right
 
  left:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
-  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 7, i32 7) ; arg, arg
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg)]
+  %arg.relocated = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token, i32 0, i32 0) ; arg, arg
   br label %merge
 
  right:
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg , i32 -1, i32 0, i32 0, i32 0)
-  %arg.relocated2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token2, i32 7, i32 7) ; arg, arg
+  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg), "deopt"(i32 -1, i32 0, i32 0, i32 0)]
+  %arg.relocated2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %safepoint_token2, i32 0, i32 0) ; arg, arg
   br label %merge
 
  merge:
