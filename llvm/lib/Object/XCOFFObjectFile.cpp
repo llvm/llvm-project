@@ -29,8 +29,8 @@ template <typename T>
 static Expected<const T *> getObject(MemoryBufferRef M, const void *Ptr,
                                      const uint64_t Size = sizeof(T)) {
   uintptr_t Addr = uintptr_t(Ptr);
-  if (std::error_code EC = Binary::checkOffset(M, Addr, Size))
-    return errorCodeToError(EC);
+  if (Error E = Binary::checkOffset(M, Addr, Size))
+    return std::move(E);
   return reinterpret_cast<const T *>(Addr);
 }
 
