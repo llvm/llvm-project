@@ -1302,7 +1302,6 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
   // need to additionally check that the value's attribute type is consistent
   // with the result type.
   switch (value.getKind()) {
-  case StandardAttributes::Bool:
   case StandardAttributes::Integer:
   case StandardAttributes::Float: {
     if (valueType != opType)
@@ -2449,7 +2448,6 @@ static LogicalResult verify(spirv::SpecConstantOp constOp) {
   auto value = constOp.default_value();
 
   switch (value.getKind()) {
-  case StandardAttributes::Bool:
   case StandardAttributes::Integer:
   case StandardAttributes::Float: {
     // Make sure bitwidth is allowed.

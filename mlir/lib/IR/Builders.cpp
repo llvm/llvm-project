@@ -269,12 +269,8 @@ Attribute Builder::getZeroAttr(Type type) {
   case StandardTypes::F32:
   case StandardTypes::F64:
     return getFloatAttr(type, 0.0);
-  case StandardTypes::Integer: {
-    auto width = type.cast<IntegerType>().getWidth();
-    if (width == 1)
-      return getBoolAttr(false);
-    return getIntegerAttr(type, APInt(width, 0));
-  }
+  case StandardTypes::Integer:
+    return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
   case StandardTypes::Vector:
   case StandardTypes::RankedTensor: {
     auto vtType = type.cast<ShapedType>();

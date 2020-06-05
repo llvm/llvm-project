@@ -65,28 +65,6 @@ struct ArrayAttributeStorage : public AttributeStorage {
   ArrayRef<Attribute> value;
 };
 
-/// An attribute representing a boolean value.
-struct BoolAttributeStorage : public AttributeStorage {
-  using KeyTy = std::pair<MLIRContext *, bool>;
-
-  BoolAttributeStorage(Type type, bool value)
-      : AttributeStorage(type), value(value) {}
-
-  /// We only check equality for and hash with the boolean key parameter.
-  bool operator==(const KeyTy &key) const { return key.second == value; }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_value(key.second);
-  }
-
-  static BoolAttributeStorage *construct(AttributeStorageAllocator &allocator,
-                                         const KeyTy &key) {
-    return new (allocator.allocate<BoolAttributeStorage>())
-        BoolAttributeStorage(IntegerType::get(1, key.first), key.second);
-  }
-
-  bool value;
-};
-
 /// An attribute representing a dictionary of sorted named attributes.
 struct DictionaryAttributeStorage final
     : public AttributeStorage,
