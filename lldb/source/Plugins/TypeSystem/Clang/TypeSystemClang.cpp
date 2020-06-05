@@ -7983,9 +7983,13 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       //  If the class definition declares a move constructor or move assignment
       //  operator, an implicitly declared copy constructor or copy assignment
       //  operator is defined as deleted.
-      if (cxx_record_decl->hasUserDeclaredMoveConstructor() &&
-          cxx_record_decl->needsImplicitCopyConstructor())
-        cxx_record_decl->setImplicitCopyConstructorIsDeleted();
+      if (cxx_record_decl->hasUserDeclaredMoveConstructor() ||
+          cxx_record_decl->hasUserDeclaredMoveAssignment()) {
+        if (cxx_record_decl->needsImplicitCopyConstructor())
+          cxx_record_decl->setImplicitCopyConstructorIsDeleted();
+        if (cxx_record_decl->needsImplicitCopyAssignment())
+          cxx_record_decl->setImplicitCopyAssignmentIsDeleted();
+      }
 
       if (!cxx_record_decl->isCompleteDefinition())
         cxx_record_decl->completeDefinition();
