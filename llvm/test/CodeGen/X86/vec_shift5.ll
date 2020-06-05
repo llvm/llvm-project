@@ -149,7 +149,7 @@ define <4 x i32> @test10() {
 define <2 x i64> @test11() {
 ; X32-LABEL: test11:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,u,3,0>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [0,0,3,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test11:
@@ -219,7 +219,7 @@ define <4 x i32> @test15() {
 define <2 x i64> @test16() {
 ; X32-LABEL: test16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movaps {{.*#+}} xmm0 = <u,u,248,0>
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [0,0,248,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test16:

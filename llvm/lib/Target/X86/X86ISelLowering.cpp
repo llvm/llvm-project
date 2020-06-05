@@ -39699,14 +39699,22 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
       getTargetConstantBitsFromNode(N0, NumBitsPerElt, UndefElts, EltBits)) {
     assert(EltBits.size() == VT.getVectorNumElements() &&
            "Unexpected shift value type");
-    for (APInt &Elt : EltBits) {
-      if (X86ISD::VSHLI == Opcode)
+    // Undef elements need to fold to 0. It's possible SimplifyDemandedBits
+    // created an undef input due to no input bits being demanded, but user
+    // still expects 0 in other bits.
+    for (unsigned i = 0, e = EltBits.size(); i != e; ++i) {
+      APInt &Elt = EltBits[i];
+      if (UndefElts[i])
+        Elt = 0;
+      else if (X86ISD::VSHLI == Opcode)
         Elt <<= ShiftVal;
       else if (X86ISD::VSRAI == Opcode)
         Elt.ashrInPlace(ShiftVal);
       else
         Elt.lshrInPlace(ShiftVal);
     }
+    // Reset undef elements since they were zeroed above.
+    UndefElts = 0;
     return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 
