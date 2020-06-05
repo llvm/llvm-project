@@ -11,7 +11,7 @@ int global;
 int dyn_init_global = global;
 int __attribute__((no_sanitize("address"))) attributed_global;
 int blacklisted_global;
-int __attribute__((section(".foo.bar"))) sectioned_global;
+int __attribute__ ((section("__DATA, __common"))) sectioned_global;
 
 void func() {
   static int static_var = 0;
@@ -41,7 +41,7 @@ void func() {
 // CHECK: ![[ATTR_GLOBAL]] = !{{{.*}}, null, null, i1 false, i1 true}
 // CHECK: ![[BLACKLISTED_GLOBAL]] = !{{{.*}}, null, null, i1 false, i1 true}
 // CHECK: ![[SECTIONED_GLOBAL]] = !{{{.*}} ![[SECTIONED_GLOBAL_LOC:[0-9]+]], !"sectioned_global", i1 false, i1 false}
-// CHECK: ![[SECTIONED_GLOBAL_LOC]] = !{!"{{.*}}asan-globals.cpp", i32 14, i32 42}
+// CHECK: ![[SECTIONED_GLOBAL_LOC]] = !{!"{{.*}}asan-globals.cpp", i32 14, i32 51}
 // CHECK: ![[STATIC_VAR]] = !{{{.*}} ![[STATIC_LOC:[0-9]+]], !"static_var", i1 false, i1 false}
 // CHECK: ![[STATIC_LOC]] = !{!"{{.*}}asan-globals.cpp", i32 17, i32 14}
 // CHECK: ![[LITERAL]] = !{{{.*}} ![[LITERAL_LOC:[0-9]+]], !"<string literal>", i1 false, i1 false}
