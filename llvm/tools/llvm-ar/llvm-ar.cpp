@@ -520,7 +520,7 @@ static std::string normalizePath(StringRef Path) {
 
 static bool comparePaths(StringRef Path1, StringRef Path2) {
 // When on Windows this function calls CompareStringOrdinal
-// as Windows file paths are case-insensitive. 
+// as Windows file paths are case-insensitive.
 // CompareStringOrdinal compares two Unicode strings for
 // binary equivalence and allows for case insensitivity.
 #ifdef _WIN32
@@ -999,7 +999,7 @@ static int performOperation(ArchiveOperation Operation,
       MemoryBuffer::getFile(ArchiveName, -1, false);
   std::error_code EC = Buf.getError();
   if (EC && EC != errc::no_such_file_or_directory)
-    fail("error opening '" + ArchiveName + "': " + EC.message());
+    fail("unable to open '" + ArchiveName + "': " + EC.message());
 
   if (!EC) {
     Error Err = Error::success();
@@ -1014,7 +1014,7 @@ static int performOperation(ArchiveOperation Operation,
   assert(EC == errc::no_such_file_or_directory);
 
   if (!shouldCreateArchive(Operation)) {
-    failIfError(EC, Twine("error loading '") + ArchiveName + "'");
+    failIfError(EC, Twine("unable to load '") + ArchiveName + "'");
   } else {
     if (!Create) {
       // Produce a warning if we should and we're creating the archive
@@ -1100,9 +1100,9 @@ static void runMRIScript() {
       fail("unknown command: " + CommandStr);
     }
   }
-  
+
   ParsingMRIScript = false;
-  
+
   // Nothing to do if not saved.
   if (Saved)
     performOperation(ReplaceOrInsert, &NewMembers);
