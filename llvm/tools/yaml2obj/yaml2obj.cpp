@@ -44,6 +44,11 @@ cl::opt<unsigned>
            cl::desc("Read specified document from input (default = 1)"),
            cl::cat(Cat));
 
+static cl::opt<uint64_t> MaxSize(
+    "max-size", cl::init(10 * 1024 * 1024),
+    cl::desc(
+        "Sets the maximum allowed output size (0 means no limit) [ELF only]"));
+
 cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                     cl::value_desc("filename"), cl::init("-"),
                                     cl::Prefix, cl::cat(Cat));
@@ -115,7 +120,9 @@ int main(int argc, char **argv) {
   if (!Buffer)
     return 1;
   yaml::Input YIn(*Buffer);
-  if (!convertYAML(YIn, Out->os(), ErrHandler, DocNum))
+
+  if (!convertYAML(YIn, Out->os(), ErrHandler, DocNum,
+                   MaxSize == 0 ? UINT64_MAX : MaxSize))
     return 1;
 
   Out->keep();
