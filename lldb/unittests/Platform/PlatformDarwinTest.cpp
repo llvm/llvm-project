@@ -20,7 +20,6 @@ using namespace lldb_private;
 struct PlatformDarwinTester : public PlatformDarwin {
 public:
   using PlatformDarwin::FindComponentInPath;
-  using PlatformDarwin::FindXcodeContentsDirectoryInPath;
 };
 
 TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
@@ -49,44 +48,6 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
 
   std::tie(V, D) = PlatformDarwin::ParseVersionBuildDir("3.4.5");
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
-}
-
-TEST(PlatformDarwinTest, FindXcodeContentsDirectoryInPath) {
-  std::string standard =
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
-      "Developer/SDKs/MacOSX.sdk";
-  EXPECT_EQ("/Applications/Xcode.app/Contents",
-            PlatformDarwinTester::FindXcodeContentsDirectoryInPath(standard));
-
-  std::string standard_version =
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
-      "Developer/SDKs/MacOSX10.15.sdk";
-  EXPECT_EQ(
-      "/Applications/Xcode.app/Contents",
-      PlatformDarwinTester::FindXcodeContentsDirectoryInPath(standard_version));
-
-  std::string beta = "/Applications/Xcode-beta.app/Contents/Developer/"
-                     "Platforms/MacOSX.platform/"
-                     "Developer/SDKs/MacOSX10.15.sdk";
-  EXPECT_EQ("/Applications/Xcode-beta.app/Contents",
-            PlatformDarwinTester::FindXcodeContentsDirectoryInPath(beta));
-
-  std::string no_app =
-      "/Applications/Xcode/Contents/Developer/Platforms/MacOSX.platform/"
-      "Developer/SDKs/MacOSX10.15.sdk";
-  EXPECT_EQ("", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(no_app));
-
-  std::string no_contents =
-      "/Applications/Xcode.app/Developer/Platforms/MacOSX.platform/"
-      "Developer/SDKs/MacOSX10.15.sdk";
-  EXPECT_EQ(
-      "", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(no_contents));
-
-  std::string no_capitalization =
-      "/Applications/Xcode.app/contents/Developer/Platforms/MacOSX.platform/"
-      "Developer/SDKs/MacOSX10.15.sdk";
-  EXPECT_EQ("", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(
-                    no_capitalization));
 }
 
 TEST(PlatformDarwinTest, FindComponentInPath) {

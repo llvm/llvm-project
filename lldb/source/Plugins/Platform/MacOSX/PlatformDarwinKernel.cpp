@@ -18,6 +18,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
@@ -328,7 +329,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 
   // DeveloperDirectory is something like
   // "/Applications/Xcode.app/Contents/Developer"
-  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
+  std::string developer_dir = HostInfo::GetXcodeDeveloperDirectory().GetPath();
   if (developer_dir.empty())
     developer_dir = "/Applications/Xcode.app/Contents/Developer";
 
