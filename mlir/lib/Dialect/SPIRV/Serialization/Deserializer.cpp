@@ -717,6 +717,8 @@ LogicalResult Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
+  case spirv::Decoration::Flat:
+  case spirv::Decoration::NoPerspective:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -727,6 +729,7 @@ LogicalResult Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
     break;
+  case spirv::Decoration::Location:
   case spirv::Decoration::SpecId:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecoration with ")
