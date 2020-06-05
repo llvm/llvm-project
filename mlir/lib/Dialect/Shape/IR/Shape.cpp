@@ -42,6 +42,9 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
   if (auto sizeType = type.dyn_cast<SizeType>()) {
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
   }
+  if (auto witnessType = type.dyn_cast<WitnessType>()) {
+    return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
+  }
   return nullptr;
 }
 
@@ -228,6 +231,12 @@ OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
+
+//===----------------------------------------------------------------------===//
+// ConstWitnessOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ConstWitnessOp::fold(ArrayRef<Attribute>) { return passingAttr(); }
 
 //===----------------------------------------------------------------------===//
 // IndexToSizeOp
