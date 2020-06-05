@@ -300,6 +300,8 @@ static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
     else
       return llvm::Type::getInt16Ty(VMContext);
   }
+  if (&format == &llvm::APFloat::BFloat())
+    return llvm::Type::getBFloatTy(VMContext);
   if (&format == &llvm::APFloat::IEEEsingle())
     return llvm::Type::getFloatTy(VMContext);
   if (&format == &llvm::APFloat::IEEEdouble())
@@ -498,6 +500,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
           Context.getLangOpts().NativeHalfType ||
               !Context.getTargetInfo().useFP16ConversionIntrinsics());
       break;
+    case BuiltinType::BFloat16:
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
