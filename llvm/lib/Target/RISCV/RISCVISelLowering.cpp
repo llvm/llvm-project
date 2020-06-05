@@ -1461,11 +1461,11 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
     unsigned StackAlign = std::max(XLenInBytes, ArgFlags1.getOrigAlign());
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
-                            State.AllocateStack(XLenInBytes, StackAlign),
+                            State.AllocateStack(XLenInBytes, Align(StackAlign)),
                             VA1.getLocVT(), CCValAssign::Full));
     State.addLoc(CCValAssign::getMem(
-        ValNo2, ValVT2, State.AllocateStack(XLenInBytes, XLenInBytes), LocVT2,
-        CCValAssign::Full));
+        ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
+        LocVT2, CCValAssign::Full));
     return false;
   }
 
@@ -1476,8 +1476,8 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   } else {
     // The second half is passed via the stack, without additional alignment.
     State.addLoc(CCValAssign::getMem(
-        ValNo2, ValVT2, State.AllocateStack(XLenInBytes, XLenInBytes), LocVT2,
-        CCValAssign::Full));
+        ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
+        LocVT2, CCValAssign::Full));
   }
 
   return false;
@@ -1572,13 +1572,13 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     Register Reg = State.AllocateReg(ArgGPRs);
     LocVT = MVT::i32;
     if (!Reg) {
-      unsigned StackOffset = State.AllocateStack(8, 8);
+      unsigned StackOffset = State.AllocateStack(8, Align(8));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
     }
     if (!State.AllocateReg(ArgGPRs))
-      State.AllocateStack(4, 4);
+      State.AllocateStack(4, Align(4));
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return false;
   }
@@ -1618,7 +1618,8 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     Reg = State.AllocateReg(ArgFPR64s, ArgFPR32s);
   else
     Reg = State.AllocateReg(ArgGPRs);
-  unsigned StackOffset = Reg ? 0 : State.AllocateStack(XLen / 8, XLen / 8);
+  unsigned StackOffset =
+      Reg ? 0 : State.AllocateStack(XLen / 8, Align(XLen / 8));
 
   // If we reach this point and PendingLocs is non-empty, we must be at the
   // end of a split argument that must be passed indirectly.
@@ -1887,13 +1888,13 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   if (LocVT == MVT::i32 || LocVT == MVT::f32) {
-    unsigned Offset4 = State.AllocateStack(4, 4);
+    unsigned Offset4 = State.AllocateStack(4, Align(4));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset4, LocVT, LocInfo));
     return false;
   }
 
   if (LocVT == MVT::i64 || LocVT == MVT::f64) {
-    unsigned Offset5 = State.AllocateStack(8, 8);
+    unsigned Offset5 = State.AllocateStack(8, Align(8));
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset5, LocVT, LocInfo));
     return false;
   }
