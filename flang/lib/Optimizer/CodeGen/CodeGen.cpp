@@ -1485,7 +1485,7 @@ struct CoordinateOpConversion
         offs.push_back(nxtOpnd);
       }
       if (dims.hasValue())
-        return mlir::emitError(loc, "not enough arguments for array shape");
+        offs.append(arrIdx.rbegin(), arrIdx.rend());
       mlir::Value retval = genGEP(loc, unwrap(ty), rewriter, base, offs);
       rewriter.replaceOp(coor, retval);
       return success();
@@ -1583,7 +1583,7 @@ struct CoordinateOpConversion
     }
     if (ptrEle)
       return (!subEle) && (sz == 1);
-    return subEle && (i == sz);
+    return subEle && (i >= sz);
   }
 
   /// Returns the element type of the reference `refTy`.
