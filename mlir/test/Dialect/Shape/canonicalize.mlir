@@ -245,3 +245,25 @@ func @f() {
   "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }
+
+// -----
+// any can be replaced with a constant input if it has one.
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape) -> !shape.shape {
+  // CHECK-NEXT: %[[CS:.*]] = shape.const_shape
+  // CHECK-NEXT: return %[[CS]]
+  %0 = shape.const_shape [2, 3, 4]
+  %1 = shape.any %0, %arg0
+  return %1 : !shape.shape
+}
+
+
+// -----
+// Folding of any with partially constant operands is not yet implemented.
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> !shape.shape {
+  // CHECK-NEXT: shape.any
+  // CHECK-NEXT: return %[[CS]]
+  %1 = shape.any %arg0, %arg1
+  return %1 : !shape.shape
+}
