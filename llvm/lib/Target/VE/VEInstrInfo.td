@@ -95,6 +95,11 @@ def fcond2ccSwap : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(VECC, SDLoc(N), MVT::i32);
 }]>;
 
+def CCOP : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(),
+                                   SDLoc(N), MVT::i32);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Feature predicates.
 //===----------------------------------------------------------------------===//
@@ -261,9 +266,11 @@ def MEMzii : Operand<iPTR> {
 // AS assembly instruction format:
 def VEMEMriAsmOperand : AsmOperandClass {
   let Name = "MEMri";
+  let ParserMethod = "parseMEMAsOperand";
 }
 def VEMEMziAsmOperand : AsmOperandClass {
   let Name = "MEMzi";
+  let ParserMethod = "parseMEMAsOperand";
 }
 // AS generic assembly instruction format:
 def MEMriASX : Operand<iPTR> {
@@ -290,8 +297,14 @@ def calltarget : Operand<i64> {
 }
 
 // Operand for printing out a condition code.
-let PrintMethod = "printCCOperand" in
-  def CCOp : Operand<i32>;
+def CCOpAsmOperand : AsmOperandClass { let Name = "CCOp"; }
+def CCOp : Operand<i32>, ImmLeaf<i32, [{
+    return Imm >= 0 && Imm < 22; }], CCOP> {
+  let PrintMethod = "printCCOperand";
+  let DecoderMethod = "DecodeCCOperand";
+  let EncoderMethod = "getCCOpValue";
+  let ParserMatchClass = CCOpAsmOperand;
+}
 
 // Operand for printing out a rounding mode code.
 def RDOp : Operand<i32> {
@@ -586,13 +599,14 @@ multiclass BCtgm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
 }
 multiclass BCm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
                RegisterClass RC, Operand immOp> {
+  let DecoderMethod = "DecodeBranchCondition" in
   defm r : BCtgm<opcStr, "$comp, ", opc, (ins CCOp:$cond, RC:$comp)>;
-  let cy = 0 in
+  let DecoderMethod = "DecodeBranchCondition", cy = 0 in
   defm i : BCtgm<opcStr, "$comp, ", opc, (ins CCOp:$cond, immOp:$comp)>;
-  let cy = 0, sy = 0,
+  let DecoderMethod = "DecodeBranchConditionAlways", cy = 0, sy = 0,
       cf = 15 /* AT */, isBarrier = 1 in
   defm a : BCtgm<opcStrAt, "", opc, (ins)>;
-  let cy = 0, sy = 0,
+  let DecoderMethod = "DecodeBranchConditionAlways", cy = 0, sy = 0,
       cf = 0 /* AF */ in
   defm na : BCtgm<opcStrAf, "", opc, (ins)>;
 }
@@ -1044,7 +1058,7 @@ let cx = 1, cx2 = 1 in
 defm BRCFS : BCRm<"br${cf}.s", "br.s", "braf.s", 0x18, F32, simm7fp>;
 
 // Section 8.8.5 - BSIC (Branch and Save IC)
-let isCall = 1, hasSideEffects = 0 in
+let isCall = 1, hasSideEffects = 0, DecoderMethod = "DecodeCall" in
 defm BSIC : RMm<"bsic", 0x08, I64>;
 
 // Call instruction is a special case of BSIC.
