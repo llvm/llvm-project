@@ -67,6 +67,7 @@ class VEAsmParser : public MCTargetAsmParser {
 
   // Custom parse functions for VE specific operands.
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
+  OperandMatchResultTy parseMImmOperand(OperandVector &Operands);
   OperandMatchResultTy parseOperand(OperandVector &Operands, StringRef Name);
   OperandMatchResultTy parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
 
@@ -120,6 +121,8 @@ private:
     k_MemoryRegImmImm,  // base=reg, index=imm, disp=imm
     k_MemoryZeroRegImm, // base=0, index=reg, disp=imm
     k_MemoryZeroImmImm, // base=0, index=imm, disp=imm
+    k_MImmOp,           // Special immediate value of sequential bit stream
+                        // of 0 or 1.
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -144,11 +147,17 @@ private:
     const MCExpr *Offset;
   };
 
+  struct MImmOp {
+    const MCExpr *Val;
+    bool M0Flag;
+  };
+
   union {
     struct Token Tok;
     struct RegOp Reg;
     struct ImmOp Imm;
     struct MemOp Mem;
+    struct MImmOp MImm;
   };
 
 public:
@@ -176,6 +185,17 @@ public:
     if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
       int64_t Value = ConstExpr->getValue();
       return isInt<7>(Value);
+    }
+    return false;
+  }
+  bool isMImm() const {
+    if (Kind != k_MImmOp)
+      return false;
+
+    // Constant case
+    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(MImm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<6>(Value);
     }
     return false;
   }
@@ -227,6 +247,15 @@ public:
     Mem.Offset = off;
   }
 
+  const MCExpr *getMImmVal() const {
+    assert((Kind == k_MImmOp) && "Invalid access!");
+    return MImm.Val;
+  }
+  bool getM0Flag() const {
+    assert((Kind == k_MImmOp) && "Invalid access!");
+    return MImm.M0Flag;
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
@@ -260,6 +289,9 @@ public:
     case k_MemoryZeroImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
       OS << "Mem: 0+" << *getMemIndex() << "+" << *getMemOffset() << "\n";
+      break;
+    case k_MImmOp:
+      OS << "MImm: (" << getMImmVal() << (getM0Flag() ? ")0" : ")1") << "\n";
       break;
     }
   }
@@ -329,6 +361,16 @@ public:
     // FIXME: implement
   }
 
+  void addMImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const auto *ConstExpr = dyn_cast<MCConstantExpr>(getMImmVal());
+    assert(ConstExpr && "Null operands!");
+    int64_t Value = ConstExpr->getValue();
+    if (getM0Flag())
+      Value += 64;
+    Inst.addOperand(MCOperand::createImm(Value));
+  }
+
   static std::unique_ptr<VEOperand> CreateToken(StringRef Str, SMLoc S) {
     auto Op = std::make_unique<VEOperand>(k_Token);
     Op->Tok.Data = Str.data();
@@ -351,6 +393,16 @@ public:
                                               SMLoc E) {
     auto Op = std::make_unique<VEOperand>(k_Immediate);
     Op->Imm.Val = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<VEOperand> CreateMImm(const MCExpr *Val, bool Flag,
+                                               SMLoc S, SMLoc E) {
+    auto Op = std::make_unique<VEOperand>(k_MImmOp);
+    Op->MImm.Val = Val;
+    Op->MImm.M0Flag = Flag;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -648,6 +700,47 @@ OperandMatchResultTy VEAsmParser::parseMEMOperand(OperandVector &Operands) {
           ? VEOperand::MorphToMEMrii(BaseReg, IndexValue, std::move(Offset))
           : VEOperand::MorphToMEMrri(BaseReg, IndexReg, std::move(Offset)));
 
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy VEAsmParser::parseMImmOperand(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << "parseMImmOperand\n");
+
+  // Parsing "(" + number + ")0/1"
+  const AsmToken Tok1 = Parser.getTok();
+  if (!Tok1.is(AsmToken::LParen))
+    return MatchOperand_NoMatch;
+
+  Parser.Lex(); // Eat the '('.
+
+  const AsmToken Tok2 = Parser.getTok();
+  SMLoc E;
+  const MCExpr *EVal;
+  if (!Tok2.is(AsmToken::Integer) || getParser().parseExpression(EVal, E)) {
+    getLexer().UnLex(Tok1);
+    return MatchOperand_NoMatch;
+  }
+
+  const AsmToken Tok3 = Parser.getTok();
+  if (!Tok3.is(AsmToken::RParen)) {
+    getLexer().UnLex(Tok2);
+    getLexer().UnLex(Tok1);
+    return MatchOperand_NoMatch;
+  }
+  Parser.Lex(); // Eat the ')'.
+
+  const AsmToken &Tok4 = Parser.getTok();
+  StringRef Suffix = Tok4.getString();
+  if (Suffix != "1" && Suffix != "0") {
+    getLexer().UnLex(Tok3);
+    getLexer().UnLex(Tok2);
+    getLexer().UnLex(Tok1);
+    return MatchOperand_NoMatch;
+  }
+  Parser.Lex(); // Eat the value.
+  SMLoc EndLoc = SMLoc::getFromPointer(Suffix.end());
+  Operands.push_back(
+      VEOperand::CreateMImm(EVal, Suffix == "0", Tok1.getLoc(), EndLoc));
   return MatchOperand_Success;
 }
 
