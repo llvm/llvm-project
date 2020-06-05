@@ -1663,6 +1663,7 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
         ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "CopyAssignment";
       }
+      FLAG(hasSimpleCopyAssignment, simple);
       FLAG(hasTrivialCopyAssignment, trivial);
       FLAG(hasNonTrivialCopyAssignment, non_trivial);
       FLAG(hasCopyAssignmentWithConstParam, has_const_param);
