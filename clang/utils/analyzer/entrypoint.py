@@ -1,9 +1,10 @@
 import argparse
 import os
+import sys
 
 from typing import List, Tuple
 
-from subprocess import check_call
+from subprocess import call, check_call, CalledProcessError
 
 
 def main():
@@ -12,7 +13,7 @@ def main():
         build_llvm()
     if settings.build_llvm_only:
         return
-    test(rest)
+    sys.exit(test(rest))
 
 
 def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
@@ -24,8 +25,12 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
 
 def build_llvm() -> None:
     os.chdir('/build')
-    cmake()
-    ninja()
+    try:
+        cmake()
+        ninja()
+    except CalledProcessError:
+        print("Build failed!")
+        sys.exit(1)
 
 
 CMAKE_COMMAND = "cmake -G Ninja -DCMAKE_BUILD_TYPE=Release " \
@@ -43,9 +48,9 @@ def ninja():
     check_call("ninja install", shell=True)
 
 
-def test(args: List[str]):
+def test(args: List[str]) -> int:
     os.chdir("/projects")
-    check_call("/scripts/SATest.py " + " ".join(args), shell=True)
+    return call("/scripts/SATest.py " + " ".join(args), shell=True)
 
 
 if __name__ == '__main__':
