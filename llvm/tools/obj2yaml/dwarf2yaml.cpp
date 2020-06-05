@@ -68,7 +68,8 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     if (Error E = Set.extract(ArangesData, &Offset))
       return E;
     DWARFYAML::ARange Range;
-    Range.Length.setLength(Set.getHeader().Length);
+    Range.Format = Set.getHeader().Format;
+    Range.Length = Set.getHeader().Length;
     Range.Version = Set.getHeader().Version;
     Range.CuOffset = Set.getHeader().CuOffset;
     Range.AddrSize = Set.getHeader().AddrSize;

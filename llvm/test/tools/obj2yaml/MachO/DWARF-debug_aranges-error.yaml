@@ -287,8 +287,7 @@ LoadCommands:
         reserved3:       0x00000000
 DWARF:
   debug_aranges:
-    - Length:
-        TotalLength:     45
+    - Length:          45
       Version:         2
       CuOffset:        0
       AddrSize:        8

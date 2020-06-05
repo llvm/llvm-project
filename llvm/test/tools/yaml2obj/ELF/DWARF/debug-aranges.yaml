@@ -2,9 +2,9 @@
 
 ## a) Generate the .debug_aranges section from the "DWARF" entry.
 
-## Generate and verify a big endian object file.
+## Generate and verify a big endian DWARF32 .debug_aranges section.
 
-# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t.be.o
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB -DFORMAT=DWARF32 %s -o %t.be.o
 # RUN: llvm-readobj --sections --section-data %t.be.o | \
 # RUN:   FileCheck %s -DADDRALIGN=1 -DSIZE=96 --check-prefixes=DWARF-BE-HEADER,DWARF-BE-CONTENT
 
@@ -69,8 +69,8 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_aranges:
-    - Length:
-        TotalLength: 0x2c
+    - Format:   [[FORMAT]]
+      Length:   0x2c
       Version:  2
       CuOffset: 0
       AddrSize: 0x04
@@ -78,8 +78,8 @@ DWARF:
       Descriptors:
         - Address: 0x00001234
           Length:  0x20
-    - Length:
-        TotalLength: 0x2c
+    - Format:   [[FORMAT]]
+      Length:   0x2c
       Version:  2
       CuOffset: 0x65
       AddrSize: 0x08
@@ -90,9 +90,9 @@ DWARF:
         - Address: 0x0000000056780000
           Length:  0x10
 
-## Generate and verify a little endian object file.
+## Generate and verify a little endian DWARF32 .debug_aranges section.
 
-# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t.le.o
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s -o %t.le.o
 # RUN: llvm-readobj --sections --section-data %t.le.o | \
 # RUN:   FileCheck %s --check-prefixes=DWARF-LE-DEFAULT
 
@@ -211,8 +211,7 @@ Sections:
     Size: 0x10
 DWARF:
   debug_aranges:
-    - Length:
-        TotalLength: 0x2c
+    - Length:   0x2c
       Version:  2
       CuOffset: 0
       AddrSize: 0x08
@@ -238,8 +237,7 @@ Sections:
     Content: "00"
 DWARF:
   debug_aranges:
-    - Length:
-        TotalLength: 0x2c
+    - Length:   0x2c
       Version:  2
       CuOffset: 0
       AddrSize: 0x08
@@ -304,8 +302,7 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_aranges:
-    - Length:
-        TotalLength: 0x2c
+    - Length:   0x2c
       Version:  2
       CuOffset: 0
       AddrSize: 0x08
