@@ -930,8 +930,10 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
     }
 
     // Sign bit of byte is 2nd high order bit (0x40)
-    if (shift < size && (byte & 0x40))
-      result |= -(static_cast<int64_t>(1) << shift);
+    if (shift < size && (byte & 0x40)) {
+      // -(static_cast<int64_t>(1) << 63) errors on the negation with UBSan.
+      result |= -(static_cast<uint64_t>(1) << shift);
+    }
 
     *offset_ptr += bytecount;
     return result;
