@@ -26,6 +26,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgOps
   MLIRLinalgUtils
   MLIRSCF
+  MLIRSCFTransforms
   MLIRPass
   MLIRStandardOps
   MLIRStandardToLLVM
