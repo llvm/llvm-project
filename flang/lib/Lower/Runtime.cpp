@@ -20,29 +20,34 @@ using Fortran::lower::operator""_rt_ident;
 #define MakeRuntimeEntry(X) mkKey(RTNAME(X))
 
 template <typename RuntimeEntry>
-static mlir::FuncOp genRuntimeFunction(Fortran::lower::FirOpBuilder &builder) {
+static mlir::FuncOp genRuntimeFunction(mlir::Location loc,
+                                       Fortran::lower::FirOpBuilder &builder) {
   auto func = builder.getNamedFunction(RuntimeEntry::name);
   if (func)
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
-  func = builder.createFunction(RuntimeEntry::name, funTy);
+  func = builder.createFunction(loc, RuntimeEntry::name, funTy);
   func.setAttr("fir.runtime", builder.getUnitAttr());
   return func;
 }
 
 static mlir::FuncOp
-genStopStatementRuntime(Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(StopStatement)>(builder);
+genStopStatementRuntime(mlir::Location loc,
+                        Fortran::lower::FirOpBuilder &builder) {
+  return genRuntimeFunction<MakeRuntimeEntry(StopStatement)>(loc, builder);
 }
 
 static mlir::FuncOp
-genStopStatementTextRuntime(Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(StopStatementText)>(builder);
+genStopStatementTextRuntime(mlir::Location loc,
+                            Fortran::lower::FirOpBuilder &builder) {
+  return genRuntimeFunction<MakeRuntimeEntry(StopStatementText)>(loc, builder);
 }
 
 static mlir::FuncOp
-genProgramEndStatementRuntime(Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(ProgramEndStatement)>(builder);
+genProgramEndStatementRuntime(mlir::Location loc,
+                              Fortran::lower::FirOpBuilder &builder) {
+  return genRuntimeFunction<MakeRuntimeEntry(ProgramEndStatement)>(loc,
+                                                                   builder);
 }
 
 // TODO: We don't have runtime library support for various features. When they
@@ -62,7 +67,7 @@ void Fortran::lower::genStopStatement(
     const Fortran::parser::StopStmt &stmt) {
   auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genStopStatementRuntime(builder);
+  auto callee = genStopStatementRuntime(loc, builder);
   auto calleeType = callee.getType();
   llvm::SmallVector<mlir::Value, 8> operands;
   assert(calleeType.getNumInputs() == 3 &&
@@ -75,13 +80,13 @@ void Fortran::lower::genStopStatement(
     operands.push_back(converter.genExprValue(*expr));
   } else {
     operands.push_back(
-        builder.createIntegerConstant(calleeType.getInput(0), 0));
+        builder.createIntegerConstant(loc, calleeType.getInput(0), 0));
   }
   // Second operand indicates ERROR STOP
   bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
                  Fortran::parser::StopStmt::Kind::ErrorStop;
   operands.push_back(
-      builder.createIntegerConstant(calleeType.getInput(1), isError));
+      builder.createIntegerConstant(loc, calleeType.getInput(1), isError));
 
   // Third operand indicates QUIET (default to false).
   if (const auto &quiet =
@@ -91,7 +96,7 @@ void Fortran::lower::genStopStatement(
     operands.push_back(converter.genExprValue(*expr));
   } else {
     operands.push_back(
-        builder.createIntegerConstant(calleeType.getInput(2), 0));
+        builder.createIntegerConstant(loc, calleeType.getInput(2), 0));
   }
 
   // Cast operands in case they have different integer/logical types
@@ -108,7 +113,8 @@ void Fortran::lower::genFailImageStatement(
     Fortran::lower::AbstractConverter &converter) {
   auto &bldr = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genRuntimeFunction<MakeRuntimeEntry(FailImageStatement)>(bldr);
+  auto callee =
+      genRuntimeFunction<MakeRuntimeEntry(FailImageStatement)>(loc, bldr);
   bldr.create<mlir::CallOp>(loc, callee, llvm::None);
 }
 
