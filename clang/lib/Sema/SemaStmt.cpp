@@ -477,7 +477,9 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
     return ER;
   };
 
-  ExprResult Converted = CorrectDelayedTyposInExpr(Val, CheckAndFinish);
+  ExprResult Converted = CorrectDelayedTyposInExpr(
+      Val, /*InitDecl=*/nullptr, /*RecoverUncorrectedTypos=*/false,
+      CheckAndFinish);
   if (Converted.get() == Val.get())
     Converted = CheckAndFinish(Val.get());
   return Converted;
