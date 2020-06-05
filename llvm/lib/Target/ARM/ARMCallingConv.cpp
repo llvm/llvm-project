@@ -32,9 +32,8 @@ static bool f64AssignAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
 
     // Put the whole thing on the stack.
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(8, 4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(8, Align(4)), LocVT, LocInfo));
     return true;
   }
 
@@ -42,9 +41,8 @@ static bool f64AssignAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (unsigned Reg = State.AllocateReg(RegList))
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   else
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(4, 4),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(4, Align(4)), LocVT, LocInfo));
   return true;
 }
 
@@ -81,9 +79,8 @@ static bool f64AssignAAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
 
     // Put the whole thing on the stack.
-    State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                           State.AllocateStack(8, 8),
-                                           LocVT, LocInfo));
+    State.addLoc(CCValAssign::getCustomMem(
+        ValNo, ValVT, State.AllocateStack(8, Align(8)), LocVT, LocInfo));
     return true;
   }
 
@@ -193,8 +190,9 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
   auto &DL = State.getMachineFunction().getDataLayout();
-  unsigned StackAlign = DL.getStackAlignment().value();
-  unsigned Align = std::min(PendingMembers[0].getExtraInfo(), StackAlign);
+  const Align StackAlign = DL.getStackAlignment();
+  const Align FirstMemberAlign(PendingMembers[0].getExtraInfo());
+  Align Alignment = std::min(FirstMemberAlign, StackAlign);
 
   ArrayRef<MCPhysReg> RegList;
   switch (LocVT.SimpleTy) {
@@ -204,7 +202,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 
     // First consume all registers that would give an unaligned object. Whether
     // we go on stack or in regs, no-one will be using them in future.
-    unsigned RegAlign = alignTo(Align, 4) / 4;
+    unsigned RegAlign = alignTo(Alignment.value(), 4) / 4;
     while (RegIdx % RegAlign != 0 && RegIdx < RegList.size())
       State.AllocateReg(RegList[RegIdx++]);
 
@@ -247,7 +245,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     unsigned RegIdx = State.getFirstUnallocated(RegList);
     for (auto &It : PendingMembers) {
       if (RegIdx >= RegList.size())
-        It.convertToMem(State.AllocateStack(Size, Size));
+        It.convertToMem(State.AllocateStack(Size, Align(Size)));
       else
         It.convertToReg(State.AllocateReg(RegList[RegIdx++]));
 
@@ -265,12 +263,12 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   // After the first item has been allocated, the rest are packed as tightly as
   // possible. (E.g. an incoming i64 would have starting Align of 8, but we'll
   // be allocating a bunch of i32 slots).
-  unsigned RestAlign = std::min(Align, Size);
+  const Align RestAlign = std::min(Alignment, Align(Size));
 
   for (auto &It : PendingMembers) {
-    It.convertToMem(State.AllocateStack(Size, Align));
+    It.convertToMem(State.AllocateStack(Size, Alignment));
     State.addLoc(It);
-    Align = RestAlign;
+    Alignment = RestAlign;
   }
 
   // All pending members have now been allocated
