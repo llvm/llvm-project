@@ -1034,7 +1034,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
 
   for (auto &MO : MI->operands()) {
     if (!MO.isFI()) {
-      MIB.add(MI->getOperand(OperIdx));
+      MIB.add(MO);
       continue;
     }
 
@@ -1051,13 +1051,13 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
       assert(MI->getOpcode() == TargetOpcode::STATEPOINT && "sanity");
       MIB.addImm(StackMaps::IndirectMemRefOp);
       MIB.addImm(MFI.getObjectSize(FI));
-      MIB.add(MI->getOperand(OperIdx));
+      MIB.add(MO);
       MIB.addImm(0);
     } else {
       // direct-mem-ref tag, #FI, offset.
       // Used by patchpoint, and direct alloca arguments to statepoints
       MIB.addImm(StackMaps::DirectMemRefOp);
-      MIB.add(MI->getOperand(OperIdx));
+      MIB.add(MO);
       MIB.addImm(0);
     }
 
