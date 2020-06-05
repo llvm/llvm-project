@@ -1890,6 +1890,19 @@ Error ASTNodeImporter::ImportDefinition(
         // set in CXXRecordDecl::CreateLambda.  We must import the contained
         // decls here and finish the definition.
         (To->isLambda() && shouldForceImportDeclContext(Kind))) {
+      if (To->isLambda()) {
+        auto *FromCXXRD = cast<CXXRecordDecl>(From);
+        SmallVector<LambdaCapture, 8> ToCaptures;
+        ToCaptures.reserve(FromCXXRD->capture_size());
+        for (const auto &FromCapture : FromCXXRD->captures()) {
+          if (auto ToCaptureOrErr = import(FromCapture))
+            ToCaptures.push_back(*ToCaptureOrErr);
+          else
+            return ToCaptureOrErr.takeError();
+        }
+        cast<CXXRecordDecl>(To)->setCaptures(ToCaptures);
+      }
+
       Error Result = ImportDeclContext(From, /*ForceImport=*/true);
       // Finish the definition of the lambda, set isBeingDefined to false.
       if (To->isLambda())
@@ -7588,15 +7601,6 @@ ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {
   if (!ToCallOpOrErr)
     return ToCallOpOrErr.takeError();
 
-  SmallVector<LambdaCapture, 8> ToCaptures;
-  ToCaptures.reserve(E->capture_size());
-  for (const auto &FromCapture : E->captures()) {
-    if (auto ToCaptureOrErr = import(FromCapture))
-      ToCaptures.push_back(*ToCaptureOrErr);
-    else
-      return ToCaptureOrErr.takeError();
-  }
-
   SmallVector<Expr *, 8> ToCaptureInits(E->capture_size());
   if (Error Err = ImportContainerChecked(E->capture_inits(), ToCaptureInits))
     return std::move(Err);
@@ -7608,11 +7612,11 @@ ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return LambdaExpr::Create(
-      Importer.getToContext(), ToClass, ToIntroducerRange,
-      E->getCaptureDefault(), ToCaptureDefaultLoc, ToCaptures,
-      E->hasExplicitParameters(), E->hasExplicitResultType(), ToCaptureInits,
-      ToEndLoc, E->containsUnexpandedParameterPack());
+  return LambdaExpr::Create(Importer.getToContext(), ToClass, ToIntroducerRange,
+                            E->getCaptureDefault(), ToCaptureDefaultLoc,
+                            E->hasExplicitParameters(),
+                            E->hasExplicitResultType(), ToCaptureInits,
+                            ToEndLoc, E->containsUnexpandedParameterPack());
 }
 
 
