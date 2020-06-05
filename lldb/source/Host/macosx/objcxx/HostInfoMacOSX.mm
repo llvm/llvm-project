@@ -297,6 +297,63 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   }
 }
 
+FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
+  static FileSpec g_xcode_contents_path;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    // Try the shlib dir first.
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string xcode_contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        if (!xcode_contents_dir.empty()) {
+          g_xcode_contents_path = FileSpec(xcode_contents_dir);
+          return;
+        }
+      }
+    }
+
+    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
+      FileSpec fspec(developer_dir_env_var);
+      if (FileSystem::Instance().Exists(fspec)) {
+        // FIXME: This looks like it couldn't possibly work!
+        std::string xcode_contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        if (!xcode_contents_dir.empty()) {
+          g_xcode_contents_path = FileSpec(xcode_contents_dir);
+          return;
+        }
+      }
+    }
+
+    FileSpec fspec(HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS()));
+    if (fspec) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string xcode_contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        if (!xcode_contents_dir.empty()) {
+          g_xcode_contents_path = FileSpec(xcode_contents_dir);
+          return;
+        }
+      }
+    }
+  });
+  return g_xcode_contents_path;
+}
+
+lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
+  static lldb_private::FileSpec g_developer_directory;
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    if (FileSpec fspec = GetXcodeContentsDirectory()) {
+      fspec.AppendPathComponent("Developer");
+      if (FileSystem::Instance().Exists(fspec))
+        g_developer_directory = fspec;
+    }
+  });
+  return g_developer_directory;
+}
+
 static std::string GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
