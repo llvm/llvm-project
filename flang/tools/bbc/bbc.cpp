@@ -16,6 +16,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -65,11 +66,11 @@ static llvm::cl::list<std::string>
 
 static llvm::cl::opt<std::string>
     intrinsicModuleDir("intrinsic-module-directory",
-                llvm::cl::desc("intrinsic module directory"));
+                       llvm::cl::desc("intrinsic module directory"));
 
 static llvm::cl::opt<std::string>
     moduleDir("module", llvm::cl::desc("module output directory (default .)"),
-                llvm::cl::init("."));
+              llvm::cl::init("."));
 
 static llvm::cl::opt<std::string>
     moduleSuffix("module-suffix", llvm::cl::desc("module file suffix override"),
@@ -218,24 +219,29 @@ static void convertFortranSourceToMLIR(
     llvm::errs() << "could not open output file " << outputName << '\n';
     return;
   }
-  if (emitFIR) {
-    // Do lowering, but nothing else. Dump FIR and exit.
-    printModule(mlirModule, out);
-    return;
-  }
 
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule.getContext());
   mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
     passPipeline.addToPipeline(pm);
+  } else if (emitFIR) {
+    // --emit-fir: Build the IR, verify it, and dump the IR (unconditionally).
+    pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+    if (mlir::failed(pm.run(mlirModule)))
+      llvm::errs() << "FATAL: verification of lowering to FIR failed";
+    printModule(mlirModule, out);
+    return;
   } else {
+    pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+    pm.addPass(mlir::createCanonicalizerPass());
+    pm.addPass(fir::createCSEPass());
     pm.addPass(fir::createPromoteToAffinePass());
     pm.addPass(fir::createFirToCfgPass());
     pm.addPass(fir::createControlFlowLoweringPass());
     pm.addPass(mlir::createLowerToCFGPass());
     // pm.addPass(fir::createMemToRegPass());
-    pm.addPass(fir::createCSEPass());
+    pm.addPass(mlir::createCSEPass());
     pm.addPass(mlir::createCanonicalizerPass());
   }
 
