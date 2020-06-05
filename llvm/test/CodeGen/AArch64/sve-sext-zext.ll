@@ -186,3 +186,143 @@ define <vscale x 2 x i64> @zext_i32_i64(<vscale x 2 x i32> %a) {
   %r = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %r
 }
+
+; Extending to illegal types
+
+define <vscale x 16 x i16> @sext_b_to_h(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sext_b_to_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z2.h, z0.b
+; CHECK-NEXT:    sunpkhi z1.h, z0.b
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i16>
+  ret <vscale x 16 x i16> %ext
+}
+
+define <vscale x 8 x i32> @sext_h_to_s(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sext_h_to_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z2.s, z0.h
+; CHECK-NEXT:    sunpkhi z1.s, z0.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %ext
+}
+
+define <vscale x 4 x i64> @sext_s_to_d(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sext_s_to_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z2.d, z0.s
+; CHECK-NEXT:    sunpkhi z1.d, z0.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %ext
+}
+
+define <vscale x 16 x i32> @sext_b_to_s(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sext_b_to_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z1.h, z0.b
+; CHECK-NEXT:    sunpkhi z3.h, z0.b
+; CHECK-NEXT:    sunpklo z0.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    sunpklo z2.s, z3.h
+; CHECK-NEXT:    sunpkhi z3.s, z3.h
+; CHECK-NEXT:    ret
+  %ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %ext
+}
+
+define <vscale x 16 x i64> @sext_b_to_d(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sext_b_to_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z1.h, z0.b
+; CHECK-NEXT:    sunpkhi z0.h, z0.b
+; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    sunpkhi z3.s, z1.h
+; CHECK-NEXT:    sunpklo z5.s, z0.h
+; CHECK-NEXT:    sunpkhi z7.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z2.s
+; CHECK-NEXT:    sunpkhi z1.d, z2.s
+; CHECK-NEXT:    sunpklo z2.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEXT:    sunpklo z4.d, z5.s
+; CHECK-NEXT:    sunpkhi z5.d, z5.s
+; CHECK-NEXT:    sunpklo z6.d, z7.s
+; CHECK-NEXT:    sunpkhi z7.d, z7.s
+; CHECK-NEXT:    ret
+  %ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  ret <vscale x 16 x i64> %ext
+}
+
+define <vscale x 16 x i16> @zext_b_to_h(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: zext_b_to_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z2.h, z0.b
+; CHECK-NEXT:    uunpkhi z1.h, z0.b
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
+  ret <vscale x 16 x i16> %ext
+}
+
+define <vscale x 8 x i32> @zext_h_to_s(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: zext_h_to_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z2.s, z0.h
+; CHECK-NEXT:    uunpkhi z1.s, z0.h
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %ext
+}
+
+define <vscale x 4 x i64> @zext_s_to_d(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: zext_s_to_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpkhi z1.d, z0.s
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %ext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %ext
+}
+
+define <vscale x 16 x i32> @zext_b_to_s(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: zext_b_to_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    uunpkhi z3.h, z0.b
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    uunpkhi z3.s, z3.h
+; CHECK-NEXT:    ret
+  %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %ext
+}
+
+define <vscale x 16 x i64> @zext_b_to_d(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: zext_b_to_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    uunpkhi z0.h, z0.b
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpkhi z3.s, z1.h
+; CHECK-NEXT:    uunpklo z5.s, z0.h
+; CHECK-NEXT:    uunpkhi z7.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z2.s
+; CHECK-NEXT:    uunpkhi z1.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEXT:    uunpklo z4.d, z5.s
+; CHECK-NEXT:    uunpkhi z5.d, z5.s
+; CHECK-NEXT:    uunpklo z6.d, z7.s
+; CHECK-NEXT:    uunpkhi z7.d, z7.s
+; CHECK-NEXT:    ret
+  %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  ret <vscale x 16 x i64> %ext
+}
