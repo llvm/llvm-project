@@ -134,7 +134,7 @@
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="unsupported-expr-false.txt" time="{{[0-9]+\.[0-9]+}}"/>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="unsupported-expr-true.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT:<skipped message="Skipping because of configuration"/>
+# XUNIT-NEXT:<skipped message="Unsupported configuration"/>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="unsupported-star.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
@@ -142,7 +142,7 @@
 # XUNIT-NEXT: </testcase>
 
 # XUNIT: <testcase classname="shtest-format.unsupported_dir" name="some-test.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT:<skipped message="Skipping because of configuration"/>
+# XUNIT-NEXT:<skipped message="Unsupported configuration"/>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="xfail-expr-false.txt" time="{{[0-9]+\.[0-9]+}}"/>
 
