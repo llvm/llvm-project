@@ -9,6 +9,10 @@
 
 # RUN: mkdir -p %t.dir
 
+# RUN: echo > %tempty.list
+# RUN: not ld.lld --dynamic-list %tempty.list 2>&1 | FileCheck --check-prefix=EMPTY %s
+# EMPTY: error: {{.*}}.list:1: unexpected EOF
+
 # RUN: echo foobar > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR1 %s
 # ERR1: {{.*}}:1: { expected, but got foobar
