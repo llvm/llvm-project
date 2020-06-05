@@ -159,6 +159,44 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
   p.printOptionalAttrDict(op.getAttrs());
 }
 
+namespace {
+// Removes AssumingOp with a passing witness and inlines the region.
+struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
+  using OpRewritePattern<AssumingOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AssumingOp op,
+                                PatternRewriter &rewriter) const override {
+    auto witness = op.witness().getDefiningOp<ConstWitnessOp>();
+    if (!witness || !witness.passingAttr())
+      return failure();
+
+    auto *blockBeforeAssuming = rewriter.getInsertionBlock();
+    auto *assumingBlock = op.getBody();
+    auto initPosition = rewriter.getInsertionPoint();
+    auto *blockAfterAssuming =
+        rewriter.splitBlock(blockBeforeAssuming, initPosition);
+
+    // Remove the AssumingOp and AssumingYieldOp.
+    auto &yieldOp = assumingBlock->back();
+    rewriter.inlineRegionBefore(op.doRegion(), blockAfterAssuming);
+    rewriter.replaceOp(op, yieldOp.getOperands());
+    rewriter.eraseOp(&yieldOp);
+
+    // Merge blocks together as there was no branching behavior from the
+    // AssumingOp.
+    rewriter.mergeBlocks(assumingBlock, blockBeforeAssuming);
+    rewriter.mergeBlocks(blockAfterAssuming, blockBeforeAssuming);
+    return success();
+  }
+};
+}; // namespace
+
+void AssumingOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                             MLIRContext *context) {
+  // If taking a passing witness, inline region
+  patterns.insert<AssumingWithTrue>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // AssumingAllOp
 //===----------------------------------------------------------------------===//

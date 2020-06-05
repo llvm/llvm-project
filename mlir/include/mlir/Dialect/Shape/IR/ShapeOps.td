@@ -509,6 +509,8 @@ def Shape_AssumingOp : Shape_Op<"assuming",
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let hasCanonicalizer = 1;
 }
 
 def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
