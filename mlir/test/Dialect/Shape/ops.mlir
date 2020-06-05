@@ -1,4 +1,8 @@
 // RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// Verify the printed output can be parsed.
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// Verify the generic form can be parsed.
+// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s --dump-input-on-failure
 
 // CHECK-LABEL: shape_num_elements
 func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
@@ -79,4 +83,9 @@ func @test_constraints() {
     shape.assuming_yield %2 : !shape.shape
   }
   return
+}
+
+func @test_mul(%lhs: !shape.size, %rhs: !shape.size) -> !shape.size {
+  %product = shape.mul %lhs, %rhs
+  return %product: !shape.size
 }
