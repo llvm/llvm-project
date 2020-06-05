@@ -2233,6 +2233,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#else\n";
   OS << "typedef int8_t poly8_t;\n";
   OS << "typedef int16_t poly16_t;\n";
+  OS << "typedef int64_t poly64_t;\n";
   OS << "#endif\n";
 
   // Emit Neon vector typedefs.
@@ -2245,7 +2246,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   for (auto &TS : TDTypeVec) {
     bool IsA64 = false;
     Type T(TS, ".");
-    if (T.isDouble() || (T.isPoly() && T.getElementSizeInBits() == 64))
+    if (T.isDouble())
       IsA64 = true;
 
     if (InIfdef && !IsA64) {
@@ -2278,7 +2279,7 @@ void NeonEmitter::run(raw_ostream &OS) {
     for (auto &TS : TDTypeVec) {
       bool IsA64 = false;
       Type T(TS, ".");
-      if (T.isDouble() || (T.isPoly() && T.getElementSizeInBits() == 64))
+      if (T.isDouble())
         IsA64 = true;
 
       if (InIfdef && !IsA64) {
