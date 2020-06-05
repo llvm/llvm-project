@@ -391,6 +391,26 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(YieldOp op) {
+  auto *parentOp = op.getParentOp();
+  auto results = parentOp->getResults();
+  auto operands = op.getOperands();
+
+  if (parentOp->getNumResults() != op.getNumOperands())
+    return op.emitOpError() << "number of operands does not match number of "
+                               "results of its parent";
+  for (auto e : llvm::zip(results, operands))
+    if (std::get<0>(e).getType() != std::get<1>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between yield op and its parent";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // SplitAtOp
 //===----------------------------------------------------------------------===//
 
