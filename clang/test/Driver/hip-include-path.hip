@@ -22,7 +22,7 @@
 // COMMON: {{.*}}include/c++
 // COMMON: clang/{{.*}}/include
 
-// COMMON-LABEL: clang{{.*}} -cc1 -triple x86_64-unknown-linux-gnu
+// COMMON-LABEL: clang{{.*}} -cc1 -triple x86_64
 // WRAP: clang/{{.*}}/include/cuda_wrappers
 // NOWRAP-NOT: clang/{{.*}}/include/cuda_wrappers
 // HIP: {{.*}}Inputs/rocm/include
