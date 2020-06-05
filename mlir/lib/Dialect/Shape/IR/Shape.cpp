@@ -146,6 +146,30 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// AssumingAllOp
+//===----------------------------------------------------------------------===//
+OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
+  // Iterate in reverse to first handle all constant operands. They are
+  // guaranteed to be the tail of the inputs because this is commutative.
+  for (int idx = operands.size() - 1; idx >= 0; idx--) {
+    Attribute a = operands[idx];
+    // Cannot fold if any inputs are not constant;
+    if (!a)
+      return nullptr;
+
+    // We do not need to keep statically known values after handling them in
+    // this method.
+    getOperation()->eraseOperand(idx);
+
+    // Always false if any input is statically known false
+    if (!a.cast<BoolAttr>().getValue())
+      return a;
+  }
+  // If this is reached, all inputs were statically known passing.
+  return BoolAttr::get(true, getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 

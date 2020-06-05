@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -canonicalize <%s | FileCheck %s --dump-input=fail
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize <%s | FileCheck %s --dump-input=fail
 
 // -----
 // CHECK-LABEL: func @f
@@ -211,4 +211,37 @@ func @not_const(%arg0: !shape.shape) -> !shape.size {
   // CHECK: shape.get_extent
   %0 = shape.get_extent %arg0, 3
   return %0 : !shape.size
+}
+
+// -----
+// assuming_all with known passing witnesses can be folded
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: shape.const_witness true
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %0 = shape.const_witness true
+  %1 = shape.const_witness true
+  %2 = shape.const_witness true
+  %3 = shape.assuming_all %0, %1, %2
+  "consume.witness"(%3) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+// assuming_all should not be removed if not all witnesses are statically passing.
+//
+// Additionally check that the attribute is moved to the end as this op is
+// commutative.
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: %[[UNKNOWN:.*]] = "test.source"
+  // CHECK-NEXT: shape.assuming_all %[[UNKNOWN]]
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %0 = shape.const_witness true
+  %1 = "test.source"() : () -> !shape.witness
+  %2 = shape.assuming_all %0, %1
+  "consume.witness"(%2) : (!shape.witness) -> ()
+  return
 }
