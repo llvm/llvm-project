@@ -61,22 +61,22 @@ private:
 inline ArrayRef<TestLanguage> langCxx11OrLater() {
   static const TestLanguage Result[] = {Lang_CXX11, Lang_CXX14, Lang_CXX17,
                                         Lang_CXX20};
-  return Result;
+  return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx14OrLater() {
   static const TestLanguage Result[] = {Lang_CXX14, Lang_CXX17, Lang_CXX20};
-  return Result;
+  return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx17OrLater() {
   static const TestLanguage Result[] = {Lang_CXX17, Lang_CXX20};
-  return Result;
+  return ArrayRef<TestLanguage>(Result);
 }
 
 inline ArrayRef<TestLanguage> langCxx20OrLater() {
   static const TestLanguage Result[] = {Lang_CXX20};
-  return Result;
+  return ArrayRef<TestLanguage>(Result);
 }
 
 template <typename T>
