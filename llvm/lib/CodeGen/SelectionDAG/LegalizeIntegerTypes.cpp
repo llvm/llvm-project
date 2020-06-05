@@ -344,8 +344,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
       return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT,
                          BitConvertToInteger(GetScalarizedVector(InOp)));
     break;
-  case TargetLowering::TypeScalarizeScalableVector:
-    report_fatal_error("Scalarization of scalable vectors is not supported.");
   case TargetLowering::TypeSplitVector: {
     if (!NOutVT.isVector()) {
       // For example, i32 = BITCAST v2i16 on alpha.  Convert the split

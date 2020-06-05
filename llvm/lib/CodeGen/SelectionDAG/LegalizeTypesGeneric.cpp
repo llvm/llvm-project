@@ -83,8 +83,6 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
       Lo = DAG.getNode(ISD::BITCAST, dl, NOutVT, Lo);
       Hi = DAG.getNode(ISD::BITCAST, dl, NOutVT, Hi);
       return;
-    case TargetLowering::TypeScalarizeScalableVector:
-      report_fatal_error("Scalarization of scalable vectors is not supported.");
     case TargetLowering::TypeWidenVector: {
       assert(!(InVT.getVectorNumElements() & 1) && "Unsupported BITCAST");
       InOp = GetWidenedVector(InOp);
