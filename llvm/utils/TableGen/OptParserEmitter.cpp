@@ -190,8 +190,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
     for (Init *I : *LI)
-      OS << (NumFlags++ ? " | " : "")
-         << cast<DefInit>(I)->getDef()->getName();
+      OS << (NumFlags++ ? " | " : "") << cast<DefInit>(I)->getDef()->getName();
     if (GroupFlags) {
       for (Init *I : *GroupFlags)
         OS << (NumFlags++ ? " | " : "")
