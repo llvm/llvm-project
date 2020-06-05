@@ -1710,16 +1710,17 @@ PeelingModuloScheduleExpander::getPhiCanonicalReg(MachineInstr *CanonicalPhi,
                                                   MachineInstr *Phi) {
   unsigned distance = PhiNodeLoopIteration[Phi];
   MachineInstr *CanonicalUse = CanonicalPhi;
+  Register CanonicalUseReg = CanonicalUse->getOperand(0).getReg();
   for (unsigned I = 0; I < distance; ++I) {
     assert(CanonicalUse->isPHI());
     assert(CanonicalUse->getNumOperands() == 5);
     unsigned LoopRegIdx = 3, InitRegIdx = 1;
     if (CanonicalUse->getOperand(2).getMBB() == CanonicalUse->getParent())
       std::swap(LoopRegIdx, InitRegIdx);
-    CanonicalUse =
-        MRI.getVRegDef(CanonicalUse->getOperand(LoopRegIdx).getReg());
+    CanonicalUseReg = CanonicalUse->getOperand(LoopRegIdx).getReg();
+    CanonicalUse = MRI.getVRegDef(CanonicalUseReg);
   }
-  return CanonicalUse->getOperand(0).getReg();
+  return CanonicalUseReg;
 }
 
 void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
