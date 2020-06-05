@@ -41,19 +41,19 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 
 // Defines atomic and non-atomic loads, regular and extending.
 multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode,
-                           list<Predicate> reqs> {
+                           list<Predicate> reqs = []> {
   let mayLoad = 1, UseNamedOperandTable = 1 in {
   defm "_A32": I<(outs rc:$dst),
                  (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
                  (outs), (ins P2Align:$p2align, offset32_op:$off),
                  [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"),
-                 !strconcat(Name, "\t${off}${p2align}"), Opcode>,
+                 !strconcat(Name, "\t${off}${p2align}"), Opcode, "false">,
                Requires<reqs>;
   defm "_A64": I<(outs rc:$dst),
                  (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
                  (outs), (ins P2Align:$p2align, offset64_op:$off),
                  [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"),
-                 !strconcat(Name, "\t${off}${p2align}"), Opcode>,
+                 !strconcat(Name, "\t${off}${p2align}"), Opcode, "true">,
                Requires<reqs>;
   }
 }
@@ -236,21 +236,24 @@ defm : LoadPatGlobalAddrOffOnly<i64, extloadi16, "LOAD16_U_I64">;
 defm : LoadPatGlobalAddrOffOnly<i64, extloadi32, "LOAD32_U_I64">;
 
 // Defines atomic and non-atomic stores, regular and truncating
-multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode> {
+multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode,
+                            list<Predicate> reqs = []> {
   let mayStore = 1, UseNamedOperandTable = 1 in
   defm "_A32" : I<(outs),
                   (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
                   (outs),
                   (ins P2Align:$p2align, offset32_op:$off), [],
                   !strconcat(Name, "\t${off}(${addr})${p2align}, $val"),
-                  !strconcat(Name, "\t${off}${p2align}"), Opcode>;
+                  !strconcat(Name, "\t${off}${p2align}"), Opcode, "false">,
+                Requires<reqs>;
   let mayStore = 1, UseNamedOperandTable = 1 in
   defm "_A64" : I<(outs),
                   (ins P2Align:$p2align, offset64_op:$off, I64:$addr, rc:$val),
                   (outs),
                   (ins P2Align:$p2align, offset64_op:$off), [],
                   !strconcat(Name, "\t${off}(${addr})${p2align}, $val"),
-                  !strconcat(Name, "\t${off}${p2align}"), Opcode>;
+                  !strconcat(Name, "\t${off}${p2align}"), Opcode, "true">,
+                Requires<reqs>;
 }
 
 // Basic store.
