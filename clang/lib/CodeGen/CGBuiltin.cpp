@@ -9368,10 +9368,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                           : Intrinsic::aarch64_neon_sqsub;
     return EmitNeonCall(CGM.getIntrinsic(AccInt, Int64Ty), Ops, "vqdmlXl");
   }
+  case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_f16: {
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vget_lane");
   }
+  case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_f16: {
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vgetq_lane");
