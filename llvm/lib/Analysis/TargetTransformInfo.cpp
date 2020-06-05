@@ -1307,17 +1307,9 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return getCmpSelInstrCost(I->getOpcode(), ValTy, I->getType(),
                               CostKind, I);
   }
-  case Instruction::Store: {
-    const StoreInst *SI = cast<StoreInst>(I);
-    Type *ValTy = SI->getValueOperand()->getType();
-    return getMemoryOpCost(I->getOpcode(), ValTy, SI->getAlign(),
-                           SI->getPointerAddressSpace(), CostKind, I);
-  }
-  case Instruction::Load: {
-    const LoadInst *LI = cast<LoadInst>(I);
-    return getMemoryOpCost(I->getOpcode(), I->getType(), LI->getAlign(),
-                           LI->getPointerAddressSpace(), CostKind, I);
-  }
+  case Instruction::Store:
+  case Instruction::Load:
+    return getUserCost(I, CostKind);
   case Instruction::ZExt:
   case Instruction::SExt:
   case Instruction::FPToUI:

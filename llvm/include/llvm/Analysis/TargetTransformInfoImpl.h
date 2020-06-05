@@ -851,6 +851,19 @@ public:
     case Instruction::ZExt:
     case Instruction::AddrSpaceCast:
       return TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I);
+    case Instruction::Store: {
+      auto *SI = cast<StoreInst>(U);
+      Type *ValTy = U->getOperand(0)->getType();
+      return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
+                                        SI->getPointerAddressSpace(),
+                                        CostKind, I);
+    }
+    case Instruction::Load: {
+      auto *LI = cast<LoadInst>(U);
+      return TargetTTI->getMemoryOpCost(Opcode, U->getType(), LI->getAlign(),
+                                        LI->getPointerAddressSpace(),
+                                        CostKind, I);
+    }
     }
     // By default, just classify everything as 'basic'.
     return TTI::TCC_Basic;
