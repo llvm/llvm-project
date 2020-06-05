@@ -5,13 +5,13 @@
 // RUN: rm -f %t*
 
 // -O1, no tagging
-// RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -mllvm -stack-safety-print=1 %s -S -o - 2>&1 | FileCheck %s
-// RUN: %clang    -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -mllvm -stack-safety-print=1 %s -S -o - 2>&1 | FileCheck %s
+// RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s
+// RUN: %clang    -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s
 
 // Full LTO
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -c %s -flto=full -o %t.lto1.bc
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -c -DBUILD2 %s -flto=full -o %t.lto2.bc
-// RUN: llvm-lto2 run -o %t.lto %t.lto1.bc %t.lto2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -o %t.lto %t.lto1.bc %t.lto2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.lto1.bc,fn,plx \
 // RUN:  -r %t.lto1.bc,use,lx \
 // RUN:  -r %t.lto1.bc,use_local,plx \
@@ -22,7 +22,7 @@
 // Full LTO, new PM
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -c %s -flto=full -o %t.ltonewpm1.bc
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -c -DBUILD2 %s -flto=full -o %t.ltonewpm2.bc
-// RUN: llvm-lto2 run -use-new-pm -o %t.ltonewpm %t.ltonewpm1.bc %t.ltonewpm2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -use-new-pm -o %t.ltonewpm %t.ltonewpm1.bc %t.ltonewpm2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.ltonewpm1.bc,fn,plx \
 // RUN:  -r %t.ltonewpm1.bc,use,lx \
 // RUN:  -r %t.ltonewpm1.bc,use_local,plx \
@@ -33,7 +33,7 @@
 // Thin LTO
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -c %s -flto=thin -o %t.thinlto1.bc
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -c -DBUILD2 %s -flto=thin -o %t.thinlto2.bc
-// RUN: llvm-lto2 run -o %t.thinlto %t.thinlto1.bc %t.thinlto2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -o %t.thinlto %t.thinlto1.bc %t.thinlto2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.thinlto1.bc,fn,plx \
 // RUN:  -r %t.thinlto1.bc,use,lx \
 // RUN:  -r %t.thinlto1.bc,use_local,plx \
@@ -44,7 +44,7 @@
 // Thin LTO, new PM
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -c %s -flto=thin -o %t.thinltonewpm1.bc
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -c -DBUILD2 %s -flto=thin -o %t.thinltonewpm2.bc
-// RUN: llvm-lto2 run -use-new-pm -o %t.thinltonewpm %t.thinltonewpm1.bc %t.thinltonewpm2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -use-new-pm -o %t.thinltonewpm %t.thinltonewpm1.bc %t.thinltonewpm2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.thinltonewpm1.bc,fn,plx \
 // RUN:  -r %t.thinltonewpm1.bc,use,lx \
 // RUN:  -r %t.thinltonewpm1.bc,use_local,plx \
@@ -56,17 +56,17 @@
 // RUN: rm -f %t*
 
 // -O0: both are unsafe.
-// RUN: %clang -fno-experimental-new-pass-manager -O0 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print=1 %s -S -o - 2>&1 | FileCheck %s
-// RUN: %clang    -fexperimental-new-pass-manager -O0 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print=1 %s -S -o - 2>&1 | FileCheck %s
+// RUN: %clang -fno-experimental-new-pass-manager -O0 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s
+// RUN: %clang    -fexperimental-new-pass-manager -O0 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s
 
 // No LTO: just one is safe.
-// RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print=1 %s -S -o /dev/null 2>&1 | FileCheck %s -check-prefixes=SSI,XUNSAFE,YSAFE
-// RUN: %clang    -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print=1 %s -S -o /dev/null 2>&1 | FileCheck %s -check-prefixes=SSI,XUNSAFE,YSAFE
+// RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print %s -S -o /dev/null 2>&1 | FileCheck %s -check-prefixes=SSI,XUNSAFE,YSAFE
+// RUN: %clang    -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -mllvm -stack-safety-print %s -S -o /dev/null 2>&1 | FileCheck %s -check-prefixes=SSI,XUNSAFE,YSAFE
 
 // Full LTO: both are safe.
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c %s -flto=full -o %t.lto1.bc
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c -DBUILD2 %s -flto=full -o %t.lto2.bc
-// RUN: llvm-lto2 run -o %t.lto %t.lto1.bc %t.lto2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -o %t.lto %t.lto1.bc %t.lto2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.lto1.bc,fn,plx \
 // RUN:  -r %t.lto1.bc,use,lx \
 // RUN:  -r %t.lto1.bc,use_local,plx \
@@ -77,7 +77,7 @@
 // Full LTO, new PM: both are safe.
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c %s -flto=full -o %t.ltonewpm1.bc
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c -DBUILD2 %s -flto=full -o %t.ltonewpm2.bc
-// RUN: llvm-lto2 run -use-new-pm -o %t.ltonewpm %t.ltonewpm1.bc %t.ltonewpm2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -use-new-pm -o %t.ltonewpm %t.ltonewpm1.bc %t.ltonewpm2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.ltonewpm1.bc,fn,plx \
 // RUN:  -r %t.ltonewpm1.bc,use,lx \
 // RUN:  -r %t.ltonewpm1.bc,use_local,plx \
@@ -88,7 +88,7 @@
 // FIXME: Thin LTO: both are safe.
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c %s -flto=thin -o %t.thinlto1.bc
 // RUN: %clang -fno-experimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c -DBUILD2 %s -flto=thin -o %t.thinlto2.bc
-// RUN: llvm-lto2 run -o %t.thinlto %t.thinlto1.bc %t.thinlto2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -o %t.thinlto %t.thinlto1.bc %t.thinlto2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.thinlto1.bc,fn,plx \
 // RUN:  -r %t.thinlto1.bc,use,lx \
 // RUN:  -r %t.thinlto1.bc,use_local,plx \
@@ -99,7 +99,7 @@
 // FIXME: Thin LTO, new PM: both are safe.
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c %s -flto=thin -o %t.thinltonewpm1.bc
 // RUN: %clang -fexperimental-new-pass-manager -O1 -target aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag -c -DBUILD2 %s -flto=thin -o %t.thinltonewpm2.bc
-// RUN: llvm-lto2 run -use-new-pm -o %t.thinltonewpm %t.thinltonewpm1.bc %t.thinltonewpm2.bc -save-temps -stack-safety-print=1 -thinlto-threads 1 -O1 \
+// RUN: llvm-lto2 run -use-new-pm -o %t.thinltonewpm %t.thinltonewpm1.bc %t.thinltonewpm2.bc -save-temps -stack-safety-print -thinlto-threads 1 -O1 \
 // RUN:  -r %t.thinltonewpm1.bc,fn,plx \
 // RUN:  -r %t.thinltonewpm1.bc,use,lx \
 // RUN:  -r %t.thinltonewpm1.bc,use_local,plx \
