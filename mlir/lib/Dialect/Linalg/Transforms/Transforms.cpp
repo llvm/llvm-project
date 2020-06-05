@@ -35,10 +35,7 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
-using llvm::dbgs;
-
-#define DEBUG_TYPE "linalg-transforms"
-
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
 //===----------------------------------------------------------------------===//
@@ -120,6 +117,7 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
     return failure();
   if (failed(marker.checkAndNotify(rewriter, linalgOp)))
     return failure();
+
   Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
 
   if (!res)
@@ -213,30 +211,26 @@ LogicalResult mlir::linalg::applyStagedPatterns(
     function_ref<LogicalResult(Operation *)> stage3Lambda) {
   unsigned iteration = 0;
   (void)iteration;
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
-  (void)dbgPref;
   for (const auto &patterns : stage1Patterns) {
+    LLVM_DEBUG(DBGS() << "Before 1st stage, iter: " << ++iteration << "\n"
+                      << *op);
     if (!applyPatternsAndFoldGreedily(op, patterns)) {
-      dbgs() << "Underlying first stage rewrite did not converge";
+      LLVM_DEBUG(DBGS() << "Underlying first stage rewrite did not converge");
       return failure();
     }
-    LLVM_DEBUG(dbgs()
-               << dbgPref << "After 1st stage, iter: " << ++iteration << "\n"
-               << *op);
+    LLVM_DEBUG(DBGS() << "After 1st stage, iter: " << ++iteration << "\n"
+                      << *op);
     if (!applyPatternsAndFoldGreedily(op, stage2Patterns)) {
-      LLVM_DEBUG(dbgs()
-                 << dbgPref << "Underlying 2nd stage rewrite did not converge");
+      LLVM_DEBUG(DBGS() << "Underlying 2nd stage rewrite did not converge");
       return failure();
     }
-    LLVM_DEBUG(dbgs()
-               << dbgPref << "After 2nd stage, iter : " << iteration << "\n"
-               << *op);
+    LLVM_DEBUG(DBGS() << "After 2nd stage, iter : " << iteration << "\n"
+                      << *op);
     if (stage3Lambda) {
       if (failed(stage3Lambda(op)))
         return failure();
-      LLVM_DEBUG(dbgs()
-                 << dbgPref << "After 3rd stage, iter : " << iteration << "\n"
-                 << *op);
+      LLVM_DEBUG(DBGS() << "After 3rd stage, iter : " << iteration << "\n"
+                        << *op);
     }
   }
   return success();
