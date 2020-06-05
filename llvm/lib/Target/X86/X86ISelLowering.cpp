@@ -40227,6 +40227,81 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
   return SDValue();
 }
 
+// Attempt to simplify the MOVMSK input based on the comparison type.
+static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
+                                  SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  // Only handle eq/ne against zero (any_of).
+  // TODO: Handle eq/ne against -1 (all_of) as well.
+  if (!(CC == X86::COND_E || CC == X86::COND_NE))
+    return SDValue();
+  if (EFLAGS.getValueType() != MVT::i32)
+    return SDValue();
+  unsigned CmpOpcode = EFLAGS.getOpcode();
+  if (CmpOpcode != X86ISD::CMP || !isNullConstant(EFLAGS.getOperand(1)))
+    return SDValue();
+
+  SDValue CmpOp = EFLAGS.getOperand(0);
+  unsigned CmpBits = CmpOp.getValueSizeInBits();
+
+  // Peek through any truncate.
+  if (CmpOp.getOpcode() == ISD::TRUNCATE)
+    CmpOp = CmpOp.getOperand(0);
+
+  // Bail if we don't find a MOVMSK.
+  if (CmpOp.getOpcode() != X86ISD::MOVMSK)
+    return SDValue();
+
+  SDValue Vec = CmpOp.getOperand(0);
+  MVT VecVT = Vec.getSimpleValueType();
+  assert((VecVT.is128BitVector() || VecVT.is256BitVector()) &&
+         "Unexpected MOVMSK operand");
+
+  // See if we can avoid a PACKSS by calling MOVMSK on the sources.
+  // For vXi16 cases we can use a v2Xi8 PMOVMSKB. We must mask out
+  // sign bits prior to the comparison with zero unless we know that
+  // the vXi16 splats the sign bit down to the lower i8 half.
+  if (Vec.getOpcode() == X86ISD::PACKSS && VecVT == MVT::v16i8) {
+    SDValue VecOp0 = Vec.getOperand(0);
+    SDValue VecOp1 = Vec.getOperand(1);
+    bool SignExt0 = DAG.ComputeNumSignBits(VecOp0) > 8;
+    bool SignExt1 = DAG.ComputeNumSignBits(VecOp1) > 8;
+    // PMOVMSKB(PACKSSBW(X, undef)) -> PMOVMSKB(BITCAST_v16i8(X)) & 0xAAAA.
+    if (CmpBits == 8 && VecOp1.isUndef()) {
+      SDLoc DL(EFLAGS);
+      SDValue Result = DAG.getBitcast(MVT::v16i8, VecOp0);
+      Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
+      Result = DAG.getZExtOrTrunc(Result, DL, MVT::i16);
+      if (!SignExt0) {
+        Result = DAG.getNode(ISD::AND, DL, MVT::i16, Result,
+                             DAG.getConstant(0xAAAA, DL, MVT::i16));
+      }
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
+                         DAG.getConstant(0, DL, MVT::i16));
+    }
+    // PMOVMSKB(PACKSSBW(LO(X), HI(X)))
+    // -> PMOVMSKB(BITCAST_v32i8(X)) & 0xAAAAAAAA.
+    if (CmpBits == 16 && Subtarget.hasInt256() &&
+        VecOp0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        VecOp1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        VecOp0.getOperand(0) == VecOp1.getOperand(0) &&
+        VecOp0.getConstantOperandAPInt(1) == 0 &&
+        VecOp1.getConstantOperandAPInt(1) == 8) {
+      SDLoc DL(EFLAGS);
+      SDValue Result = DAG.getBitcast(MVT::v32i8, VecOp0.getOperand(0));
+      Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
+      if (!SignExt0 || !SignExt1) {
+        Result = DAG.getNode(ISD::AND, DL, MVT::i32, Result,
+                             DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
+      }
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
+                         DAG.getConstant(0, DL, MVT::i32));
+    }
+  }
+
+  return SDValue();
+}
+
 /// Optimize an EFLAGS definition used according to the condition code \p CC
 /// into a simpler EFLAGS value, potentially returning a new \p CC and replacing
 /// uses of chain values.
@@ -40241,6 +40316,9 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
     return R;
 
   if (SDValue R = combinePTESTCC(EFLAGS, CC, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineSetCCMOVMSK(EFLAGS, CC, DAG, Subtarget))
     return R;
 
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);
