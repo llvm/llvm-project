@@ -2999,10 +2999,6 @@ public:
                                                 const InternalLinkageAttr &AL);
   CommonAttr *mergeCommonAttr(Decl *D, const ParsedAttr &AL);
   CommonAttr *mergeCommonAttr(Decl *D, const CommonAttr &AL);
-  WebAssemblyImportNameAttr *mergeImportNameAttr(
-      Decl *D, const WebAssemblyImportNameAttr &AL);
-  WebAssemblyImportModuleAttr *mergeImportModuleAttr(
-      Decl *D, const WebAssemblyImportModuleAttr &AL);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
