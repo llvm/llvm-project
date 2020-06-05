@@ -333,7 +333,10 @@ namespace llvm {
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool ParseByValWithOptionalType(Type *&Result);
+
+    bool ParseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName);
     bool ParsePreallocated(Type *&Result);
+    bool ParseByRef(Type *&Result);
 
     // Module Summary Index Parsing.
     bool SkipModuleSummaryEntry();

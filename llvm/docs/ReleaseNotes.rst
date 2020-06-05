@@ -59,6 +59,9 @@ Changes to the LLVM IR
 
 * ...
 
+* Added the ``byref`` attribute to better represent argument passing
+  for the `amdgpu_kernel` calling convention.
+
 Changes to building LLVM
 ------------------------
 
@@ -87,6 +90,9 @@ Changes to the AMDGPU Target
 -----------------------------
 
 During this release ...
+
+* The new ``byref`` attribute is now the preferred method for
+  representing aggregate kernel arguments.
 
 Changes to the AVR Target
 -----------------------------

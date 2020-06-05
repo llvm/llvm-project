@@ -467,6 +467,11 @@ public:
     return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
   }
 
+  /// Extract the byref type for a parameter.
+  Type *getParamByRefType(unsigned ArgNo) const {
+    return AttributeSets.getParamByRefType(ArgNo);
+  }
+
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   /// @param i AttributeList index, referring to a return value or argument.

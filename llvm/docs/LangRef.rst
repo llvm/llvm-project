@@ -1066,6 +1066,30 @@ Currently, only the following parameter attributes are defined:
     site. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
 
+.. _attr_byref:
+
+``byref(<ty>)``
+
+    The ``byref`` argument attribute allows specifying the pointee
+    memory type of an argument. This is similar to ``byval``, but does
+    not imply a copy is made anywhere, or that the argument is passed
+    on the stack. This implies the pointer is dereferenceable up to
+    the storage size of the type.
+
+    It is not generally permissible to introduce a write to an
+    ``byref`` pointer. The pointer may have any address space and may
+    be read only.
+
+    This is not a valid attribute for return values.
+
+    The alignment for an ``byref`` parameter can be explicitly
+    specified by combining it with the ``align`` attribute, similar to
+    ``byval``. If the alignment is not specified, then the code generator
+    makes a target-specific assumption.
+
+     This is intended for representing ABI constraints, and is not
+    intended to be inferred for optimization use.
+
 .. _attr_preallocated:
 
 ``preallocated(<ty>)``

@@ -1382,6 +1382,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
     case lltok::kw_immarg:
+    case lltok::kw_byref:
       HaveError |=
         Error(Lex.getLoc(),
               "invalid use of parameter-only attribute on a function");
@@ -1675,6 +1676,13 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
       B.addDereferenceableOrNullAttr(Bytes);
       continue;
     }
+    case lltok::kw_byref: {
+      Type *Ty;
+      if (ParseByRef(Ty))
+        return true;
+      B.addByRefAttr(Ty);
+      continue;
+    }
     case lltok::kw_inalloca:        B.addAttribute(Attribute::InAlloca); break;
     case lltok::kw_inreg:           B.addAttribute(Attribute::InReg); break;
     case lltok::kw_nest:            B.addAttribute(Attribute::Nest); break;
@@ -1795,6 +1803,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
     case lltok::kw_immarg:
+    case lltok::kw_byref:
       HaveError |= Error(Lex.getLoc(), "invalid use of parameter-only attribute");
       break;
 
@@ -2568,11 +2577,11 @@ bool LLParser::ParseByValWithOptionalType(Type *&Result) {
   return false;
 }
 
-/// ParsePreallocated
-///   ::= preallocated(<ty>)
-bool LLParser::ParsePreallocated(Type *&Result) {
+/// ParseRequiredTypeAttr
+///   ::= attrname(<ty>)
+bool LLParser::ParseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName) {
   Result = nullptr;
-  if (!EatIfPresent(lltok::kw_preallocated))
+  if (!EatIfPresent(AttrName))
     return true;
   if (!EatIfPresent(lltok::lparen))
     return Error(Lex.getLoc(), "expected '('");
@@ -2581,6 +2590,18 @@ bool LLParser::ParsePreallocated(Type *&Result) {
   if (!EatIfPresent(lltok::rparen))
     return Error(Lex.getLoc(), "expected ')'");
   return false;
+}
+
+/// ParsePreallocated
+///   ::= preallocated(<ty>)
+bool LLParser::ParsePreallocated(Type *&Result) {
+  return ParseRequiredTypeAttr(Result, lltok::kw_preallocated);
+}
+
+/// ParseByRef
+///   ::= byref(<type>)
+bool LLParser::ParseByRef(Type *&Result) {
+  return ParseRequiredTypeAttr(Result, lltok::kw_byref);
 }
 
 /// ParseOptionalOperandBundles

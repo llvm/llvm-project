@@ -1652,9 +1652,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
                Attrs.hasAttribute(Attribute::InReg);
   AttrCount += Attrs.hasAttribute(Attribute::Nest);
+  AttrCount += Attrs.hasAttribute(Attribute::ByRef);
   Assert(AttrCount <= 1,
          "Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', "
-         "and 'sret' are incompatible!",
+         "'byref', and 'sret' are incompatible!",
          V);
 
   Assert(!(Attrs.hasAttribute(Attribute::InAlloca) &&
@@ -1720,9 +1721,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     SmallPtrSet<Type*, 4> Visited;
     if (!PTy->getElementType()->isSized(&Visited)) {
       Assert(!Attrs.hasAttribute(Attribute::ByVal) &&
-                 !Attrs.hasAttribute(Attribute::InAlloca) &&
-                 !Attrs.hasAttribute(Attribute::Preallocated),
-             "Attributes 'byval', 'inalloca', and 'preallocated' do not "
+             !Attrs.hasAttribute(Attribute::ByRef) &&
+             !Attrs.hasAttribute(Attribute::InAlloca) &&
+             !Attrs.hasAttribute(Attribute::Preallocated),
+             "Attributes 'byval', 'byref', 'inalloca', and 'preallocated' do not "
              "support unsized types!",
              V);
     }
@@ -1731,9 +1733,17 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
              "Attribute 'swifterror' only applies to parameters "
              "with pointer to pointer type!",
              V);
+
+    if (Attrs.hasAttribute(Attribute::ByRef)) {
+      Assert(Attrs.getByRefType() == PTy->getElementType(),
+             "Attribute 'byref' type does not match parameter!", V);
+    }
   } else {
     Assert(!Attrs.hasAttribute(Attribute::ByVal),
            "Attribute 'byval' only applies to parameters with pointer type!",
+           V);
+    Assert(!Attrs.hasAttribute(Attribute::ByRef),
+           "Attribute 'byref' only applies to parameters with pointer type!",
            V);
     Assert(!Attrs.hasAttribute(Attribute::SwiftError),
            "Attribute 'swifterror' only applies to parameters "
@@ -1765,10 +1775,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           !RetAttrs.hasAttribute(Attribute::Returned) &&
           !RetAttrs.hasAttribute(Attribute::InAlloca) &&
           !RetAttrs.hasAttribute(Attribute::Preallocated) &&
+          !RetAttrs.hasAttribute(Attribute::ByRef) &&
           !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
           !RetAttrs.hasAttribute(Attribute::SwiftError)),
-         "Attributes 'byval', 'inalloca', 'preallocated', 'nest', 'sret', "
-         "'nocapture', 'nofree', "
+         "Attributes 'byval', 'inalloca', 'preallocated', 'byref', "
+         "'nest', 'sret', 'nocapture', 'nofree', "
          "'returned', 'swiftself', and 'swifterror' do not apply to return "
          "values!",
          V);
@@ -3174,17 +3185,19 @@ static bool isTypeCongruent(Type *L, Type *R) {
 
 static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
-      Attribute::StructRet,   Attribute::ByVal,     Attribute::InAlloca,
-      Attribute::InReg,       Attribute::SwiftSelf, Attribute::SwiftError,
-      Attribute::Preallocated};
+      Attribute::StructRet,    Attribute::ByVal,     Attribute::InAlloca,
+      Attribute::InReg,        Attribute::SwiftSelf, Attribute::SwiftError,
+      Attribute::Preallocated, Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
     if (Attrs.hasParamAttribute(I, AK))
       Copy.addAttribute(AK);
   }
-  // `align` is ABI-affecting only in combination with `byval`.
+
+  // `align` is ABI-affecting only in combination with `byval` or `byref`.
   if (Attrs.hasParamAttribute(I, Attribute::Alignment) &&
-      Attrs.hasParamAttribute(I, Attribute::ByVal))
+      (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
+       Attrs.hasParamAttribute(I, Attribute::ByRef)))
     Copy.addAlignmentAttr(Attrs.getParamAlignment(I));
   return Copy;
 }
