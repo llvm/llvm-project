@@ -671,6 +671,10 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                     MaybeAlign Alignment, unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind,
                                     const Instruction *I) {
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
