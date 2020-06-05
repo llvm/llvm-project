@@ -475,7 +475,7 @@ unary operators +, --            yes     yes       yes         --
 +,--,*,/,%                       yes     yes       yes         --
 bitwise operators &,|,^,~        yes     yes       yes         --
 >>,<<                            yes     yes       yes         --
-!, &&, ||                        yes     --        yes [#]_    --
+!, &&, ||                        yes     --        yes         --
 ==, !=, >, <, >=, <=             yes     yes       yes         --
 =                                yes     yes       yes         yes
 ?: [#]_                          yes     --        yes         --
@@ -488,7 +488,6 @@ const_cast                       no      no        no          no
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
-.. [#] unary operator ! is not implemented, however && and || are.
 .. [#] ternary operator(?:) has different behaviors depending on condition
   operand's vector type. If the condition is a GNU vector (i.e. __vector_size__),
   it's only available in C++ and uses normal bool conversions (that is, != 0).
