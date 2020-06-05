@@ -100,6 +100,11 @@ def add_debugger_tool_arguments(parser, context, defaults):
         default=None,
         display_default=defaults.arch,
         help='target architecture')
+    defaults.source_root_dir = ''
+    parser.add_argument(
+        '--source-root-dir',
+        default=None,
+        help='prefix path to ignore when matching debug info and source files.')
 
 
 def handle_debugger_tool_base_options(context, defaults):  # noqa
