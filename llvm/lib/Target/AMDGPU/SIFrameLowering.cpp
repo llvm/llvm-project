@@ -457,7 +457,10 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg);
 
-  if (MF.getFrameInfo().hasCalls()) {
+  // We need the SP if the function has calls, but we may also need it if the
+  // function has non spill stack objects (in some cases). So if they exist we
+  // initialize SP in case it is required.
+  if (MF.getFrameInfo().hasCalls() || MFI->hasNonSpillStackObjects()) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)

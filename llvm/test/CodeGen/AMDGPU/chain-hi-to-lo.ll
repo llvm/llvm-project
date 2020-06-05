@@ -198,6 +198,7 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    s_movk_i32 s32, 0x280
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN-NEXT:    v_mov_b32_e32 v3, s5

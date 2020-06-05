@@ -773,13 +773,10 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       // There are no free SGPRs, and since we are in the process of spilling
       // VGPRs too.  Since we need a VGPR in order to spill SGPRs (this is true
       // on SI/CI and on VI it is true until we implement spilling using scalar
-      // stores), we have no way to free up an SGPR.  Our solution here is to
-      // add the offset directly to the ScratchOffset or StackPtrOffset
-      // register, and then subtract the offset after the spill to return the
-      // register to it's original value.
-      // In the case where StackPtrOffset is not initialized/otherwise used
-      // (hasCalls is false), we can just use the register directly with no
-      // adjustment required.
+      // stores), we have no way to free up an SGPR.
+      // Instead we use the StackPtrOffsetReg as a temporary place to store the
+      // offset, and then restore it after use. This only works for functions
+      // with no calls and is an entry function.
       if (!ScratchOffsetReg) {
         ScratchOffsetReg = FuncInfo->getStackPtrOffsetReg();
         UninitStackPtrOffset = !MFI.hasCalls();
@@ -861,7 +858,10 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
   }
 
-  if (!UninitStackPtrOffset && ScratchOffsetRegDelta != 0) {
+  if (UninitStackPtrOffset) {
+    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
+      .addImm(MF->getFrameInfo().getStackSize() * ST.getWavefrontSize());
+  } else if (ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
     BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), SOffset)
         .addReg(SOffset)
