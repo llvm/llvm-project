@@ -6,21 +6,21 @@
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB -DFORMAT=DWARF32 %s -o %t.be.o
 # RUN: llvm-readobj --sections --section-data %t.be.o | \
-# RUN:   FileCheck %s -DADDRALIGN=1 -DSIZE=96 --check-prefixes=DWARF-BE-HEADER,DWARF-BE-CONTENT
+# RUN:   FileCheck -DADDRALIGN=1 -DSIZE=96 %s --check-prefixes=DWARF-HEADER,DWARF-BE-CONTENT
 
-#       DWARF-BE-HEADER: Index: 1
-#  DWARF-BE-HEADER-NEXT: Name: .debug_aranges (1)
-#  DWARF-BE-HEADER-NEXT: Type: SHT_PROGBITS (0x1)
-#  DWARF-BE-HEADER-NEXT: Flags [ (0x0)
-#  DWARF-BE-HEADER-NEXT: ]
-#  DWARF-BE-HEADER-NEXT: Address: 0x0
-#  DWARF-BE-HEADER-NEXT: Offset: 0x40
-#  DWARF-BE-HEADER-NEXT: Size: [[SIZE]]
-#  DWARF-BE-HEADER-NEXT: Link: 0
-#  DWARF-BE-HEADER-NEXT: Info: 0
-#  DWARF-BE-HEADER-NEXT: AddressAlignment: [[ADDRALIGN]]
-#  DWARF-BE-HEADER-NEXT: EntrySize: 0
-#      DWARF-BE-CONTENT: SectionData (
+#          DWARF-HEADER: Index: 1
+#     DWARF-HEADER-NEXT: Name: .debug_aranges (1)
+#     DWARF-HEADER-NEXT: Type: SHT_PROGBITS (0x1)
+#     DWARF-HEADER-NEXT: Flags [ (0x0)
+#     DWARF-HEADER-NEXT: ]
+#     DWARF-HEADER-NEXT: Address: 0x0
+#     DWARF-HEADER-NEXT: Offset: 0x40
+#     DWARF-HEADER-NEXT: Size: [[SIZE]]
+#     DWARF-HEADER-NEXT: Link: 0
+#     DWARF-HEADER-NEXT: Info: 0
+#     DWARF-HEADER-NEXT: AddressAlignment: [[ADDRALIGN]]
+#     DWARF-HEADER-NEXT: EntrySize: 0
+# DWARF-BE-CONTENT-NEXT: SectionData (
 # DWARF-BE-CONTENT-NEXT:   0000: 0000002C 00020000 00000400 00000000
 ##                               |        |   |        | |  |
 ##                               |        |   |        | |  +------- Padding zeros (4-byte)
@@ -94,68 +94,54 @@ DWARF:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s -o %t.le.o
 # RUN: llvm-readobj --sections --section-data %t.le.o | \
-# RUN:   FileCheck %s --check-prefixes=DWARF-LE-DEFAULT
+# RUN:   FileCheck -DADDRALIGN=1 -DSIZE=96 %s --check-prefixes=DWARF-HEADER,DWARF-LE-CONTENT
 
-#      DWARF-LE-DEFAULT: Section {
-#      DWARF-LE-DEFAULT:   Index: 1
-# DWARF-LE-DEFAULT-NEXT:   Name: .debug_aranges (1)
-# DWARF-LE-DEFAULT-NEXT:   Type: SHT_PROGBITS (0x1)
-# DWARF-LE-DEFAULT-NEXT:   Flags [ (0x0)
-# DWARF-LE-DEFAULT-NEXT:   ]
-# DWARF-LE-DEFAULT-NEXT:   Address: 0x0
-# DWARF-LE-DEFAULT-NEXT:   Offset: 0x40
-# DWARF-LE-DEFAULT-NEXT:   Size: 96
-# DWARF-LE-DEFAULT-NEXT:   Link: 0
-# DWARF-LE-DEFAULT-NEXT:   Info: 0
-# DWARF-LE-DEFAULT-NEXT:   AddressAlignment: 1
-# DWARF-LE-DEFAULT-NEXT:   EntrySize: 0
-# DWARF-LE-DEFAULT-NEXT:   SectionData (
-# DWARF-LE-DEFAULT-NEXT:     0000: 2C000000 02000000 00000400 00000000
-##                                 |        |   |        | |  |
-##                                 |        |   |        | |  +------- Padding zeros (4-byte)
-##                                 |        |   |        | +- SegSize (1-byte) 0x00
-##                                 |        |   |        +- AddrSize (1-byte) 0x04
-##                                 |        |   +-------- CuOffset (4-byte) 0x00
-##                                 |        +--- Version (2-byte) 0x02
-##                                 +------- InitialLength (4-byte) 0x2c
+# DWARF-LE-CONTENT-NEXT: SectionData (
+# DWARF-LE-CONTENT-NEXT:   0000: 2C000000 02000000 00000400 00000000
+##                               |        |   |        | |  |
+##                               |        |   |        | |  +------- Padding zeros (4-byte)
+##                               |        |   |        | +- SegSize (1-byte) 0x00
+##                               |        |   |        +- AddrSize (1-byte) 0x04
+##                               |        |   +-------- CuOffset (4-byte) 0x00
+##                               |        +--- Version (2-byte) 0x02
+##                               +------- InitialLength (4-byte) 0x2c
 ##
-# DWARF-LE-DEFAULT-NEXT:     0010: 34120000 20000000 00000000 00000000
-##                                 |        |        |
-##                                 |        |        +---------------- Terminating Entry
-##                                 |        +------- Length (4-byte) 0x20
-##                                 +------- Address (4-byte) 0x1234
+# DWARF-LE-CONTENT-NEXT:   0010: 34120000 20000000 00000000 00000000
+##                               |        |        |
+##                               |        |        +---------------- Terminating Entry
+##                               |        +------- Length (4-byte) 0x20
+##                               +------- Address (4-byte) 0x1234
 ##
-# DWARF-LE-DEFAULT-NEXT:     0020: 2C000000 02006500 00000800 00000000
-##                                 |        |   |        | |  |
-##                                 |        |   |        | |  +------- Padding zeros (4-byte)
-##                                 |        |   |        | +- SegSize (1-byte) 0x00
-##                                 |        |   |        +- AddrSize (1-byte) 0x08
-##                                 |        |   +-------- CuOffset (4-byte) 0x00
-##                                 |        +--- Version (2-byte) 0x02
-##                                 +------- InitialLength (4-byte) 0x2c
+# DWARF-LE-CONTENT-NEXT:   0020: 2C000000 02006500 00000800 00000000
+##                               |        |   |        | |  |
+##                               |        |   |        | |  +------- Padding zeros (4-byte)
+##                               |        |   |        | +- SegSize (1-byte) 0x00
+##                               |        |   |        +- AddrSize (1-byte) 0x08
+##                               |        |   +-------- CuOffset (4-byte) 0x00
+##                               |        +--- Version (2-byte) 0x02
+##                               +------- InitialLength (4-byte) 0x2c
 ##
-# DWARF-LE-DEFAULT-NEXT:     0030: 78560000 00000000 20000000 00000000
-##                                 |                 |
-##                                 |                 +---------------- Length (8-byte) 0x20
-##                                 +---------------- Address (8-byte) 0x5678
+# DWARF-LE-CONTENT-NEXT:   0030: 78560000 00000000 20000000 00000000
+##                               |                 |
+##                               |                 +---------------- Length (8-byte) 0x20
+##                               +---------------- Address (8-byte) 0x5678
 ##
-# DWARF-LE-DEFAULT-NEXT:     0040: 00007856 00000000 10000000 00000000
-##                                 |                 |
-##                                 |                 +---------------- Length (8-byte) 0x10
-##                                 +---------------- Address (8-byte) 0x5678
-##                           
-# DWARF-LE-DEFAULT-NEXT:     0050: 00000000 00000000 00000000 00000000
-##                                 |
-##                                 +---------------------------------- Terminating entry
+# DWARF-LE-CONTENT-NEXT:   0040: 00007856 00000000 10000000 00000000
+##                               |                 |
+##                               |                 +---------------- Length (8-byte) 0x10
+##                               +---------------- Address (8-byte) 0x5678
 ##
-# DWARF-LE-DEFAULT-NEXT:   )
-# DWARF-LE-DEFAULT-NEXT: }
+# DWARF-LE-CONTENT-NEXT:   0050: 00000000 00000000 00000000 00000000
+##                               |
+##                               +---------------------------------- Terminating entry
+##
+# DWARF-LE-CONTENT-NEXT: )
 
 ## b) Generate the .debug_aranges section from raw section content.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: llvm-readobj --sections --section-data %t2.o | \
-# RUN:   FileCheck %s -DADDRALIGN=0 -DSIZE=3 --check-prefixes=DWARF-BE-HEADER,ARBITRARY-CONTENT
+# RUN:   FileCheck %s -DADDRALIGN=0 -DSIZE=3 --check-prefixes=DWARF-HEADER,ARBITRARY-CONTENT
 
 #      ARBITRARY-CONTENT: SectionData (
 # ARBITRARY-CONTENT-NEXT:   0000: 112233
