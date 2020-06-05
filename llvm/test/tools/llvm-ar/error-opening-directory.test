@@ -1,0 +1,8 @@
+# RUN: rm -rf %t && mkdir -p %t
+
+## Passing in a directory:
+# RUN: mkdir -p %t/tmpDir
+# RUN: not llvm-ar p %t/tmpDir 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=IS-DIR -DARCHIVE=%t/tmpDir
+
+# IS-DIR: error: error opening '[[ARCHIVE]]': {{[iI]}}s a directory
