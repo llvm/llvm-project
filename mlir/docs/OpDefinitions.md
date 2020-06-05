@@ -626,7 +626,8 @@ let verifier = [{
 ```
 
 Code placed in `verifier` will be called after the auto-generated verification
-code.
+code. The order of trait verification excluding those of `verifier` should not
+be relied upon.
 
 ### Declarative Assembly Format
 
