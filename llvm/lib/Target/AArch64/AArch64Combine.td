@@ -49,9 +49,16 @@ def uzp : GICombineRule<
   (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
 >;
 
+def dup: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return matchDup(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+>;
+
 // Combines which replace a G_SHUFFLE_VECTOR with a target-specific pseudo
 // instruction.
-def shuffle_vector_pseudos : GICombineGroup<[rev, zip, uzp]>;
+def shuffle_vector_pseudos : GICombineGroup<[dup, rev, zip, uzp]>;
 
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",

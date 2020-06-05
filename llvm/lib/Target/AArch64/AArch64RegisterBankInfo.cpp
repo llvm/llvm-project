@@ -501,6 +501,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
     const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
+  case AArch64::G_DUP:
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
@@ -642,6 +643,16 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // Some of the floating-point instructions have mixed GPR and FPR operands:
   // fine-tune the computed mapping.
   switch (Opc) {
+  case AArch64::G_DUP: {
+    Register ScalarReg = MI.getOperand(1).getReg();
+    auto ScalarDef = MRI.getVRegDef(ScalarReg);
+    if (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+        onlyDefinesFP(*ScalarDef, MRI, TRI))
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+    else
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
+    break;
+  }
   case TargetOpcode::G_TRUNC: {
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 128)
