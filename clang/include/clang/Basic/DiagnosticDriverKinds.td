@@ -58,7 +58,7 @@ def err_drv_no_cuda_libdevice : Error<
 
 def err_drv_no_rocm_installation : Error<
   "cannot find ROCm installation.  Provide its path via --rocm-path, or pass "
-  "-nogpulib.">;
+  "-nogpulib and -nogpuinc to build without ROCm device library and HIP includes.">;
 def err_drv_no_rocm_device_lib : Error<
   "cannot find device library for %0. Provide path to different ROCm installation "
   "via --rocm-path, or pass -nogpulib to build without linking default libraries.">;
