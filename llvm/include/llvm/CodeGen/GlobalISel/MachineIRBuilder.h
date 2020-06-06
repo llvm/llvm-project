@@ -804,6 +804,14 @@ public:
   MachineInstrBuilder buildLoadInstr(unsigned Opcode, const DstOp &Res,
                                      const SrcOp &Addr, MachineMemOperand &MMO);
 
+  /// Helper to create a load from a constant offset given a base address. Load
+  /// the type of \p Dst from \p Offset from the given base address and memory
+  /// operand.
+  MachineInstrBuilder buildLoadFromOffset(const DstOp &Dst,
+                                          const SrcOp &BasePtr,
+                                          MachineMemOperand &BaseMMO,
+                                          int64_t Offset);
+
   /// Build and insert `G_STORE Val, Addr, MMO`.
   ///
   /// Stores the value \p Val to \p Addr.
