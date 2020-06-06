@@ -7,7 +7,7 @@
 
 # CHECK: (const long) $0 = 0xed9a924c00011151
 
-# The DW_TAG_variable using DW_AT_const_value. can be produced from:
+# The DW_TAG_variable using DW_AT_const_value can be compiled from:
 # static const long magic64 = 0xed9a924c00011151;
 # int main(void) { return magic64; }
 
