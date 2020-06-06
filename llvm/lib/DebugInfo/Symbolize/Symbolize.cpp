@@ -515,8 +515,8 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   auto InsertResult = Modules.insert(
       std::make_pair(std::string(ModuleName), std::move(SymMod)));
   assert(InsertResult.second);
-  if (!InfoOrErr)
-    return InfoOrErr.takeError();
+  if (std::error_code EC = InfoOrErr.getError())
+    return errorCodeToError(EC);
   return InsertResult.first->second.get();
 }
 

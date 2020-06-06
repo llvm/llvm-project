@@ -133,8 +133,8 @@ static Expected<std::string> getPdbPathFromExe(StringRef ExePath) {
 
   StringRef PdbPath;
   const llvm::codeview::DebugInfo *PdbInfo = nullptr;
-  if (Error E = ObjFile->getDebugPDBInfo(PdbInfo, PdbPath))
-    return std::move(E);
+  if (auto EC = ObjFile->getDebugPDBInfo(PdbInfo, PdbPath))
+    return make_error<RawError>(EC);
 
   return std::string(PdbPath);
 }
