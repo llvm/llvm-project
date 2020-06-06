@@ -24,10 +24,10 @@
 
 # CHECK:      Testing: 1 tests
 # CHECK-NOT:  PASS
-# CHECK:      Expected Passes: 1
+# CHECK:      Passed: 1
 
 # SHOW-ALL:     Testing: 1 tests
 # SHOW-ALL:     PASS: lit-opts :: test.txt (1 of 1)
 # SHOW-ALL:     {{^}}[[VAR]]
 # SHOW-ALL-NOT: PASS
-# SHOW-ALL:     Expected Passes: 1
+# SHOW-ALL:     Passed: 1
