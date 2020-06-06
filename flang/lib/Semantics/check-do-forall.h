@@ -50,6 +50,7 @@ public:
   void Leave(const parser::ForallStmt &);
   void Leave(const parser::ForallAssignmentStmt &s);
   void Enter(const parser::ExitStmt &);
+  void Enter(const parser::Expr &);
   void Leave(const parser::Expr &);
   void Leave(const parser::InquireSpec &);
   void Leave(const parser::IoControlSpec &);
@@ -58,6 +59,7 @@ public:
 
 private:
   SemanticsContext &context_;
+  int exprDepth_{0};
 
   void SayBadLeave(
       StmtType, const char *enclosingStmt, const ConstructNode &) const;
