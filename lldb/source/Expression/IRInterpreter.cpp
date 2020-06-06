@@ -173,24 +173,24 @@ public:
 
       return AssignToMatchType(scalar, value_apint.getLimitedValue(),
                                value->getType());
-    } else {
-      lldb::addr_t process_address = ResolveValue(value, module);
-      size_t value_size = m_target_data.getTypeStoreSize(value->getType());
+    }
 
-      lldb_private::DataExtractor value_extractor;
-      lldb_private::Status extract_error;
+    lldb::addr_t process_address = ResolveValue(value, module);
+    size_t value_size = m_target_data.getTypeStoreSize(value->getType());
 
-      m_execution_unit.GetMemoryData(value_extractor, process_address,
-                                     value_size, extract_error);
+    lldb_private::DataExtractor value_extractor;
+    lldb_private::Status extract_error;
 
-      if (!extract_error.Success())
-        return false;
+    m_execution_unit.GetMemoryData(value_extractor, process_address,
+                                   value_size, extract_error);
 
-      lldb::offset_t offset = 0;
-      if (value_size <= 8) {
-        uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
-        return AssignToMatchType(scalar, u64value, value->getType());
-      }
+    if (!extract_error.Success())
+      return false;
+
+    lldb::offset_t offset = 0;
+    if (value_size <= 8) {
+      uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
+      return AssignToMatchType(scalar, u64value, value->getType());
     }
 
     return false;
