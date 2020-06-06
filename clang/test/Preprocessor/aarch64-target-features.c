@@ -41,6 +41,12 @@
 // CHECK-NOT: __ARM_FEATURE_DOTPROD
 // CHECK-NOT: __ARM_FEATURE_PAC_DEFAULT
 // CHECK-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-NOT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-NOT: __ARM_FEATURE_BF16 1
+// CHECK-NOT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+
+// RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
+// CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
@@ -368,3 +374,10 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
 // CHECK-BTI-OFF-NOT: __ARM_FEATURE_BTI_DEFAULT
 // CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1
+
+// ================== Check BFloat16 Extensions.
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+

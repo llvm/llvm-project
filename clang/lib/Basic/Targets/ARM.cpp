@@ -838,6 +838,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
+  if (HasBFloat16) {
+    Builder.defineMacro("__ARM_FEATURE_BF16", "1");
+    Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
+    Builder.defineMacro("__ARM_BF16_FORMAT_ALTERNATIVE", "1");
+  }
+
   switch (ArchKind) {
   default:
     break;
