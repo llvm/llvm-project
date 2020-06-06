@@ -29,6 +29,7 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
