@@ -6389,15 +6389,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         if (GetMinTrailingZeros(LHS) >=
             (CIVal.getBitWidth() - CIVal.countLeadingZeros())) {
           // Build a plain add SCEV.
-          const SCEV *S = getAddExpr(LHS, getSCEV(CI));
-          // If the LHS of the add was an addrec and it has no-wrap flags,
-          // transfer the no-wrap flags, since an or won't introduce a wrap.
-          if (const SCEVAddRecExpr *NewAR = dyn_cast<SCEVAddRecExpr>(S)) {
-            const SCEVAddRecExpr *OldAR = cast<SCEVAddRecExpr>(LHS);
-            const_cast<SCEVAddRecExpr *>(NewAR)->setNoWrapFlags(
-                OldAR->getNoWrapFlags());
-          }
-          return S;
+          return getAddExpr(LHS, getSCEV(CI),
+                            (SCEV::NoWrapFlags)(SCEV::FlagNUW | SCEV::FlagNSW));
         }
       }
       break;
