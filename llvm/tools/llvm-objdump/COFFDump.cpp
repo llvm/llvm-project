@@ -238,8 +238,8 @@ printSEHTable(const COFFObjectFile *Obj, uint32_t TableVA, int Count) {
     return;
 
   uintptr_t IntPtr = 0;
-  if (std::error_code EC = Obj->getVaPtr(TableVA, IntPtr))
-    reportError(errorCodeToError(EC), Obj->getFileName());
+  if (Error E = Obj->getVaPtr(TableVA, IntPtr))
+    reportError(std::move(E), Obj->getFileName());
 
   const support::ulittle32_t *P = (const support::ulittle32_t *)IntPtr;
   outs() << "SEH Table:";
@@ -277,17 +277,17 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
   if (!PE32Header && !PE32PlusHeader)
     return;
 
-  const data_directory *DataDir;
-  if (std::error_code EC = Obj->getDataDirectory(COFF::TLS_TABLE, DataDir))
-    reportError(errorCodeToError(EC), Obj->getFileName());
+  const data_directory *DataDir = Obj->getDataDirectory(COFF::TLS_TABLE);
+  if (!DataDir)
+    reportError("missing data dir for TLS table", Obj->getFileName());
 
   if (DataDir->RelativeVirtualAddress == 0)
     return;
 
   uintptr_t IntPtr = 0;
-  if (std::error_code EC =
+  if (Error E =
           Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(errorCodeToError(EC), Obj->getFileName());
+    reportError(std::move(E), Obj->getFileName());
 
   if (PE32Header) {
     auto *TLSDir = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
@@ -309,19 +309,17 @@ static void printLoadConfiguration(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_I386)
     return;
 
-  const data_directory *DataDir;
-
-  if (std::error_code EC =
-          Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE, DataDir))
-    reportError(errorCodeToError(EC), Obj->getFileName());
+  const data_directory *DataDir = Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE);
+  if (!DataDir)
+    reportError("no load config data dir", Obj->getFileName());
 
   uintptr_t IntPtr = 0;
   if (DataDir->RelativeVirtualAddress == 0)
     return;
 
-  if (std::error_code EC =
+  if (Error E =
           Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(errorCodeToError(EC), Obj->getFileName());
+    reportError(std::move(E), Obj->getFileName());
 
   auto *LoadConf = reinterpret_cast<const coff_load_configuration32 *>(IntPtr);
   outs() << "Load configuration:"
@@ -696,9 +694,9 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
     for (unsigned AI = 0, AE = Symbol->getNumberOfAuxSymbols(); AI < AE; ++AI, ++SI) {
       if (Symbol->isSectionDefinition()) {
         const coff_aux_section_definition *asd;
-        if (std::error_code EC =
+        if (Error E =
                 coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
-          reportError(errorCodeToError(EC), coff->getFileName());
+          reportError(std::move(E), coff->getFileName());
 
         int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
 
@@ -713,8 +711,8 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
                          , unsigned(asd->Selection));
       } else if (Symbol->isFileRecord()) {
         const char *FileName;
-        if (std::error_code EC = coff->getAuxSymbol<char>(SI + 1, FileName))
-          reportError(errorCodeToError(EC), coff->getFileName());
+        if (Error E = coff->getAuxSymbol<char>(SI + 1, FileName))
+          reportError(std::move(E), coff->getFileName());
 
         StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
                                      coff->getSymbolTableEntrySize());
@@ -724,9 +722,8 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
         break;
       } else if (Symbol->isWeakExternal()) {
         const coff_aux_weak_external *awe;
-        if (std::error_code EC =
-                coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
-          reportError(errorCodeToError(EC), coff->getFileName());
+        if (Error E = coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
+          reportError(std::move(E), coff->getFileName());
 
         outs() << "AUX " << format("indx %d srch %d\n",
                                    static_cast<uint32_t>(awe->TagIndex),
