@@ -4951,7 +4951,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Add metadata for calls to MSAllocator functions
   if (getDebugInfo() && TargetDecl &&
       TargetDecl->hasAttr<MSAllocatorAttr>())
-    getDebugInfo()->addHeapAllocSiteMetadata(CI, RetTy->getPointeeType(), Loc);
+    getDebugInfo()->addHeapAllocSiteMetadata(CI, RetTy, Loc);
 
   // 4. Finish the call.
 
