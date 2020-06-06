@@ -213,62 +213,6 @@ func @not_const(%arg0: !shape.shape) -> !shape.size {
   return %0 : !shape.size
 }
 
-
-// -----
-// cstr_eq with non-constant but known equal shapes can be removed.
-// CHECK-LABEL: func @f
-func @f(%arg0 : !shape.shape) {
-  // CHECK-NEXT: shape.const_witness true
-  // CHECK-NEXT: consume.witness
-  // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg0, %arg0
-  "consume.witness"(%0) : (!shape.witness) -> ()
-  return
-}
-
-// -----
-// cstr_eq with equal const_shapes can be folded
-// CHECK-LABEL: func @f
-func @f() {
-  // CHECK-NEXT: shape.const_witness true
-  // CHECK-NEXT: consume.witness
-  // CHECK-NEXT: return
-  %cs0 = shape.const_shape [0, 1]
-  %cs1 = shape.const_shape [0, 1]
-  %cs2 = shape.const_shape [0, 1]
-  %0 = shape.cstr_eq %cs0, %cs1, %cs2
-  "consume.witness"(%0) : (!shape.witness) -> ()
-  return
-}
-
-// -----
-// cstr_eq with unequal const_shapes cannot be folded
-// CHECK-LABEL: func @f
-func @f() {
-  // CHECK-NEXT: shape.const_shape
-  // CHECK-NEXT: shape.const_shape
-  // CHECK-NEXT: shape.cstr_eq
-  // CHECK-NEXT: consume.witness
-  // CHECK-NEXT: return
-  %cs0 = shape.const_shape [0, 1]
-  %cs1 = shape.const_shape [3, 1]
-  %0 = shape.cstr_eq %cs0, %cs1
-  "consume.witness"(%0) : (!shape.witness) -> ()
-  return
-}
-
-// -----
-// cstr_eq without const_shapes cannot be folded
-// CHECK-LABEL: func @f
-func @f(%arg0: !shape.shape, %arg1: !shape.shape) {
-  // CHECK-NEXT: shape.cstr_eq
-  // CHECK-NEXT: consume.witness
-  // CHECK-NEXT: return
-  %0 = shape.cstr_eq %arg0, %arg1
-  "consume.witness"(%0) : (!shape.witness) -> ()
-  return
-}
-
 // -----
 // assuming_all with known passing witnesses can be folded
 // CHECK-LABEL: func @f
