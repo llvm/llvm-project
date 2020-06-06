@@ -14460,7 +14460,6 @@ static SDValue PerformVMOVNCombine(SDNode *N,
 static SDValue PerformVQMOVNCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
   unsigned IsTop = N->getConstantOperandVal(2);
 
   unsigned NumElts = N->getValueType(0).getVectorNumElements();
