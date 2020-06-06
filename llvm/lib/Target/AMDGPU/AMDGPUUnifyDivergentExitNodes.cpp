@@ -216,6 +216,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
 
   bool InsertExport = false;
 
+  bool Changed = false;
   for (BasicBlock *BB : PDT.getRoots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
@@ -281,6 +282,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
       }
+      Changed = true;
     }
   }
 
@@ -299,6 +301,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(UnreachableBlock, BB);
       }
+      Changed = true;
     }
 
     if (!ReturningBlocks.empty()) {
@@ -322,15 +325,16 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
       // actually reached here.
       ReturnInst::Create(F.getContext(), RetVal, UnreachableBlock);
       ReturningBlocks.push_back(UnreachableBlock);
+      Changed = true;
     }
   }
 
   // Now handle return blocks.
   if (ReturningBlocks.empty())
-    return false; // No blocks return
+    return Changed; // No blocks return
 
   if (ReturningBlocks.size() == 1 && !InsertExport)
-    return false; // Already has a single return block
+    return Changed; // Already has a single return block
 
   const TargetTransformInfo &TTI
     = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
