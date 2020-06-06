@@ -4,13 +4,13 @@
 # RUN:   -o %t/libhello.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libgoodbye.s \
 # RUN:   -o %t/libgoodbye.o
-# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN: lld -flavor darwinnew -arch x86_64 -dylib -install_name \
 # RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
-# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN: lld -flavor darwinnew -arch x86_64 -dylib -install_name \
 # RUN:   @executable_path/libgoodbye.dylib %t/libgoodbye.o -o %t/libgoodbye.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink-lazy.o
-# RUN: lld -flavor darwinnew -o %t/dylink-lazy -L%t -lhello -lgoodbye %t/dylink-lazy.o
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/dylink-lazy -L%t -lhello -lgoodbye %t/dylink-lazy.o
 
 ## When looking at the __stubs section alone, we are unable to easily tell which
 ## symbol each entry points to. So we call objdump twice in order to get the
