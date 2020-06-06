@@ -388,7 +388,12 @@ defm DS_MAX_U32       : DS_1A1D_NORET_mc<"ds_max_u32">;
 defm DS_AND_B32       : DS_1A1D_NORET_mc<"ds_and_b32">;
 defm DS_OR_B32        : DS_1A1D_NORET_mc<"ds_or_b32">;
 defm DS_XOR_B32       : DS_1A1D_NORET_mc<"ds_xor_b32">;
+
+let SubtargetPredicate = HasLDSFPAtomics in {
 defm DS_ADD_F32       : DS_1A1D_NORET_mc<"ds_add_f32">;
+}
+
+// FIXME: Are these really present pre-gfx8?
 defm DS_MIN_F32       : DS_1A1D_NORET_mc<"ds_min_f32">;
 defm DS_MAX_F32       : DS_1A1D_NORET_mc<"ds_max_f32">;
 
@@ -443,7 +448,10 @@ defm DS_MIN_F64       : DS_1A1D_NORET_mc<"ds_min_f64", VReg_64>;
 defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", VReg_64>;
 
 defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32", VGPR_32, "ds_add_u32">;
+
+let SubtargetPredicate = HasLDSFPAtomics in {
 defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32", VGPR_32, "ds_add_f32">;
+}
 defm DS_SUB_RTN_U32   : DS_1A1D_RET_mc<"ds_sub_rtn_u32", VGPR_32, "ds_sub_u32">;
 defm DS_RSUB_RTN_U32  : DS_1A1D_RET_mc<"ds_rsub_rtn_u32", VGPR_32, "ds_rsub_u32">;
 defm DS_INC_RTN_U32   : DS_1A1D_RET_mc<"ds_inc_rtn_u32", VGPR_32, "ds_inc_u32">;
@@ -609,9 +617,11 @@ def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
                                        int_amdgcn_ds_bpermute>;
 }
 
-def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
-
 } // let SubtargetPredicate = isGFX8Plus
+
+let SubtargetPredicate = HasLDSFPAtomics in {
+def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
+}
 
 //===----------------------------------------------------------------------===//
 // DS Patterns
@@ -830,9 +840,12 @@ defm : DSAtomicRetPat_mc<DS_MAX_RTN_I32, i32, "atomic_load_max">;
 defm : DSAtomicRetPat_mc<DS_MIN_RTN_U32, i32, "atomic_load_umin">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_U32, i32, "atomic_load_umax">;
 defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B32, i32, "atomic_cmp_swap">;
+
+let SubtargetPredicate = HasLDSFPAtomics in {
 defm : DSAtomicRetPat_mc<DS_MIN_RTN_F32, f32, "atomic_load_fmin">;
 defm : DSAtomicRetPat_mc<DS_MAX_RTN_F32, f32, "atomic_load_fmax">;
 defm : DSAtomicRetPat_mc<DS_ADD_RTN_F32, f32, "atomic_load_fadd">;
+}
 
 // 64-bit atomics.
 defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B64, i64, "atomic_swap">;

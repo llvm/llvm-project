@@ -1048,6 +1048,9 @@ def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
+def HasLDSFPAtomics : Predicate<"Subtarget->hasLDSFPAtomics()">,
+  AssemblerPredicate<(all_of FeatureGFX8Insts)>;
+
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
   AssemblerPredicate<(all_of FeatureAddNoCarryInsts)>;
 
