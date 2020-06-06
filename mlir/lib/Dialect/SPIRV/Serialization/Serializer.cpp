@@ -672,8 +672,9 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   }
   SmallVector<uint32_t, 1> args;
   switch (decoration.getValue()) {
-  case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
+  case spirv::Decoration::DescriptorSet:
+  case spirv::Decoration::Location:
     if (auto intAttr = attr.second.dyn_cast<IntegerAttr>()) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
@@ -690,6 +691,13 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
              << attrName << " attribute " << strAttr.getValue();
     }
     return emitError(loc, "expected string attribute for ") << attrName;
+  case spirv::Decoration::Flat:
+  case spirv::Decoration::NoPerspective:
+    if (auto unitAttr = attr.second.dyn_cast<UnitAttr>()) {
+      // For unit attributes, the args list has no values so we do nothing
+      break;
+    }
+    return emitError(loc, "expected unit attribute for ") << attrName;
   default:
     return emitError(loc, "unhandled decoration ") << decorationName;
   }
