@@ -689,6 +689,10 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
         (Name[Next + 1] == 'd' || Name[Next + 1] == 's'))
       ICC = false;
     Mnemonic = parseCC(Name, Start, Next, ICC, true, NameLoc, Operands);
+  } else if (Name.startswith("cmov.l.") || Name.startswith("cmov.w.") ||
+             Name.startswith("cmov.d.") || Name.startswith("cmov.s.")) {
+    bool ICC = Name[5] == 'l' || Name[5] == 'w';
+    Mnemonic = parseCC(Name, 7, Name.size(), ICC, false, NameLoc, Operands);
   } else {
     Operands->push_back(VEOperand::CreateToken(Mnemonic, NameLoc));
   }
@@ -696,8 +700,16 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
   return Mnemonic;
 }
 
+static void applyMnemonicAliases(StringRef &Mnemonic,
+                                 const FeatureBitset &Features,
+                                 unsigned VariantID);
+
 bool VEAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                    SMLoc NameLoc, OperandVector &Operands) {
+  // If the target architecture uses MnemonicAlias, call it here to parse
+  // operands correctly.
+  applyMnemonicAliases(Name, getAvailableFeatures(), 0);
+
   // Split name to first token and the rest, e.g. "bgt.l.t" to "b", "gt", and
   // ".l.t".  We treat "b" as a mnemonic, "gt" as first operand, and ".l.t"
   // as second operand.
