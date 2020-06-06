@@ -123,7 +123,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [ConstantLike, NoSideEffect]> {
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $value";
+  let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
 }
 
@@ -143,7 +143,7 @@ def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
   let arguments = (ins Variadic<Index>:$extents);
   let results = (outs Shape_ShapeType:$shape);
 
-  let assemblyFormat = "attr-dict $extents";
+  let assemblyFormat = "$extents attr-dict";
 
   let hasFolder = 1;
 }
@@ -219,7 +219,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let arguments = (ins Index:$arg);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
@@ -268,7 +268,7 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
   let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $lhs `,` $rhs";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
@@ -285,7 +285,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeType:$shape);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $shape";
+  let assemblyFormat = "$shape attr-dict";
 
   let hasFolder = 1;
 }
@@ -345,7 +345,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
 
-  let assemblyFormat = "attr-dict $arg `:` type($arg)";
+  let assemblyFormat = "$arg `:` type($arg) attr-dict";
 
   let hasFolder = 1;
 }
@@ -362,7 +362,7 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let arguments = (ins Shape_SizeType:$arg);
   let results = (outs Index:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
