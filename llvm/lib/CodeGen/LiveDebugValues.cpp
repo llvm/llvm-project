@@ -79,7 +79,6 @@ using namespace llvm;
 #define DEBUG_TYPE "livedebugvalues"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
-STATISTIC(NumRemoved, "Number of DBG_VALUE instructions removed");
 
 // Options to prevent pathological compile-time behavior. If InputBBLimit and
 // InputDbgValueLimit are both exceeded, range extension is disabled.
@@ -348,6 +347,7 @@ private:
       const auto &IID = MI.getDesc();
       const DILocalVariable *Var = MI.getDebugVariable();
       const DIExpression *DIExpr = MI.getDebugExpression();
+      NumInserted++;
 
       switch (Kind) {
       case EntryValueKind:
@@ -712,8 +712,7 @@ private:
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
             const VarLocMap &VarLocIDs,
             SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
-            SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks,
-            VarLocInMBB &PendingInLocs);
+            SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks);
 
   /// Create DBG_VALUE insts for inlocs that have been propagated but
   /// had their instruction creation deferred.
@@ -1543,10 +1542,8 @@ bool LiveDebugValues::join(
     MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
     const VarLocMap &VarLocIDs,
     SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
-    SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks,
-    VarLocInMBB &PendingInLocs) {
+    SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks) {
   LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getNumber() << "\n");
-  bool Changed = false;
 
   VarLocSet InLocsT(Alloc); // Temporary incoming locations.
 
@@ -1615,27 +1612,11 @@ bool LiveDebugValues::join(
          "Should have processed at least one predecessor");
 
   VarLocSet &ILS = getVarLocsInMBB(&MBB, InLocs);
-  VarLocSet &Pending = getVarLocsInMBB(&MBB, PendingInLocs);
-
-  // New locations will have DBG_VALUE insts inserted at the start of the
-  // block, after location propagation has finished. Record the insertions
-  // that we need to perform in the Pending set.
-  VarLocSet Diff = InLocsT;
-  Diff.intersectWithComplement(ILS);
-  Pending.set(Diff);
-  ILS.set(Diff);
-  NumInserted += Diff.count();
-  Changed |= !Diff.empty();
-
-  // We may have lost locations by learning about a predecessor that either
-  // loses or moves a variable. Find any locations in ILS that are not in the
-  // new in-locations, and delete those.
-  VarLocSet Removed = ILS;
-  Removed.intersectWithComplement(InLocsT);
-  Pending.intersectWithComplement(Removed);
-  ILS.intersectWithComplement(Removed);
-  NumRemoved += Removed.count();
-  Changed |= !Removed.empty();
+  bool Changed = false;
+  if (ILS != InLocsT) {
+    ILS = InLocsT;
+    Changed = true;
+  }
 
   return Changed;
 }
@@ -1758,9 +1739,6 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   VarLocInMBB InLocs;         // Ranges that are incoming after joining.
   TransferMap Transfers;      // DBG_VALUEs associated with transfers (such as
                               // spills, copies and restores).
-  VarLocInMBB PendingInLocs;  // Ranges that are incoming after joining, but
-                              // that we have deferred creating DBG_VALUE insts
-                              // for immediately.
 
   VarToFragments SeenFragments;
 
@@ -1791,14 +1769,10 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   }
 
   // Initialize per-block structures and scan for fragment overlaps.
-  for (auto &MBB : MF) {
-    PendingInLocs[&MBB] = std::make_unique<VarLocSet>(Alloc);
-
-    for (auto &MI : MBB) {
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
       if (MI.isDebugValue())
         accumulateFragmentMap(MI, SeenFragments, OverlapFragments);
-    }
-  }
 
   auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
     if (const DebugLoc &DL = MI.getDebugLoc())
@@ -1851,7 +1825,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
       MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
       Worklist.pop();
       MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs, Visited,
-                       ArtificialBlocks, PendingInLocs);
+                       ArtificialBlocks);
       MBBJoined |= Visited.insert(MBB).second;
       if (MBBJoined) {
         MBBJoined = false;
@@ -1860,8 +1834,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
         // examine spill, copy and restore instructions to see whether they
         // operate with registers that correspond to user variables.
         // First load any pending inlocs.
-        OpenRanges.insertFromLocSet(getVarLocsInMBB(MBB, PendingInLocs),
-                                    VarLocIDs);
+        OpenRanges.insertFromLocSet(getVarLocsInMBB(MBB, InLocs), VarLocIDs);
         for (auto &MI : *MBB)
           process(MI, OpenRanges, VarLocIDs, Transfers);
         OLChanged |= transferTerminator(MBB, OpenRanges, OutLocs, VarLocIDs);
@@ -1899,7 +1872,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
   // Deferred inlocs will not have had any DBG_VALUE insts created; do
   // that now.
-  flushPendingLocs(PendingInLocs, VarLocIDs);
+  flushPendingLocs(InLocs, VarLocIDs);
 
   LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs, "Final OutLocs", dbgs()));
   LLVM_DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs, "Final InLocs", dbgs()));
