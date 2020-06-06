@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 // CHECK: @i32_global = internal global i32 42
 llvm.mlir.global internal @i32_global(42: i32) : !llvm.i32
@@ -1214,3 +1214,14 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
+
+// -----
+
+// CHECK-LABEL: @constant_bf16
+llvm.func @constant_bf16() -> !llvm<"bfloat"> {
+  %0 = llvm.mlir.constant(1.000000e+01 : bf16) : !llvm<"bfloat">
+  llvm.return %0 : !llvm<"bfloat">
+}
+
+// CHECK: ret bfloat 0xR4120
+
