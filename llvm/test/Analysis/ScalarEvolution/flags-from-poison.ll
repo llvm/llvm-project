@@ -559,11 +559,11 @@ loop:
   %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {(-2147483648 * %start),+,-2147483648}<%loop>
+; CHECK: --> {(-2147483648 * %start),+,-2147483648}<nsw><%loop>
   %index32 = shl nuw nsw i32 %i, 31
 
 ; CHECK: %index64 =
-; CHECK: --> (sext i32 {(-2147483648 * %start),+,-2147483648}<%loop>
+; CHECK: --> {(sext i32 (-2147483648 * %start) to i64),+,-2147483648}<nsw><%loop>
   %index64 = sext i32 %index32 to i64
 
   %ptr = getelementptr inbounds float, float* %input, i64 %index64
