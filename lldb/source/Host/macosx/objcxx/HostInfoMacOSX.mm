@@ -326,9 +326,9 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
       }
     }
 
-    std::string env_developer_dir = GetEnvDeveloperDir();
+    llvm::SmallString<128> env_developer_dir(GetEnvDeveloperDir());
     if (!env_developer_dir.empty()) {
-      // FIXME: This looks like it couldn't possibly work!
+      llvm::sys::path::append(env_developer_dir, "Contents");
       std::string xcode_contents_dir =
           XcodeSDK::FindXcodeContentsDirectoryInPath(env_developer_dir);
       if (!xcode_contents_dir.empty()) {
