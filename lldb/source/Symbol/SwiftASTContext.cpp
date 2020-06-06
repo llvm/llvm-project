@@ -1013,90 +1013,6 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   }
 }
 
-static StringRef GetXcodeContentsPath() {
-  static std::once_flag g_once_flag;
-  static std::string g_xcode_contents_path;
-  std::call_once(g_once_flag, [&]() {
-    const char substr[] = ".app/Contents/";
-
-    // First, try based on the current shlib's location.
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        g_xcode_contents_path = path_to_shlib;
-        return;
-      }
-    }
-
-    // Fall back to using xcrun.
-    if (HostInfo::GetArchitecture().GetTriple().getOS() ==
-        llvm::Triple::MacOSX) {
-      int status = 0;
-      int signo = 0;
-      std::string output;
-      const char *command = "xcrun -sdk macosx --show-sdk-path";
-      lldb_private::Status error = Host::RunShellCommand(
-          command, // shell command to run
-          {},      // current working directory
-          &status, // Put the exit status of the process in here
-          &signo,  // Put the signal that caused the process to exit in here
-          &output, // Get the output from the command and place it in this
-                   // string
-          std::chrono::seconds(
-              3)); // Timeout in seconds to wait for shell program to finish
-      if (status == 0 && !output.empty()) {
-        size_t first_non_newline = output.find_last_not_of("\r\n");
-        if (first_non_newline != std::string::npos) {
-          output.erase(first_non_newline + 1);
-        }
-
-        size_t pos = output.rfind(substr);
-        if (pos != std::string::npos) {
-          output.erase(pos + strlen(substr));
-          g_xcode_contents_path = output;
-        }
-      }
-    }
-  });
-  return g_xcode_contents_path;
-}
-
-static std::string GetCurrentToolchainPath() {
-  const char substr[] = ".xctoolchain/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return {};
-}
-
-static std::string GetCurrentCLToolsPath() {
-  const char substr[] = "/CommandLineTools/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return {};
-}
-
 /// Return the name of the OS-specific subdirectory containing the
 /// Swift stdlib needed for \p target.
 std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
@@ -1126,9 +1042,10 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
     return it->getValue();
 
   auto value = GetResourceDir(
-      platform_sdk_path.str(), swift_stdlib_os_dir,
-      GetSwiftResourceDir().GetPath(), GetXcodeContentsPath().str(),
-      GetCurrentToolchainPath(), GetCurrentCLToolsPath());
+      platform_sdk_path, swift_stdlib_os_dir, GetSwiftResourceDir().GetPath(),
+      HostInfo::GetXcodeContentsDirectory().GetPath(),
+      PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
+      PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }
