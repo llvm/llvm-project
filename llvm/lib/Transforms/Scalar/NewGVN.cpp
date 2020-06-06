@@ -1336,8 +1336,6 @@ LoadExpression *NewGVN::createLoadExpression(Type *LoadType, Value *PointerOp,
   // Give store and loads same opcode so they value number together.
   E->setOpcode(0);
   E->op_push_back(PointerOp);
-  if (LI)
-    E->setAlignment(MaybeAlign(LI->getAlignment()));
 
   // TODO: Value number heap versions. We may be able to discover
   // things alias analysis can't on it's own (IE that a store and a
