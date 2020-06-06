@@ -1069,7 +1069,7 @@ func @reduce_elt_type_mismatch(%arg0: vector<16xf32>) -> i32 {
 // -----
 
 func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
-  // expected-error@+1 {{'vector.reduction' op attribute 'kind' failed to satisfy constraint: string attribute}}
+  // expected-error@+1 {{attribute 'kind' failed to satisfy constraint: string attribute}}
   %0 = vector.reduction 1234, %arg0 : vector<16xf32> into i32
 }
 

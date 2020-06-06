@@ -30,6 +30,20 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF-LABEL: AOp definitions
 
+// Test verify method
+// ---
+
+// DEF:      LogicalResult AOpOperandAdaptor::verify
+// DEF:      auto tblgen_aAttr = odsAttrs.get("aAttr");
+// DEF-NEXT: if (!tblgen_aAttr) return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
+// DEF:        if (!((some-condition))) return emitError(loc, "'test.a_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
+// DEF:      auto tblgen_bAttr = odsAttrs.get("bAttr");
+// DEF-NEXT: if (tblgen_bAttr) {
+// DEF-NEXT:   if (!((some-condition))) return emitError(loc, "'test.a_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
+// DEF:      auto tblgen_cAttr = odsAttrs.get("cAttr");
+// DEF-NEXT: if (tblgen_cAttr) {
+// DEF-NEXT:   if (!((some-condition))) return emitError(loc, "'test.a_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+
 // Test getter methods
 // ---
 
@@ -80,20 +94,6 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:        ArrayRef<NamedAttribute> attributes
 // DEF:      odsState.addAttributes(attributes);
 
-// Test verify method
-// ---
-
-// DEF:      AOp::verify()
-// DEF:      auto tblgen_aAttr = this->getAttr("aAttr");
-// DEF-NEXT: if (!tblgen_aAttr) return emitOpError("requires attribute 'aAttr'");
-// DEF:        if (!((some-condition))) return emitOpError("attribute 'aAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_bAttr = this->getAttr("bAttr");
-// DEF-NEXT: if (tblgen_bAttr) {
-// DEF-NEXT:   if (!((some-condition))) return emitOpError("attribute 'bAttr' failed to satisfy constraint: some attribute kind");
-// DEF:      auto tblgen_cAttr = this->getAttr("cAttr");
-// DEF-NEXT: if (tblgen_cAttr) {
-// DEF-NEXT:   if (!((some-condition))) return emitOpError("attribute 'cAttr' failed to satisfy constraint: some attribute kind");
-
 def SomeTypeAttr : TypeAttrBase<"SomeType", "some type attribute">;
 
 def BOp : NS_Op<"b_op", []> {
@@ -114,6 +114,25 @@ def BOp : NS_Op<"b_op", []> {
   );
 }
 
+
+// Test common attribute kinds' constraints
+// ---
+
+// DEF-LABEL: BOpOperandAdaptor::verify
+// DEF: if (!((true)))
+// DEF: if (!((tblgen_bool_attr.isa<BoolAttr>())))
+// DEF: if (!(((tblgen_i32_attr.isa<IntegerAttr>())) && ((tblgen_i32_attr.cast<IntegerAttr>().getType().isSignlessInteger(32)))))
+// DEF: if (!(((tblgen_i64_attr.isa<IntegerAttr>())) && ((tblgen_i64_attr.cast<IntegerAttr>().getType().isSignlessInteger(64)))))
+// DEF: if (!(((tblgen_f32_attr.isa<FloatAttr>())) && ((tblgen_f32_attr.cast<FloatAttr>().getType().isF32()))))
+// DEF: if (!(((tblgen_f64_attr.isa<FloatAttr>())) && ((tblgen_f64_attr.cast<FloatAttr>().getType().isF64()))))
+// DEF: if (!((tblgen_str_attr.isa<StringAttr>())))
+// DEF: if (!((tblgen_elements_attr.isa<ElementsAttr>())))
+// DEF: if (!((tblgen_function_attr.isa<FlatSymbolRefAttr>())))
+// DEF: if (!(((tblgen_type_attr.isa<TypeAttr>())) && ((tblgen_type_attr.cast<TypeAttr>().getValue().isa<SomeType>()))))
+// DEF: if (!((tblgen_array_attr.isa<ArrayAttr>())))
+// DEF: if (!(((tblgen_some_attr_array.isa<ArrayAttr>())) && (llvm::all_of(tblgen_some_attr_array.cast<ArrayAttr>(), [](Attribute attr) { return (some-condition); }))))
+// DEF: if (!(((tblgen_type_attr.isa<TypeAttr>())) && ((tblgen_type_attr.cast<TypeAttr>().getValue().isa<Type>()))))
+
 // Test common attribute kind getters' return types
 // ---
 
@@ -130,24 +149,6 @@ def BOp : NS_Op<"b_op", []> {
 // DEF: ArrayAttr BOp::array_attr()
 // DEF: ArrayAttr BOp::some_attr_array()
 // DEF: Type BOp::type_attr()
-
-// Test common attribute kinds' constraints
-// ---
-
-// DEF-LABEL: BOp::verify
-// DEF: if (!((true)))
-// DEF: if (!((tblgen_bool_attr.isa<BoolAttr>())))
-// DEF: if (!(((tblgen_i32_attr.isa<IntegerAttr>())) && ((tblgen_i32_attr.cast<IntegerAttr>().getType().isSignlessInteger(32)))))
-// DEF: if (!(((tblgen_i64_attr.isa<IntegerAttr>())) && ((tblgen_i64_attr.cast<IntegerAttr>().getType().isSignlessInteger(64)))))
-// DEF: if (!(((tblgen_f32_attr.isa<FloatAttr>())) && ((tblgen_f32_attr.cast<FloatAttr>().getType().isF32()))))
-// DEF: if (!(((tblgen_f64_attr.isa<FloatAttr>())) && ((tblgen_f64_attr.cast<FloatAttr>().getType().isF64()))))
-// DEF: if (!((tblgen_str_attr.isa<StringAttr>())))
-// DEF: if (!((tblgen_elements_attr.isa<ElementsAttr>())))
-// DEF: if (!((tblgen_function_attr.isa<FlatSymbolRefAttr>())))
-// DEF: if (!(((tblgen_type_attr.isa<TypeAttr>())) && ((tblgen_type_attr.cast<TypeAttr>().getValue().isa<SomeType>()))))
-// DEF: if (!((tblgen_array_attr.isa<ArrayAttr>())))
-// DEF: if (!(((tblgen_some_attr_array.isa<ArrayAttr>())) && (llvm::all_of(tblgen_some_attr_array.cast<ArrayAttr>(), [](Attribute attr) { return (some-condition); }))))
-// DEF: if (!(((tblgen_type_attr.isa<TypeAttr>())) && ((tblgen_type_attr.cast<TypeAttr>().getValue().isa<Type>()))))
 
 // Test building constant values for array attribute kinds
 // ---
