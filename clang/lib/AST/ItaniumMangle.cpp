@@ -3170,6 +3170,7 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
     case BuiltinType::UShort:
       EltName = "poly16_t";
       break;
+    case BuiltinType::LongLong:
     case BuiltinType::ULongLong:
       EltName = "poly64_t";
       break;
