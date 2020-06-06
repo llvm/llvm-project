@@ -437,7 +437,8 @@ std::string SVEType::str() const {
       S += "x" + utostr(getNumElements());
     if (NumVectors > 1)
       S += "x" + utostr(NumVectors);
-    S += "_t";
+    if (!isScalarPredicate())
+      S += "_t";
   }
 
   if (Constant)
@@ -1058,7 +1059,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __fp16 float16_t;\n";
   OS << "typedef float float32_t;\n";
   OS << "typedef double float64_t;\n";
-  OS << "typedef bool bool_t;\n\n";
 
   OS << "typedef __SVInt8_t svint8_t;\n";
   OS << "typedef __SVInt16_t svint16_t;\n";
