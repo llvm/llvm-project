@@ -7,12 +7,12 @@
 // target not included in the test.
 
 // RUN: %clang -### -v -target amdgcn-amd-amdhsa -mcpu=gfx902 \
-// RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902-DEFAULTLIBS %s
 
 
 // RUN: %clang -### -v -target amdgcn-amd-amdhsa -mcpu=gfx902 -nogpulib \
-// RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902,NODEFAULTLIBS %s
 
 
