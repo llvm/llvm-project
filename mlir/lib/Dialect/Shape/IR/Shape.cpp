@@ -326,27 +326,6 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// CstrEqOp
-//===----------------------------------------------------------------------===//
-
-void CstrEqOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
-                                           MLIRContext *context) {
-  // If inputs are equal, return passing witness
-  patterns.insert<CstrEqEqOps>(context);
-}
-
-OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
-  if (llvm::all_of(operands,
-                   [&](Attribute a) { return a && a == operands[0]; }))
-    return BoolAttr::get(true, getContext());
-
-  // Because a failing witness result here represents an eventual assertion
-  // failure, we do not try to replace it with a constant witness. Similarly, we
-  // cannot if there are any non-const inputs.
-  return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
 // ConstSizeOp
 //===----------------------------------------------------------------------===//
 
