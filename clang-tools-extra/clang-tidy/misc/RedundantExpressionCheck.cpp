@@ -72,8 +72,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   Expr::const_child_iterator LeftIter = Left->child_begin();
   Expr::const_child_iterator RightIter = Right->child_begin();
   while (LeftIter != Left->child_end() && RightIter != Right->child_end()) {
-    if (!areEquivalentExpr(dyn_cast<Expr>(*LeftIter),
-                           dyn_cast<Expr>(*RightIter)))
+    if (!areEquivalentExpr(dyn_cast_or_null<Expr>(*LeftIter),
+                           dyn_cast_or_null<Expr>(*RightIter)))
       return false;
     ++LeftIter;
     ++RightIter;
@@ -117,6 +117,9 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   case Stmt::MemberExprClass:
     return cast<MemberExpr>(Left)->getMemberDecl() ==
            cast<MemberExpr>(Right)->getMemberDecl();
+  case Stmt::CXXFoldExprClass:
+    return cast<CXXFoldExpr>(Left)->getOperator() ==
+           cast<CXXFoldExpr>(Right)->getOperator();
   case Stmt::CXXFunctionalCastExprClass:
   case Stmt::CStyleCastExprClass:
     return cast<ExplicitCastExpr>(Left)->getTypeAsWritten() ==
