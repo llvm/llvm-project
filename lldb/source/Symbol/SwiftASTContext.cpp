@@ -1013,90 +1013,6 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   }
 }
 
-static StringRef GetXcodeContentsPath() {
-  static std::once_flag g_once_flag;
-  static std::string g_xcode_contents_path;
-  std::call_once(g_once_flag, [&]() {
-    const char substr[] = ".app/Contents/";
-
-    // First, try based on the current shlib's location.
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        g_xcode_contents_path = path_to_shlib;
-        return;
-      }
-    }
-
-    // Fall back to using xcrun.
-    if (HostInfo::GetArchitecture().GetTriple().getOS() ==
-        llvm::Triple::MacOSX) {
-      int status = 0;
-      int signo = 0;
-      std::string output;
-      const char *command = "xcrun -sdk macosx --show-sdk-path";
-      lldb_private::Status error = Host::RunShellCommand(
-          command, // shell command to run
-          {},      // current working directory
-          &status, // Put the exit status of the process in here
-          &signo,  // Put the signal that caused the process to exit in here
-          &output, // Get the output from the command and place it in this
-                   // string
-          std::chrono::seconds(
-              3)); // Timeout in seconds to wait for shell program to finish
-      if (status == 0 && !output.empty()) {
-        size_t first_non_newline = output.find_last_not_of("\r\n");
-        if (first_non_newline != std::string::npos) {
-          output.erase(first_non_newline + 1);
-        }
-
-        size_t pos = output.rfind(substr);
-        if (pos != std::string::npos) {
-          output.erase(pos + strlen(substr));
-          g_xcode_contents_path = output;
-        }
-      }
-    }
-  });
-  return g_xcode_contents_path;
-}
-
-static std::string GetCurrentToolchainPath() {
-  const char substr[] = ".xctoolchain/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return {};
-}
-
-static std::string GetCurrentCLToolsPath() {
-  const char substr[] = "/CommandLineTools/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return {};
-}
-
 /// Return the name of the OS-specific subdirectory containing the
 /// Swift stdlib needed for \p target.
 std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
@@ -1126,9 +1042,10 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
     return it->getValue();
 
   auto value = GetResourceDir(
-      platform_sdk_path.str(), swift_stdlib_os_dir,
-      GetSwiftResourceDir().GetPath(), GetXcodeContentsPath().str(),
-      GetCurrentToolchainPath(), GetCurrentCLToolsPath());
+      platform_sdk_path, swift_stdlib_os_dir, GetSwiftResourceDir().GetPath(),
+      HostInfo::GetXcodeContentsDirectory().GetPath(),
+      PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
+      PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }
@@ -1873,15 +1790,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   std::vector<std::string> module_names;
   swift_ast_sp->RegisterSectionModules(module, module_names);
-  swift_ast_sp->ValidateSectionModules(module, module_names);
-
-  if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
-    std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
-               static_cast<void *>(&module),
-               module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
-               static_cast<void *>(swift_ast_sp.get()));
-    swift_ast_sp->LogConfiguration();
+  if (module_names.size()) {
+    swift_ast_sp->ValidateSectionModules(module, module_names);
+    if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
+      std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Module*)%p, \"%s\") = %p",
+                 static_cast<void *>(&module),
+                 module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
+                 static_cast<void *>(swift_ast_sp.get()));
+      swift_ast_sp->LogConfiguration();
+    }
   }
   return swift_ast_sp;
 }
@@ -1937,6 +1855,17 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   }
 
   return ModuleSP();
+}
+
+/// Detect whether a Swift module was "imported" by DWARFImporter.
+/// All this *really* means is that it couldn't be loaded through any
+/// other mechanism.
+static bool IsDWARFImported(swift::ModuleDecl &module) {
+  return std::any_of(module.getFiles().begin(), module.getFiles().end(),
+                     [](swift::FileUnit *file_unit) {
+                       return (file_unit->getKind() ==
+                               swift::FileUnitKind::DWARFModule);
+                     });
 }
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
@@ -2288,7 +2217,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   const bool can_create = true;
-  if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
+  swift::ModuleDecl *stdlib =
+      swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+  if (!stdlib || IsDWARFImported(*stdlib)) {
     logError("couldn't load the Swift stdlib");
     return {};
   }
@@ -2779,7 +2710,7 @@ public:
             std::string(text), info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
-            : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
+                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
       else
         m_raw_diagnostics.push_back(RawDiagnostic(
             message_ref, info.Kind, bufferName, bufferID, line_col.first,
@@ -3413,7 +3344,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   registerSILOptimizerRequestFunctions(m_ast_context_ap->evaluator);
   registerTBDGenRequestFunctions(m_ast_context_ap->evaluator);
   registerIRGenRequestFunctions(m_ast_context_ap->evaluator);
-
   registerIRGenSILTransforms(*m_ast_context_ap);
 
   GetASTMap().Insert(m_ast_context_ap.get(), this);
@@ -4069,18 +3999,18 @@ static std::string GetBriefModuleName(Module &module) {
   return name;
 }
 
-bool SwiftASTContext::RegisterSectionModules(
+void SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
-  VALID_OR_RETURN(false);
+  VALID_OR_RETURN_VOID();
 
   swift::MemoryBufferSerializedModuleLoader *loader =
       GetMemoryBufferModuleLoader();
   if (!loader)
-    return false;
+    return;
 
   SectionList *section_list = module.GetSectionList();
   if (!section_list)
-    return false;
+    return;
 
   SectionSP section_sp(
       section_list->FindSectionByType(eSectionTypeSwiftModules, true));
@@ -4095,12 +4025,12 @@ bool SwiftASTContext::RegisterSectionModules(
       if (swift::parseASTSection(*loader, section_data_ref, llvm_modules)) {
         for (auto module_name : llvm_modules)
           module_names.push_back(module_name);
-        return true;
+        return;
       }
     }
   } else {
     if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
-      return true;
+      return;
 
     // Grab all the AST blobs from the symbol vendor.
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
@@ -4143,10 +4073,10 @@ bool SwiftASTContext::RegisterSectionModules(
     }
     if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
       // We found AST data entries and we successfully parsed all of them.
-      return true;
+      return;
     }
   }
-  return false;
+  return;
 }
 
 void SwiftASTContext::ValidateSectionModules(
@@ -8224,9 +8154,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   s.PutCString("kind = ");
 
   switch (file_unit->getKind()) {
-  default: {
-    s.PutCString("<unknown>");
-  }
   case swift::FileUnitKind::Source: {
     s.PutCString("Source, ");
     if (swift::SourceFile *source_file =
@@ -8258,7 +8185,10 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
     swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
     s.Printf("filename = \"%s\"", loaded_file->getFilename().str().c_str());
   } break;
+  case swift::FileUnitKind::DWARFModule:
+    s.PutCString("DWARF");
   };
+  s.PutCString(";");
 }
 
 // Gets the full module name from the module passed in.
@@ -8296,7 +8226,7 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
 
   error.Clear();
   ConstString toplevel = module.path.front();
-  llvm::SmallString<1> m_description;
+  const std::string &m_description = swift_ast_context.GetDescription();
   LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing module %s",
              toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
@@ -8316,6 +8246,16 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   } else
     swift_module = swift_ast_context.GetModule(module, error);
 
+  if (swift_module && IsDWARFImported(*swift_module)) {
+    // This module was "imported" from DWARF. This basically means the
+    // import as a Swift or Clang module failed. We have not yet
+    // checked that DWARF debug info for this module actually exists
+    // and there is no good mechanism to do so ahead of time.
+    // We do know that we never load the stdlib from DWARF though.
+    if (toplevel.GetStringRef() == swift::STDLIB_NAME)
+      swift_module = nullptr;
+  }
+
   if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
     LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Couldn't import module %s: %s",
                toplevel.AsCString(), error.AsCString());
@@ -8326,14 +8266,11 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   }
 
   if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
-    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Importing %s with source files:",
-               module.path.front().AsCString());
-
-    for (swift::FileUnit *file_unit : swift_module->getFiles()) {
-      StreamString ss;
+    StreamString ss;
+    for (swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
-      LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "  %s", ss.GetData());
-    }
+    LOG_PRINTF(LIBLLDB_LOG_EXPRESSIONS, "Imported module %s from {%s}",
+               module.path.front().AsCString(), ss.GetData());
   }
   return swift_module;
 }

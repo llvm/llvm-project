@@ -713,7 +713,8 @@ public:
   void LoadModule(swift::ModuleDecl *swift_module, Process &process,
                   Status &error);
 
-  bool RegisterSectionModules(Module &module,
+  /// Collect Swift modules in the .swift_ast section of \p module.
+  void RegisterSectionModules(Module &module,
                               std::vector<std::string> &module_names);
 
   void ValidateSectionModules(Module &module, // this is used to print errors
