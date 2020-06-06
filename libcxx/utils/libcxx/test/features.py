@@ -90,3 +90,21 @@ for macro, feature in macros.items():
             )
     )
   ]
+
+
+# Mapping from canonical locale names (used in the tests) to possible locale
+# names on various systems. Each locale is considered supported if any of the
+# alternative names is supported.
+locales = {
+  'en_US.UTF-8':     ['en_US.UTF-8', 'en_US.utf8', 'English_United States.1252'],
+  'fr_FR.UTF-8':     ['fr_FR.UTF-8', 'fr_FR.utf8', 'French_France.1252'],
+  'ru_RU.UTF-8':     ['ru_RU.UTF-8', 'ru_RU.utf8', 'Russian_Russia.1251'],
+  'zh_CN.UTF-8':     ['zh_CN.UTF-8', 'zh_CN.utf8', 'Chinese_China.936'],
+  'fr_CA.ISO8859-1': ['fr_CA.ISO8859-1', 'French_Canada.1252'],
+  'cs_CZ.ISO8859-2': ['cs_CZ.ISO8859-2', 'Czech_Czech Republic.1250']
+}
+for locale, alts in locales.items():
+  features += [
+    Feature(name='locale.{}'.format(locale),
+            when=lambda cfg: any(hasLocale(cfg, alt) for alt in alts))
+  ]
