@@ -15,7 +15,6 @@
 #define LLVM_ANALYSIS_SCOPEDNOALIASAA_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <memory>
