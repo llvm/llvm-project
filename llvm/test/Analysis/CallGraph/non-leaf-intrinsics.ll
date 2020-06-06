@@ -10,7 +10,7 @@ define private void @f() {
 define void @calls_statepoint(i8 addrspace(1)* %arg) gc "statepoint-example" {
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg) ["deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @f, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i8 addrspace(1)* %arg, i64 addrspace(1)* %cast, i8 addrspace(1)* %arg, i8 addrspace(1)* %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
   ret void
 }
 
