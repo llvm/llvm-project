@@ -744,10 +744,10 @@ ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (EShdr->sh_type == ELF::SHT_NOBITS)
     return makeArrayRef((const uint8_t *)base(), 0);
-  if (std::error_code EC =
+  if (Error E =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
-    return errorCodeToError(EC);
+    return std::move(E);
   return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
                       EShdr->sh_size);
 }
