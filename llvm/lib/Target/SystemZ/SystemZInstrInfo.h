@@ -159,6 +159,16 @@ int getTargetMemOpcode(uint16_t Opcode);
 // Return a version of comparison CC mask CCMask in which the LT and GT
 // actions are swapped.
 unsigned reverseCCMask(unsigned CCMask);
+
+// Create a new basic block after MBB.
+MachineBasicBlock *emitBlockAfter(MachineBasicBlock *MBB);
+// Split MBB after MI and return the new block (the one that contains
+// instructions after MI).
+MachineBasicBlock *splitBlockAfter(MachineBasicBlock::iterator MI,
+                                   MachineBasicBlock *MBB);
+// Split MBB before MI and return the new block (the one that contains MI).
+MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
+                                    MachineBasicBlock *MBB);
 }
 
 class SystemZInstrInfo : public SystemZGenInstrInfo {

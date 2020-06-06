@@ -374,12 +374,39 @@ static void emitIncrement(MachineBasicBlock &MBB,
   }
 }
 
+// Add CFI for the new CFA offset.
+static void buildCFAOffs(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI,
+                         const DebugLoc &DL, int Offset,
+                         const SystemZInstrInfo *ZII) {
+  unsigned CFIIndex = MBB.getParent()->addFrameInst(
+    MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset));
+  BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
+    .addCFIIndex(CFIIndex);
+}
+
+// Add CFI for the new frame location.
+static void buildDefCFAReg(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI,
+                           const DebugLoc &DL, unsigned Reg,
+                           const SystemZInstrInfo *ZII) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineModuleInfo &MMI = MF.getMMI();
+  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  unsigned RegNum = MRI->getDwarfRegNum(Reg, true);
+  unsigned CFIIndex = MF.addFrameInst(
+                        MCCFIInstruction::createDefCfaRegister(nullptr, RegNum));
+  BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
+    .addCFIIndex(CFIIndex);
+}
+
 void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+  const SystemZSubtarget &STI = MF.getSubtarget<SystemZSubtarget>();
+  const SystemZTargetLowering &TLI = *STI.getTargetLowering();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
-  auto *ZII =
-      static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  auto *ZII = static_cast<const SystemZInstrInfo *>(STI.getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineModuleInfo &MMI = MF.getMMI();
@@ -462,13 +489,22 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Allocate StackSize bytes.
     int64_t Delta = -int64_t(StackSize);
-    emitIncrement(MBB, MBBI, DL, SystemZ::R15D, Delta, ZII);
-
-    // Add CFI for the allocation.
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::cfiDefCfaOffset(nullptr, -SPOffsetFromCFA - Delta));
-    BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    const unsigned ProbeSize = TLI.getStackProbeSize(MF);
+    bool FreeProbe = (ZFI->getSpillGPRRegs().GPROffset &&
+           (ZFI->getSpillGPRRegs().GPROffset + StackSize) < ProbeSize);
+    if (!FreeProbe &&
+        MF.getSubtarget().getTargetLowering()->hasInlineStackProbe(MF)) {
+      // Stack probing may involve looping, but splitting the prologue block
+      // is not possible at this point since it would invalidate the
+      // SaveBlocks / RestoreBlocks sets of PEI in the single block function
+      // case. Build a pseudo to be handled later by inlineStackProbe().
+      BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::PROBED_STACKALLOC))
+        .addImm(StackSize);
+    }
+    else {
+      emitIncrement(MBB, MBBI, DL, SystemZ::R15D, Delta, ZII);
+      buildCFAOffs(MBB, MBBI, DL, SPOffsetFromCFA + Delta, ZII);
+    }
     SPOffsetFromCFA += Delta;
 
     if (StoreBackchain) {
@@ -486,11 +522,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(SystemZ::R15D);
 
     // Add CFI for the new frame location.
-    unsigned HardFP = MRI->getDwarfRegNum(SystemZ::R11D, true);
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaRegister(nullptr, HardFP));
-    BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    buildDefCFAReg(MBB, MBBI, DL, SystemZ::R11D, ZII);
 
     // Mark the FramePtr as live at the beginning of every block except
     // the entry block.  (We'll have marked R11 as live on entry when
@@ -581,6 +613,91 @@ void SystemZFrameLowering::emitEpilogue(MachineFunction &MF,
     DebugLoc DL = MBBI->getDebugLoc();
     emitIncrement(MBB, MBBI, DL, SystemZ::R15D, StackSize, ZII);
   }
+}
+
+void SystemZFrameLowering::inlineStackProbe(MachineFunction &MF,
+                                            MachineBasicBlock &PrologMBB) const {
+  auto *ZII =
+    static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SystemZSubtarget &STI = MF.getSubtarget<SystemZSubtarget>();
+  const SystemZTargetLowering &TLI = *STI.getTargetLowering();
+
+  MachineInstr *StackAllocMI = nullptr;
+  for (MachineInstr &MI : PrologMBB)
+    if (MI.getOpcode() == SystemZ::PROBED_STACKALLOC) {
+      StackAllocMI = &MI;
+      break;
+    }
+  if (StackAllocMI == nullptr)
+    return;
+  uint64_t StackSize = StackAllocMI->getOperand(0).getImm();
+  const unsigned ProbeSize = TLI.getStackProbeSize(MF);
+  uint64_t NumFullBlocks = StackSize / ProbeSize;
+  uint64_t Residual = StackSize % ProbeSize;
+  int64_t SPOffsetFromCFA = -SystemZMC::CFAOffsetFromInitialSP;
+  MachineBasicBlock *MBB = &PrologMBB;
+  MachineBasicBlock::iterator MBBI = StackAllocMI;
+  const DebugLoc DL = StackAllocMI->getDebugLoc();
+
+  // Allocate a block of Size bytes on the stack and probe it.
+  auto allocateAndProbe = [&](MachineBasicBlock &InsMBB,
+                              MachineBasicBlock::iterator InsPt, unsigned Size,
+                              bool EmitCFI) -> void {
+    emitIncrement(InsMBB, InsPt, DL, SystemZ::R15D, -int64_t(Size), ZII);
+    if (EmitCFI) {
+      SPOffsetFromCFA -= Size;
+      buildCFAOffs(InsMBB, InsPt, DL, SPOffsetFromCFA, ZII);
+    }
+    // Probe by means of a volatile compare.
+    MachineMemOperand *MMO = MF.getMachineMemOperand(MachinePointerInfo(),
+      MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
+    BuildMI(InsMBB, InsPt, DL, ZII->get(SystemZ::CG))
+      .addReg(SystemZ::R0D, RegState::Undef)
+      .addReg(SystemZ::R15D).addImm(Size - 8).addReg(0)
+      .addMemOperand(MMO);
+  };
+
+  if (NumFullBlocks < 3) {
+    // Emit unrolled probe statements.
+    for (unsigned int i = 0; i < NumFullBlocks; i++)
+      allocateAndProbe(*MBB, MBBI, ProbeSize, true/*EmitCFI*/);
+  } else {
+    // Emit a loop probing the pages.
+    uint64_t LoopAlloc = ProbeSize * NumFullBlocks;
+    SPOffsetFromCFA -= LoopAlloc;
+
+    BuildMI(*MBB, MBBI, DL, ZII->get(SystemZ::LGR), SystemZ::R1D)
+      .addReg(SystemZ::R15D);
+    buildDefCFAReg(*MBB, MBBI, DL, SystemZ::R1D, ZII);
+    emitIncrement(*MBB, MBBI, DL, SystemZ::R1D, -int64_t(LoopAlloc), ZII);
+    buildCFAOffs(*MBB, MBBI, DL, -int64_t(SystemZMC::CallFrameSize + LoopAlloc),
+                 ZII);
+
+    MachineBasicBlock *DoneMBB = SystemZ::splitBlockBefore(MBBI, MBB);
+    MachineBasicBlock *LoopMBB = SystemZ::emitBlockAfter(MBB);
+    MBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(DoneMBB);
+
+    MBB = LoopMBB;
+    allocateAndProbe(*MBB, MBB->end(), ProbeSize, false/*EmitCFI*/);
+    BuildMI(*MBB, MBB->end(), DL, ZII->get(SystemZ::CLGR))
+      .addReg(SystemZ::R15D).addReg(SystemZ::R1D);
+    BuildMI(*MBB, MBB->end(), DL, ZII->get(SystemZ::BRC))
+      .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_GT).addMBB(MBB);
+
+    MBB = DoneMBB;
+    MBBI = DoneMBB->begin();
+    buildDefCFAReg(*MBB, MBBI, DL, SystemZ::R15D, ZII);
+
+    recomputeLiveIns(*DoneMBB);
+    recomputeLiveIns(*LoopMBB);
+  }
+
+  if (Residual)
+    allocateAndProbe(*MBB, MBBI, Residual, true/*EmitCFI*/);
+
+  StackAllocMI->eraseFromParent();
 }
 
 bool SystemZFrameLowering::hasFP(const MachineFunction &MF) const {

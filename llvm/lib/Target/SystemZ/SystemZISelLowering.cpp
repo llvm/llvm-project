@@ -826,6 +826,15 @@ bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return SystemZVectorConstantInfo(Imm).isVectorConstantLegal(Subtarget);
 }
 
+/// Returns true if stack probing through inline assembly is requested.
+bool SystemZTargetLowering::hasInlineStackProbe(MachineFunction &MF) const {
+  // If the function specifically requests inline stack probes, emit them.
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+  return false;
+}
+
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
   // We can use CGFI or CLGFI.
   return isInt<32>(Imm) || isUInt<32>(Imm);
@@ -3428,10 +3437,17 @@ lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
                               DAG.getConstant(ExtraAlignSpace, DL, MVT::i64));
 
   // Get the new stack pointer value.
-  SDValue NewSP = DAG.getNode(ISD::SUB, DL, MVT::i64, OldSP, NeededSpace);
-
-  // Copy the new stack pointer back.
-  Chain = DAG.getCopyToReg(Chain, DL, SPReg, NewSP);
+  SDValue NewSP;
+  if (hasInlineStackProbe(MF)) {
+    NewSP = DAG.getNode(SystemZISD::PROBED_ALLOCA, DL,
+                DAG.getVTList(MVT::i64, MVT::Other), Chain, OldSP, NeededSpace);
+    Chain = NewSP.getValue(1);
+  }
+  else {
+    NewSP = DAG.getNode(ISD::SUB, DL, MVT::i64, OldSP, NeededSpace);
+    // Copy the new stack pointer back.
+    Chain = DAG.getCopyToReg(Chain, DL, SPReg, NewSP);
+  }
 
   // The allocated data lives above the 160 bytes allocated for the standard
   // frame, plus any outgoing stack arguments.  We don't know how much that
@@ -5400,6 +5416,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(BR_CCMASK);
     OPCODE(SELECT_CCMASK);
     OPCODE(ADJDYNALLOC);
+    OPCODE(PROBED_ALLOCA);
     OPCODE(POPCNT);
     OPCODE(SMUL_LOHI);
     OPCODE(UMUL_LOHI);
@@ -6825,37 +6842,28 @@ SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+unsigned
+SystemZTargetLowering::getStackProbeSize(MachineFunction &MF) const {
+  const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+  unsigned StackAlign = TFI->getStackAlignment();
+  assert(StackAlign >=1 && isPowerOf2_32(StackAlign) &&
+         "Unexpected stack alignment");
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute.
+  unsigned StackProbeSize = 4096;
+  const Function &Fn = MF.getFunction();
+  if (Fn.hasFnAttribute("stack-probe-size"))
+    Fn.getFnAttribute("stack-probe-size")
+        .getValueAsString()
+        .getAsInteger(0, StackProbeSize);
+  // Round down to the stack alignment.
+  StackProbeSize &= ~(StackAlign - 1);
+  return StackProbeSize ? StackProbeSize : StackAlign;
+}
+
 //===----------------------------------------------------------------------===//
 // Custom insertion
 //===----------------------------------------------------------------------===//
-
-// Create a new basic block after MBB.
-static MachineBasicBlock *emitBlockAfter(MachineBasicBlock *MBB) {
-  MachineFunction &MF = *MBB->getParent();
-  MachineBasicBlock *NewMBB = MF.CreateMachineBasicBlock(MBB->getBasicBlock());
-  MF.insert(std::next(MachineFunction::iterator(MBB)), NewMBB);
-  return NewMBB;
-}
-
-// Split MBB after MI and return the new block (the one that contains
-// instructions after MI).
-static MachineBasicBlock *splitBlockAfter(MachineBasicBlock::iterator MI,
-                                          MachineBasicBlock *MBB) {
-  MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
-  NewMBB->splice(NewMBB->begin(), MBB,
-                 std::next(MachineBasicBlock::iterator(MI)), MBB->end());
-  NewMBB->transferSuccessorsAndUpdatePHIs(MBB);
-  return NewMBB;
-}
-
-// Split MBB before MI and return the new block (the one that contains MI).
-static MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
-                                           MachineBasicBlock *MBB) {
-  MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
-  NewMBB->splice(NewMBB->begin(), MBB, MI, MBB->end());
-  NewMBB->transferSuccessorsAndUpdatePHIs(MBB);
-  return NewMBB;
-}
 
 // Force base value Base into a register before MI.  Return the register.
 static Register forceReg(MachineInstr &MI, MachineOperand &Base,
@@ -7027,8 +7035,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   bool CCKilled =
       (LastMI->killsRegister(SystemZ::CC) || checkCCKill(*LastMI, MBB));
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *JoinMBB  = splitBlockAfter(LastMI, MBB);
-  MachineBasicBlock *FalseMBB = emitBlockAfter(StartMBB);
+  MachineBasicBlock *JoinMBB  = SystemZ::splitBlockAfter(LastMI, MBB);
+  MachineBasicBlock *FalseMBB = SystemZ::emitBlockAfter(StartMBB);
 
   // Unless CC was killed in the last Select instruction, mark it as
   // live-in to both FalseMBB and JoinMBB.
@@ -7121,8 +7129,8 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
     CCMask ^= CCValid;
 
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *JoinMBB  = splitBlockBefore(MI, MBB);
-  MachineBasicBlock *FalseMBB = emitBlockAfter(StartMBB);
+  MachineBasicBlock *JoinMBB  = SystemZ::splitBlockBefore(MI, MBB);
+  MachineBasicBlock *FalseMBB = SystemZ::emitBlockAfter(StartMBB);
 
   // Unless CC was killed in the CondStore instruction, mark it as
   // live-in to both FalseMBB and JoinMBB.
@@ -7205,8 +7213,8 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
 
   // Insert a basic block for the main loop.
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *DoneMBB  = splitBlockBefore(MI, MBB);
-  MachineBasicBlock *LoopMBB  = emitBlockAfter(StartMBB);
+  MachineBasicBlock *DoneMBB  = SystemZ::splitBlockBefore(MI, MBB);
+  MachineBasicBlock *LoopMBB  = SystemZ::emitBlockAfter(StartMBB);
 
   //  StartMBB:
   //   ...
@@ -7323,10 +7331,10 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
 
   // Insert 3 basic blocks for the loop.
   MachineBasicBlock *StartMBB  = MBB;
-  MachineBasicBlock *DoneMBB   = splitBlockBefore(MI, MBB);
-  MachineBasicBlock *LoopMBB   = emitBlockAfter(StartMBB);
-  MachineBasicBlock *UseAltMBB = emitBlockAfter(LoopMBB);
-  MachineBasicBlock *UpdateMBB = emitBlockAfter(UseAltMBB);
+  MachineBasicBlock *DoneMBB   = SystemZ::splitBlockBefore(MI, MBB);
+  MachineBasicBlock *LoopMBB   = SystemZ::emitBlockAfter(StartMBB);
+  MachineBasicBlock *UseAltMBB = SystemZ::emitBlockAfter(LoopMBB);
+  MachineBasicBlock *UpdateMBB = SystemZ::emitBlockAfter(UseAltMBB);
 
   //  StartMBB:
   //   ...
@@ -7434,9 +7442,9 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
 
   // Insert 2 basic blocks for the loop.
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *DoneMBB  = splitBlockBefore(MI, MBB);
-  MachineBasicBlock *LoopMBB  = emitBlockAfter(StartMBB);
-  MachineBasicBlock *SetMBB   = emitBlockAfter(LoopMBB);
+  MachineBasicBlock *DoneMBB  = SystemZ::splitBlockBefore(MI, MBB);
+  MachineBasicBlock *LoopMBB  = SystemZ::emitBlockAfter(StartMBB);
+  MachineBasicBlock *SetMBB   = SystemZ::emitBlockAfter(LoopMBB);
 
   //  StartMBB:
   //   ...
@@ -7596,7 +7604,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
   // When generating more than one CLC, all but the last will need to
   // branch to the end when a difference is found.
   MachineBasicBlock *EndMBB = (Length > 256 && Opcode == SystemZ::CLC ?
-                               splitBlockAfter(MI, MBB) : nullptr);
+                               SystemZ::splitBlockAfter(MI, MBB) : nullptr);
 
   // Check for the loop form, in which operand 5 is the trip count.
   if (MI.getNumExplicitOperands() > 5) {
@@ -7620,9 +7628,10 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     Register NextCountReg = MRI.createVirtualRegister(RC);
 
     MachineBasicBlock *StartMBB = MBB;
-    MachineBasicBlock *DoneMBB = splitBlockBefore(MI, MBB);
-    MachineBasicBlock *LoopMBB = emitBlockAfter(StartMBB);
-    MachineBasicBlock *NextMBB = (EndMBB ? emitBlockAfter(LoopMBB) : LoopMBB);
+    MachineBasicBlock *DoneMBB = SystemZ::splitBlockBefore(MI, MBB);
+    MachineBasicBlock *LoopMBB = SystemZ::emitBlockAfter(StartMBB);
+    MachineBasicBlock *NextMBB =
+        (EndMBB ? SystemZ::emitBlockAfter(LoopMBB) : LoopMBB);
 
     //  StartMBB:
     //   # fall through to LoopMMB
@@ -7738,7 +7747,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     // If there's another CLC to go, branch to the end if a difference
     // was found.
     if (EndMBB && Length > 0) {
-      MachineBasicBlock *NextMBB = splitBlockBefore(MI, MBB);
+      MachineBasicBlock *NextMBB = SystemZ::splitBlockBefore(MI, MBB);
       BuildMI(MBB, DL, TII->get(SystemZ::BRC))
         .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_NE)
         .addMBB(EndMBB);
@@ -7778,8 +7787,8 @@ MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
   uint64_t End2Reg  = MRI.createVirtualRegister(RC);
 
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *DoneMBB = splitBlockBefore(MI, MBB);
-  MachineBasicBlock *LoopMBB = emitBlockAfter(StartMBB);
+  MachineBasicBlock *DoneMBB = SystemZ::splitBlockBefore(MI, MBB);
+  MachineBasicBlock *LoopMBB = SystemZ::emitBlockAfter(StartMBB);
 
   //  StartMBB:
   //   # fall through to LoopMMB
@@ -7888,6 +7897,97 @@ MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
   MI.eraseFromParent();
 
   return MBB;
+}
+
+MachineBasicBlock *SystemZTargetLowering::emitProbedAlloca(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  DebugLoc DL = MI.getDebugLoc();
+  const unsigned ProbeSize = getStackProbeSize(MF);
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SizeReg = MI.getOperand(2).getReg();
+
+  MachineBasicBlock *StartMBB = MBB;
+  MachineBasicBlock *DoneMBB  = SystemZ::splitBlockAfter(MI, MBB);
+  MachineBasicBlock *LoopTestMBB  = SystemZ::emitBlockAfter(StartMBB);
+  MachineBasicBlock *LoopBodyMBB = SystemZ::emitBlockAfter(LoopTestMBB);
+  MachineBasicBlock *TailTestMBB = SystemZ::emitBlockAfter(LoopBodyMBB);
+  MachineBasicBlock *TailMBB = SystemZ::emitBlockAfter(TailTestMBB);
+
+  MachineMemOperand *VolLdMMO = MF.getMachineMemOperand(MachinePointerInfo(),
+    MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
+
+  Register PHIReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  Register IncReg = MRI->createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+
+  //  LoopTestMBB
+  //  BRC TailTestMBB
+  //  # fallthrough to LoopBodyMBB
+  StartMBB->addSuccessor(LoopTestMBB);
+  MBB = LoopTestMBB;
+  BuildMI(MBB, DL, TII->get(SystemZ::PHI), PHIReg)
+    .addReg(SizeReg)
+    .addMBB(StartMBB)
+    .addReg(IncReg)
+    .addMBB(LoopBodyMBB);
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGFI))
+    .addReg(PHIReg)
+    .addImm(ProbeSize);
+  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+    .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
+    .addMBB(TailTestMBB);
+  MBB->addSuccessor(LoopBodyMBB);
+  MBB->addSuccessor(TailTestMBB);
+
+  //  LoopBodyMBB: Allocate and probe by means of a volatile compare.
+  //  J LoopTestMBB
+  MBB = LoopBodyMBB;
+  BuildMI(MBB, DL, TII->get(SystemZ::SLGFI), IncReg)
+    .addReg(PHIReg)
+    .addImm(ProbeSize);
+  BuildMI(MBB, DL, TII->get(SystemZ::SLGFI), SystemZ::R15D)
+    .addReg(SystemZ::R15D)
+    .addImm(ProbeSize);
+  BuildMI(MBB, DL, TII->get(SystemZ::CG)).addReg(SystemZ::R15D)
+    .addReg(SystemZ::R15D).addImm(ProbeSize - 8).addReg(0)
+    .setMemRefs(VolLdMMO);
+  BuildMI(MBB, DL, TII->get(SystemZ::J)).addMBB(LoopTestMBB);
+  MBB->addSuccessor(LoopTestMBB);
+
+  //  TailTestMBB
+  //  BRC DoneMBB
+  //  # fallthrough to TailMBB
+  MBB = TailTestMBB;
+  BuildMI(MBB, DL, TII->get(SystemZ::CGHI))
+    .addReg(PHIReg)
+    .addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+    .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_EQ)
+    .addMBB(DoneMBB);
+  MBB->addSuccessor(TailMBB);
+  MBB->addSuccessor(DoneMBB);
+
+  //  TailMBB
+  //  # fallthrough to DoneMBB
+  MBB = TailMBB;
+  BuildMI(MBB, DL, TII->get(SystemZ::SLGR), SystemZ::R15D)
+    .addReg(SystemZ::R15D)
+    .addReg(PHIReg);
+  BuildMI(MBB, DL, TII->get(SystemZ::CG)).addReg(SystemZ::R15D)
+    .addReg(SystemZ::R15D).addImm(-8).addReg(PHIReg)
+    .setMemRefs(VolLdMMO);
+  MBB->addSuccessor(DoneMBB);
+
+  //  DoneMBB
+  MBB = DoneMBB;
+  BuildMI(*MBB, MBB->begin(), DL, TII->get(TargetOpcode::COPY), DstReg)
+    .addReg(SystemZ::R15D);
+
+  MI.eraseFromParent();
+  return DoneMBB;
 }
 
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
@@ -8149,6 +8249,9 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTDBR);
   case SystemZ::LTXBRCompare_VecPseudo:
     return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTXBR);
+
+  case SystemZ::PROBED_ALLOCA:
+    return emitProbedAlloca(MI, MBB);
 
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
