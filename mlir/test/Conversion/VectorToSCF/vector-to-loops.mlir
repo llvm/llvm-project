@@ -232,7 +232,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
   %f7 = constant 7.0: f32
 
   // CHECK-DAG: %[[splat:.*]] = constant dense<7.000000e+00> : vector<15xf32>
-  // CHECK-DAG: %[[alloc:.*]] = alloc() : memref<3xvector<15xf32>>
+  // CHECK-DAG: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
   // CHECK-DAG: %[[dim:.*]] = dim %[[A]], 0 : memref<?x?xf32>
   // CHECK: affine.for %[[I:.*]] = 0 to 3 {
   // CHECK:   %[[add:.*]] = affine.apply #[[MAP0]](%[[I]])[%[[base]]]
@@ -304,7 +304,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
 //  FULL-UNROLL-SAME:   %[[base:[a-zA-Z0-9]+]]: index,
 //  FULL-UNROLL-SAME:   %[[vec:[a-zA-Z0-9]+]]: vector<3x15xf32>
 func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vector<3x15xf32>) {
-  // CHECK: %[[alloc:.*]] = alloc() : memref<3xvector<15xf32>>
+  // CHECK: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
   // CHECK: %[[vmemref:.*]] = vector.type_cast %[[alloc]] : memref<3xvector<15xf32>> to memref<vector<3x15xf32>>
   // CHECK: store %[[vec]], %[[vmemref]][] : memref<vector<3x15xf32>>
   // CHECK: %[[dim:.*]] = dim %[[A]], 0 : memref<?x?xf32>
@@ -359,7 +359,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
 //  FULL-UNROLL-SAME:   %[[vec:[a-zA-Z0-9]+]]: vector<3x15xf32>
 func @transfer_write_progressive_not_masked(%A : memref<?x?xf32>, %base: index, %vec: vector<3x15xf32>) {
   // CHECK-NOT:    scf.if
-  // CHECK-NEXT: %[[alloc:.*]] = alloc() : memref<3xvector<15xf32>>
+  // CHECK-NEXT: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
   // CHECK-NEXT: %[[vmemref:.*]] = vector.type_cast %[[alloc]] : memref<3xvector<15xf32>> to memref<vector<3x15xf32>>
   // CHECK-NEXT: store %[[vec]], %[[vmemref]][] : memref<vector<3x15xf32>>
   // CHECK-NEXT: affine.for %[[I:.*]] = 0 to 3 {
