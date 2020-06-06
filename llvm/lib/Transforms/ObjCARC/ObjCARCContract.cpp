@@ -529,6 +529,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     return true;
   case ARCInstKind::IntrinsicUser:
     // Remove calls to @llvm.objc.clang.arc.use(...).
+    Changed = true;
     Inst->eraseFromParent();
     return true;
   default:
