@@ -11,12 +11,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 class BasicBlock;
 class Function;
+class Triple;
 class Value;
 
 enum class EHPersonality {
