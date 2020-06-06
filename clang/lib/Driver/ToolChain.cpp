@@ -998,9 +998,6 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
 void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
-void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
-                                  ArgStringList &CC1Args) const {}
-
 void ToolChain::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {}
 
