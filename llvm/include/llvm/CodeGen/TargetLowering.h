@@ -210,13 +210,6 @@ public:
     TypeWidenVector,     // This vector should be widened into a larger vector.
     TypePromoteFloat,    // Replace this float with a larger one.
     TypeSoftPromoteHalf, // Soften half to i16 and use float to do arithmetic.
-    TypeScalarizeScalableVector, // This action is explicitly left unimplemented.
-                                 // While it is theoretically possible to
-                                 // legalize operations on scalable types with a
-                                 // loop that handles the vscale * #lanes of the
-                                 // vector, this is non-trivial at SelectionDAG
-                                 // level and these types are better to be
-                                 // widened or promoted.
   };
 
   /// LegalizeKind holds the legalization kind that needs to happen to EVT
@@ -419,7 +412,7 @@ public:
   virtual TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const {
     // The default action for one element vectors is to scalarize
-    if (VT.getVectorElementCount() == 1)
+    if (VT.getVectorNumElements() == 1)
       return TypeScalarizeVector;
     // The default action for an odd-width vector is to widen.
     if (!VT.isPow2VectorType())
