@@ -103,6 +103,17 @@ namespace llvm {
       return VecTy;
     }
 
+    /// Return a VT for a vector type whose attributes match ourselves
+    /// with the exception of the element type that is chosen by the caller.
+    EVT changeVectorElementType(EVT EltVT) const {
+      if (!isSimple())
+        return changeExtendedVectorElementType(EltVT);
+      MVT VecTy = MVT::getVectorVT(EltVT.V, getVectorElementCount());
+      assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
+             "Simple vector VT not representable by simple integer vector VT!");
+      return VecTy;
+    }
+
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
@@ -432,6 +443,7 @@ namespace llvm {
     // These are all out-of-line to prevent users of this header file
     // from having a dependency on Type.h.
     EVT changeExtendedTypeToInteger() const;
+    EVT changeExtendedVectorElementType(EVT EltVT) const;
     EVT changeExtendedVectorElementTypeToInteger() const;
     static EVT getExtendedIntegerVT(LLVMContext &C, unsigned BitWidth);
     static EVT getExtendedVectorVT(LLVMContext &C, EVT VT, unsigned NumElements,
