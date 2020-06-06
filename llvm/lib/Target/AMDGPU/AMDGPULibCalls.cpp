@@ -1730,7 +1730,9 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      if (!CI) continue;
+      // Ignore intrinsics that do not become real instructions.
+      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
+        continue;
 
       // Ignore indirect calls.
       Function *Callee = CI->getCalledFunction();
