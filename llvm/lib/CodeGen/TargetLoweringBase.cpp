@@ -825,7 +825,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     if (LA == TypeSplitVector)
       return LegalizeKind(LA,
                           EVT::getVectorVT(Context, SVT.getVectorElementType(),
-                                           SVT.getVectorNumElements() / 2));
+                                           SVT.getVectorElementCount() / 2));
     if (LA == TypeScalarizeVector)
       return LegalizeKind(LA, SVT.getVectorElementType());
     return LegalizeKind(LA, NVT);
@@ -852,12 +852,15 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   }
 
   // Handle vector types.
-  unsigned NumElts = VT.getVectorNumElements();
+  ElementCount NumElts = VT.getVectorElementCount();
   EVT EltVT = VT.getVectorElementType();
 
   // Vectors with only one element are always scalarized.
   if (NumElts == 1)
     return LegalizeKind(TypeScalarizeVector, EltVT);
+
+  if (VT.getVectorElementCount() == ElementCount(1, true))
+    report_fatal_error("Cannot legalize this vector");
 
   // Try to widen vector elements until the element type is a power of two and
   // promote it to a legal type later on, for example:
@@ -866,7 +869,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // Vectors with a number of elements that is not a power of two are always
     // widened, for example <3 x i8> -> <4 x i8>.
     if (!VT.isPow2VectorType()) {
-      NumElts = (unsigned)NextPowerOf2(NumElts);
+      NumElts = NumElts.NextPowerOf2();
       EVT NVT = EVT::getVectorVT(Context, EltVT, NumElts);
       return LegalizeKind(TypeWidenVector, NVT);
     }
@@ -915,7 +918,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   // If there is no wider legal type, split the vector.
   while (true) {
     // Round up to the next power of 2.
-    NumElts = (unsigned)NextPowerOf2(NumElts);
+    NumElts = NumElts.NextPowerOf2();
 
     // If there is no simple vector type with this many elements then there
     // cannot be a larger legal vector type.  Note that this assumes that
@@ -938,7 +941,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   }
 
   // Vectors with illegal element types are expanded.
-  EVT NVT = EVT::getVectorVT(Context, EltVT, VT.getVectorNumElements() / 2);
+  EVT NVT = EVT::getVectorVT(Context, EltVT, VT.getVectorElementCount() / 2);
   return LegalizeKind(TypeSplitVector, NVT);
 }
 
@@ -1257,7 +1260,7 @@ void TargetLoweringBase::computeRegisterProperties(
       continue;
 
     MVT EltVT = VT.getVectorElementType();
-    unsigned NElts = VT.getVectorNumElements();
+    ElementCount EC = VT.getVectorElementCount();
     bool IsLegalWiderType = false;
     bool IsScalable = VT.isScalableVector();
     LegalizeTypeAction PreferredAction = getPreferredVectorAction(VT);
@@ -1274,8 +1277,7 @@ void TargetLoweringBase::computeRegisterProperties(
         // Promote vectors of integers to vectors with the same number
         // of elements, with a wider element type.
         if (SVT.getScalarSizeInBits() > EltVT.getSizeInBits() &&
-            SVT.getVectorNumElements() == NElts &&
-            SVT.isScalableVector() == IsScalable && isTypeLegal(SVT)) {
+            SVT.getVectorElementCount() == EC && isTypeLegal(SVT)) {
           TransformToType[i] = SVT;
           RegisterTypeForVT[i] = SVT;
           NumRegistersForVT[i] = 1;
@@ -1290,13 +1292,13 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(NElts)) {
+      if (isPowerOf2_32(EC.Min)) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
-          if (SVT.getVectorElementType() == EltVT
-              && SVT.getVectorNumElements() > NElts
-              && SVT.isScalableVector() == IsScalable && isTypeLegal(SVT)) {
+          if (SVT.getVectorElementType() == EltVT &&
+              SVT.isScalableVector() == IsScalable &&
+              SVT.getVectorElementCount().Min > EC.Min && isTypeLegal(SVT)) {
             TransformToType[i] = SVT;
             RegisterTypeForVT[i] = SVT;
             NumRegistersForVT[i] = 1;
@@ -1340,10 +1342,12 @@ void TargetLoweringBase::computeRegisterProperties(
           ValueTypeActions.setTypeAction(VT, TypeScalarizeVector);
         else if (PreferredAction == TypeSplitVector)
           ValueTypeActions.setTypeAction(VT, TypeSplitVector);
+        else if (EC.Min > 1)
+          ValueTypeActions.setTypeAction(VT, TypeSplitVector);
         else
-          // Set type action according to the number of elements.
-          ValueTypeActions.setTypeAction(VT, NElts == 1 ? TypeScalarizeVector
-                                                        : TypeSplitVector);
+          ValueTypeActions.setTypeAction(VT, EC.Scalable
+                                                 ? TypeScalarizeScalableVector
+                                                 : TypeScalarizeVector);
       } else {
         TransformToType[i] = NVT;
         ValueTypeActions.setTypeAction(VT, TypeWidenVector);
