@@ -974,7 +974,7 @@ def G_FENCE : GenericInstruction {
 // register banks have been selected.
 def G_EXTRACT : GenericInstruction {
   let OutOperandList = (outs type0:$res);
-  let InOperandList = (ins type1:$src, unknown:$offset);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
@@ -993,7 +993,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
 // Insert a smaller register into a larger one at the specified bit-index.
 def G_INSERT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
+  let InOperandList = (ins type0:$src, type1:$op, untyped_imm_0:$offset);
   let hasSideEffects = 0;
 }
 
