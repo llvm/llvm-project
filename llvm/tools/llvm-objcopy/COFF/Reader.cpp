@@ -45,9 +45,9 @@ Error COFFReader::readExecutableHeaders(Object &Obj) const {
   }
 
   for (size_t I = 0; I < Obj.PeHeader.NumberOfRvaAndSize; I++) {
-    const data_directory *Dir = COFFObj.getDataDirectory(I);
-    if (!Dir)
-      return errorCodeToError(object_error::parse_failed);
+    const data_directory *Dir;
+    if (auto EC = COFFObj.getDataDirectory(I, Dir))
+      return errorCodeToError(EC);
     Obj.DataDirectories.emplace_back(*Dir);
   }
   return Error::success();

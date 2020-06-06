@@ -799,13 +799,13 @@ private:
   // Finish initializing the object and return success or an error.
   Error initialize();
 
-  Error initSymbolTablePtr();
-  Error initImportTablePtr();
-  Error initDelayImportTablePtr();
-  Error initExportTablePtr();
-  Error initBaseRelocPtr();
-  Error initDebugDirectoryPtr();
-  Error initLoadConfigPtr();
+  std::error_code initSymbolTablePtr();
+  std::error_code initImportTablePtr();
+  std::error_code initDelayImportTablePtr();
+  std::error_code initExportTablePtr();
+  std::error_code initBaseRelocPtr();
+  std::error_code initDebugDirectoryPtr();
+  std::error_code initLoadConfigPtr();
 
 public:
   static Expected<std::unique_ptr<COFFObjectFile>>
@@ -989,7 +989,8 @@ public:
   const pe32_header *getPE32Header() const { return PE32Header; }
   const pe32plus_header *getPE32PlusHeader() const { return PE32PlusHeader; }
 
-  const data_directory *getDataDirectory(uint32_t index) const;
+  std::error_code getDataDirectory(uint32_t index,
+                                   const data_directory *&Res) const;
   Expected<const coff_section *> getSection(int32_t index) const;
 
   Expected<COFFSymbolRef> getSymbol(uint32_t index) const {
@@ -1003,12 +1004,12 @@ public:
   }
 
   template <typename T>
-  Error getAuxSymbol(uint32_t index, const T *&Res) const {
+  std::error_code getAuxSymbol(uint32_t index, const T *&Res) const {
     Expected<COFFSymbolRef> S = getSymbol(index);
     if (Error E = S.takeError())
-      return E;
+      return errorToErrorCode(std::move(E));
     Res = reinterpret_cast<const T *>(S->getRawPtr());
-    return Error::success();
+    return std::error_code();
   }
 
   Expected<StringRef> getSymbolName(COFFSymbolRef Symbol) const;
@@ -1034,29 +1035,29 @@ public:
                            ArrayRef<uint8_t> &Res) const;
 
   uint64_t getImageBase() const;
-  Error getVaPtr(uint64_t VA, uintptr_t &Res) const;
-  Error getRvaPtr(uint32_t Rva, uintptr_t &Res) const;
+  std::error_code getVaPtr(uint64_t VA, uintptr_t &Res) const;
+  std::error_code getRvaPtr(uint32_t Rva, uintptr_t &Res) const;
 
   /// Given an RVA base and size, returns a valid array of bytes or an error
   /// code if the RVA and size is not contained completely within a valid
   /// section.
-  Error getRvaAndSizeAsBytes(uint32_t RVA, uint32_t Size,
-                             ArrayRef<uint8_t> &Contents) const;
+  std::error_code getRvaAndSizeAsBytes(uint32_t RVA, uint32_t Size,
+                                       ArrayRef<uint8_t> &Contents) const;
 
-  Error getHintName(uint32_t Rva, uint16_t &Hint,
+  std::error_code getHintName(uint32_t Rva, uint16_t &Hint,
                               StringRef &Name) const;
 
   /// Get PDB information out of a codeview debug directory entry.
-  Error getDebugPDBInfo(const debug_directory *DebugDir,
-                        const codeview::DebugInfo *&Info,
-                        StringRef &PDBFileName) const;
+  std::error_code getDebugPDBInfo(const debug_directory *DebugDir,
+                                  const codeview::DebugInfo *&Info,
+                                  StringRef &PDBFileName) const;
 
   /// Get PDB information from an executable. If the information is not present,
   /// Info will be set to nullptr and PDBFileName will be empty. An error is
   /// returned only on corrupt object files. Convenience accessor that can be
   /// used if the debug directory is not already handy.
-  Error getDebugPDBInfo(const codeview::DebugInfo *&Info,
-                        StringRef &PDBFileName) const;
+  std::error_code getDebugPDBInfo(const codeview::DebugInfo *&Info,
+                                  StringRef &PDBFileName) const;
 
   bool isRelocatableObject() const override;
   bool is64() const { return PE32PlusHeader; }
@@ -1085,11 +1086,11 @@ public:
   imported_symbol_iterator lookup_table_end() const;
   iterator_range<imported_symbol_iterator> lookup_table_symbols() const;
 
-  Error getName(StringRef &Result) const;
-  Error getImportLookupTableRVA(uint32_t &Result) const;
-  Error getImportAddressTableRVA(uint32_t &Result) const;
+  std::error_code getName(StringRef &Result) const;
+  std::error_code getImportLookupTableRVA(uint32_t &Result) const;
+  std::error_code getImportAddressTableRVA(uint32_t &Result) const;
 
-  Error
+  std::error_code
   getImportTableEntry(const coff_import_directory_table_entry *&Result) const;
 
 private:
@@ -1112,10 +1113,10 @@ public:
   imported_symbol_iterator imported_symbol_end() const;
   iterator_range<imported_symbol_iterator> imported_symbols() const;
 
-  Error getName(StringRef &Result) const;
-  Error getDelayImportTable(
+  std::error_code getName(StringRef &Result) const;
+  std::error_code getDelayImportTable(
       const delay_import_directory_table_entry *&Result) const;
-  Error getImportAddress(int AddrIndex, uint64_t &Result) const;
+  std::error_code getImportAddress(int AddrIndex, uint64_t &Result) const;
 
 private:
   const delay_import_directory_table_entry *Table;
@@ -1134,14 +1135,14 @@ public:
   bool operator==(const ExportDirectoryEntryRef &Other) const;
   void moveNext();
 
-  Error getDllName(StringRef &Result) const;
-  Error getOrdinalBase(uint32_t &Result) const;
-  Error getOrdinal(uint32_t &Result) const;
-  Error getExportRVA(uint32_t &Result) const;
-  Error getSymbolName(StringRef &Result) const;
+  std::error_code getDllName(StringRef &Result) const;
+  std::error_code getOrdinalBase(uint32_t &Result) const;
+  std::error_code getOrdinal(uint32_t &Result) const;
+  std::error_code getExportRVA(uint32_t &Result) const;
+  std::error_code getSymbolName(StringRef &Result) const;
 
-  Error isForwarder(bool &Result) const;
-  Error getForwardTo(StringRef &Result) const;
+  std::error_code isForwarder(bool &Result) const;
+  std::error_code getForwardTo(StringRef &Result) const;
 
 private:
   const export_directory_table_entry *ExportTable;
@@ -1162,10 +1163,10 @@ public:
   bool operator==(const ImportedSymbolRef &Other) const;
   void moveNext();
 
-  Error getSymbolName(StringRef &Result) const;
-  Error isOrdinal(bool &Result) const;
-  Error getOrdinal(uint16_t &Result) const;
-  Error getHintNameRVA(uint32_t &Result) const;
+  std::error_code getSymbolName(StringRef &Result) const;
+  std::error_code isOrdinal(bool &Result) const;
+  std::error_code getOrdinal(uint16_t &Result) const;
+  std::error_code getHintNameRVA(uint32_t &Result) const;
 
 private:
   const import_lookup_table_entry32 *Entry32;
@@ -1184,8 +1185,8 @@ public:
   bool operator==(const BaseRelocRef &Other) const;
   void moveNext();
 
-  Error getType(uint8_t &Type) const;
-  Error getRVA(uint32_t &Result) const;
+  std::error_code getType(uint8_t &Type) const;
+  std::error_code getRVA(uint32_t &Result) const;
 
 private:
   const coff_base_reloc_block_header *Header;
