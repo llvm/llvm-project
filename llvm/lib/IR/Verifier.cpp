@@ -1278,7 +1278,9 @@ void Verifier::visitDIGlobalVariable(const DIGlobalVariable &N) {
 
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
   AssertDI(isType(N.getRawType()), "invalid type ref", &N, N.getRawType());
-  AssertDI(N.getType(), "missing global variable type", &N);
+  // Assert only if the global variable is not an extern
+  if (N.isDefinition())
+    AssertDI(N.getType(), "missing global variable type", &N);
   if (auto *Member = N.getRawStaticDataMemberDeclaration()) {
     AssertDI(isa<DIDerivedType>(Member),
              "invalid static data member declaration", &N, Member);
