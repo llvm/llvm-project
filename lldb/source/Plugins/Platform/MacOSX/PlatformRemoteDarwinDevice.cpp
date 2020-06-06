@@ -15,6 +15,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
@@ -342,7 +343,7 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForLatestOSVersion() {
 const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectory() {
   std::string platform_dir = "/Platforms/" + GetPlatformName() + "/DeviceSupport";
   if (m_device_support_directory.empty()) {
-    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+    if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
       m_device_support_directory = fspec.GetPath();
       m_device_support_directory.append(platform_dir.c_str());
     } else {
