@@ -69,18 +69,14 @@ public:
   /// predicate to simplify operations downstream.
   bool signBitIsZero(Register Op);
 
-  // FIXME: Is this the right place for G_FRAME_INDEX? Should it be in
-  // TargetLowering?
-  void computeKnownBitsForFrameIndex(Register R, KnownBits &Known,
-                                     const APInt &DemandedElts,
-                                     unsigned Depth = 0);
-  static Align inferAlignmentForFrameIdx(int FrameIdx, int Offset,
-                                         const MachineFunction &MF);
   static void computeKnownBitsForAlignment(KnownBits &Known,
-                                           MaybeAlign Alignment);
+                                           Align Alignment) {
+    // The low bits are known zero if the pointer is aligned.
+    Known.Zero.setLowBits(Log2(Alignment));
+  }
 
-  // Try to infer alignment for MI.
-  static MaybeAlign inferPtrAlignment(const MachineInstr &MI);
+  /// \return The known alignment for the pointer-like value \p R.
+  Align computeKnownAlignment(Register R, unsigned Depth = 0);
 
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override{};
