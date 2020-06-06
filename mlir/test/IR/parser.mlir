@@ -1073,28 +1073,26 @@ func @f64_special_values() {
   return
 }
 
-// FIXME: bfloat16 currently uses f64 as a storage format. This test should be
-// changed when that gets fixed.
 // CHECK-LABEL: @bfloat16_special_values
 func @bfloat16_special_values() {
   // bfloat16 signaling NaNs.
-  // CHECK: constant 0x7FF0000000000001 : bf16
-  %0 = constant 0x7FF0000000000001 : bf16
-  // CHECK: constant 0x7FF8000000000000 : bf16
-  %1 = constant 0x7FF8000000000000 : bf16
+  // CHECK: constant 0x7F81 : bf16
+  %0 = constant 0x7F81 : bf16
+  // CHECK: constant 0xFF81 : bf16
+  %1 = constant 0xFF81 : bf16
 
   // bfloat16 quiet NaNs.
-  // CHECK: constant 0x7FF0000001000000 : bf16
-  %2 = constant 0x7FF0000001000000 : bf16
-  // CHECK: constant 0xFFF0000001000000 : bf16
-  %3 = constant 0xFFF0000001000000 : bf16
+  // CHECK: constant 0x7FC0 : bf16
+  %2 = constant 0x7FC0 : bf16
+  // CHECK: constant 0xFFC0 : bf16
+  %3 = constant 0xFFC0 : bf16
 
   // bfloat16 positive infinity.
-  // CHECK: constant 0x7FF0000000000000 : bf16
-  %4 = constant 0x7FF0000000000000 : bf16
+  // CHECK: constant 0x7F80 : bf16
+  %4 = constant 0x7F80 : bf16
   // bfloat16 negative infinity.
-  // CHECK: constant 0xFFF0000000000000 : bf16
-  %5 = constant 0xFFF0000000000000 : bf16
+  // CHECK: constant 0xFF80 : bf16
+  %5 = constant 0xFF80 : bf16
 
   return
 }
@@ -1215,12 +1213,12 @@ func @pretty_names() {
   %x = test.string_attr_pretty_name
   // CHECK: %x = test.string_attr_pretty_name
   // CHECK-NOT: attributes
-  
+
   // This specifies an explicit name, which should override the result.
   %YY = test.string_attr_pretty_name attributes { names = ["y"] }
   // CHECK: %y = test.string_attr_pretty_name
   // CHECK-NOT: attributes
-  
+
   // Conflicts with the 'y' name, so need an explicit attribute.
   %0 = "test.string_attr_pretty_name"() { names = ["y"]} : () -> i32
   // CHECK: %y_0 = test.string_attr_pretty_name attributes {names = ["y"]}

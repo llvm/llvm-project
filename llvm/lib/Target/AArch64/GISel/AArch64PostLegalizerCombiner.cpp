@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -27,6 +28,7 @@
 #define DEBUG_TYPE "aarch64-postlegalizer-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 /// Represents a pseudo instruction which replaces a G_SHUFFLE_VECTOR.
 ///
@@ -40,6 +42,29 @@ struct ShuffleVectorPseudo {
       : Opc(Opc), Dst(Dst), SrcOps(SrcOps){};
   ShuffleVectorPseudo() {}
 };
+
+/// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
+/// If \p MI is not a splat, returns None.
+static Optional<int> getSplatIndex(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Only G_SHUFFLE_VECTOR can have a splat index!");
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  auto FirstDefinedIdx = find_if(Mask, [](int Elt) { return Elt >= 0; });
+
+  // If all elements are undefined, this shuffle can be considered a splat.
+  // Return 0 for better potential for callers to simplify.
+  if (FirstDefinedIdx == Mask.end())
+    return 0;
+
+  // Make sure all remaining elements are either undef or the same
+  // as the first non-undef value.
+  int SplatValue = *FirstDefinedIdx;
+  if (any_of(make_range(std::next(FirstDefinedIdx), Mask.end()),
+             [&SplatValue](int Elt) { return Elt >= 0 && Elt != SplatValue; }))
+    return None;
+
+  return SplatValue;
+}
 
 /// Check if a vector shuffle corresponds to a REV instruction with the
 /// specified blocksize.
@@ -167,6 +192,53 @@ static bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
+  return true;
+}
+
+static bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     ShuffleVectorPseudo &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  auto Lane = getSplatIndex(MI);
+  if (!Lane || *Lane != 0)
+    return false;
+
+  // Try to match a vector splat operation into a dup instruction.
+  // We're looking for this pattern:
+  //
+  // %scalar:gpr(s64) = COPY $x0
+  // %undef:fpr(<2 x s64>) = G_IMPLICIT_DEF
+  // %cst0:gpr(s32) = G_CONSTANT i32 0
+  // %zerovec:fpr(<2 x s32>) = G_BUILD_VECTOR %cst0(s32), %cst0(s32)
+  // %ins:fpr(<2 x s64>) = G_INSERT_VECTOR_ELT %undef, %scalar(s64), %cst0(s32)
+  // %splat:fpr(<2 x s64>) = G_SHUFFLE_VECTOR %ins(<2 x s64>), %undef, %zerovec(<2 x s32>)
+  //
+  // ...into:
+  // %splat = G_DUP %scalar
+
+  // Begin matching the insert.
+  auto *InsMI = getOpcodeDef(TargetOpcode::G_INSERT_VECTOR_ELT,
+                             MI.getOperand(1).getReg(), MRI);
+  if (!InsMI)
+    return false;
+
+  // Match the undef vector operand.
+  if (!getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
+                               InsMI->getOperand(1).getReg(), MRI))
+    return false;
+
+  // Match the index constant 0.
+  int64_t Index = 0;
+  if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ICst(Index)) || Index)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI.getType(Dst).getScalarSizeInBits() < 32) {
+    LLVM_DEBUG(dbgs() << "Could not optimize splat pattern < 32b elts yet");
+    return false;
+  }
+
+  MatchInfo =
+      ShuffleVectorPseudo(AArch64::G_DUP, Dst, {InsMI->getOperand(2).getReg()});
   return true;
 }
 

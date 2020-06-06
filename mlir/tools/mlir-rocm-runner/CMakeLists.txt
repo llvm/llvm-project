@@ -34,6 +34,9 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     message(STATUS "ROCm HIP version: ${HIP_VERSION}")
   endif()
 
+  # Set compile-time flags for ROCm path.
+  add_definitions(-D__ROCM_PATH__="${ROCM_PATH}")
+
   # Locate HIP runtime library.
   find_library(ROCM_RUNTIME_LIBRARY hip_hcc
                PATHS "${HIP_PATH}/lib")
@@ -108,6 +111,11 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     rocm-runtime-wrappers
     )
   llvm_update_compile_flags(mlir-rocm-runner)
+  target_include_directories(mlir-rocm-runner
+    PRIVATE
+    "${HIP_PATH}/../include"
+    "${HIP_PATH}/include"
+  )
   target_link_libraries(mlir-rocm-runner PRIVATE ${LIBS} ${targets_to_link})
 
 endif()

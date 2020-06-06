@@ -2311,7 +2311,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   // Declare your legalization info
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
-    getActionDefinitionsBuilder(G_EXTRACT).legalFor({{s16, s32}});
+    getActionDefinitionsBuilder(G_EXTRACT).legalForTypeWithAnyImm({{s16, s32}});
   });
 
   LLT S16{LLT::scalar(16)};

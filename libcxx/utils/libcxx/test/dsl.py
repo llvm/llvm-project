@@ -48,7 +48,7 @@ def _makeConfigTest(config):
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
   if not os.path.exists(sourceRoot):
     os.makedirs(sourceRoot)
-  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False)
+  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp')
   tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
@@ -68,7 +68,7 @@ def sourceBuilds(config, source):
       sourceFile.write(source)
     commands = [
       "mkdir -p %T",
-      "%{cxx} -xc++ %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
+      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
     ]
     commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
@@ -108,7 +108,7 @@ def hasLocale(config, locale):
       """)
     commands = [
       "mkdir -p %T",
-      "%{cxx} -xc++ %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
+      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
       "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
     ]
     commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])

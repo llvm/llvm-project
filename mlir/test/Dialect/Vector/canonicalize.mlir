@@ -159,3 +159,19 @@ func @transpose_3D_sequence(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
   // CHECK-NEXT: return [[ADD]]
   return %7 : vector<4x3x2xf32>
 }
+
+// -----
+
+// CHECK-LABEL: cast_transfers
+func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = memref_cast %A : memref<4x8xf32> to memref<?x?xf32>
+
+  // CHECK: vector.transfer_read %{{.*}} : memref<4x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
+
+  // CHECK: vector.transfer_write %{{.*}} : vector<4x8xf32>, memref<4x8xf32>
+  vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
+  return %1 : vector<4x8xf32>
+}
