@@ -15,11 +15,16 @@
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Instructions.h"
+#include <cstdint>
 
 namespace llvm {
 
+class CallBase;
+class CallInst;
+class Constant;
 class DominatorTree;
+class Instruction;
+class Module;
 
 /// The type of CFI jumptable needed for a function.
 enum CfiFunctionLinkage {
