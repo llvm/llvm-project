@@ -1774,9 +1774,7 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
 /// Construct a float attribute bitwise equivalent to the integer literal.
 static Optional<APFloat> buildHexadecimalFloatLiteral(Parser *p, FloatType type,
                                                       uint64_t value) {
-  // FIXME: bfloat is currently stored as a double internally because it doesn't
-  // have valid APFloat semantics.
-  if (type.isF64() || type.isBF16())
+  if (type.isF64())
     return APFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
 
   APInt apInt(type.getWidth(), value);
@@ -2153,9 +2151,8 @@ TensorLiteralParser::getFloatAttrElements(llvm::SMLoc loc, FloatType eltTy,
     if (!val.hasValue())
       return p.emitError("floating point value too large for attribute");
 
-    // Treat BF16 as double because it is not supported in LLVM's APFloat.
     APFloat apVal(isNegative ? -*val : *val);
-    if (!eltTy.isBF16() && !eltTy.isF64()) {
+    if (!eltTy.isF64()) {
       bool unused;
       apVal.convert(eltTy.getFloatSemantics(), APFloat::rmNearestTiesToEven,
                     &unused);
