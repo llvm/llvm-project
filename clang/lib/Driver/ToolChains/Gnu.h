@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_GNU_H
 
 #include "Cuda.h"
-#include "ROCm.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include <set>
@@ -279,7 +278,6 @@ public:
 protected:
   GCCInstallationDetector GCCInstallation;
   CudaInstallationDetector CudaInstallation;
-  RocmInstallationDetector RocmInstallation;
 
 public:
   Generic_GCC(const Driver &D, const llvm::Triple &Triple,
