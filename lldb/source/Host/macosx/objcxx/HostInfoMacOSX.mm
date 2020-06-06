@@ -297,6 +297,19 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   }
 }
 
+/// Return and cache $DEVELOPER_DIR if it is set and exists.
+static std::string GetEnvDeveloperDir() {
+  static std::string g_env_developer_dir;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&]() {
+    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
+      FileSpec fspec(developer_dir_env_var);
+      if (FileSystem::Instance().Exists(fspec))
+        g_env_developer_dir = fspec.GetPath();
+    }});
+  return g_env_developer_dir;
+}
+
 FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
   static FileSpec g_xcode_contents_path;
   static std::once_flag g_once_flag;
@@ -313,16 +326,14 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
       }
     }
 
-    if (const char *developer_dir_env_var = getenv("DEVELOPER_DIR")) {
-      FileSpec fspec(developer_dir_env_var);
-      if (FileSystem::Instance().Exists(fspec)) {
-        // FIXME: This looks like it couldn't possibly work!
-        std::string xcode_contents_dir =
-            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
-        if (!xcode_contents_dir.empty()) {
-          g_xcode_contents_path = FileSpec(xcode_contents_dir);
-          return;
-        }
+    std::string env_developer_dir = GetEnvDeveloperDir();
+    if (!env_developer_dir.empty()) {
+      // FIXME: This looks like it couldn't possibly work!
+      std::string xcode_contents_dir =
+          XcodeSDK::FindXcodeContentsDirectoryInPath(env_developer_dir);
+      if (!xcode_contents_dir.empty()) {
+        g_xcode_contents_path = FileSpec(xcode_contents_dir);
+        return;
       }
     }
 
@@ -359,8 +370,7 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   auto find_sdk = [](std::string sdk_name) -> std::string {
     std::string xcrun_cmd;
-    Environment env = Host::GetEnvironment();
-    std::string developer_dir = env.lookup("DEVELOPER_DIR");
+    std::string developer_dir = GetEnvDeveloperDir();
     if (developer_dir.empty())
       if (FileSpec fspec = HostInfo::GetShlibDir())
         if (FileSystem::Instance().Exists(fspec)) {
