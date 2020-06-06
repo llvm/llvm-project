@@ -358,7 +358,21 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   auto find_sdk = [](std::string sdk_name) -> std::string {
-    std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " + sdk_name;
+    std::string xcrun_cmd;
+    Environment env = Host::GetEnvironment();
+    std::string developer_dir = env.lookup("DEVELOPER_DIR");
+    if (developer_dir.empty())
+      if (FileSpec fspec = HostInfo::GetShlibDir())
+        if (FileSystem::Instance().Exists(fspec)) {
+          FileSpec path(
+              XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
+          if (path.RemoveLastPathComponent())
+            developer_dir = path.GetPath();
+        }
+    if (!developer_dir.empty())
+      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir + "\" ";
+    xcrun_cmd += "xcrun --show-sdk-path --sdk " + sdk_name;
+
     int status = 0;
     int signo = 0;
     std::string output_str;
