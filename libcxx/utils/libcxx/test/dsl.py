@@ -56,6 +56,26 @@ def _makeConfigTest(config):
     def __exit__(self, *args): os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
+def sourceBuilds(config, source):
+  """
+  Return whether the program in the given string builds successfully.
+
+  This is done by compiling and linking a program that consists of the given
+  source with the %{cxx} substitution, and seeing whether that succeeds.
+  """
+  with _makeConfigTest(config) as test:
+    with open(test.getSourcePath(), 'w') as sourceFile:
+      sourceFile.write(source)
+    commands = [
+      "mkdir -p %T",
+      "%{cxx} -xc++ %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
+    ]
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])
+    _executeScriptInternal(test, cleanup)
+    return exitCode == 0
+
 def hasCompileFlag(config, flag):
   """
   Return whether the compiler in the configuration supports a given compiler flag.

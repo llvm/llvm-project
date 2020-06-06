@@ -32,6 +32,12 @@ features = [
   Feature(name='objective-c++',                 when=lambda cfg: hasCompileFlag(cfg, '-xobjective-c++ -fobjc-arc')),
   Feature(name='diagnose-if-support',           when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'), compileFlag='-Wuser-defined-warnings'),
   Feature(name='modules-support',               when=lambda cfg: hasCompileFlag(cfg, '-fmodules')),
+  Feature(name='non-lockfree-atomics',          when=lambda cfg: sourceBuilds(cfg, """
+                                                                  #include <atomic>
+                                                                  struct Large { int storage[100]; };
+                                                                  std::atomic<Large> x;
+                                                                  int main(int, char**) { return x.load(), x.is_lock_free(); }
+                                                                """)),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
