@@ -2707,10 +2707,10 @@ public:
 
       if (message_ref.empty())
         m_raw_diagnostics.push_back(RawDiagnostic(
-            text.str(), info.Kind, bufferName, bufferID, line_col.first,
+            std::string(text), info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
-            : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
+                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
       else
         m_raw_diagnostics.push_back(RawDiagnostic(
             message_ref, info.Kind, bufferName, bufferID, line_col.first,
@@ -2719,7 +2719,7 @@ public:
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     } else {
       m_raw_diagnostics.push_back(RawDiagnostic(
-          text.str(), info.Kind, bufferName, bufferID, line_col.first,
+          std::string(text), info.Kind, bufferName, bufferID, line_col.first,
           line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     }
 
