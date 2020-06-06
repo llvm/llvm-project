@@ -174,6 +174,34 @@ Expect the source line this is found on will never be stepped on to.
 
 
 ----
+## DexLimitSteps
+    DexLimitSteps(expr, *values [, **from_line=1],[,**to_line=Max]
+                  [,**on_line])
+
+    Args:
+        expr (str): variable or value to compare.
+
+    Arg list:
+        values (str): At least one potential value the expr may evaluate to.
+
+    Keyword args:
+        from_line (int): Define the start of the limited step range.
+        to_line (int): Define the end of the limited step range.
+        on_line (int): Define a range with length 1 starting and ending on the
+                       same line.
+
+### Description
+Define a limited stepping range that is predicated on a condition. When
+'(expr) == (values[n])', set a range of temporary, unconditional break points within
+the test file defined by the range from_line and to_line or on_line.
+
+The condition is only evaluated on the line 'from_line' or 'on_line'. If the
+condition is not true at the start of the range, the whole range is ignored.
+
+DexLimitSteps commands are useful for reducing the amount of steps gathered in
+large test cases that would normally take much longer to complete.
+
+----
 ## DexLabel
     DexLabel(name)
 
