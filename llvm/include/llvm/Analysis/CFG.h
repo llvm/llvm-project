@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_CFG_H
 #define LLVM_ANALYSIS_CFG_H
 
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <utility>
 
