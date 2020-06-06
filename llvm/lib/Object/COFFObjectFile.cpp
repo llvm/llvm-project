@@ -59,8 +59,8 @@ static std::error_code getObject(const T *&Obj, MemoryBufferRef M,
                                  const void *Ptr,
                                  const uint64_t Size = sizeof(T)) {
   uintptr_t Addr = uintptr_t(Ptr);
-  if (Error E = Binary::checkOffset(M, Addr, Size))
-    return errorToErrorCode(std::move(E));
+  if (std::error_code EC = Binary::checkOffset(M, Addr, Size))
+    return EC;
   Obj = reinterpret_cast<const T *>(Addr);
   return std::error_code();
 }
@@ -374,11 +374,9 @@ getFirstReloc(const coff_section *Sec, MemoryBufferRef M, const uint8_t *Base) {
     // relocations.
     begin++;
   }
-  if (auto E = Binary::checkOffset(M, uintptr_t(begin),
-                                   sizeof(coff_relocation) * NumRelocs)) {
-    consumeError(std::move(E));
+  if (Binary::checkOffset(M, uintptr_t(begin),
+                          sizeof(coff_relocation) * NumRelocs))
     return nullptr;
-  }
   return begin;
 }
 
@@ -557,8 +555,8 @@ std::error_code COFFObjectFile::initImportTablePtr() {
   uintptr_t IntPtr = 0;
   if (std::error_code EC = getRvaPtr(ImportTableRva, IntPtr))
     return EC;
-  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
-    return errorToErrorCode(std::move(E));
+  if (std::error_code EC = checkOffset(Data, IntPtr, DataEntry->Size))
+    return EC;
   ImportDirectory = reinterpret_cast<
       const coff_import_directory_table_entry *>(IntPtr);
   return std::error_code();
@@ -1095,8 +1093,8 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
   // data, as there's nothing that says that is not allowed.
   uintptr_t ConStart = uintptr_t(base()) + Sec->PointerToRawData;
   uint32_t SectionSize = getSectionSize(Sec);
-  if (Error E = checkOffset(Data, ConStart, SectionSize))
-    return E;
+  if (checkOffset(Data, ConStart, SectionSize))
+    return make_error<BinaryError>();
   Res = makeArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
   return Error::success();
 }
