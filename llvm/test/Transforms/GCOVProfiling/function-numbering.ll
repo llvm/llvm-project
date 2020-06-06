@@ -32,10 +32,10 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; GCDA-NEXT:    %[[START_FILE_ARG_0_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 0
 ; GCDA-NEXT:    %[[START_FILE_ARG_0:.*]] = load i8*, i8** %[[START_FILE_ARG_0_PTR]]
 ; GCDA-NEXT:    %[[START_FILE_ARG_1_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 1
-; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i8*, i8** %[[START_FILE_ARG_1_PTR]]
+; GCDA-NEXT:    %[[START_FILE_ARG_1:.*]] = load i32, i32* %[[START_FILE_ARG_1_PTR]]
 ; GCDA-NEXT:    %[[START_FILE_ARG_2_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[START_FILE_ARGS]], i32 0, i32 2
 ; GCDA-NEXT:    %[[START_FILE_ARG_2:.*]] = load i32, i32* %[[START_FILE_ARG_2_PTR]]
-; GCDA-NEXT:    call void @llvm_gcda_start_file(i8* %[[START_FILE_ARG_0]], i8* %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
+; GCDA-NEXT:    call void @llvm_gcda_start_file(i8* %[[START_FILE_ARG_0]], i32 %[[START_FILE_ARG_1]], i32 %[[START_FILE_ARG_2]])
 ; GCDA-NEXT:    %[[NUM_COUNTERS_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 1
 ; GCDA-NEXT:    %[[NUM_COUNTERS:.*]] = load i32, i32* %[[NUM_COUNTERS_PTR]]
 ; GCDA-NEXT:    %[[EMIT_FUN_ARGS_ARRAY_PTR:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %[[FILE_INFO]], i32 0, i32 2
