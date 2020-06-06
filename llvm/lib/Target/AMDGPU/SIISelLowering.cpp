@@ -9623,17 +9623,13 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
 
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
 // expanded into a set of cmp/select instructions.
-static bool shouldExpandVectorDynExt(SDNode *N) {
-  SDValue Idx = N->getOperand(N->getNumOperands() - 1);
-  if (UseDivergentRegisterIndexing || isa<ConstantSDNode>(Idx))
+bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
+                                                unsigned NumElem,
+                                                bool IsDivergentIdx) {
+  if (UseDivergentRegisterIndexing)
     return false;
 
-  SDValue Vec = N->getOperand(0);
-  EVT VecVT = Vec.getValueType();
-  EVT EltVT = VecVT.getVectorElementType();
-  unsigned VecSize = VecVT.getSizeInBits();
-  unsigned EltSize = EltVT.getSizeInBits();
-  unsigned NumElem = VecVT.getVectorNumElements();
+  unsigned VecSize = EltSize * NumElem;
 
   // Sub-dword vectors of size 2 dword or less have better implementation.
   if (VecSize <= 64 && EltSize < 32)
@@ -9645,13 +9641,28 @@ static bool shouldExpandVectorDynExt(SDNode *N) {
     return true;
 
   // Always do this if var-idx is divergent, otherwise it will become a loop.
-  if (Idx->isDivergent())
+  if (IsDivergentIdx)
     return true;
 
   // Large vectors would yield too many compares and v_cndmask_b32 instructions.
   unsigned NumInsts = NumElem /* Number of compares */ +
                       ((EltSize + 31) / 32) * NumElem /* Number of cndmasks */;
   return NumInsts <= 16;
+}
+
+static bool shouldExpandVectorDynExt(SDNode *N) {
+  SDValue Idx = N->getOperand(N->getNumOperands() - 1);
+  if (isa<ConstantSDNode>(Idx))
+    return false;
+
+  SDValue Vec = N->getOperand(0);
+  EVT VecVT = Vec.getValueType();
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned EltSize = EltVT.getSizeInBits();
+  unsigned NumElem = VecVT.getVectorNumElements();
+
+  return SITargetLowering::shouldExpandVectorDynExt(EltSize, NumElem,
+                                                    Idx->isDivergent());
 }
 
 SDValue SITargetLowering::performExtractVectorEltCombine(
@@ -9715,7 +9726,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   unsigned EltSize = EltVT.getSizeInBits();
 
   // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
-  if (shouldExpandVectorDynExt(N)) {
+  if (::shouldExpandVectorDynExt(N)) {
     SDLoc SL(N);
     SDValue Idx = N->getOperand(1);
     SDValue V;
@@ -9778,7 +9789,7 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
 
   // INSERT_VECTOR_ELT (<n x e>, var-idx)
   // => BUILD_VECTOR n x select (e, const-idx)
-  if (!shouldExpandVectorDynExt(N))
+  if (!::shouldExpandVectorDynExt(N))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
