@@ -545,10 +545,15 @@ void llvm_gcda_summary_info() {
     }
 
     val = read_32bit_value(); /* length */
-    read_32bit_value();
-    if (gcov_version < 90)
+    uint32_t prev_runs;
+    if (gcov_version < 90) {
       read_32bit_value();
-    uint32_t prev_runs = read_32bit_value();
+      read_32bit_value();
+      prev_runs = read_32bit_value();
+    } else {
+      prev_runs = read_32bit_value();
+      read_32bit_value();
+    }
     for (uint32_t i = gcov_version < 90 ? 3 : 2; i < val; ++i)
       read_32bit_value();
     /* Add previous run count to new counter, if not already counted before. */
