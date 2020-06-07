@@ -22,10 +22,11 @@ namespace phases {
     Assemble,
     Link,
     IfsMerge,
+    LastPhase = IfsMerge,
   };
 
   enum {
-    MaxNumberOfPhases = IfsMerge + 1
+    MaxNumberOfPhases = LastPhase + 1
   };
 
   const char *getPhaseName(ID Id);
