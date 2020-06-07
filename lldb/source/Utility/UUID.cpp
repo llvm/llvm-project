@@ -61,10 +61,9 @@ static inline int xdigit_to_int(char ch) {
 
 llvm::StringRef
 UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
-                                llvm::SmallVectorImpl<uint8_t> &uuid_bytes,
-                                uint32_t num_uuid_bytes) {
+                                llvm::SmallVectorImpl<uint8_t> &uuid_bytes) {
   uuid_bytes.clear();
-  while (!p.empty()) {
+  while (p.size() >= 2) {
     if (isxdigit(p[0]) && isxdigit(p[1])) {
       int hi_nibble = xdigit_to_int(p[0]);
       int lo_nibble = xdigit_to_int(p[1]);
@@ -73,11 +72,6 @@ UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
 
       // Skip both hex digits
       p = p.drop_front(2);
-
-      // Increment the byte that we are decoding within the UUID value and
-      // break out if we are done
-      if (uuid_bytes.size() == num_uuid_bytes)
-        break;
     } else if (p.front() == '-') {
       // Skip dashes
       p = p.drop_front();
@@ -89,35 +83,30 @@ UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
   return p;
 }
 
-size_t UUID::SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes) {
+bool UUID::SetFromStringRef(llvm::StringRef str) {
   llvm::StringRef p = str;
 
   // Skip leading whitespace characters
   p = p.ltrim();
 
   llvm::SmallVector<uint8_t, 20> bytes;
-  llvm::StringRef rest =
-      UUID::DecodeUUIDBytesFromString(p, bytes, num_uuid_bytes);
+  llvm::StringRef rest = UUID::DecodeUUIDBytesFromString(p, bytes);
 
-  // If we successfully decoded a UUID, return the amount of characters that
-  // were consumed
-  if (bytes.size() == num_uuid_bytes) {
-    *this = fromData(bytes);
-    return str.size() - rest.size();
-  }
+  // Return false if we could not consume the entire string or if the parsed
+  // UUID is empty.
+  if (!rest.empty() || bytes.empty())
+    return false;
 
-  // Else return zero to indicate we were not able to parse a UUID value
-  return 0;
+  *this = fromData(bytes);
+  return true;
 }
 
-size_t UUID::SetFromOptionalStringRef(llvm::StringRef str, 
-                                      uint32_t num_uuid_bytes) {
-  size_t num_chars_consumed = SetFromStringRef(str, num_uuid_bytes);
-  if (num_chars_consumed) {
+bool UUID::SetFromOptionalStringRef(llvm::StringRef str) {
+  bool result = SetFromStringRef(str);
+  if (result) {
     if (llvm::all_of(m_bytes, [](uint8_t b) { return b == 0; }))
         Clear();
   }
-  
-  return num_chars_consumed;
-}
 
+  return result;
+}
