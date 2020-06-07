@@ -30,8 +30,8 @@ define i1 @movmskps_allof_bitcast_v4f64(<4 x double> %a0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vmovmskps %ymm0, %eax
-; CHECK-NEXT:    cmpl $255, %eax
+; CHECK-NEXT:    vmovmskpd %ymm0, %eax
+; CHECK-NEXT:    cmpl $15, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
