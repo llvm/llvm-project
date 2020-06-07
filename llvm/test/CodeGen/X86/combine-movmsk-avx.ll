@@ -5,14 +5,14 @@
 declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>)
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>)
 
-; TODO - Use widest possible vector for movmsk comparisons
+; Use widest possible vector for movmsk comparisons
 
 define i1 @movmskps_bitcast_v4f64(<4 x double> %a0) {
 ; CHECK-LABEL: movmskps_bitcast_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vmovmskps %ymm0, %eax
+; CHECK-NEXT:    vmovmskpd %ymm0, %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    vzeroupper
