@@ -4444,15 +4444,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (RelocationModel != llvm::Reloc::Static && !IsPIE)
       A->render(Args, CmdArgs);
 
-  CmdArgs.push_back("-mthread-model");
-  if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
-    if (!TC.isThreadModelSupported(A->getValue()))
-      D.Diag(diag::err_drv_invalid_thread_model_for_target)
-          << A->getValue() << A->getAsString(Args);
-    CmdArgs.push_back(A->getValue());
+  {
+    std::string Model;
+    if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
+      if (!TC.isThreadModelSupported(A->getValue()))
+        D.Diag(diag::err_drv_invalid_thread_model_for_target)
+            << A->getValue() << A->getAsString(Args);
+      Model = A->getValue();
+    } else
+      Model = TC.getThreadModel();
+    if (Model != "posix") {
+      CmdArgs.push_back("-mthread-model");
+      CmdArgs.push_back(Args.MakeArgString(Model));
+    }
   }
-  else
-    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel()));
 
   Args.AddLastArg(CmdArgs, options::OPT_fveclib);
 
