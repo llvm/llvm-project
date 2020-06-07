@@ -40297,13 +40297,13 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // sign bits prior to the comparison with zero unless we know that
   // the vXi16 splats the sign bit down to the lower i8 half.
   // TODO: Handle all_of patterns.
-  if (IsAnyOf && Vec.getOpcode() == X86ISD::PACKSS && VecVT == MVT::v16i8) {
+  if (Vec.getOpcode() == X86ISD::PACKSS && VecVT == MVT::v16i8) {
     SDValue VecOp0 = Vec.getOperand(0);
     SDValue VecOp1 = Vec.getOperand(1);
     bool SignExt0 = DAG.ComputeNumSignBits(VecOp0) > 8;
     bool SignExt1 = DAG.ComputeNumSignBits(VecOp1) > 8;
     // PMOVMSKB(PACKSSBW(X, undef)) -> PMOVMSKB(BITCAST_v16i8(X)) & 0xAAAA.
-    if (CmpBits == 8 && VecOp1.isUndef()) {
+    if (IsAnyOf && CmpBits == 8 && VecOp1.isUndef()) {
       SDLoc DL(EFLAGS);
       SDValue Result = DAG.getBitcast(MVT::v16i8, VecOp0);
       Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
@@ -40322,16 +40322,19 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
         VecOp1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         VecOp0.getOperand(0) == VecOp1.getOperand(0) &&
         VecOp0.getConstantOperandAPInt(1) == 0 &&
-        VecOp1.getConstantOperandAPInt(1) == 8) {
+        VecOp1.getConstantOperandAPInt(1) == 8 &&
+        (IsAnyOf || (SignExt0 && SignExt1))) {
       SDLoc DL(EFLAGS);
       SDValue Result = DAG.getBitcast(MVT::v32i8, VecOp0.getOperand(0));
       Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
+      unsigned CmpMask = IsAnyOf ? 0 : 0xFFFFFFFF;
       if (!SignExt0 || !SignExt1) {
+        assert(IsAnyOf && "Only perform v16i16 signmasks for any_of patterns");
         Result = DAG.getNode(ISD::AND, DL, MVT::i32, Result,
                              DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
       }
       return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
-                         DAG.getConstant(0, DL, MVT::i32));
+                         DAG.getConstant(CmpMask, DL, MVT::i32));
     }
   }
 
