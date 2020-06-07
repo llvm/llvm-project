@@ -635,11 +635,23 @@ def VZIP : WInst<"vzip", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPs">;
 def VUZP : WInst<"vuzp", "2..", "csiUcUsUifPcPsQcQsQiQUcQUsQUiQfQPcQPs">;
 
 ////////////////////////////////////////////////////////////////////////////////
+
+class REINTERPRET_CROSS_SELF<string Types> :
+  NoTestOpInst<"vreinterpret", "..", Types, OP_REINT> {
+    let CartesianProductWith = Types;
+}
+
+multiclass REINTERPRET_CROSS_TYPES<string TypesA, string TypesB> {
+  def AXB: NoTestOpInst<"vreinterpret", "..", TypesA, OP_REINT> {
+    let CartesianProductWith = TypesB;
+  }
+  def BXA: NoTestOpInst<"vreinterpret", "..", TypesB, OP_REINT> {
+    let CartesianProductWith = TypesA;
+  }
+}
+
 // E.3.31 Vector reinterpret cast operations
-def VREINTERPRET
-  : NoTestOpInst<"vreinterpret", "..",
-         "csilUcUsUiUlhfPcPsQcQsQiQlQUcQUsQUiQUlQhQfQPcQPs", OP_REINT> {
-  let CartesianProductOfTypes = 1;
+def VREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfPcPsQcQsQiQlQUcQUsQUiQUlQhQfQPcQPs"> {
   let ArchGuard = "!defined(__aarch64__)";
   let BigEndianSafe = 1;
 }
@@ -1188,12 +1200,9 @@ def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPc">;
 // NeonEmitter implicitly takes the cartesian product of the type string with
 // itself during generation so, unlike all other intrinsics, this one should
 // include *all* types, not just additional ones.
-def VVREINTERPRET
-  : NoTestOpInst<"vreinterpret", "..",
-       "csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk", OP_REINT> {
-  let CartesianProductOfTypes = 1;
-  let BigEndianSafe = 1;
+def VVREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk"> {
   let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)";
+  let BigEndianSafe = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1889,5 +1898,19 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && defined(__aarc
   def SCALAR_VDUP_LANE_BF_A64 : IInst<"vdup_lane", "1.I", "Sb">;
   def SCALAR_VDUP_LANEQ_BF_A64 : IInst<"vdup_laneq", "1QI", "Sb"> {
     let isLaneQ = 1;
+  }
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_BF16) && !defined(__aarch64__)" in {
+  let BigEndianSafe = 1 in {
+    defm VREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
+        "csilUcUsUiUlhfPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQPcQPsQPl", "bQb">;
+  }
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_BF16) && defined(__aarch64__)" in {
+  let BigEndianSafe = 1 in {
+    defm VVREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
+        "csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk", "bQb">;
   }
 }
