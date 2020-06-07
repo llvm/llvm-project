@@ -327,7 +327,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 
   let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$result);
-  let regions = (region SizedRegion<1>:$region);
+  let regions = (region SizedRegion<1>:$body);
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
