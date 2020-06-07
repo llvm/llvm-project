@@ -123,7 +123,9 @@ void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
   for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
-    assert(DebugRanges.Offset <= CurrOffset);
+    assert(DebugRanges.Offset >= CurrOffset &&
+           "Offset should be greater than or equal to the bytes that we have "
+           "written");
     if (DebugRanges.Offset > CurrOffset)
       ZeroFillBytes(OS, DebugRanges.Offset - CurrOffset);
     for (auto Entry : DebugRanges.Entries) {
