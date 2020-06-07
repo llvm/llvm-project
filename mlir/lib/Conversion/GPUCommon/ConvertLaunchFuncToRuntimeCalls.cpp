@@ -464,6 +464,8 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::translateGpuLaunchCalls(
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
     StringRef gpuBinaryAnnotation) {
+  if (gpuBinaryAnnotation.empty())
+    return std::make_unique<GpuLaunchFuncToGpuRuntimeCallsPass>();
   return std::make_unique<GpuLaunchFuncToGpuRuntimeCallsPass>(
       gpuBinaryAnnotation);
 }

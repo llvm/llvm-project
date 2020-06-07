@@ -311,7 +311,7 @@ class Intrinsic {
   /// The unmangled name.
   std::string Name;
   /// The input and output typespecs. InTS == OutTS except when
-  /// CartesianProductOfTypes is 1 - this is the case for vreinterpret.
+  /// CartesianProductWith is non-empty - this is the case for vreinterpret.
   TypeSpec OutTS, InTS;
   /// The base class kind. Most intrinsics use ClassS, which has full type
   /// info for integers (s32/u32). Some use ClassI, which doesn't care about
@@ -344,7 +344,7 @@ class Intrinsic {
   /// The set of intrinsics that this intrinsic uses/requires.
   std::set<Intrinsic *> Dependencies;
   /// The "base type", which is Type('d', OutTS). InBaseType is only
-  /// different if CartesianProductOfTypes = 1 (for vreinterpret).
+  /// different if CartesianProductWith is non-empty (for vreinterpret).
   Type BaseType, InBaseType;
   /// The return variable.
   Variable RetVar;
@@ -1936,10 +1936,10 @@ void NeonEmitter::createIntrinsic(Record *R,
   std::string Proto = std::string(R->getValueAsString("Prototype"));
   std::string Types = std::string(R->getValueAsString("Types"));
   Record *OperationRec = R->getValueAsDef("Operation");
-  bool CartesianProductOfTypes = R->getValueAsBit("CartesianProductOfTypes");
   bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
   std::string Guard = std::string(R->getValueAsString("ArchGuard"));
   bool IsUnavailable = OperationRec->getValueAsBit("Unavailable");
+  std::string CartesianProductWith = std::string(R->getValueAsString("CartesianProductWith"));
 
   // Set the global current record. This allows assert_with_loc to produce
   // decent location information even when highly nested.
@@ -1954,17 +1954,20 @@ void NeonEmitter::createIntrinsic(Record *R,
     CK = ClassMap[R->getSuperClasses()[1].first];
 
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
-  for (auto TS : TypeSpecs) {
-    if (CartesianProductOfTypes) {
+  if (!CartesianProductWith.empty()) {
+    std::vector<TypeSpec> ProductTypeSpecs = TypeSpec::fromTypeSpecs(CartesianProductWith);
+    for (auto TS : TypeSpecs) {
       Type DefaultT(TS, ".");
-      for (auto SrcTS : TypeSpecs) {
+      for (auto SrcTS : ProductTypeSpecs) {
         Type DefaultSrcT(SrcTS, ".");
         if (TS == SrcTS ||
             DefaultSrcT.getSizeInBits() != DefaultT.getSizeInBits())
           continue;
         NewTypeSpecs.push_back(std::make_pair(TS, SrcTS));
       }
-    } else {
+    }
+  } else {
+    for (auto TS : TypeSpecs) {
       NewTypeSpecs.push_back(std::make_pair(TS, TS));
     }
   }

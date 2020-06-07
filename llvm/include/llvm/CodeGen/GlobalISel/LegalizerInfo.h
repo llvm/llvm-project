@@ -578,6 +578,15 @@ public:
     return actionIf(LegalizeAction::Legal, always);
   }
 
+  /// The specified type index is coerced if predicate is true.
+  LegalizeRuleSet &bitcastIf(LegalityPredicate Predicate,
+                             LegalizeMutation Mutation) {
+    // We have no choice but conservatively assume that lowering with a
+    // free-form user provided Predicate properly handles all type indices:
+    markAllIdxsAsCovered();
+    return actionIf(LegalizeAction::Bitcast, Predicate, Mutation);
+  }
+
   /// The instruction is lowered.
   LegalizeRuleSet &lower() {
     using namespace LegalizeMutations;

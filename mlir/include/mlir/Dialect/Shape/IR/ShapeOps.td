@@ -123,7 +123,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [ConstantLike, NoSideEffect]> {
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $value";
+  let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
 }
 
@@ -143,7 +143,7 @@ def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
   let arguments = (ins Variadic<Index>:$extents);
   let results = (outs Shape_ShapeType:$shape);
 
-  let assemblyFormat = "attr-dict $extents";
+  let assemblyFormat = "$extents attr-dict";
 
   let hasFolder = 1;
 }
@@ -219,7 +219,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let arguments = (ins Index:$arg);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
@@ -268,7 +268,7 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
   let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $lhs `,` $rhs";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
@@ -285,7 +285,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let arguments = (ins Shape_ShapeType:$shape);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $shape";
+  let assemblyFormat = "$shape attr-dict";
 
   let hasFolder = 1;
 }
@@ -327,7 +327,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 
   let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$result);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$region);
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
@@ -345,7 +345,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
 
-  let assemblyFormat = "attr-dict $arg `:` type($arg)";
+  let assemblyFormat = "$arg `:` type($arg) attr-dict";
 
   let hasFolder = 1;
 }
@@ -362,12 +362,16 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let arguments = (ins Shape_SizeType:$arg);
   let results = (outs Index:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
 
-def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
+def Shape_YieldOp : Shape_Op<"yield", 
+    [HasParent<"ReduceOp">,
+     NoSideEffect,
+     ReturnLike,
+     Terminator]> {
   let summary = "Returns the value to parent op";
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -376,6 +380,7 @@ def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
     "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
   >];
 
+  let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
@@ -541,7 +546,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
+def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
   let summary = "Determines if 2 shapes can be successfully broadcasted";
   let description = [{
     Given 2 input shapes, return a witness specifying if they are broadcastable.
@@ -560,12 +565,9 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
 }
 
-def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
+def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
   let summary = "Determines if all input shapes are equal";
   let description = [{
     Given 1 or more input shapes, determine if all shapes are the exact same.
@@ -582,9 +584,6 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
-
-  let hasCanonicalizer = 1;
-  let hasFolder = 1;
 }
 
 def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect]> {

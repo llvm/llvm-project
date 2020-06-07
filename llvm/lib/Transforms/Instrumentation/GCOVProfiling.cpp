@@ -45,9 +45,18 @@
 #include <memory>
 #include <string>
 #include <utility>
+
 using namespace llvm;
+namespace endian = llvm::support::endian;
 
 #define DEBUG_TYPE "insert-gcov-profiling"
+
+enum : uint32_t {
+  GCOV_TAG_FUNCTION = 0x01000000,
+  GCOV_TAG_BLOCKS = 0x01410000,
+  GCOV_TAG_ARCS = 0x01430000,
+  GCOV_TAG_LINES = 0x01450000,
+};
 
 static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
                                                cl::init("408*"), cl::Hidden,
@@ -73,15 +82,7 @@ class GCOVFunction;
 class GCOVProfiler {
 public:
   GCOVProfiler() : GCOVProfiler(GCOVOptions::getDefault()) {}
-  GCOVProfiler(const GCOVOptions &Opts) : Options(Opts) {
-    assert((Options.EmitNotes || Options.EmitData) &&
-           "GCOVProfiler asked to do nothing?");
-    ReversedVersion[0] = Options.Version[3];
-    ReversedVersion[1] = Options.Version[2];
-    ReversedVersion[2] = Options.Version[1];
-    ReversedVersion[3] = Options.Version[0];
-    ReversedVersion[4] = '\0';
-  }
+  GCOVProfiler(const GCOVOptions &Opts) : Options(Opts) {}
   bool
   runOnModule(Module &M,
               std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
@@ -120,8 +121,6 @@ private:
 
   GCOVOptions Options;
 
-  // Reversed, NUL-terminated copy of Options.Version.
-  char ReversedVersion[5];
   // Checksum, produced by hash of EdgeDestinations
   SmallVector<uint32_t, 4> FileChecksums;
 
@@ -196,20 +195,17 @@ static SmallString<128> getFilename(const DISubprogram *SP) {
 
 namespace {
   class GCOVRecord {
-   protected:
-    static const char *const LinesTag;
-    static const char *const FunctionTag;
-    static const char *const BlockTag;
-    static const char *const EdgeTag;
+  protected:
+    support::endianness Endian;
 
-    GCOVRecord() = default;
+    GCOVRecord(support::endianness Endian) : Endian(Endian) {}
 
-    void writeBytes(const char *Bytes, int Size) {
-      os->write(Bytes, Size);
-    }
+    void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
 
     void write(uint32_t i) {
-      writeBytes(reinterpret_cast<char*>(&i), 4);
+      char Bytes[4];
+      endian::write32(Bytes, i, Endian);
+      os->write(Bytes, 4);
     }
 
     // Returns the length measured in 4-byte blocks that will be used to
@@ -227,17 +223,11 @@ namespace {
       writeBytes(s.data(), s.size());
 
       // Write 1 to 4 bytes of NUL padding.
-      assert((unsigned)(4 - (s.size() % 4)) > 0);
-      assert((unsigned)(4 - (s.size() % 4)) <= 4);
       writeBytes("\0\0\0\0", 4 - (s.size() % 4));
     }
 
     raw_ostream *os;
   };
-  const char *const GCOVRecord::LinesTag = "\0\0\x45\x01";
-  const char *const GCOVRecord::FunctionTag = "\0\0\0\1";
-  const char *const GCOVRecord::BlockTag = "\0\0\x41\x01";
-  const char *const GCOVRecord::EdgeTag = "\0\0\x43\x01";
 
   class GCOVFunction;
   class GCOVBlock;
@@ -264,7 +254,8 @@ namespace {
         write(Lines[i]);
     }
 
-    GCOVLines(StringRef F, raw_ostream *os) : Filename(std::string(F)) {
+    GCOVLines(StringRef F, raw_ostream *os, support::endianness Endian)
+        : GCOVRecord(Endian), Filename(std::string(F)) {
       this->os = os;
     }
 
@@ -280,7 +271,8 @@ namespace {
   class GCOVBlock : public GCOVRecord {
    public:
     GCOVLines &getFile(StringRef Filename) {
-      return LinesByFile.try_emplace(Filename, Filename, os).first->second;
+      return LinesByFile.try_emplace(Filename, Filename, os, Endian)
+          .first->second;
     }
 
     void addEdge(GCOVBlock &Successor) {
@@ -295,7 +287,7 @@ namespace {
         SortedLinesByFile.push_back(&I);
       }
 
-      writeBytes(LinesTag, 4);
+      write(GCOV_TAG_LINES);
       write(Len);
       write(Number);
 
@@ -320,8 +312,8 @@ namespace {
    private:
     friend class GCOVFunction;
 
-    GCOVBlock(uint32_t Number, raw_ostream *os)
-        : Number(Number) {
+    GCOVBlock(uint32_t Number, raw_ostream *os, support::endianness Endian)
+        : GCOVRecord(Endian), Number(Number) {
       this->os = os;
     }
 
@@ -334,11 +326,12 @@ namespace {
   // set of blocks and a map of edges between blocks. This is the only GCOV
   // object users can construct, the blocks and lines will be rooted here.
   class GCOVFunction : public GCOVRecord {
-   public:
-     GCOVFunction(const DISubprogram *SP, Function *F, raw_ostream *os,
-                  uint32_t Ident, bool UseCfgChecksum, bool ExitBlockBeforeBody)
-         : SP(SP), Ident(Ident), UseCfgChecksum(UseCfgChecksum), CfgChecksum(0),
-           ReturnBlock(1, os) {
+  public:
+    GCOVFunction(const DISubprogram *SP, Function *F, raw_ostream *os,
+                 support::endianness Endian, uint32_t Ident,
+                 bool UseCfgChecksum, bool ExitBlockBeforeBody)
+        : GCOVRecord(Endian), SP(SP), Ident(Ident),
+          UseCfgChecksum(UseCfgChecksum), ReturnBlock(1, os, Endian) {
       this->os = os;
 
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
@@ -348,7 +341,7 @@ namespace {
         // Skip index 1 if it's assigned to the ReturnBlock.
         if (i == 1 && ExitBlockBeforeBody)
           ++i;
-        Blocks.insert(std::make_pair(&BB, GCOVBlock(i++, os)));
+        Blocks.insert(std::make_pair(&BB, GCOVBlock(i++, os, Endian)));
       }
       if (!ExitBlockBeforeBody)
         ReturnBlock.Number = i;
@@ -384,12 +377,8 @@ namespace {
       return FuncChecksum;
     }
 
-    void setCfgChecksum(uint32_t Checksum) {
-      CfgChecksum = Checksum;
-    }
-
-    void writeOut() {
-      writeBytes(FunctionTag, 4);
+    void writeOut(uint32_t CfgChecksum) {
+      write(GCOV_TAG_FUNCTION);
       SmallString<128> Filename = getFilename(SP);
       uint32_t BlockLen = 1 + 1 + 1 + lengthOfGCOVString(getFunctionName(SP)) +
                           1 + lengthOfGCOVString(Filename) + 1;
@@ -405,7 +394,7 @@ namespace {
       write(SP->getLine());
 
       // Emit count of blocks.
-      writeBytes(BlockTag, 4);
+      write(GCOV_TAG_BLOCKS);
       write(Blocks.size() + 1);
       for (int i = 0, e = Blocks.size() + 1; i != e; ++i) {
         write(0);  // No flags on our blocks.
@@ -413,13 +402,12 @@ namespace {
       LLVM_DEBUG(dbgs() << Blocks.size() << " blocks.\n");
 
       // Emit edges between blocks.
-      if (Blocks.empty()) return;
       Function *F = Blocks.begin()->first->getParent();
       for (BasicBlock &I : *F) {
         GCOVBlock &Block = getBlock(&I);
         if (Block.OutEdges.empty()) continue;
 
-        writeBytes(EdgeTag, 4);
+        write(GCOV_TAG_ARCS);
         write(Block.OutEdges.size() * 2 + 1);
         write(Block.Number);
         for (int i = 0, e = Block.OutEdges.size(); i != e; ++i) {
@@ -435,12 +423,11 @@ namespace {
         getBlock(&I).writeOut();
     }
 
-   private:
-     const DISubprogram *SP;
+  private:
+    const DISubprogram *SP;
     uint32_t Ident;
     uint32_t FuncChecksum;
     bool UseCfgChecksum;
-    uint32_t CfgChecksum;
     DenseMap<BasicBlock *, GCOVBlock> Blocks;
     GCOVBlock ReturnBlock;
   };
@@ -468,11 +455,9 @@ std::vector<Regex> GCOVProfiler::createRegexesFromString(StringRef RegexesStr) {
 
 bool GCOVProfiler::doesFilenameMatchARegex(StringRef Filename,
                                            std::vector<Regex> &Regexes) {
-  for (Regex &Re : Regexes) {
-    if (Re.match(Filename)) {
+  for (Regex &Re : Regexes)
+    if (Re.match(Filename))
       return true;
-    }
-  }
   return false;
 }
 
@@ -726,6 +711,9 @@ void GCOVProfiler::emitProfileNotes() {
 
     std::string EdgeDestinations;
 
+    auto Endian = M->getDataLayout().isLittleEndian()
+                      ? support::endianness::little
+                      : support::endianness::big;
     unsigned FunctionIdent = 0;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
@@ -745,8 +733,9 @@ void GCOVProfiler::emitProfileNotes() {
 
       bool UseCfgChecksum = strncmp(Options.Version, "407", 3) >= 0;
       bool ExitBlockBeforeBody = strncmp(Options.Version, "408", 3) >= 0;
-      Funcs.push_back(std::make_unique<GCOVFunction>(
-          SP, &F, &out, FunctionIdent++, UseCfgChecksum, ExitBlockBeforeBody));
+      Funcs.push_back(
+          std::make_unique<GCOVFunction>(SP, &F, &out, Endian, FunctionIdent++,
+                                         UseCfgChecksum, ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
       // Add the function line number to the lines of the entry block
@@ -795,15 +784,21 @@ void GCOVProfiler::emitProfileNotes() {
       EdgeDestinations += Func.getEdgeDestinations();
     }
 
+    char Tmp[4];
     FileChecksums.push_back(hash_value(EdgeDestinations));
-    out.write("oncg", 4);
-    out.write(ReversedVersion, 4);
-    out.write(reinterpret_cast<char*>(&FileChecksums.back()), 4);
-
-    for (auto &Func : Funcs) {
-      Func->setCfgChecksum(FileChecksums.back());
-      Func->writeOut();
+    if (Endian == support::endianness::big) {
+      out.write("gcno", 4);
+      out.write(Options.Version, 4);
+    } else {
+      out.write("oncg", 4);
+      std::reverse_copy(Options.Version, Options.Version + 4, Tmp);
+      out.write(Tmp, 4);
     }
+    endian::write32(Tmp, FileChecksums.back(), Endian);
+    out.write(Tmp, 4);
+
+    for (auto &Func : Funcs)
+      Func->writeOut(FileChecksums.back());
 
     out.write("\0\0\0\0\0\0\0\0", 8);  // EOF
     out.close();
@@ -926,9 +921,9 @@ bool GCOVProfiler::emitProfileArcs() {
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-    Type::getInt8PtrTy(*Ctx),  // const char *orig_filename
-    Type::getInt8PtrTy(*Ctx),  // const char version[4]
-    Type::getInt32Ty(*Ctx),    // uint32_t checksum
+      Type::getInt8PtrTy(*Ctx), // const char *orig_filename
+      Type::getInt32Ty(*Ctx),   // uint32_t version
+      Type::getInt32Ty(*Ctx),   // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   AttributeList AL;
@@ -1008,7 +1003,7 @@ Function *GCOVProfiler::insertCounterWriteout(
   // Collect the relevant data into a large constant data structure that we can
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
-      {Builder.getInt8PtrTy(), Builder.getInt8PtrTy(), Builder.getInt32Ty()});
+      {Builder.getInt8PtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()});
   StructType *EmitFunctionCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()});
   StructType *EmitArcsCallArgsTy = StructType::create(
@@ -1033,9 +1028,10 @@ Function *GCOVProfiler::insertCounterWriteout(
     std::string FilenameGcda = mangleName(CU, GCovFileType::GCDA);
     uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
     auto *StartFileCallArgs = ConstantStruct::get(
-        StartFileCallArgsTy, {Builder.CreateGlobalStringPtr(FilenameGcda),
-                              Builder.CreateGlobalStringPtr(ReversedVersion),
-                              Builder.getInt32(CfgChecksum)});
+        StartFileCallArgsTy,
+        {Builder.CreateGlobalStringPtr(FilenameGcda),
+         Builder.getInt32(endian::read32be(Options.Version)),
+         Builder.getInt32(CfgChecksum)});
 
     SmallVector<Constant *, 8> EmitFunctionCallArgsArray;
     SmallVector<Constant *, 8> EmitArcsCallArgsArray;
@@ -1219,8 +1215,6 @@ Function *GCOVProfiler::insertReset(
   if (!ResetF)
     ResetF = Function::Create(FTy, GlobalValue::InternalLinkage,
                               "__llvm_gcov_reset", M);
-  else
-    ResetF->setLinkage(GlobalValue::InternalLinkage);
   ResetF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   ResetF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
@@ -1254,8 +1248,6 @@ Function *GCOVProfiler::insertFlush(Function *ResetF) {
   if (!FlushF)
     FlushF = Function::Create(FTy, GlobalValue::InternalLinkage,
                               "__llvm_gcov_flush", M);
-  else
-    FlushF->setLinkage(GlobalValue::InternalLinkage);
   FlushF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   FlushF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)

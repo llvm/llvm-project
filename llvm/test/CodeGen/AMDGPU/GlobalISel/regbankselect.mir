@@ -44,7 +44,7 @@
 
   define void @non_power_of_2() { ret void }
 
-  define amdgpu_kernel void @load_constant_v4i16_from_6_align8(<3 x i16> addrspace(4)* %ptr0) {
+  define amdgpu_kernel void @load_constant_v4i16_from_8_align8(<3 x i16> addrspace(4)* %ptr0) {
     ret void
   }
 
@@ -188,15 +188,15 @@ body: |
 ...
 
 ---
-name: load_constant_v4i16_from_6_align8
+name: load_constant_v4i16_from_8_align8
 legalized: true
 
 body: |
   bb.0:
-    ; CHECK-LABEL: name: load_constant_v4i16_from_6_align8
+    ; CHECK-LABEL: name: load_constant_v4i16_from_8_align8
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (load 6 from %ir.ptr0, align 8, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (load 8 from %ir.ptr0, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s16>) = G_LOAD %0 :: (load 6 from %ir.ptr0, align 8, addrspace 4)
+    %1:_(<4 x s16>) = G_LOAD %0 :: (load 8 from %ir.ptr0, align 8, addrspace 4)
 
 ...

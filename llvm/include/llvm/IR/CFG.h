@@ -22,17 +22,18 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
 
 namespace llvm {
+
+class BasicBlock;
+class Instruction;
+class Use;
 
 //===----------------------------------------------------------------------===//
 // BasicBlock pred_iterator definition

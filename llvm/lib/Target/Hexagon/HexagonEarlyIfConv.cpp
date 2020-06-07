@@ -1017,18 +1017,20 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
   PredB->removeSuccessor(SuccB);
   PredB->splice(PredB->end(), SuccB, SuccB->begin(), SuccB->end());
   PredB->transferSuccessorsAndUpdatePHIs(SuccB);
+  MachineBasicBlock *OldLayoutSuccessor = SuccB->getNextNode();
   removeBlock(SuccB);
   if (!TermOk)
-    PredB->updateTerminator();
+    PredB->updateTerminator(OldLayoutSuccessor);
 }
 
 void HexagonEarlyIfConversion::simplifyFlowGraph(const FlowPattern &FP) {
+  MachineBasicBlock *OldLayoutSuccessor = FP.SplitB->getNextNode();
   if (FP.TrueB)
     removeBlock(FP.TrueB);
   if (FP.FalseB)
     removeBlock(FP.FalseB);
 
-  FP.SplitB->updateTerminator();
+  FP.SplitB->updateTerminator(OldLayoutSuccessor);
   if (FP.SplitB->succ_size() != 1)
     return;
 

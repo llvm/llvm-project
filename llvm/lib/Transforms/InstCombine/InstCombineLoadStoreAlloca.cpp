@@ -365,42 +365,40 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     }
   }
 
-  if (AI.getAlignment()) {
-    // Check to see if this allocation is only modified by a memcpy/memmove from
-    // a constant whose alignment is equal to or exceeds that of the allocation.
-    // If this is the case, we can change all users to use the constant global
-    // instead.  This is commonly produced by the CFE by constructs like "void
-    // foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A' is only subsequently
-    // read.
-    SmallVector<Instruction *, 4> ToDelete;
-    if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
-      MaybeAlign AllocaAlign = AI.getAlign();
-      Align SourceAlign = getOrEnforceKnownAlignment(
-          Copy->getSource(), AllocaAlign, DL, &AI, &AC, &DT);
-      if ((!AllocaAlign || *AllocaAlign <= SourceAlign) &&
-          isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
-        LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
-        LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
-        for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
-          eraseInstFromFunction(*ToDelete[i]);
-        Value *TheSrc = Copy->getSource();
-        auto *SrcTy = TheSrc->getType();
-        auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
-                                        SrcTy->getPointerAddressSpace());
-        Value *Cast =
-          Builder.CreatePointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
-        if (AI.getType()->getPointerAddressSpace() ==
-            SrcTy->getPointerAddressSpace()) {
-          Instruction *NewI = replaceInstUsesWith(AI, Cast);
-          eraseInstFromFunction(*Copy);
-          ++NumGlobalCopies;
-          return NewI;
-        }
-
-        PointerReplacer PtrReplacer(*this);
-        PtrReplacer.replacePointer(AI, Cast);
+  // Check to see if this allocation is only modified by a memcpy/memmove from
+  // a constant whose alignment is equal to or exceeds that of the allocation.
+  // If this is the case, we can change all users to use the constant global
+  // instead.  This is commonly produced by the CFE by constructs like "void
+  // foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A' is only subsequently
+  // read.
+  SmallVector<Instruction *, 4> ToDelete;
+  if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
+    Align AllocaAlign = AI.getAlign();
+    Align SourceAlign = getOrEnforceKnownAlignment(
+        Copy->getSource(), AllocaAlign, DL, &AI, &AC, &DT);
+    if (AllocaAlign <= SourceAlign &&
+        isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
+      LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
+      LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
+      for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
+        eraseInstFromFunction(*ToDelete[i]);
+      Value *TheSrc = Copy->getSource();
+      auto *SrcTy = TheSrc->getType();
+      auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
+                                      SrcTy->getPointerAddressSpace());
+      Value *Cast =
+        Builder.CreatePointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
+      if (AI.getType()->getPointerAddressSpace() ==
+          SrcTy->getPointerAddressSpace()) {
+        Instruction *NewI = replaceInstUsesWith(AI, Cast);
+        eraseInstFromFunction(*Copy);
         ++NumGlobalCopies;
+        return NewI;
       }
+
+      PointerReplacer PtrReplacer(*this);
+      PtrReplacer.replacePointer(AI, Cast);
+      ++NumGlobalCopies;
     }
   }
 

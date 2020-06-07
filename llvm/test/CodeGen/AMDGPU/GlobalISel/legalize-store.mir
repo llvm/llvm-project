@@ -392,18 +392,16 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; SI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; SI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF1]](<4 x s8>)
-    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[DEF]](<3 x s8>), 0
-    ; SI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; SI: G_STORE [[TRUNC]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[INSERT]](<4 x s8>)
+    ; SI: G_STORE [[BITCAST]](s32), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; VI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; VI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF1]](<4 x s8>)
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[DEF]](<3 x s8>), 0
-    ; VI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; VI: G_STORE [[TRUNC]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
+    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[INSERT]](<4 x s8>)
+    ; VI: G_STORE [[BITCAST]](s32), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<3 x s8>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store 3, addrspace 1, align 4)
