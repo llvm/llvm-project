@@ -2791,10 +2791,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             ReadUntranslatedSourceLocation(Record[Idx++]);
         off_t StoredSize = (off_t)Record[Idx++];
         time_t StoredModTime = (time_t)Record[Idx++];
-        ASTFileSignature StoredSignature = {
-            {{(uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
-              (uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
-              (uint32_t)Record[Idx++]}}};
+        auto FirstSignatureByte = Record.begin() + Idx;
+        ASTFileSignature StoredSignature = ASTFileSignature::create(
+            FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
+        Idx += ASTFileSignature::size;
 
         std::string ImportedName = ReadString(Record, Idx);
         std::string ImportedFile;
@@ -4734,7 +4734,7 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     switch ((UnhashedControlBlockRecordTypes)MaybeRecordType.get()) {
     case SIGNATURE:
       if (F)
-        std::copy(Record.begin(), Record.end(), F->Signature.data());
+        F->Signature = ASTFileSignature::create(Record.begin(), Record.end());
       break;
     case DIAGNOSTIC_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
@@ -5023,8 +5023,8 @@ static ASTFileSignature readASTFileSignature(StringRef PCH) {
       return ASTFileSignature();
     }
     if (SIGNATURE == MaybeRecord.get())
-      return {{{(uint32_t)Record[0], (uint32_t)Record[1], (uint32_t)Record[2],
-                (uint32_t)Record[3], (uint32_t)Record[4]}}};
+      return ASTFileSignature::create(Record.begin(),
+                                      Record.begin() + ASTFileSignature::size);
   }
 }
 
@@ -5322,7 +5322,9 @@ bool ASTReader::readASTFileControlBlock(
       unsigned Idx = 0, N = Record.size();
       while (Idx < N) {
         // Read information about the AST file.
-        Idx += 1+1+1+1+5; // Kind, ImportLoc, Size, ModTime, Signature
+        Idx +=
+            1 + 1 + 1 + 1 +
+            ASTFileSignature::size; // Kind, ImportLoc, Size, ModTime, Signature
         std::string ModuleName = ReadString(Record, Idx);
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
