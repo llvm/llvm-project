@@ -223,8 +223,6 @@ namespace {
       writeBytes(s.data(), s.size());
 
       // Write 1 to 4 bytes of NUL padding.
-      assert((unsigned)(4 - (s.size() % 4)) > 0);
-      assert((unsigned)(4 - (s.size() % 4)) <= 4);
       writeBytes("\0\0\0\0", 4 - (s.size() % 4));
     }
 
@@ -333,8 +331,7 @@ namespace {
                  support::endianness Endian, uint32_t Ident,
                  bool UseCfgChecksum, bool ExitBlockBeforeBody)
         : GCOVRecord(Endian), SP(SP), Ident(Ident),
-          UseCfgChecksum(UseCfgChecksum), CfgChecksum(0),
-          ReturnBlock(1, os, Endian) {
+          UseCfgChecksum(UseCfgChecksum), ReturnBlock(1, os, Endian) {
       this->os = os;
 
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
@@ -380,11 +377,7 @@ namespace {
       return FuncChecksum;
     }
 
-    void setCfgChecksum(uint32_t Checksum) {
-      CfgChecksum = Checksum;
-    }
-
-    void writeOut() {
+    void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
       SmallString<128> Filename = getFilename(SP);
       uint32_t BlockLen = 1 + 1 + 1 + lengthOfGCOVString(getFunctionName(SP)) +
@@ -409,7 +402,6 @@ namespace {
       LLVM_DEBUG(dbgs() << Blocks.size() << " blocks.\n");
 
       // Emit edges between blocks.
-      if (Blocks.empty()) return;
       Function *F = Blocks.begin()->first->getParent();
       for (BasicBlock &I : *F) {
         GCOVBlock &Block = getBlock(&I);
@@ -436,7 +428,6 @@ namespace {
     uint32_t Ident;
     uint32_t FuncChecksum;
     bool UseCfgChecksum;
-    uint32_t CfgChecksum;
     DenseMap<BasicBlock *, GCOVBlock> Blocks;
     GCOVBlock ReturnBlock;
   };
@@ -464,11 +455,9 @@ std::vector<Regex> GCOVProfiler::createRegexesFromString(StringRef RegexesStr) {
 
 bool GCOVProfiler::doesFilenameMatchARegex(StringRef Filename,
                                            std::vector<Regex> &Regexes) {
-  for (Regex &Re : Regexes) {
-    if (Re.match(Filename)) {
+  for (Regex &Re : Regexes)
+    if (Re.match(Filename))
       return true;
-    }
-  }
   return false;
 }
 
@@ -808,10 +797,8 @@ void GCOVProfiler::emitProfileNotes() {
     endian::write32(Tmp, FileChecksums.back(), Endian);
     out.write(Tmp, 4);
 
-    for (auto &Func : Funcs) {
-      Func->setCfgChecksum(FileChecksums.back());
-      Func->writeOut();
-    }
+    for (auto &Func : Funcs)
+      Func->writeOut(FileChecksums.back());
 
     out.write("\0\0\0\0\0\0\0\0", 8);  // EOF
     out.close();
@@ -1228,8 +1215,6 @@ Function *GCOVProfiler::insertReset(
   if (!ResetF)
     ResetF = Function::Create(FTy, GlobalValue::InternalLinkage,
                               "__llvm_gcov_reset", M);
-  else
-    ResetF->setLinkage(GlobalValue::InternalLinkage);
   ResetF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   ResetF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
@@ -1263,8 +1248,6 @@ Function *GCOVProfiler::insertFlush(Function *ResetF) {
   if (!FlushF)
     FlushF = Function::Create(FTy, GlobalValue::InternalLinkage,
                               "__llvm_gcov_flush", M);
-  else
-    FlushF->setLinkage(GlobalValue::InternalLinkage);
   FlushF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   FlushF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
