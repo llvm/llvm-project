@@ -36,26 +36,19 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemorySSA.h"
-#include "llvm/IR/OperandTraits.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CFGDiff.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
+#include <utility>
 
 namespace llvm {
 
 class BasicBlock;
-class Function;
+class BranchInst;
+class DominatorTree;
 class Instruction;
 class LoopBlocksRPO;
-class LLVMContext;
-class raw_ostream;
+class WeakVH;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;
