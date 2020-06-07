@@ -73,10 +73,8 @@ const auto isMoveOnly = [] {
 };
 
 template <class T> struct NodeID;
-template <> struct NodeID<Expr> { static const std::string value; };
-template <> struct NodeID<Decl> { static const std::string value; };
-const std::string NodeID<Expr>::value = "expr";
-const std::string NodeID<Decl>::value = "decl";
+template <> struct NodeID<Expr> { static constexpr StringRef value = "expr"; };
+template <> struct NodeID<Decl> { static constexpr StringRef value = "decl"; };
 
 template <class T, class F = const Stmt *(ExprMutationAnalyzer::*)(const T *)>
 const Stmt *tryEachMatch(ArrayRef<ast_matchers::BoundNodes> Matches,
