@@ -1025,7 +1025,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
 
   // Some decls shouldn't be tracked here because they were not created by
   // copying 'from' to 'to'. Just exit early for those.
-  if (m_decls_to_ignore.find(to) != m_decls_to_ignore.end())
+  if (m_decls_to_ignore.count(to))
     return clang::ASTImporter::Imported(from, to);
 
   // Transfer module ownership information.

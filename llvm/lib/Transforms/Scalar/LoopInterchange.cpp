@@ -694,7 +694,7 @@ bool LoopInterchangeLegality::findInductionAndReductions(
       // PHIs in inner loops need to be part of a reduction in the outer loop,
       // discovered when checking the PHIs of the outer loop earlier.
       if (!InnerLoop) {
-        if (OuterInnerReductions.find(&PHI) == OuterInnerReductions.end()) {
+        if (!OuterInnerReductions.count(&PHI)) {
           LLVM_DEBUG(dbgs() << "Inner loop PHI is not part of reductions "
                                "across the outer loop.\n");
           return false;
@@ -908,8 +908,8 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
       return false;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
-          return !PN || (Reductions.find(PN) == Reductions.end() &&
-                         OuterL->contains(PN->getParent()));
+          return !PN ||
+                 (!Reductions.count(PN) && OuterL->contains(PN->getParent()));
         })) {
       return false;
     }
@@ -1582,13 +1582,11 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // outer loop and all the remains to do is and updating the incoming blocks.
   for (PHINode *PHI : OuterLoopPHIs) {
     PHI->moveBefore(InnerLoopHeader->getFirstNonPHI());
-    assert(OuterInnerReductions.find(PHI) != OuterInnerReductions.end() &&
-           "Expected a reduction PHI node");
+    assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
   for (PHINode *PHI : InnerLoopPHIs) {
     PHI->moveBefore(OuterLoopHeader->getFirstNonPHI());
-    assert(OuterInnerReductions.find(PHI) != OuterInnerReductions.end() &&
-           "Expected a reduction PHI node");
+    assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
 
   // Update the incoming blocks for moved PHI nodes.
