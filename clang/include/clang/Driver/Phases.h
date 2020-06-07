@@ -25,7 +25,7 @@ namespace phases {
   };
 
   enum {
-    MaxNumberOfPhases = Link + 1
+    MaxNumberOfPhases = IfsMerge + 1
   };
 
   const char *getPhaseName(ID Id);
