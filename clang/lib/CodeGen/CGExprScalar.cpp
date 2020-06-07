@@ -741,6 +741,22 @@ public:
       }
     }
 
+    if (Ops.Ty->isConstantMatrixType()) {
+      llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+      // We need to check the types of the operands of the operator to get the
+      // correct matrix dimensions.
+      auto *BO = cast<BinaryOperator>(Ops.E);
+      auto *LHSMatTy = dyn_cast<ConstantMatrixType>(
+          BO->getLHS()->getType().getCanonicalType());
+      auto *RHSMatTy = dyn_cast<ConstantMatrixType>(
+          BO->getRHS()->getType().getCanonicalType());
+      if (LHSMatTy && RHSMatTy)
+        return MB.CreateMatrixMultiply(Ops.LHS, Ops.RHS, LHSMatTy->getNumRows(),
+                                       LHSMatTy->getNumColumns(),
+                                       RHSMatTy->getNumColumns());
+      return MB.CreateScalarMultiply(Ops.LHS, Ops.RHS);
+    }
+
     if (Ops.Ty->isUnsignedIntegerType() &&
         CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
         !CanElideOverflowCheck(CGF.getContext(), Ops))

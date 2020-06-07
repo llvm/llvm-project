@@ -157,6 +157,45 @@ void test_IntWrapper_Sub(MyMatrix<double, 10, 9> &m) {
   m.value = w3 - m.value;
 }
 
+template <typename EltTy0, unsigned R0, unsigned C0, unsigned C1>
+typename MyMatrix<EltTy0, R0, C1>::matrix_t multiply(MyMatrix<EltTy0, R0, C0> &A, MyMatrix<EltTy0, C0, C1> &B) {
+  return A.value * B.value;
+}
+
+MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
+                                             MyMatrix<float, 5, 2> Mat2) {
+  // CHECK-LABEL: define void @_Z22test_multiply_template8MyMatrixIfLj2ELj5EES_IfLj5ELj2EE(
+  // CHECK-NEXT:  entry:
+  // CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @_Z8multiplyIfLj2ELj5ELj2EEN8MyMatrixIT_XT0_EXT2_EE8matrix_tERS0_IS1_XT0_EXT1_EERS0_IS1_XT1_EXT2_EE(%struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat1, %struct.MyMatrix.2* nonnull align 4 dereferenceable(40) %Mat2)
+  // CHECK-NEXT:    %value = getelementptr inbounds %struct.MyMatrix.1, %struct.MyMatrix.1* %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = bitcast [4 x float]* %value to <4 x float>*
+  // CHECK-NEXT:    store <4 x float> [[RES]], <4 x float>* [[VALUE_ADDR]], align 4
+  // CHECK-NEXT:    ret void
+  //
+  // CHECK-LABEL:  define linkonce_odr <4 x float> @_Z8multiplyIfLj2ELj5ELj2EEN8MyMatrixIT_XT0_EXT2_EE8matrix_tERS0_IS1_XT0_EXT1_EERS0_IS1_XT1_EXT2_EE(
+  // CHECK:         [[MAT1:%.*]] = load <10 x float>, <10 x float>* {{.*}}, align 4
+  // CHECK:         [[MAT2:%.*]] = load <10 x float>, <10 x float>* {{.*}}, align 4
+  // CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.matrix.multiply.v4f32.v10f32.v10f32(<10 x float> [[MAT1]], <10 x float> [[MAT2]], i32 2, i32 5, i32 2)
+  // CHECK-NEXT:    ret <4 x float> [[RES]]
+
+  MyMatrix<float, 2, 2> Res;
+  Res.value = multiply(Mat1, Mat2);
+  return Res;
+}
+
+void test_IntWrapper_Multiply(MyMatrix<double, 10, 9> &m, IntWrapper &w3) {
+  // CHECK-LABEL: define void @_Z24test_IntWrapper_MultiplyR8MyMatrixIdLj10ELj9EER10IntWrapper(
+  // CHECK:       [[SCALAR:%.*]] = call i32 @_ZN10IntWrappercviEv(%struct.IntWrapper* {{.*}})
+  // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
+  // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[RES:%.*]] = fmul <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
+  // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
+  // CHECK:       ret void
+  m.value = w3 * m.value;
+}
+
 template <typename EltTy, unsigned Rows, unsigned Columns>
 void insert(MyMatrix<EltTy, Rows, Columns> &Mat, EltTy e, unsigned i, unsigned j) {
   Mat.value[i][j] = e;
@@ -164,11 +203,11 @@ void insert(MyMatrix<EltTy, Rows, Columns> &Mat, EltTy e, unsigned i, unsigned j
 
 void test_insert_template1(MyMatrix<unsigned, 2, 2> &Mat, unsigned e, unsigned i, unsigned j) {
   // CHECK-LABEL: @_Z21test_insert_template1R8MyMatrixIjLj2ELj2EEjjj(
-  // CHECK:         [[MAT_ADDR:%.*]] = load %struct.MyMatrix.1*, %struct.MyMatrix.1** %Mat.addr, align 8
+  // CHECK:         [[MAT_ADDR:%.*]] = load %struct.MyMatrix.3*, %struct.MyMatrix.3** %Mat.addr, align 8
   // CHECK-NEXT:    [[E:%.*]] = load i32, i32* %e.addr, align 4
   // CHECK-NEXT:    [[I:%.*]] = load i32, i32* %i.addr, align 4
   // CHECK-NEXT:    [[J:%.*]] = load i32, i32* %j.addr, align 4
-  // CHECK-NEXT:    call void @_Z6insertIjLj2ELj2EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(%struct.MyMatrix.1* nonnull align 4 dereferenceable(16) [[MAT_ADDR]], i32 [[E]], i32 [[I]], i32 [[J]])
+  // CHECK-NEXT:    call void @_Z6insertIjLj2ELj2EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(%struct.MyMatrix.3* nonnull align 4 dereferenceable(16) [[MAT_ADDR]], i32 [[E]], i32 [[I]], i32 [[J]])
   // CHECK-NEXT:    ret void
   //
   // CHECK-LABEL: define linkonce_odr void @_Z6insertIjLj2ELj2EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(
@@ -190,9 +229,9 @@ void test_insert_template1(MyMatrix<unsigned, 2, 2> &Mat, unsigned e, unsigned i
 
 void test_insert_template2(MyMatrix<float, 3, 8> &Mat, float e) {
   // CHECK-LABEL: @_Z21test_insert_template2R8MyMatrixIfLj3ELj8EEf(
-  // CHECK:         [[MAT_ADDR:%.*]] = load %struct.MyMatrix.2*, %struct.MyMatrix.2** %Mat.addr, align 8
+  // CHECK:         [[MAT_ADDR:%.*]] = load %struct.MyMatrix.4*, %struct.MyMatrix.4** %Mat.addr, align 8
   // CHECK-NEXT:    [[E:%.*]] = load float, float* %e.addr, align 4
-  // CHECK-NEXT:    call void @_Z6insertIfLj3ELj8EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(%struct.MyMatrix.2* nonnull align 4 dereferenceable(96) [[MAT_ADDR]], float [[E]], i32 2, i32 5)
+  // CHECK-NEXT:    call void @_Z6insertIfLj3ELj8EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(%struct.MyMatrix.4* nonnull align 4 dereferenceable(96) [[MAT_ADDR]], float [[E]], i32 2, i32 5)
   // CHECK-NEXT:    ret void
   //
   // CHECK-LABEL: define linkonce_odr void @_Z6insertIfLj3ELj8EEvR8MyMatrixIT_XT0_EXT1_EES1_jj(
@@ -220,7 +259,7 @@ EltTy extract(MyMatrix<EltTy, Rows, Columns> &Mat) {
 int test_extract_template(MyMatrix<int, 2, 2> Mat1) {
   // CHECK-LABEL: @_Z21test_extract_template8MyMatrixIiLj2ELj2EE(
   // CHECK-NEXT:  entry:
-  // CHECK-NEXT:    [[CALL:%.*]] = call i32 @_Z7extractIiLj2ELj2EET_R8MyMatrixIS0_XT0_EXT1_EE(%struct.MyMatrix.3* nonnull align 4 dereferenceable(16) [[MAT1:%.*]])
+  // CHECK-NEXT:    [[CALL:%.*]] = call i32 @_Z7extractIiLj2ELj2EET_R8MyMatrixIS0_XT0_EXT1_EE(%struct.MyMatrix.5* nonnull align 4 dereferenceable(16) [[MAT1:%.*]])
   // CHECK-NEXT:    ret i32 [[CALL]]
   //
   // CHECK-LABEL: define linkonce_odr i32 @_Z7extractIiLj2ELj2EET_R8MyMatrixIS0_XT0_EXT1_EE(
@@ -301,7 +340,7 @@ struct identmatrix_t {
 constexpr identmatrix_t identmatrix;
 
 void test_constexpr1(matrix_type<float, 4, 4> &m) {
-  // CHECK-LABEL: define void @_Z15test_constexpr1RU11matrix_typeLm4ELm4Ef([16 x float]* nonnull align 4 dereferenceable(64) %m) #3 {
+  // CHECK-LABEL: define void @_Z15test_constexpr1RU11matrix_typeLm4ELm4Ef(
   // CHECK:         [[MAT:%.*]] = load <16 x float>, <16 x float>* {{.*}}, align 4
   // CHECK-NEXT:    [[IM:%.*]] = call <16 x float> @_ZNK13identmatrix_tcvU11matrix_typeXT0_EXT0_ET_IfLj4EEEv(%struct.identmatrix_t* @_ZL11identmatrix)
   // CHECK-NEXT:    [[ADD:%.*]] = fadd <16 x float> [[MAT]], [[IM]]
@@ -327,7 +366,7 @@ void test_constexpr1(matrix_type<float, 4, 4> &m) {
 }
 
 void test_constexpr2(matrix_type<int, 5, 5> &m) {
-  // CHECK-LABEL: define void @_Z15test_constexpr2RU11matrix_typeLm5ELm5Ei([25 x i32]* nonnull align 4 dereferenceable(100) %m) #4 {
+  // CHECK-LABEL: define void @_Z15test_constexpr2RU11matrix_typeLm5ELm5Ei(
   // CHECK:         [[IM:%.*]] = call <25 x i32> @_ZNK13identmatrix_tcvU11matrix_typeXT0_EXT0_ET_IiLj5EEEv(%struct.identmatrix_t* @_ZL11identmatrix)
   // CHECK:         [[MAT:%.*]] = load <25 x i32>, <25 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]

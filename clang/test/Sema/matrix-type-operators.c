@@ -32,6 +32,44 @@ void sub(sx10x10_t a, sx5x10_t b, sx10x5_t c) {
   // expected-error@-2 {{casting 'sx10x5_t *' (aka 'float  __attribute__((matrix_type(10, 5)))*') to incompatible type 'float'}}
 }
 
+typedef int ix10x5_t __attribute__((matrix_type(10, 5)));
+typedef int ix10x10_t __attribute__((matrix_type(10, 10)));
+
+void matrix_matrix_multiply(sx10x10_t a, sx5x10_t b, ix10x5_t c, ix10x10_t d, float sf, char *p) {
+  // Check dimension mismatches.
+  a = a * b;
+  // expected-error@-1 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))'))}}
+  b = a * a;
+  // expected-error@-1 {{assigning to 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') from incompatible type 'float __attribute__((matrix_type(10, 10)))'}}
+
+  // Check element type mismatches.
+  a = b * c;
+  // expected-error@-1 {{invalid operands to binary expression ('sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') and 'ix10x5_t' (aka 'int __attribute__((matrix_type(10, 5)))'))}}
+  d = a * a;
+  // expected-error@-1 {{assigning to 'ix10x10_t' (aka 'int __attribute__((matrix_type(10, 10)))') from incompatible type 'float __attribute__((matrix_type(10, 10)))'}}
+
+  p = a * a;
+  // expected-error@-1 {{assigning to 'char *' from incompatible type 'float __attribute__((matrix_type(10, 10)))'}}
+}
+
+void mat_scalar_multiply(sx10x10_t a, sx5x10_t b, float sf, char *p) {
+  // Shape of multiplication result does not match the type of b.
+  b = a * sf;
+  // expected-error@-1 {{assigning to 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
+  b = sf * a;
+  // expected-error@-1 {{assigning to 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
+
+  a = a * p;
+  // expected-error@-1 {{casting 'char *' to incompatible type 'float'}}
+  // expected-error@-2 {{invalid operands to binary expression ('sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))') and 'char *')}}
+  a = p * a;
+  // expected-error@-1 {{casting 'char *' to incompatible type 'float'}}
+  // expected-error@-2 {{invalid operands to binary expression ('char *' and 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))'))}}
+
+  sf = a * sf;
+  // expected-error@-1 {{assigning to 'float' from incompatible type 'sx10x10_t' (aka 'float __attribute__((matrix_type(10, 10)))')}}
+}
+
 sx5x10_t get_matrix();
 
 void insert(sx5x10_t a, float f) {
