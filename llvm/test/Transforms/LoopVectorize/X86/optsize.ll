@@ -218,38 +218,35 @@ for.end:                                          ; preds = %for.body
 attributes #1 = { minsize }
 
 
-; We can't vectorize this one because we version for stride==1; even having TC
-; a multiple of VF.
+; We can vectorize this one by refraining from versioning for stride==1.
 define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32 %k) #2 {
 ; CHECK-LABEL: @scev4stride1(
 ; CHECK-NEXT:  for.body.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K:%.*]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_07]]
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i32> undef, i32 [[K:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT]], <64 x i32> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 256, 256
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;
 ; AUTOVF-LABEL: @scev4stride1(
 ; AUTOVF-NEXT:  for.body.preheader:
-; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
-; AUTOVF:       for.body:
-; AUTOVF-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
-; AUTOVF-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K:%.*]]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[MUL]]
-; AUTOVF-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; AUTOVF-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_07]]
-; AUTOVF-NEXT:    store i32 [[TMP0]], i32* [[ARRAYIDX1]], align 4
-; AUTOVF-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; AUTOVF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AUTOVF:       vector.ph:
+; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 [[K:%.*]], i32 0
+; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AUTOVF-NEXT:    br label [[VECTOR_BODY:%.*]]
+; AUTOVF:       vector.body:
+; AUTOVF:       middle.block:
+; AUTOVF-NEXT:    [[CMP_N:%.*]] = icmp eq i32 256, 256
+; AUTOVF-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; AUTOVF:       scalar.ph:
 ; AUTOVF:       for.end.loopexit:
 ; AUTOVF-NEXT:    ret void
 ;
