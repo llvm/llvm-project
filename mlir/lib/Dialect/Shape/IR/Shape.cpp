@@ -473,7 +473,7 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
 
 static LogicalResult verify(ReduceOp op) {
   // Verify block arg types.
-  Block &block = op.region().front();
+  Block &block = op.body().front();
 
   auto blockArgsCount = op.initVals().size() + 2;
   if (block.getNumArguments() != blockArgsCount)
@@ -529,7 +529,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
   p << op.getOperationName() << '(' << op.shape() << ", " << op.initVals()
     << ") ";
   p.printOptionalArrowTypeList(op.getResultTypes());
-  p.printRegion(op.region());
+  p.printRegion(op.body());
   p.printOptionalAttrDict(op.getAttrs());
 }
 
