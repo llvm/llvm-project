@@ -1719,6 +1719,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i32,
                        Subtarget.hasVLX() ? Legal : Custom);
 
+    if (Subtarget.hasDQI()) {
+      // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
+      // v2f32 UINT_TO_FP is already custom under SSE2.
+      assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
+             isOperationCustom(ISD::STRICT_UINT_TO_FP, MVT::v2f32) &&
+             "Unexpected operation action!");
+      // v2i64 FP_TO_S/UINT(v2f32) custom conversion.
+      setOperationAction(ISD::FP_TO_SINT,        MVT::v2f32, Custom);
+      setOperationAction(ISD::FP_TO_UINT,        MVT::v2f32, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2f32, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2f32, Custom);
+    }
+
     for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
       setOperationAction(ISD::SMAX, VT, Legal);
       setOperationAction(ISD::UMAX, VT, Legal);
@@ -1837,19 +1850,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setTruncStoreAction(MVT::v2i64, MVT::v2i32, Legal);
     setTruncStoreAction(MVT::v4i32, MVT::v4i8,  Legal);
     setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
-
-    if (Subtarget.hasDQI()) {
-      // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
-      // v2f32 UINT_TO_FP is already custom under SSE2.
-      assert(isOperationCustom(ISD::UINT_TO_FP, MVT::v2f32) &&
-             isOperationCustom(ISD::STRICT_UINT_TO_FP, MVT::v2f32) &&
-             "Unexpected operation action!");
-      // v2i64 FP_TO_S/UINT(v2f32) custom conversion.
-      setOperationAction(ISD::FP_TO_SINT,        MVT::v2f32, Custom);
-      setOperationAction(ISD::FP_TO_UINT,        MVT::v2f32, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2f32, Custom);
-      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2f32, Custom);
-    }
 
     if (Subtarget.hasBWI()) {
       setTruncStoreAction(MVT::v16i16,  MVT::v16i8, Legal);
@@ -20717,6 +20717,25 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     if (VT == MVT::v2i64 && SrcVT  == MVT::v2f32) {
+      if (!Subtarget.hasVLX()) {
+        // Non-strict nodes without VLX can we widened to v4f32->v4i64 by type
+        // legalizer and then widened again by vector op legalization.
+        if (!IsStrict)
+          return SDValue();
+
+        SDValue Zero = DAG.getConstantFP(0.0, dl, MVT::v2f32);
+        SDValue Tmp = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f32,
+                                  {Src, Zero, Zero, Zero});
+        Tmp = DAG.getNode(Op.getOpcode(), dl, {MVT::v8i64, MVT::Other},
+                          {Op->getOperand(0), Tmp});
+        SDValue Chain = Tmp.getValue(1);
+        Tmp = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i64, Tmp,
+                          DAG.getIntPtrConstant(0, dl));
+        if (IsStrict)
+          return DAG.getMergeValues({Tmp, Chain}, dl);
+        return Tmp;
+      }
+
       assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL");
       SDValue Tmp = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                                 DAG.getUNDEF(MVT::v2f32));
