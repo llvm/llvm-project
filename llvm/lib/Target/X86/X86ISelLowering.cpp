@@ -40260,6 +40260,24 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   assert((VecVT.is128BitVector() || VecVT.is256BitVector()) &&
          "Unexpected MOVMSK operand");
 
+  // See if we can peek through to a vector with a wider element type, if the
+  // signbits extend down to all the sub-elements as well.
+  // Calling MOVMSK with the wider type, avoiding the bitcast, helps expose
+  // potential SimplifyDemandedBits/Elts cases.
+  if (Vec.getOpcode() == ISD::BITCAST) {
+    SDValue BC = peekThroughBitcasts(Vec);
+    unsigned NumEltBits = VecVT.getScalarSizeInBits();
+    unsigned BCNumEltBits = BC.getScalarValueSizeInBits();
+    if ((BCNumEltBits == 32 || BCNumEltBits == 64) &&
+        BCNumEltBits > NumEltBits &&
+        DAG.ComputeNumSignBits(BC) > (BCNumEltBits - NumEltBits)) {
+      SDLoc DL(EFLAGS);
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
+                         DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
+                         DAG.getConstant(0, DL, MVT::i32));
+    }
+  }
+
   // See if we can avoid a PACKSS by calling MOVMSK on the sources.
   // For vXi16 cases we can use a v2Xi8 PMOVMSKB. We must mask out
   // sign bits prior to the comparison with zero unless we know that
