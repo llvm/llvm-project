@@ -684,7 +684,7 @@ StackSafetyGlobalInfo::~StackSafetyGlobalInfo() = default;
 
 bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   const auto &Info = getInfo();
-  return Info.SafeAllocas.find(&AI) != Info.SafeAllocas.end();
+  return Info.SafeAllocas.count(&AI);
 }
 
 void StackSafetyGlobalInfo::print(raw_ostream &O) const {

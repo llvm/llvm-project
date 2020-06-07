@@ -705,7 +705,7 @@ public:
 
     // Third, lower remaining instructions with shape information.
     for (Instruction *Inst : MatrixInsts) {
-      if (FusedInsts.find(Inst) != FusedInsts.end())
+      if (FusedInsts.count(Inst))
         continue;
 
       IRBuilder<> Builder(Inst);
@@ -1593,7 +1593,7 @@ public:
       // Deal with shared subtrees. Mark them as shared, if required.
       if (!ParentShared) {
         auto SI = Shared.find(Expr);
-        assert(SI != Shared.end() && SI->second.find(Leaf) != SI->second.end());
+        assert(SI != Shared.end() && SI->second.count(Leaf));
 
         for (Value *S : SI->second) {
           if (S == Leaf)
