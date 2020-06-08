@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -90,10 +91,16 @@ static Optional<std::string> findLibrary(StringRef name) {
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_arch, "x86_64");
-  if (s != "x86_64")
-    error("missing or unsupported -arch " + s);
-  return createX86_64TargetInfo();
+  StringRef arch = llvm::Triple(LLVM_DEFAULT_TARGET_TRIPLE).getArchName();
+  config->arch = llvm::MachO::getArchitectureFromName(
+      args.getLastArgValue(OPT_arch, arch));
+  switch (config->arch) {
+  case llvm::MachO::AK_x86_64:
+  case llvm::MachO::AK_x86_64h:
+    return createX86_64TargetInfo();
+  default:
+    fatal("missing or unsupported -arch " + args.getLastArgValue(OPT_arch));
+  }
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList &args) {

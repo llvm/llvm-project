@@ -368,13 +368,10 @@ AllocaInst *findAllocaForValue(Value *V,
                                DenseMap<Value *, AllocaInst *> &AllocaForValue);
 
 /// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression.
-/// Returns true if any debug users were updated.
-bool salvageDebugInfo(Instruction &I);
+/// debug users of \p I by writing the effect of \p I in a DIExpression. If it
+/// cannot be salvaged changes its debug uses to undef.
+void salvageDebugInfo(Instruction &I);
 
-/// Salvage all debug users of the instruction \p I or mark it as undef if it
-/// cannot be salvaged.
-void salvageDebugInfoOrMarkUndef(Instruction &I);
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
 /// \p Insns, rather than all debug users of \p I.

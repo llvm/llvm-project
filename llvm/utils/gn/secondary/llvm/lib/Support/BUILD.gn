@@ -120,6 +120,7 @@ static_library("Support") {
     "StringMap.cpp",
     "StringRef.cpp",
     "StringSaver.cpp",
+    "SuffixTree.cpp",
     "SymbolRemappingReader.cpp",
     "SystemUtils.cpp",
     "TarWriter.cpp",

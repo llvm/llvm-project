@@ -1,14 +1,14 @@
-# RUN: not lld -flavor darwinnew -platform_version 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL %s
-# RUN: not lld -flavor darwinnew -platform_version macos 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version macos 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL %s
-# RUN: not lld -flavor darwinnew -platform_version macos 10.15 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version macos 10.15 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL %s
-# RUN: not lld -flavor darwinnew -platform_version macos -lfoo 10.15 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version macos -lfoo 10.15 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL %s
-# RUN: not lld -flavor darwinnew -platform_version macos 10.15 10.15.4 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version macos 10.15 10.15.4 2>&1 \
 # RUN:     | FileCheck --check-prefix=GOOD %s
-# RUN: not lld -flavor darwinnew -platform_version macos 10.15 10.15.4 foobar 2>&1 \
+# RUN: not lld -flavor darwinnew -arch x86_64 -platform_version macos 10.15 10.15.4 foobar 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL_FILE %s
 
 FAIL: usage: -platform_version platform min_version sdk_version

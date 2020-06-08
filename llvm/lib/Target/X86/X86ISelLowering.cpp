@@ -22851,12 +22851,25 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       Cond.getOperand(1).getOpcode() == X86ISD::CMP &&
       isNullConstant(Cond.getOperand(1).getOperand(1))) {
     SDValue Cmp = Cond.getOperand(1);
+    SDValue CmpOp0 = Cmp.getOperand(0);
     unsigned CondCode = Cond.getConstantOperandVal(0);
 
-    if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
+    // Special handling for __builtin_ffs(X) - 1 pattern which looks like
+    // (select (seteq X, 0), -1, (cttz_zero_undef X)). Disable the special
+    // handle to keep the CMP with 0. This should be removed by
+    // optimizeCompareInst by using the flags from the BSR/TZCNT used for the
+    // cttz_zero_undef.
+    auto MatchFFSMinus1 = [&](SDValue Op1, SDValue Op2) {
+      return (Op1.getOpcode() == ISD::CTTZ_ZERO_UNDEF && Op1.hasOneUse() &&
+              Op1.getOperand(0) == CmpOp0 && isAllOnesConstant(Op2));
+    };
+    if (Subtarget.hasCMov() && (VT == MVT::i32 || VT == MVT::i64) &&
+        ((CondCode == X86::COND_NE && MatchFFSMinus1(Op1, Op2)) ||
+         (CondCode == X86::COND_E && MatchFFSMinus1(Op2, Op1)))) {
+      // Keep Cmp.
+    } else if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
         (CondCode == X86::COND_E || CondCode == X86::COND_NE)) {
       SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
-      SDValue CmpOp0 = Cmp.getOperand(0);
 
       SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
       SDVTList CmpVTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
@@ -22886,7 +22899,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     } else if (!Subtarget.hasCMov() && CondCode == X86::COND_E &&
                Cmp.getOperand(0).getOpcode() == ISD::AND &&
                isOneConstant(Cmp.getOperand(0).getOperand(1))) {
-      SDValue CmpOp0 = Cmp.getOperand(0);
       SDValue Src1, Src2;
       // true if Op2 is XOR or OR operator and one of its operands
       // is equal to Op1

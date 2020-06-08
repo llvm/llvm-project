@@ -2146,14 +2146,16 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
   return T;
 }
 
-void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
-                                           QualType AllocatedTy,
+void CGDebugInfo::addHeapAllocSiteMetadata(llvm::Instruction *CI,
+                                           QualType D,
                                            SourceLocation Loc) {
   llvm::MDNode *node;
-  if (AllocatedTy->isVoidType())
+  if (D.getTypePtr()->isVoidPointerType()) {
     node = llvm::MDNode::get(CGM.getLLVMContext(), None);
-  else
-    node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
+  } else {
+    QualType PointeeTy = D.getTypePtr()->getPointeeType();
+    node = getOrCreateType(PointeeTy, getOrCreateFile(Loc));
+  }
 
   CI->setMetadata("heapallocsite", node);
 }

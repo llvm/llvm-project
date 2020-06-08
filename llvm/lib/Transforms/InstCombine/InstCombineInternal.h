@@ -721,7 +721,7 @@ public:
   Instruction *eraseInstFromFunction(Instruction &I) {
     LLVM_DEBUG(dbgs() << "IC: ERASE " << I << '\n');
     assert(I.use_empty() && "Cannot erase instruction that is used!");
-    salvageDebugInfoOrMarkUndef(I);
+    salvageDebugInfo(I);
 
     // Make sure that we reprocess all operands now that we reduced their
     // use counts.

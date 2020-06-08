@@ -88,7 +88,7 @@ bool InstCombiner::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                           Depth, I);
   if (!NewVal) return false;
   if (Instruction* OpInst = dyn_cast<Instruction>(U))
-    salvageDebugInfoOrMarkUndef(*OpInst);
+    salvageDebugInfo(*OpInst);
     
   replaceUse(U, NewVal);
   return true;
