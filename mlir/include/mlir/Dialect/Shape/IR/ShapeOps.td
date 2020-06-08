@@ -460,7 +460,7 @@ def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
   let assemblyFormat = "$inputs attr-dict";
 }
 
-def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
+def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> {
   let summary = "Return a logical AND of all witnesses";
   let description = [{
     Used to simplify constraints as any single failing precondition is enough
@@ -485,6 +485,8 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
+
+  let hasFolder = 1;
 }
 
 def Shape_AssumingOp : Shape_Op<"assuming",
