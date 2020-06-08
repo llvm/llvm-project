@@ -789,6 +789,31 @@ def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
+  class AdvSIMD_SVE_Create_2Vector_Tuple
+    : Intrinsic<[llvm_anyvector_ty],
+                [llvm_anyvector_ty, LLVMMatchType<1>],
+                [IntrReadMem]>;
+
+  class AdvSIMD_SVE_Create_3Vector_Tuple
+    : Intrinsic<[llvm_anyvector_ty],
+                [llvm_anyvector_ty, LLVMMatchType<1>, LLVMMatchType<1>],
+                [IntrReadMem]>;
+
+  class AdvSIMD_SVE_Create_4Vector_Tuple
+    : Intrinsic<[llvm_anyvector_ty],
+                [llvm_anyvector_ty, LLVMMatchType<1>, LLVMMatchType<1>,
+                 LLVMMatchType<1>],
+                [IntrReadMem]>;
+
+  class AdvSIMD_SVE_Set_Vector_Tuple
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>, llvm_i32_ty, llvm_anyvector_ty],
+                [IntrReadMem, ImmArg<ArgIndex<1>>]>;
+
+  class AdvSIMD_SVE_Get_Vector_Tuple
+    : Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty],
+                [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+
   class AdvSIMD_1Vec_PredLoad_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1299,6 +1324,21 @@ class SVE_MatMul_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>, LLVMSubdivide4VectorType<0>, LLVMSubdivide4VectorType<0>],
                 [IntrNoMem]>;
+
+//
+// Vector tuple creation intrinsics (ACLE)
+//
+
+def int_aarch64_sve_tuple_create2 : AdvSIMD_SVE_Create_2Vector_Tuple;
+def int_aarch64_sve_tuple_create3 : AdvSIMD_SVE_Create_3Vector_Tuple;
+def int_aarch64_sve_tuple_create4 : AdvSIMD_SVE_Create_4Vector_Tuple;
+
+//
+// Vector tuple insertion/extraction intrinsics (ACLE)
+//
+
+def int_aarch64_sve_tuple_get : AdvSIMD_SVE_Get_Vector_Tuple;
+def int_aarch64_sve_tuple_set : AdvSIMD_SVE_Set_Vector_Tuple;
 
 //
 // Loads
