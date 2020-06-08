@@ -267,7 +267,6 @@ class Inst <string n, string p, string t, Operation o> {
   string ArchGuard = "";
 
   Operation Operation = o;
-  bit CartesianProductOfTypes = 0;
   bit BigEndianSafe = 0;
   bit isShift = 0;
   bit isScalarShift = 0;
@@ -289,6 +288,8 @@ class Inst <string n, string p, string t, Operation o> {
   // this. Ex: vset_lane which outputs vmov instructions.
   bit isHiddenWInst = 0;
   bit isHiddenLInst = 0;
+
+  string CartesianProductWith = "";
 }
 
 // The following instruction classes are implemented via builtins.
