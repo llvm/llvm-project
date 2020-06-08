@@ -36,12 +36,12 @@ declare extern_weak void @foo_ext_weak(i32*)
 ; COMMON-NEXT:    .globl	.main
 ; COMMON-NEXT:    .align	4
 ; COMMON-NEXT:    .csect main[DS]
-; BIT32-NEXT:     .long	.main                   # @main
-; BIT32-NEXT:     .long	TOC[TC0]
-; BIT32-NEXT:     .long	0
-; BIT64-NEXT:     .llong	.main                   # @main
-; BIT64-NEXT:     .llong	TOC[TC0]
-; BIT64-NEXT:     .llong	0
+; BIT32-NEXT:     .vbyte	4, .main                   # @main
+; BIT32-NEXT:     .vbyte	4, TOC[TC0]
+; BIT32-NEXT:     .vbyte	4, 0
+; BIT64-NEXT:     .vbyte	8, .main                   # @main
+; BIT64-NEXT:     .vbyte	8, TOC[TC0]
+; BIT64-NEXT:     .vbyte	8, 0
 ; COMMON-NEXT:    .csect  .text[PR]
 ; COMMON-NEXT:    .main:
 
@@ -50,8 +50,8 @@ declare extern_weak void @foo_ext_weak(i32*)
 ; BIT32-NEXT:     .align	2
 ; BIT64-NEXT:     .align 	3
 ; COMMON-NEXT: foo_ext_weak_p:
-; BIT32-NEXT: 	  .long	foo_ext_weak_ref[DS]
-; BIT64-NEXT: 	  .llong  foo_ext_weak_ref[DS]
+; BIT32-NEXT: 	  .vbyte	4, foo_ext_weak_ref[DS]
+; BIT64-NEXT: 	  .vbyte	8, foo_ext_weak_ref[DS]
 ; COMMON-NEXT:    .weak   b_w[UA]
 ; COMMON-NEXT:    .weak   foo_ext_weak_ref[DS]
 ; COMMON-NEXT:    .weak   .foo_ext_weak
