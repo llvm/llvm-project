@@ -506,6 +506,23 @@ multiclass RRI1m<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
              [(set Ty:$sx, (OpNode (Ty mimm:$sz)))]>;
 }
 
+// Special RR multiclass for MRG instruction.
+//   e.g. MRG
+let Constraints = "$sx = $sd", DisableEncoding = "$sd", hasSideEffects = 0 in
+multiclass RRMRGm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty> {
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, RC:$sd),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in
+  def ir : RR<opc, (outs RC:$sx), (ins simm7:$sy, RC:$sz, RC:$sd),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in
+  def rm : RR<opc, (outs RC:$sx), (ins RC:$sy, mimm:$sz, RC:$sd),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def im : RR<opc, (outs RC:$sx), (ins simm7:$sy, mimm:$sz, RC:$sd),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
 // Special RR multiclass for BSWP instruction.
 //   e.g. BSWP
 let hasSideEffects = 0 in
@@ -892,8 +909,13 @@ defm XOR : RRm<"xor", 0x46, I64, i64, xor>;
 let isCodeGenOnly = 1 in defm XOR32 : RRm<"xor", 0x46, I32, i32, xor>;
 
 // Section 8.5.4 - EQV (Equivalence)
+defm EQV : RRm<"eqv", 0x47, I64, i64>;
+
 // Section 8.5.5 - NND (Negate AND)
+defm NND : RRNCm<"nnd", 0x54, I64, i64>;
+
 // Section 8.5.6 - MRG (Merge)
+defm MRG : RRMRGm<"mrg", 0x56, I64, i64>;
 
 // Section 8.5.7 - LDZ (Leading Zero Count)
 defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz>;
@@ -912,6 +934,10 @@ let cw = 0, cw2 = 0 in defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64, i64>;
 let cw = 1, cw2 = 0 in defm CMOVW : RRCMOVm<"cmov.w.${cfw}", 0x3B, I32, i32>;
 let cw = 0, cw2 = 1 in defm CMOVD : RRCMOVm<"cmov.d.${cfw}", 0x3B, I64, f64>;
 let cw = 1, cw2 = 1 in defm CMOVS : RRCMOVm<"cmov.s.${cfw}", 0x3B, F32, f32>;
+def : MnemonicAlias<"cmov.l", "cmov.l.at">;
+def : MnemonicAlias<"cmov.w", "cmov.w.at">;
+def : MnemonicAlias<"cmov.d", "cmov.d.at">;
+def : MnemonicAlias<"cmov.s", "cmov.s.at">;
 
 //-----------------------------------------------------------------------------
 // Section 8.6 - Shift Operation Instructions
