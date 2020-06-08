@@ -199,7 +199,7 @@ func @compute_allocs_position(%cond: i1, %arg0: tensor<2xf32>) -> tensor<2xf32>{
 // -----
 
 // Test case: Checking BufferAssignmentCallOpConverter and
-// FunctionAndBlockSignatureConverter and BufferAssignmentReturnOpConverter all
+// BufferAssignmentFuncOpConverter and BufferAssignmentReturnOpConverter all
 // together. The signature of `callee` after signature conversion would be:
 
 // func @callee(%arg0: memref<5xf32>,%arg1: memref<5xf32>) -> ()
@@ -246,7 +246,7 @@ func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 // -----
 
 // Test case: Checking BufferAssignmentCallOpConverter and
-// FunctionAndBlockSignatureConverter and BufferAssignmentReturnOpConverter all
+// BufferAssignmentFuncOpConverter and BufferAssignmentReturnOpConverter all
 // together on functions that also have memref typed results. The signature of
 // `callee` after signature conversion would be:
 
