@@ -59,26 +59,6 @@ define i32 @test4(i32 %x, i32 %y) {
   ret i32 %z
 }
 
-define i32 @test5(i32 %x, i32 %y) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret i32 -1
-;
-  %and = and i32 %x, %y
-  %not = xor i32 %and, -1
-  %z = or i32 %x, %not
-  ret i32 %z
-}
-
-define i32 @test6(i32 %x, i32 %y) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    ret i32 -1
-;
-  %and = and i32 %x, %y
-  %not = xor i32 %and, -1
-  %z = or i32 %y, %not
-  ret i32 %z
-}
-
 define i32 @test7(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[Z:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
