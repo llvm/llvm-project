@@ -449,8 +449,8 @@ def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
 
     Example:
     ```mlir
-      %s0 = shape.any [2,?], [?,3] // [2,3]
-      %s1 = shape.any [?,?], [1,2] // [1,2]
+    %s0 = shape.any [2,?], [?,3] // [2,3]
+    %s1 = shape.any [?,?], [1,2] // [1,2]
     ```
   }];
 
@@ -475,11 +475,11 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
-      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
-      %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
-      %wf = shape.assuming_all %w0, %w1 // Failure
-      %wt = shape.assuming_all %w0, %w2 // Passing
+    %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
+    %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
+    %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
+    %wf = shape.assuming_all %w0, %w1 // Failure
+    %wt = shape.assuming_all %w0, %w2 // Passing
     ```
   }];
 
@@ -543,8 +543,8 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
-      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
+    %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
+    %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
     ```
   }];
 
@@ -566,8 +566,8 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
-      %w1 = shape.cstr_eq [2,2], [1,2] // Failure
+    %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
+    %w1 = shape.cstr_eq [2,2], [1,2] // Failure
     ```
   }];
   let arguments = (ins Variadic<Shape_ShapeType>:$inputs);

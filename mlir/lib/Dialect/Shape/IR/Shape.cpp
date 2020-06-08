@@ -39,16 +39,13 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  if (auto shapeType = type.dyn_cast<ShapeType>()) {
+  if (auto shapeType = type.dyn_cast<ShapeType>())
     return builder.create<ConstShapeOp>(loc, type,
                                         value.cast<DenseIntElementsAttr>());
-  }
-  if (auto sizeType = type.dyn_cast<SizeType>()) {
+  if (auto sizeType = type.dyn_cast<SizeType>())
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
-  }
-  if (auto witnessType = type.dyn_cast<WitnessType>()) {
+  if (auto witnessType = type.dyn_cast<WitnessType>())
     return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
-  }
   return nullptr;
 }
 
