@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallBitVector.h"
 
@@ -206,15 +207,16 @@ struct LinalgTransforms {
 
 /// Helper class to control common attribute matching and setting behavior.
 struct LinalgMarker {
-  LinalgMarker(ArrayRef<StringRef> matchDisjunction = {},
-               Optional<StringRef> replacement = None);
-  LinalgMarker(ArrayRef<StringRef> matchDisjunction, StringRef replacement);
+  explicit LinalgMarker(ArrayRef<Identifier> matchDisjunction = {},
+                        Optional<Identifier> replacement = None);
+  LinalgMarker(LinalgMarker &&) = default;
+  LinalgMarker(const LinalgMarker &) = default;
   LogicalResult checkAndNotify(PatternRewriter &rewriter, Operation *op) const;
   void replaceLinalgMarker(PatternRewriter &rewriter, Operation *op) const;
 
 private:
-  SmallVector<StringRef, 4> matchDisjunction;
-  Optional<StringRef> replacement;
+  SmallVector<Identifier, 4> matchDisjunction;
+  Optional<Identifier> replacement;
 };
 
 ///
