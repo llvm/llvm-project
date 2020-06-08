@@ -28,7 +28,7 @@ struct TypeInfo {
     unsigned Bits = 0;
 
   public:
-    constexpr PhasesBitSet(const std::initializer_list<phases::ID> &Phases) {
+    constexpr PhasesBitSet(std::initializer_list<phases::ID> Phases) {
       for (auto Id : Phases)
         Bits |= 1 << Id;
     }
