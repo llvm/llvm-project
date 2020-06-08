@@ -1269,11 +1269,11 @@ uint32_t Serializer::prepareConstantScalar(Location loc, Attribute valueAttr,
   if (auto floatAttr = valueAttr.dyn_cast<FloatAttr>()) {
     return prepareConstantFp(loc, floatAttr, isSpec);
   }
-  if (auto intAttr = valueAttr.dyn_cast<IntegerAttr>()) {
-    return prepareConstantInt(loc, intAttr, isSpec);
-  }
   if (auto boolAttr = valueAttr.dyn_cast<BoolAttr>()) {
     return prepareConstantBool(loc, boolAttr, isSpec);
+  }
+  if (auto intAttr = valueAttr.dyn_cast<IntegerAttr>()) {
+    return prepareConstantInt(loc, intAttr, isSpec);
   }
 
   return 0;

@@ -127,8 +127,8 @@ func @down_propagate() -> i32 {
   // CHECK-NEXT: %c1_i32 = constant 1 : i32
   %0 = constant 1 : i32
 
-  // CHECK-NEXT: %true = constant 1 : i1
-  %cond = constant 1 : i1
+  // CHECK-NEXT: %true = constant true
+  %cond = constant true
 
   // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c1_i32 : i32)
   cond_br %cond, ^bb1, ^bb2(%0 : i32)
@@ -164,8 +164,8 @@ func @up_propagate() -> i32 {
   // CHECK-NEXT:  %c0_i32 = constant 0 : i32
   %0 = constant 0 : i32
 
-  // CHECK-NEXT: %true = constant 1 : i1
-  %cond = constant 1 : i1
+  // CHECK-NEXT: %true = constant true
+  %cond = constant true
 
   // CHECK-NEXT: cond_br %true, ^bb1, ^bb2(%c0_i32 : i32)
   cond_br %cond, ^bb1, ^bb2(%0 : i32)
@@ -195,11 +195,11 @@ func @up_propagate_region() -> i32 {
   // CHECK-NEXT: %0 = "foo.region"
   %0 = "foo.region"() ({
     // CHECK-NEXT:  %c0_i32 = constant 0 : i32
-    // CHECK-NEXT: %true = constant 1 : i1
+    // CHECK-NEXT: %true = constant true
     // CHECK-NEXT: cond_br
 
     %1 = constant 0 : i32
-    %true = constant 1 : i1
+    %true = constant true
     cond_br %true, ^bb1, ^bb2(%1 : i32)
 
   ^bb1: // CHECK: ^bb1:
