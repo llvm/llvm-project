@@ -27,7 +27,6 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
-#include "sanitizer_placement_new.h"
 #include "sanitizer_platform_limits_posix.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_ptrauth.h"
@@ -630,19 +629,24 @@ MacosVersion GetMacosAlignedVersion() {
   return *reinterpret_cast<MacosVersion *>(&result);
 }
 
+void ParseVersion(const char *vers, u16 *major, u16 *minor) {
+  // Format: <major>.<minor>.<patch>\0
+  CHECK_GE(internal_strlen(vers), 5);
+  const char *p = vers;
+  *major = internal_simple_strtoll(p, &p, /*base=*/10);
+  CHECK_EQ(*p, '.');
+  p += 1;
+  *minor = internal_simple_strtoll(p, &p, /*base=*/10);
+}
+
 DarwinKernelVersion GetDarwinKernelVersion() {
   char buf[100];
   size_t len = sizeof(buf);
   int res = internal_sysctlbyname("kern.osrelease", buf, &len, nullptr, 0);
   CHECK_EQ(res, 0);
 
-  // Format: <major>.<minor>.<patch>\0
-  CHECK_GE(len, 6);
-  const char *p = buf;
-  u16 major = internal_simple_strtoll(p, &p, /*base=*/10);
-  CHECK_EQ(*p, '.');
-  p += 1;
-  u16 minor = internal_simple_strtoll(p, &p, /*base=*/10);
+  u16 major, minor;
+  ParseVersion(buf, &major, &minor);
 
   return DarwinKernelVersion(major, minor);
 }
