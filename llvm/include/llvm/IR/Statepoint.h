@@ -144,6 +144,49 @@ public:
     return make_range(actual_arg_begin(), actual_arg_end());
   }
 
+  const_op_iterator gc_transition_args_begin() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_gc_transition))
+      return Opt->Inputs.begin();
+    auto I = actual_arg_end() + 1;
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+  const_op_iterator gc_transition_args_end() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_gc_transition))
+      return Opt->Inputs.end();
+    auto I = gc_transition_args_begin() + getNumDeoptArgs();
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+
+  /// range adapter for GC transition arguments
+  iterator_range<const_op_iterator> gc_transition_args() const {
+    return make_range(gc_transition_args_begin(), gc_transition_args_end());
+  }
+
+  const_op_iterator deopt_begin() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_deopt))
+      return Opt->Inputs.begin();
+    // The current format has two length prefix bundles between call args and
+    // start of gc args.  This will be removed in the near future.
+    uint64_t NumTrans = getNumGCTransitionArgs();
+    const_op_iterator I = actual_arg_end() + 2 + NumTrans;
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+  const_op_iterator deopt_end() const {
+    if (auto Opt = getOperandBundle(LLVMContext::OB_deopt))
+      return Opt->Inputs.end();
+    auto I = deopt_begin() + getNumDeoptArgs();
+    assert((arg_end() - I) >= 0);
+    return I;
+  }
+
+  /// range adapter for vm state arguments
+  iterator_range<const_op_iterator> deopt_operands() const {
+    return make_range(deopt_begin(), deopt_end());
+  }
+
   /// Returns an iterator to the begining of the argument range describing gc
   /// values for the statepoint.
   const_op_iterator gc_args_begin() const {
@@ -152,12 +195,9 @@ public:
 
     // The current format has two length prefix bundles between call args and
     // start of gc args.  This will be removed in the near future.
-    const Value *NumGCTransitionArgs = *actual_arg_end();
-    uint64_t NumTrans = cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
-    const_op_iterator trans_end = actual_arg_end() + 1 + NumTrans;
-    const Value *NumDeoptArgs = *trans_end;
-    uint64_t NumDeopt = cast<ConstantInt>(NumDeoptArgs)->getZExtValue();
-    auto I = trans_end + 1 + NumDeopt;
+    uint64_t NumTrans = getNumGCTransitionArgs();
+    uint64_t NumDeopt = getNumDeoptArgs();
+    auto I = actual_arg_end() + 2 + NumTrans + NumDeopt;
     assert((arg_end() - I) >= 0);
     return I;
   }
@@ -197,103 +237,18 @@ public:
     return nullptr;
   }
 
-};
-
-/// A wrapper around a GC intrinsic call, this provides most of the actual
-/// functionality for Statepoint and ImmutableStatepoint.  It is
-/// templatized to allow easily specializing of const and non-const
-/// concrete subtypes.
-template <typename FunTy, typename InstructionTy, typename ValueTy,
-          typename CallTy>
-class StatepointBase {
-  CallTy *StatepointCall;
-
-protected:
-  explicit StatepointBase(InstructionTy *I) {
-    StatepointCall = dyn_cast<GCStatepointInst>(I);
-  }
-
-  explicit StatepointBase(CallTy *Call) {
-    StatepointCall = dyn_cast<GCStatepointInst>(Call);
-  }
-
-public:
-  using arg_iterator = typename CallTy::const_op_iterator;
-
-  enum {
-    CallArgsBeginPos = GCStatepointInst::CallArgsBeginPos,
-  };
-
-  void *operator new(size_t, unsigned) = delete;
-  void *operator new(size_t s) = delete;
-
-  explicit operator bool() const {
-    // We do not assign non-statepoint call instructions to StatepointCall.
-    return (bool)StatepointCall;
-  }
-
-  /// Return the underlying call instruction.
-  CallTy *getCall() const {
-    assert(*this && "check validity first!");
-    return StatepointCall;
-  }
-
-  /// Number of GC transition args.
-  int getNumTotalGCTransitionArgs() const {
-    const Value *NumGCTransitionArgs = *getCall()->actual_arg_end();
+private:
+  int getNumGCTransitionArgs() const {
+    const Value *NumGCTransitionArgs = *actual_arg_end();
     return cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
   }
-  arg_iterator gc_transition_args_begin() const {
-    auto I = getCall()->actual_arg_end() + 1;
-    assert((getCall()->arg_end() - I) >= 0);
-    return I;
-  }
-  arg_iterator gc_transition_args_end() const {
-    auto I = gc_transition_args_begin() + getNumTotalGCTransitionArgs();
-    assert((getCall()->arg_end() - I) >= 0);
-    return I;
-  }
 
-  /// range adapter for GC transition arguments
-  iterator_range<arg_iterator> gc_transition_args() const {
-    return make_range(gc_transition_args_begin(), gc_transition_args_end());
+  int getNumDeoptArgs() const {
+    uint64_t NumTrans = getNumGCTransitionArgs();
+    const_op_iterator trans_end = actual_arg_end() + 1 + NumTrans;
+    const Value *NumDeoptArgs = *trans_end;
+    return cast<ConstantInt>(NumDeoptArgs)->getZExtValue();
   }
-
-  /// Number of additional arguments excluding those intended
-  /// for garbage collection.
-  int getNumTotalVMSArgs() const {
-    const Value *NumVMSArgs = *gc_transition_args_end();
-    return cast<ConstantInt>(NumVMSArgs)->getZExtValue();
-  }
-
-  arg_iterator deopt_begin() const {
-    auto I = gc_transition_args_end() + 1;
-    assert((getCall()->arg_end() - I) >= 0);
-    return I;
-  }
-  arg_iterator deopt_end() const {
-    auto I = deopt_begin() + getNumTotalVMSArgs();
-    assert((getCall()->arg_end() - I) >= 0);
-    return I;
-  }
-
-  /// range adapter for vm state arguments
-  iterator_range<arg_iterator> deopt_operands() const {
-    return make_range(deopt_begin(), deopt_end());
-  }
-};
-
-/// A specialization of it's base class for read only access
-/// to a gc.statepoint.  DEPRECATED.  Use GCStatepointInst instead!
-class ImmutableStatepoint
-    : public StatepointBase<const Function, const Instruction, const Value,
-                            const GCStatepointInst> {
-  using Base = StatepointBase<const Function, const Instruction, const Value,
-                              const GCStatepointInst>;
-
-public:
-  explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
-  explicit ImmutableStatepoint(const CallBase *Call) : Base(Call) {}
 };
 
 /// Common base class for representing values projected from a statepoint.
