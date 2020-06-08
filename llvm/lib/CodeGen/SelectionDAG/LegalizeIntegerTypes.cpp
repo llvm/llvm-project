@@ -4324,6 +4324,31 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
   SDLoc dl(N);
   SDValue BaseIdx = N->getOperand(1);
 
+  // TODO: We may be able to use this for types other than scalable
+  // vectors and fix those tests that expect BUILD_VECTOR to be used
+  if (OutVT.isScalableVector()) {
+    SDValue InOp0 = N->getOperand(0);
+    EVT InVT = InOp0.getValueType();
+
+    // Promote operands and see if this is handled by target lowering,
+    // Otherwise, use the BUILD_VECTOR approach below
+    if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger) {
+      // Collect the (promoted) operands
+      SDValue Ops[] = { GetPromotedInteger(InOp0), BaseIdx };
+
+      EVT PromEltVT = Ops[0].getValueType().getVectorElementType();
+      assert(PromEltVT.bitsLE(NOutVTElem) &&
+             "Promoted operand has an element type greater than result");
+
+      EVT ExtVT = NOutVT.changeVectorElementType(PromEltVT);
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), ExtVT, Ops);
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, Ext);
+    }
+  }
+
+  if (OutVT.isScalableVector())
+    report_fatal_error("Unable to promote scalable types using BUILD_VECTOR");
+
   SDValue InOp0 = N->getOperand(0);
   if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
     InOp0 = GetPromotedInteger(N->getOperand(0));
