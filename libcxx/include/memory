@@ -3597,7 +3597,6 @@ public:
                    typename enable_if<is_convertible<_Yp*, element_type*>::value, __nat>::type = __nat());
 #endif
 #endif
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template <class _Yp, class _Dp>
         shared_ptr(unique_ptr<_Yp, _Dp>&&,
                    typename enable_if
@@ -3616,26 +3615,6 @@ public:
                        is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                        __nat
                    >::type = __nat());
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    template <class _Yp, class _Dp>
-        shared_ptr(unique_ptr<_Yp, _Dp>,
-                   typename enable_if
-                   <
-                       !is_lvalue_reference<_Dp>::value &&
-                       !is_array<_Yp>::value &&
-                       is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
-                       __nat
-                   >::type = __nat());
-    template <class _Yp, class _Dp>
-        shared_ptr(unique_ptr<_Yp, _Dp>,
-                   typename enable_if
-                   <
-                       is_lvalue_reference<_Dp>::value &&
-                       !is_array<_Yp>::value &&
-                       is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
-                       __nat
-                   >::type = __nat());
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     ~shared_ptr();
 
@@ -4060,11 +4039,7 @@ shared_ptr<_Tp>::shared_ptr(auto_ptr<_Yp> __r,
 
 template<class _Tp>
 template <class _Yp, class _Dp>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
-#else
-shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
-#endif
                             typename enable_if
                             <
                                 !is_lvalue_reference<_Dp>::value &&
@@ -4090,11 +4065,7 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
 
 template<class _Tp>
 template <class _Yp, class _Dp>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
-#else
-shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
-#endif
                             typename enable_if
                             <
                                 is_lvalue_reference<_Dp>::value &&
