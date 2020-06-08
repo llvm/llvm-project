@@ -47,7 +47,8 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
+  auto VFS = Inputs.FSProvider->getFileSystem();
+  if (VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
     log("Couldn't set working directory when creating compiler invocation.");
     // We proceed anyway, our lit-tests rely on results for non-existing working
     // dirs.
@@ -56,7 +57,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
       CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      ArgStrs, CommandLineDiagsEngine, Inputs.FS,
+      ArgStrs, CommandLineDiagsEngine, std::move(VFS),
       /*ShouldRecoverOnErrors=*/true, CC1Args);
   if (!CI)
     return nullptr;

@@ -13,6 +13,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -352,6 +353,14 @@ OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
 
+void ConstSizeOp::getAsmResultNames(
+    llvm::function_ref<void(Value, StringRef)> setNameFn) {
+  SmallString<4> buffer;
+  llvm::raw_svector_ostream os(buffer);
+  os << "c" << value();
+  setNameFn(getResult(), os.str());
+}
+
 //===----------------------------------------------------------------------===//
 // ConstWitnessOp
 //===----------------------------------------------------------------------===//
@@ -524,7 +533,7 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
 
 static LogicalResult verify(ReduceOp op) {
   // Verify block arg types.
-  Block &block = op.body().front();
+  Block &block = op.region().front();
 
   auto blockArgsCount = op.initVals().size() + 2;
   if (block.getNumArguments() != blockArgsCount)
@@ -580,7 +589,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
   p << op.getOperationName() << '(' << op.shape() << ", " << op.initVals()
     << ") ";
   p.printOptionalArrowTypeList(op.getResultTypes());
-  p.printRegion(op.body());
+  p.printRegion(op.region());
   p.printOptionalAttrDict(op.getAttrs());
 }
 

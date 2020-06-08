@@ -108,7 +108,10 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
     Opts.Index = OverrideIndex.get();
   }
 
-  auto Inputs = TU.inputs();
+  MockFSProvider FS;
+  auto Inputs = TU.inputs(FS);
+  Inputs.Opts.BuildRecoveryAST = true;
+  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {
@@ -117,10 +120,7 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
   }
   auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
                                 /*InMemory=*/true, /*Callback=*/nullptr);
-  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, TU.Code};
-  ParseInput.Opts.BuildRecoveryAST = true;
-  ParseInput.Opts.PreserveRecoveryASTType = true;
-  return codeComplete(testPath(TU.Filename), Point, Preamble.get(), ParseInput,
+  return codeComplete(testPath(TU.Filename), Point, Preamble.get(), Inputs,
                       Opts);
 }
 
@@ -151,8 +151,7 @@ CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
 
   MockFSProvider FS;
   Annotations Test(Text);
-  ParseInputs ParseInput{tooling::CompileCommand(), FS.getFileSystem(),
-                         Test.code().str()};
+  ParseInputs ParseInput{tooling::CompileCommand(), &FS, Test.code().str()};
   return codeComplete(FilePath, Test.point(), /*Preamble=*/nullptr, ParseInput,
                       Opts);
 }
@@ -1058,7 +1057,11 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     Index = memIndex(IndexSymbols);
 
   auto TU = TestTU::withCode(Text);
-  auto Inputs = TU.inputs();
+  MockFSProvider FS;
+  auto Inputs = TU.inputs(FS);
+  Inputs.Index = Index.get();
+  Inputs.Opts.BuildRecoveryAST = true;
+  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {
@@ -1071,11 +1074,7 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     ADD_FAILURE() << "Couldn't build Preamble";
     return {};
   }
-  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, Text.str()};
-  ParseInput.Index = Index.get();
-  ParseInput.Opts.BuildRecoveryAST = true;
-  ParseInput.Opts.PreserveRecoveryASTType = true;
-  return signatureHelp(testPath(TU.Filename), Point, *Preamble, ParseInput);
+  return signatureHelp(testPath(TU.Filename), Point, *Preamble, Inputs);
 }
 
 SignatureHelp signatures(llvm::StringRef Text,
@@ -1213,7 +1212,8 @@ TEST(SignatureHelpTest, StalePreamble) {
   TestTU TU;
   TU.Code = "";
   IgnoreDiagnostics Diags;
-  auto Inputs = TU.inputs();
+  MockFSProvider FS;
+  auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
   ASSERT_TRUE(CI);
   auto EmptyPreamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
@@ -1225,11 +1225,8 @@ TEST(SignatureHelpTest, StalePreamble) {
     #include "a.h"
     void bar() { foo(^2); })cpp");
   TU.Code = Test.code().str();
-  Inputs = TU.inputs();
-
-  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, TU.Code};
   auto Results = signatureHelp(testPath(TU.Filename), Test.point(),
-                               *EmptyPreamble, ParseInput);
+                               *EmptyPreamble, TU.inputs(FS));
   EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);

@@ -16,6 +16,7 @@
 #include "TestFS.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
+#include "support/FSProvider.h"
 #include "support/Path.h"
 #include "support/TestTracer.h"
 #include "support/Threading.h"
@@ -73,7 +74,7 @@ protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
     ParseInputs Inputs;
     Inputs.CompileCommand = *CDB.getCompileCommand(File);
-    Inputs.FS = buildTestFS(Files, Timestamps);
+    Inputs.FSProvider = &FSProvider;
     Inputs.Contents = std::move(Contents);
     Inputs.Opts = ParseOptions();
     return Inputs;
@@ -149,8 +150,7 @@ protected:
                            std::move(CB));
   }
 
-  llvm::StringMap<std::string> Files;
-  llvm::StringMap<time_t> Timestamps;
+  MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
 };
 
@@ -161,10 +161,10 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(CDB, optsForTest());
 
   auto Added = testPath("added.cpp");
-  Files[Added] = "x";
+  FSProvider.Files[Added] = "x";
 
   auto Missing = testPath("missing.cpp");
-  Files[Missing] = "";
+  FSProvider.Files[Missing] = "";
 
   S.update(Added, getInputs(Added, "x"), WantDiagnostics::No);
 
@@ -425,7 +425,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
     for (int I = 0; I < FilesCount; ++I) {
       std::string Name = "foo" + std::to_string(I) + ".cpp";
       Files.push_back(testPath(Name));
-      this->Files[Files.back()] = "";
+      this->FSProvider.Files[Files.back()] = "";
     }
 
     StringRef Contents1 = R"cpp(int a;)cpp";
@@ -476,7 +476,6 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
                 ASSERT_TRUE((bool)AST);
-                EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
                 EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
                 EXPECT_EQ(AST->Inputs.Version, Inputs.Version);
                 EXPECT_EQ(AST->AST.version(), Inputs.Version);
@@ -617,8 +616,8 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   auto Foo = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  Files[Header] = "void foo()";
-  Timestamps[Header] = time_t(0);
+  FSProvider.Files[Header] = "void foo()";
+  FSProvider.Timestamps[Header] = time_t(0);
   auto WithPreamble = R"cpp(
     #include "foo.h"
     int main() {}
@@ -686,8 +685,8 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   auto Source = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  Files[Header] = "int a;";
-  Timestamps[Header] = time_t(0);
+  FSProvider.Files[Header] = "int a;";
+  FSProvider.Timestamps[Header] = time_t(0);
 
   std::string SourceContents = R"cpp(
       #include "foo.h"
@@ -715,7 +714,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
 
   // Update to a header should cause a rebuild, though.
-  Timestamps[Header] = time_t(1);
+  FSProvider.Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
   ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 2u);
@@ -761,11 +760,12 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
                                 Field(&Diag::Message,
                                       "use of undeclared identifier 'a'")));
       });
+  S.blockUntilIdle(timeoutSeconds(10));
 
   // Add the header file. We need to recreate the inputs since we changed a
   // file from underneath the test FS.
-  Files[Header] = "int a;";
-  Timestamps[Header] = time_t(1);
+  FSProvider.Files[Header] = "int a;";
+  FSProvider.Timestamps[Header] = time_t(1);
   Inputs = getInputs(Source, SourceContents);
 
   // The addition of the missing header file shouldn't trigger a rebuild since

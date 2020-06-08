@@ -275,9 +275,8 @@ void CallingConvEmitter::EmitAction(Record *Action,
     } else if (Action->isSubClassOf("CCPassByVal")) {
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
-      O << IndentStr
-        << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, "
-        << Size << ", " << Align << ", ArgFlags);\n";
+      O << IndentStr << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, "
+        << Size << ", Align(" << Align << "), ArgFlags);\n";
       O << IndentStr << "return false;\n";
     } else if (Action->isSubClassOf("CCCustom")) {
       O << IndentStr
