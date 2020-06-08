@@ -49,7 +49,7 @@ public:
     PointerType *PtrTy = cast<PointerType>(DataPtr->getType());
     Type *EltTy = PtrTy->getElementType();
 
-    Type *RetType = VectorType::get(EltTy, Rows * Columns);
+    auto *RetType = FixedVectorType::get(EltTy, Rows * Columns);
 
     Value *Ops[] = {DataPtr, Stride, B.getInt32(Rows), B.getInt32(Columns)};
     Type *OverloadedTypes[] = {RetType, PtrTy};
@@ -82,8 +82,8 @@ public:
   CallInst *CreateMatrixTranspose(Value *Matrix, unsigned Rows,
                                   unsigned Columns, const Twine &Name = "") {
     auto *OpType = cast<VectorType>(Matrix->getType());
-    Type *ReturnType =
-        VectorType::get(OpType->getElementType(), Rows * Columns);
+    auto *ReturnType =
+        FixedVectorType::get(OpType->getElementType(), Rows * Columns);
 
     Type *OverloadedTypes[] = {ReturnType};
     Value *Ops[] = {Matrix, B.getInt32(Rows), B.getInt32(Columns)};
@@ -101,8 +101,8 @@ public:
     auto *LHSType = cast<VectorType>(LHS->getType());
     auto *RHSType = cast<VectorType>(RHS->getType());
 
-    Type *ReturnType =
-        VectorType::get(LHSType->getElementType(), LHSRows * RHSColumns);
+    auto *ReturnType =
+        FixedVectorType::get(LHSType->getElementType(), LHSRows * RHSColumns);
 
     Value *Ops[] = {LHS, RHS, B.getInt32(LHSRows), B.getInt32(LHSColumns),
                     B.getInt32(RHSColumns)};
