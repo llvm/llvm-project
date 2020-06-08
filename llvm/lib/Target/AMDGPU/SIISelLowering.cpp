@@ -767,6 +767,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, VT, Custom);
   }
 
+  setOperationAction(ISD::SMULO, MVT::i64, Custom);
+  setOperationAction(ISD::UMULO, MVT::i64, Custom);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
@@ -4430,6 +4433,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
     return splitBinaryVectorOp(Op, DAG);
+  case ISD::SMULO:
+  case ISD::UMULO:
+    return lowerXMULO(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   }
@@ -4987,6 +4993,42 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   if (VT == MVT::v4f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
+}
+
+SDValue SITargetLowering::lowerXMULO(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc SL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  bool isSigned = Op.getOpcode() == ISD::SMULO;
+
+  if (ConstantSDNode *RHSC = isConstOrConstSplat(RHS)) {
+    const APInt &C = RHSC->getAPIntValue();
+    // mulo(X, 1 << S) -> { X << S, (X << S) >> S != X }
+    if (C.isPowerOf2()) {
+      // smulo(x, signed_min) is same as umulo(x, signed_min).
+      bool UseArithShift = isSigned && !C.isMinSignedValue();
+      SDValue ShiftAmt = DAG.getConstant(C.logBase2(), SL, MVT::i32);
+      SDValue Result = DAG.getNode(ISD::SHL, SL, VT, LHS, ShiftAmt);
+      SDValue Overflow = DAG.getSetCC(SL, MVT::i1,
+          DAG.getNode(UseArithShift ? ISD::SRA : ISD::SRL,
+                      SL, VT, Result, ShiftAmt),
+          LHS, ISD::SETNE);
+      return DAG.getMergeValues({ Result, Overflow }, SL);
+    }
+  }
+
+  SDValue Result = DAG.getNode(ISD::MUL, SL, VT, LHS, RHS);
+  SDValue Top = DAG.getNode(isSigned ? ISD::MULHS : ISD::MULHU,
+                            SL, VT, LHS, RHS);
+
+  SDValue Sign = isSigned
+    ? DAG.getNode(ISD::SRA, SL, VT, Result,
+                  DAG.getConstant(VT.getScalarSizeInBits() - 1, SL, MVT::i32))
+    : DAG.getConstant(0, SL, VT);
+  SDValue Overflow = DAG.getSetCC(SL, MVT::i1, Top, Sign, ISD::SETNE);
+
+  return DAG.getMergeValues({ Result, Overflow }, SL);
 }
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
