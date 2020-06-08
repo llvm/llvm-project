@@ -13,6 +13,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -351,6 +352,14 @@ OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
+
+void ConstSizeOp::getAsmResultNames(
+    llvm::function_ref<void(Value, StringRef)> setNameFn) {
+  SmallString<4> buffer;
+  llvm::raw_svector_ostream os(buffer);
+  os << "c" << value();
+  setNameFn(getResult(), os.str());
+}
 
 //===----------------------------------------------------------------------===//
 // ConstWitnessOp
