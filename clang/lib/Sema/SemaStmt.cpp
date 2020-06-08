@@ -2127,18 +2127,22 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
     return StmtError();
   }
 
+  // This function is responsible for attaching an initializer to LoopVar. We
+  // must call ActOnInitializerError if we fail to do so.
   Decl *LoopVar = DS->getSingleDecl();
   if (LoopVar->isInvalidDecl() || !Range ||
       DiagnoseUnexpandedParameterPack(Range, UPPC_Expression)) {
-    LoopVar->setInvalidDecl();
+    ActOnInitializerError(LoopVar);
     return StmtError();
   }
 
   // Build the coroutine state immediately and not later during template
   // instantiation
   if (!CoawaitLoc.isInvalid()) {
-    if (!ActOnCoroutineBodyStart(S, CoawaitLoc, "co_await"))
+    if (!ActOnCoroutineBodyStart(S, CoawaitLoc, "co_await")) {
+      ActOnInitializerError(LoopVar);
       return StmtError();
+    }
   }
 
   // Build  auto && __range = range-init
@@ -2150,7 +2154,7 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
                                            std::string("__range") + DepthStr);
   if (FinishForRangeVarDecl(*this, RangeVar, Range, RangeLoc,
                             diag::err_for_range_deduction_failure)) {
-    LoopVar->setInvalidDecl();
+    ActOnInitializerError(LoopVar);
     return StmtError();
   }
 
@@ -2159,14 +2163,20 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
       BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&RangeVar, 1));
   StmtResult RangeDecl = ActOnDeclStmt(RangeGroup, RangeLoc, RangeLoc);
   if (RangeDecl.isInvalid()) {
-    LoopVar->setInvalidDecl();
+    ActOnInitializerError(LoopVar);
     return StmtError();
   }
 
-  return BuildCXXForRangeStmt(
+  StmtResult R = BuildCXXForRangeStmt(
       ForLoc, CoawaitLoc, InitStmt, ColonLoc, RangeDecl.get(),
       /*BeginStmt=*/nullptr, /*EndStmt=*/nullptr,
       /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind);
+  if (R.isInvalid()) {
+    ActOnInitializerError(LoopVar);
+    return StmtError();
+  }
+
+  return R;
 }
 
 /// Create the initialization, compare, and increment steps for
@@ -2349,22 +2359,6 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
       AdjustedRange.get(), RParenLoc, Sema::BFRK_Rebuild);
 }
 
-namespace {
-/// RAII object to automatically invalidate a declaration if an error occurs.
-struct InvalidateOnErrorScope {
-  InvalidateOnErrorScope(Sema &SemaRef, Decl *D, bool Enabled)
-      : Trap(SemaRef.Diags), D(D), Enabled(Enabled) {}
-  ~InvalidateOnErrorScope() {
-    if (Enabled && Trap.hasErrorOccurred())
-      D->setInvalidDecl();
-  }
-
-  DiagnosticErrorTrap Trap;
-  Decl *D;
-  bool Enabled;
-};
-}
-
 /// BuildCXXForRangeStmt - Build or instantiate a C++11 for-range statement.
 StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
                                       SourceLocation CoawaitLoc, Stmt *InitStmt,
@@ -2390,11 +2384,6 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
 
   DeclStmt *LoopVarDS = cast<DeclStmt>(LoopVarDecl);
   VarDecl *LoopVar = cast<VarDecl>(LoopVarDS->getSingleDecl());
-
-  // If we hit any errors, mark the loop variable as invalid if its type
-  // contains 'auto'.
-  InvalidateOnErrorScope Invalidate(*this, LoopVar,
-                                    LoopVar->getType()->isUndeducedType());
 
   StmtResult BeginDeclStmt = Begin;
   StmtResult EndDeclStmt = End;
@@ -2434,11 +2423,8 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
     QualType RangeType = Range->getType();
 
     if (RequireCompleteType(RangeLoc, RangeType,
-                            diag::err_for_range_incomplete_type)) {
-      if (LoopVar->getType()->isUndeducedType())
-        LoopVar->setInvalidDecl();
+                            diag::err_for_range_incomplete_type))
       return StmtError();
-    }
 
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).

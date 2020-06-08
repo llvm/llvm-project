@@ -10,9 +10,14 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ROCM_H
 
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Option/ArgList.h"
 
 namespace clang {
 namespace driver {
