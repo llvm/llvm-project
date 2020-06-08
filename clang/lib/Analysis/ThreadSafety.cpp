@@ -995,7 +995,10 @@ private:
       FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
                                 !Cp, LK_Exclusive, loc));
     } else if (Handler) {
-      Handler->handleUnmatchedUnlock(DiagKind, Cp.toString(), loc);
+      SourceLocation PrevLoc;
+      if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
+        PrevLoc = Neg->loc();
+      Handler->handleUnmatchedUnlock(DiagKind, Cp.toString(), loc, PrevLoc);
     }
   }
 };
@@ -1322,7 +1325,10 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 
   const FactEntry *LDat = FSet.findLock(FactMan, Cp);
   if (!LDat) {
-    Handler.handleUnmatchedUnlock(DiagKind, Cp.toString(), UnlockLoc);
+    SourceLocation PrevLoc;
+    if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
+      PrevLoc = Neg->loc();
+    Handler.handleUnmatchedUnlock(DiagKind, Cp.toString(), UnlockLoc, PrevLoc);
     return;
   }
 
