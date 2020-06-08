@@ -17,6 +17,85 @@
 include "VEInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
+// Helper functions to retrieve target constants.
+//
+// VE instructions have a space to hold following immediates
+//   $sy has 7 bits to represent simm7, uimm7, simm7fp, or uimm7fp.
+//   $sz also has 7 bits to represent mimm or mimmfp.
+//   $disp has 32 bits to represent simm32.
+//
+// The mimm is a special immediate value of sequential bit stream of 0 or 1.
+//     `(m)0`: Represents 0 sequence then 1 sequence like 0b00...0011...11,
+//             where `m` is equal to the number of leading zeros.
+//     `(m)1`: Represents 1 sequence then 0 sequence like 0b11...1100...00,
+//             where `m` is equal to the number of leading ones.
+// Each bit of mimm's 7 bits is used like below:
+//     bit 6  : If `(m)0`, this bit is 1.  Otherwise, this bit is 0.
+//     bit 5-0: Represents the m (0-63).
+// Use `!add(m, 64)` to generates an immediate value in pattern matchings.
+//
+// The floating point immediate value is not something like compacted value.
+// It is simple integer representation, so it works rarely.
+//     e.g. 0.0 (0x00000000) or -2.0 (0xC0000000=(2)1).
+//===----------------------------------------------------------------------===//
+
+def LO7 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def MIMM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(convMImmVal(getImmVal(N)),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def LO32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(Lo_32(N->getZExtValue()),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def HI32 : SDNodeXForm<imm, [{
+  // Transformation function: shift the immediate value down into the low bits.
+  return CurDAG->getTargetConstant(Hi_32(N->getZExtValue()),
+                                   SDLoc(N), MVT::i32);
+}]>;
+
+def LO7FP : SDNodeXForm<fpimm, [{
+  uint64_t Val = getFpImmVal(N);
+  return CurDAG->getTargetConstant(SignExtend32(Val, 7), SDLoc(N), MVT::i32);
+}]>;
+def MIMMFP : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(convMImmVal(getFpImmVal(N)),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def LOFP32 : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(Lo_32(getFpImmVal(N) & 0xffffffff),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def HIFP32 : SDNodeXForm<fpimm, [{
+  return CurDAG->getTargetConstant(Hi_32(getFpImmVal(N)), SDLoc(N), MVT::i32);
+}]>;
+
+def icond2cc : SDNodeXForm<cond, [{
+  VECC::CondCode VECC = intCondCode2Icc(N->get());
+  return CurDAG->getTargetConstant(VECC, SDLoc(N), MVT::i32);
+}]>;
+
+def icond2ccSwap : SDNodeXForm<cond, [{
+  ISD::CondCode CC = getSetCCSwappedOperands(N->get());
+  VECC::CondCode VECC = intCondCode2Icc(CC);
+  return CurDAG->getTargetConstant(VECC, SDLoc(N), MVT::i32);
+}]>;
+
+def fcond2cc : SDNodeXForm<cond, [{
+  VECC::CondCode VECC = fpCondCode2Fcc(N->get());
+  return CurDAG->getTargetConstant(VECC, SDLoc(N), MVT::i32);
+}]>;
+
+def fcond2ccSwap : SDNodeXForm<cond, [{
+  ISD::CondCode CC = getSetCCSwappedOperands(N->get());
+  VECC::CondCode VECC = fpCondCode2Fcc(CC);
+  return CurDAG->getTargetConstant(VECC, SDLoc(N), MVT::i32);
+}]>;
+
+//===----------------------------------------------------------------------===//
 // Feature predicates.
 //===----------------------------------------------------------------------===//
 
@@ -37,90 +116,48 @@ def uimm7 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<7>(N->getZExtValue()); }]>;
 
 // simm7 - Generic immediate value.
-def LO7 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
-                                   SDLoc(N), MVT::i32);
-}]>;
 def simm7 : Operand<i32>, PatLeaf<(imm), [{
     return isInt<7>(N->getSExtValue()); }], LO7> {
   let DecoderMethod = "DecodeSIMM7";
 }
 
 // mimm - Special immediate value of sequential bit stream of 0 or 1.
-//   `(m)0`: Represents 0b00...0011...11 pattern where the number of leading
-//           zeros equal to m.
-//   `(m)1`: Represents 0b11...1100...00 pattern where the number of leading
-//           ones equal to m.
-// The immediate value of mimm operands:
-//   bit 6  : If `(m)0`, 1.  Otherwise, 0.
-//   bit 5-0: Represents 0-63.
-// Use `!add(m, 64)` to generates an immediate value in pattern matching.
-def MIMM : SDNodeXForm<imm, [{
-  uint64_t Val = N->getZExtValue();
-  if (isMask_64(Val))
-    Val = countLeadingZeros(Val) | 0x40;
-  else
-    Val = countLeadingOnes(Val);
-  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
-}]>;
 def mimm : Operand<i32>, PatLeaf<(imm), [{
-    return isMask_64(N->getZExtValue()) ||
-           ((N->getZExtValue() & (1UL << 63)) &&
-            isShiftedMask_64(N->getZExtValue())); }], MIMM> {
+    return isMImmVal(getImmVal(N)); }], MIMM> {
   let PrintMethod = "printMImmOperand";
 }
 
 // simm7fp - Generic fp immediate value.
-def LO7FP : SDNodeXForm<fpimm, [{
-  // Get a integer immediate from fpimm
-  const APInt& imm = N->getValueAPF().bitcastToAPInt();
-  uint64_t val = imm.getSExtValue();
-  if (imm.getBitWidth() == 32)
-    val <<= 32; // Immediate value of float place at higher bits on VE.
-  return CurDAG->getTargetConstant(SignExtend32(val, 7), SDLoc(N), MVT::i32);
-}]>;
 def simm7fp : Operand<i32>, PatLeaf<(fpimm), [{
-    const APInt& imm = N->getValueAPF().bitcastToAPInt();
-    uint64_t val = imm.getSExtValue();
-    if (imm.getBitWidth() == 32)
-      val <<= 32; // Immediate value of float place at higher bits on VE.
-    return isInt<7>(val);
+    return isInt<7>(getFpImmVal(N));
   }], LO7FP> {
   let DecoderMethod = "DecodeSIMM7";
 }
 
-// mimm - Special fp immediate value of sequential bit stream of 0 or 1.
-def MIMMFP : SDNodeXForm<fpimm, [{
-  const APInt& Imm = N->getValueAPF().bitcastToAPInt();
-  uint64_t Val = Imm.getSExtValue();
-  bool M0Flag = isMask_64(Val);
-  if (Imm.getBitWidth() == 32)
-    Val <<= 32; // Immediate value of float place at higher bits on VE.
-  if (M0Flag) {
-    //   bit 6  : If `(m)0`, 1.  Otherwise, 0.
-    Val = countLeadingZeros(Val) | 0x40;
-  } else
-    Val = countLeadingOnes(Val);
-  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
-}]>;
+// mimmfp - Special fp immediate value of sequential bit stream of 0 or 1.
 def mimmfp : Operand<i32>, PatLeaf<(fpimm), [{
-    const APInt& Imm = N->getValueAPF().bitcastToAPInt();
-    uint64_t Val = Imm.getSExtValue();
-    return isMask_64(Val) ||
-           ((Val & (1UL << 63)) && isShiftedMask_64(Val)); }], MIMMFP> {
+    return isMImmVal(getFpImmVal(N)); }], MIMMFP> {
   let PrintMethod = "printMImmOperand";
 }
 
+// mimmfp32 - 32 bit width mimmfp
+//   Float value places at higher bits, so ignore lower 32 bits.
+def mimmfp32 : Operand<i32>, PatLeaf<(fpimm), [{
+    return isMImm32Val(getFpImmVal(N) >> 32); }], MIMMFP> {
+  let PrintMethod = "printMImmOperand";
+}
+
+// other generic patterns to use in pattern matchings
 def simm32      : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 def uimm32      : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
 def lomsbzero   : PatLeaf<(imm), [{ return (N->getZExtValue() & 0x80000000)
                                       == 0; }]>;
 def lozero      : PatLeaf<(imm), [{ return (N->getZExtValue() & 0xffffffff)
                                       == 0; }]>;
-def fplomsbzero : PatLeaf<(fpimm), [{ return (N->getValueAPF().bitcastToAPInt()
-                                      .getZExtValue() & 0x80000000) == 0; }]>;
-def fplozero    : PatLeaf<(fpimm), [{ return (N->getValueAPF().bitcastToAPInt()
-                                      .getZExtValue() & 0xffffffff) == 0; }]>;
+def fplomsbzero : PatLeaf<(fpimm), [{ return (getFpImmVal(N) & 0x80000000)
+                                        == 0; }]>;
+def fplozero    : PatLeaf<(fpimm), [{ return (getFpImmVal(N) & 0xffffffff)
+                                        == 0; }]>;
 
 def CCSIOp : PatLeaf<(cond), [{
   switch (N->get()) {
@@ -140,127 +177,6 @@ def CCUIOp : PatLeaf<(cond), [{
   case ISD::SETGT:
   case ISD::SETGE: return false;
   }
-}]>;
-
-def LOFP32 : SDNodeXForm<fpimm, [{
-  // Get a integer immediate from fpimm
-  const APInt& imm = N->getValueAPF().bitcastToAPInt();
-  return CurDAG->getTargetConstant(Lo_32(imm.getZExtValue() & 0xffffffff),
-                                   SDLoc(N), MVT::i64);
-}]>;
-
-def HIFP32 : SDNodeXForm<fpimm, [{
-  // Get a integer immediate from fpimm
-  const APInt& imm = N->getValueAPF().bitcastToAPInt();
-  return CurDAG->getTargetConstant(Hi_32(imm.getZExtValue()),
-                                   SDLoc(N), MVT::i64);
-}]>;
-
-def LO32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(Lo_32(N->getZExtValue()),
-                                   SDLoc(N), MVT::i64);
-}]>;
-
-def HI32 : SDNodeXForm<imm, [{
-  // Transformation function: shift the immediate value down into the low bits.
-  return CurDAG->getTargetConstant(Hi_32(N->getZExtValue()),
-                                   SDLoc(N), MVT::i32);
-}]>;
-
-def icond2cc : SDNodeXForm<cond, [{
-  VECC::CondCode cc;
-  switch (N->get()) {
-  default:          llvm_unreachable("Unknown integer condition code!");
-  case ISD::SETEQ:  cc = VECC::CC_IEQ; break;
-  case ISD::SETNE:  cc = VECC::CC_INE; break;
-  case ISD::SETLT:  cc = VECC::CC_IL;  break;
-  case ISD::SETGT:  cc = VECC::CC_IG;  break;
-  case ISD::SETLE:  cc = VECC::CC_ILE; break;
-  case ISD::SETGE:  cc = VECC::CC_IGE; break;
-  case ISD::SETULT: cc = VECC::CC_IL;  break;
-  case ISD::SETULE: cc = VECC::CC_ILE; break;
-  case ISD::SETUGT: cc = VECC::CC_IG;  break;
-  case ISD::SETUGE: cc = VECC::CC_IGE; break;
-  }
-  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
-}]>;
-
-def icond2ccSwap : SDNodeXForm<cond, [{
-  VECC::CondCode cc;
-  switch (N->get()) {
-  default:          llvm_unreachable("Unknown integer condition code!");
-  case ISD::SETEQ:  cc = VECC::CC_IEQ; break;
-  case ISD::SETNE:  cc = VECC::CC_INE; break;
-  case ISD::SETLT:  cc = VECC::CC_IG;  break;
-  case ISD::SETGT:  cc = VECC::CC_IL;  break;
-  case ISD::SETLE:  cc = VECC::CC_IGE; break;
-  case ISD::SETGE:  cc = VECC::CC_ILE; break;
-  case ISD::SETULT: cc = VECC::CC_IG;  break;
-  case ISD::SETULE: cc = VECC::CC_IGE; break;
-  case ISD::SETUGT: cc = VECC::CC_IL;  break;
-  case ISD::SETUGE: cc = VECC::CC_ILE; break;
-  }
-  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
-}]>;
-
-def fcond2cc : SDNodeXForm<cond, [{
-  VECC::CondCode cc;
-  switch (N->get()) {
-  default:          llvm_unreachable("Unknown float condition code!");
-  case ISD::SETFALSE: cc = VECC::CC_AF;    break;
-  case ISD::SETEQ:
-  case ISD::SETOEQ:   cc = VECC::CC_EQ;    break;
-  case ISD::SETNE:
-  case ISD::SETONE:   cc = VECC::CC_NE;    break;
-  case ISD::SETLT:
-  case ISD::SETOLT:   cc = VECC::CC_L;     break;
-  case ISD::SETGT:
-  case ISD::SETOGT:   cc = VECC::CC_G;     break;
-  case ISD::SETLE:
-  case ISD::SETOLE:   cc = VECC::CC_LE;    break;
-  case ISD::SETGE:
-  case ISD::SETOGE:   cc = VECC::CC_GE;    break;
-  case ISD::SETO:     cc = VECC::CC_NUM;   break;
-  case ISD::SETUO:    cc = VECC::CC_NAN;   break;
-  case ISD::SETUEQ:   cc = VECC::CC_EQNAN; break;
-  case ISD::SETUNE:   cc = VECC::CC_NENAN; break;
-  case ISD::SETULT:   cc = VECC::CC_LNAN;  break;
-  case ISD::SETUGT:   cc = VECC::CC_GNAN;  break;
-  case ISD::SETULE:   cc = VECC::CC_LENAN; break;
-  case ISD::SETUGE:   cc = VECC::CC_GENAN; break;
-  case ISD::SETTRUE:  cc = VECC::CC_AT;    break;
-  }
-  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
-}]>;
-
-def fcond2ccSwap : SDNodeXForm<cond, [{
-  VECC::CondCode cc;
-  switch (N->get()) {
-  default:          llvm_unreachable("Unknown float condition code!");
-  case ISD::SETFALSE: cc = VECC::CC_AF;    break;
-  case ISD::SETEQ:
-  case ISD::SETOEQ:   cc = VECC::CC_EQ;    break;
-  case ISD::SETNE:
-  case ISD::SETONE:   cc = VECC::CC_NE;    break;
-  case ISD::SETLT:
-  case ISD::SETOLT:   cc = VECC::CC_G;     break;
-  case ISD::SETGT:
-  case ISD::SETOGT:   cc = VECC::CC_L;     break;
-  case ISD::SETLE:
-  case ISD::SETOLE:   cc = VECC::CC_GE;    break;
-  case ISD::SETGE:
-  case ISD::SETOGE:   cc = VECC::CC_LE;    break;
-  case ISD::SETO:     cc = VECC::CC_NUM;   break;
-  case ISD::SETUO:    cc = VECC::CC_NAN;   break;
-  case ISD::SETUEQ:   cc = VECC::CC_EQNAN; break;
-  case ISD::SETUNE:   cc = VECC::CC_NENAN; break;
-  case ISD::SETULT:   cc = VECC::CC_GNAN;  break;
-  case ISD::SETUGT:   cc = VECC::CC_LNAN;  break;
-  case ISD::SETULE:   cc = VECC::CC_GENAN; break;
-  case ISD::SETUGE:   cc = VECC::CC_LENAN; break;
-  case ISD::SETTRUE:  cc = VECC::CC_AT;    break;
-  }
-  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
 }]>;
 
 // Addressing modes.
@@ -1013,30 +929,39 @@ def : Pat<(i32 (srl i32:$src, i32:$val)),
 
 // Section 8.7.1 - FAD (Floating Add)
 defm FADDD : RRFm<"fadd.d", 0x4C, I64, f64, fadd>;
-let cx = 1 in defm FADDS : RRFm<"fadd.s", 0x4C, F32, f32, fadd>;
+let cx = 1 in
+defm FADDS : RRFm<"fadd.s", 0x4C, F32, f32, fadd, simm7fp, mimmfp32>;
 
 // Section 8.7.2 - FSB (Floating Subtract)
 defm FSUBD : RRFm<"fsub.d", 0x5C, I64, f64, fsub>;
-let cx = 1 in defm FSUBS : RRFm<"fsub.s", 0x5C, F32, f32, fsub>;
+let cx = 1 in
+defm FSUBS : RRFm<"fsub.s", 0x5C, F32, f32, fsub, simm7fp, mimmfp32>;
 
 // Section 8.7.3 - FMP (Floating Multiply)
 defm FMULD : RRFm<"fmul.d", 0x4D, I64, f64, fmul>;
-let cx = 1 in defm FMULS : RRFm<"fmul.s", 0x4D, F32, f32, fmul>;
+let cx = 1 in
+defm FMULS : RRFm<"fmul.s", 0x4D, F32, f32, fmul, simm7fp, mimmfp32>;
 
 // Section 8.7.4 - FDV (Floating Divide)
 defm FDIVD : RRFm<"fdiv.d", 0x5D, I64, f64, fdiv>;
-let cx = 1 in defm FDIVS : RRFm<"fdiv.s", 0x5D, F32, f32, fdiv>;
+let cx = 1 in
+defm FDIVS : RRFm<"fdiv.s", 0x5D, F32, f32, fdiv, simm7fp, mimmfp32>;
 
 // Section 8.7.5 - FCP (Floating Compare)
 defm FCMPD : RRFm<"fcmp.d", 0x7E, I64, f64>;
-let cx = 1 in defm FCMPS : RRFm<"fcmp.s", 0x7E, F32, f32>;
+let cx = 1 in
+defm FCMPS : RRFm<"fcmp.s", 0x7E, F32, f32, null_frag, simm7fp, mimmfp32>;
 
 // Section 8.7.6 - CMS (Compare and Select Maximum/Minimum Single)
 // cx: double/float, cw: max/min
-defm FMAXD : RRFm<"fmax.d", 0x3E, I64, f64>;
-let cx = 1 in defm FMAXS : RRFm<"fmax.s", 0x3E, F32, f32>;
-let cw = 1 in defm FMIND : RRFm<"fmin.d", 0x3E, I64, f64>;
-let cw = 1, cx = 1 in defm FMINS : RRFm<"fmin.s", 0x3E, F32, f32>;
+let cw = 0, cx = 0 in
+defm FMAXD : RRFm<"fmax.d", 0x3E, I64, f64, fmaxnum>;
+let cw = 0, cx = 1 in
+defm FMAXS : RRFm<"fmax.s", 0x3E, F32, f32, fmaxnum, simm7fp, mimmfp32>;
+let cw = 1, cx = 0 in
+defm FMIND : RRFm<"fmin.d", 0x3E, I64, f64, fminnum>;
+let cw = 1, cx = 1 in
+defm FMINS : RRFm<"fmin.s", 0x3E, F32, f32, fminnum, simm7fp, mimmfp32>;
 
 // Section 8.7.7 - FAQ (Floating Add Quadruple)
 // Section 8.7.8 - FSQ (Floating Subtract Quadruple)
@@ -1161,7 +1086,7 @@ def : Pat<(i64 imm:$val),
 
 // floating point
 def : Pat<(f32 fpimm:$val),
-          (EXTRACT_SUBREG (LEASLzii 0, 0, (LOFP32 $val)), sub_f32)>;
+          (EXTRACT_SUBREG (LEASLzii 0, 0, (HIFP32 $val)), sub_f32)>;
 def : Pat<(f64 fplozero:$val),
           (LEASLzii 0, 0, (HIFP32 $val))>;
 def : Pat<(f64 fplomsbzero:$val),
