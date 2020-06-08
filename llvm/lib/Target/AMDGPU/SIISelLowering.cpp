@@ -1764,7 +1764,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgVGPRs);
   if (RegIdx == ArgVGPRs.size()) {
     // Spill to stack required.
-    int64_t Offset = CCInfo.AllocateStack(4, 4);
+    int64_t Offset = CCInfo.AllocateStack(4, Align(4));
 
     return ArgDescriptor::createStack(Offset, Mask);
   }
@@ -2596,7 +2596,8 @@ void SITargetLowering::passSpecialInputs(
       if (!CCInfo.AllocateReg(OutgoingArg->getRegister()))
         report_fatal_error("failed to allocate implicit input argument");
     } else {
-      unsigned SpecialArgOffset = CCInfo.AllocateStack(ArgVT.getStoreSize(), 4);
+      unsigned SpecialArgOffset =
+          CCInfo.AllocateStack(ArgVT.getStoreSize(), Align(4));
       SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
                                               SpecialArgOffset);
       MemOpChains.push_back(ArgStore);
@@ -2663,7 +2664,7 @@ void SITargetLowering::passSpecialInputs(
     RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
     CCInfo.AllocateReg(OutgoingArg->getRegister());
   } else {
-    unsigned SpecialArgOffset = CCInfo.AllocateStack(4, 4);
+    unsigned SpecialArgOffset = CCInfo.AllocateStack(4, Align(4));
     SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
                                             SpecialArgOffset);
     MemOpChains.push_back(ArgStore);

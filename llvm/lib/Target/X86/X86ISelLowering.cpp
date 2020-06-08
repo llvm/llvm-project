@@ -3559,7 +3559,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   // Allocate shadow area for Win64.
   if (IsWin64)
-    CCInfo.AllocateStack(32, 8);
+    CCInfo.AllocateStack(32, Align(8));
 
   CCInfo.AnalyzeArguments(Ins, CC_X86);
 
@@ -3898,7 +3898,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Allocate shadow area for Win64.
   if (IsWin64)
-    CCInfo.AllocateStack(32, 8);
+    CCInfo.AllocateStack(32, Align(8));
 
   CCInfo.AnalyzeArguments(Outs, CC_X86);
 
@@ -4631,7 +4631,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
     // Allocate shadow area for Win64
     if (IsCalleeWin64)
-      CCInfo.AllocateStack(32, 8);
+      CCInfo.AllocateStack(32, Align(8));
 
     CCInfo.AnalyzeCallOperands(Outs, CC_X86);
     StackArgsSize = CCInfo.getNextStackOffset();
