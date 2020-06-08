@@ -11642,6 +11642,9 @@ static SDValue tryConvertSVEWideCompare(SDNode *N, ISD::CondCode CC,
     }
     }
 
+    if (!Imm)
+      return SDValue();
+
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, CmpVT, Imm);
     return DAG.getNode(AArch64ISD::SETCC_PRED, DL, VT, Pred, N->getOperand(2),
                        Splat, DAG.getCondCode(CC));
