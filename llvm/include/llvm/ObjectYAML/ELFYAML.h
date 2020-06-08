@@ -93,6 +93,7 @@ struct SectionHeader {
 
 struct SectionHeaderTable {
   std::vector<SectionHeader> Sections;
+  Optional<std::vector<SectionHeader>> Excluded;
 };
 
 struct SectionName {

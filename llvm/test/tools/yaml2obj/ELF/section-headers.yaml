@@ -68,15 +68,15 @@ SectionHeaderTable:
 # RUN:   FileCheck %s --check-prefix=ERR2
 
 # ERR1:      error: repeated section name: '.section.foo' in the section header description
-# ERR1-NEXT: error: section '.section (1)' should be present in the 'Sections' list
-# ERR1-NEXT: error: section '.section (2)' should be present in the 'Sections' list
+# ERR1-NEXT: error: section '.section (1)' should be present in the 'Sections' or 'Excluded' lists
+# ERR1-NEXT: error: section '.section (2)' should be present in the 'Sections' or 'Excluded' lists
 # ERR1-NEXT: error: section header contains undefined section 'unknown'
 
 # ERR2:      error: repeated section name: '.strtab' in the section header description
 # ERR2-NEXT: error: repeated section name: '.shstrtab' in the section header description
-# ERR2-NEXT: error: section '.section (1)' should be present in the 'Sections' list
-# ERR2-NEXT: error: section '.section (2)' should be present in the 'Sections' list
-# ERR2-NEXT: error: section '.section.foo' should be present in the 'Sections' list
+# ERR2-NEXT: error: section '.section (1)' should be present in the 'Sections' or 'Excluded' lists
+# ERR2-NEXT: error: section '.section (2)' should be present in the 'Sections' or 'Excluded' lists
+# ERR2-NEXT: error: section '.section.foo' should be present in the 'Sections' or 'Excluded' lists
 # ERR2-NEXT: error: section header contains undefined section '.filler'
 
 ## Test that we are able to specify an empty sections list for
