@@ -2832,6 +2832,12 @@ void TargetLowering::computeKnownBitsForFrameIndex(
   Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
 }
 
+Align TargetLowering::computeKnownAlignForTargetInstr(
+  GISelKnownBits &Analysis, Register R, const MachineRegisterInfo &MRI,
+  unsigned Depth) const {
+  return Align(1);
+}
+
 /// This method can be implemented by targets that want to expose additional
 /// information about sign bits to the DAG Combiner.
 unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
