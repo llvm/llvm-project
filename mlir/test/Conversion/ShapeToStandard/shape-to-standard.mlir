@@ -39,3 +39,26 @@ func @shape_id(%shape : !shape.shape) -> !shape.shape {
   // CHECK: return %[[SHAPE]] : tensor<?xindex>
   return %shape : !shape.shape
 }
+
+// -----
+
+// Lower `to_extent_tensor` operation to no-op.
+// CHECK-LABEL: @to_extent_tensor
+// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @to_extent_tensor(%shape : !shape.shape) -> tensor<?xindex> {
+  // CHECK-NEXT: return %[[SHAPE]] : tensor<?xindex>
+  %tensor = "shape.to_extent_tensor"(%shape) : (!shape.shape) -> tensor<?xindex>
+  return %tensor : tensor<?xindex>
+}
+
+// -----
+
+// Lower `from_extent_tensor` operation to no-op.
+// CHECK-LABEL: @from_extent_tensor
+// CHECK-SAME: (%[[TENSOR:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @from_extent_tensor(%tensor : tensor<?xindex>) -> !shape.shape {
+  // CHECK-NEXT: return %[[TENSOR]] : tensor<?xindex>
+  %shape = "shape.from_extent_tensor"(%tensor)
+      : (tensor<?xindex>) -> !shape.shape
+  return %shape : !shape.shape
+}
