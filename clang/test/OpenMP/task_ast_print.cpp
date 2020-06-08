@@ -99,7 +99,8 @@ T tmain(T argc, T *argv) {
   T arr[argc];
   omp_depend_t x;
   omp_event_handle_t evt;
-#pragma omp task untied depend(in : argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv) if (task : argc > 0) depend(depobj: x) detach(evt)
+  double *arr_double;
+#pragma omp task untied depend(in : argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv, arr_double[argc]) if (task : argc > 0) depend(depobj: x) detach(evt)
   a = 2;
 #pragma omp task default(none), private(argc, b) firstprivate(argv) shared(d) if (argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv)
   foo();
@@ -116,7 +117,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: T arr[argc];
 // CHECK-NEXT: omp_depend_t x;
 // CHECK-NEXT: omp_event_handle_t evt;
-// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv) if(task: argc > 0) depend(depobj : x) detach(evt)
+// CHECK-NEXT: double *arr_double;
+// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv,arr_double[argc]) if(task: argc > 0) depend(depobj : x) detach(evt)
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv)
 // CHECK-NEXT: foo()
@@ -130,7 +132,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: int arr[argc];
 // CHECK-NEXT: omp_depend_t x;
 // CHECK-NEXT: omp_event_handle_t evt;
-// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv) if(task: argc > 0) depend(depobj : x) detach(evt)
+// CHECK-NEXT: double *arr_double;
+// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv,arr_double[argc]) if(task: argc > 0) depend(depobj : x) detach(evt)
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv)
 // CHECK-NEXT: foo()
@@ -144,7 +147,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: long arr[argc];
 // CHECK-NEXT: omp_depend_t x;
 // CHECK-NEXT: omp_event_handle_t evt;
-// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv) if(task: argc > 0) depend(depobj : x) detach(evt)
+// CHECK-NEXT: double *arr_double;
+// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv,arr_double[argc]) if(task: argc > 0) depend(depobj : x) detach(evt)
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv)
 // CHECK-NEXT: foo()

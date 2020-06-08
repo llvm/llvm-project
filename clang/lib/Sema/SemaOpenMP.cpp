@@ -16128,7 +16128,7 @@ Sema::ActOnOpenMPDependClause(Expr *DepModifier, OpenMPDependClauseKind DepKind,
 
         auto *ASE = dyn_cast<ArraySubscriptExpr>(SimpleExpr);
         if (!RefExpr->IgnoreParenImpCasts()->isLValue() ||
-            (ASE &&
+            (ASE && !ASE->getBase()->isTypeDependent() &&
              !ASE->getBase()
                   ->getType()
                   .getNonReferenceType()
