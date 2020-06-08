@@ -11,6 +11,7 @@
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -29,6 +30,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-safety"
+
+STATISTIC(NumAllocaStackSafe, "Number of safe allocas");
+STATISTIC(NumAllocaTotal, "Number of total allocas");
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -660,9 +664,12 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
         new InfoTy{createGlobalStackSafetyInfo(std::move(Functions)), {}});
     for (auto &FnKV : Info->Info) {
       for (auto &KV : FnKV.second.Allocas) {
+        ++NumAllocaTotal;
         const AllocaInst *AI = KV.first;
-        if (getStaticAllocaSizeRange(*AI).contains(KV.second.Range))
+        if (getStaticAllocaSizeRange(*AI).contains(KV.second.Range)) {
           Info->SafeAllocas.insert(AI);
+          ++NumAllocaStackSafe;
+        }
       }
     }
     if (StackSafetyPrint)
