@@ -29,3 +29,13 @@ func @index_to_size(%index : index) -> !shape.size {
   %size = shape.index_to_size %index
   return %size : !shape.size
 }
+
+// -----
+
+// Convert `shape` to `tensor<?xindex>` type.
+// CHECK-LABEL: @shape_id
+// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>)
+func @shape_id(%shape : !shape.shape) -> !shape.shape {
+  // CHECK: return %[[SHAPE]] : tensor<?xindex>
+  return %shape : !shape.shape
+}
