@@ -179,14 +179,13 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
       if (length == 0) // Placeholder
         continue;
       // As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger than 3.
-      if (length != 3 || !buf.readInt(ident))
+      if ((length != 2 && length != 3) || !buf.readInt(ident))
         return false;
       auto It = IdentToFunction.find(ident);
-      uint32_t linenoChecksum, cfgChecksum;
+      uint32_t linenoChecksum, cfgChecksum = 0;
       buf.readInt(linenoChecksum);
-      buf.readInt(cfgChecksum);
-      if (Version < GCOV::V407)
-        cfgChecksum = 0;
+      if (Version >= GCOV::V407)
+        buf.readInt(cfgChecksum);
       if (It != IdentToFunction.end()) {
         fn = It->second;
         if (linenoChecksum != fn->linenoChecksum ||

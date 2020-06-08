@@ -42,7 +42,7 @@ class FileInfo;
 
 namespace GCOV {
 
-enum GCOVVersion { V402, V407, V408, V800, V900 };
+enum GCOVVersion { V304, V407, V408, V800, V900 };
 
 /// A struct for passing gcov options between functions.
 struct Options {
@@ -132,8 +132,8 @@ public:
       // r173147: split checksum into cfg checksum and line checksum.
       Version = GCOV::V407;
       return true;
-    } else {
-      Version = GCOV::V402;
+    } else if (Major == 4 || (Major == 3 && Minor >= 4)) {
+      Version = GCOV::V304;
       return true;
     }
     errs() << "unexpected version: " << str << "\n";
