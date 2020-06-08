@@ -24,9 +24,9 @@
 // Note: When there is no code in a program, we expect to see the exact same
 // set of external functions provided by the profile runtime.
 
-// RUN: %clang_profgen -fcoverage-mapping -ffunction-sections -fdata-sections -Wl,--gc-sections -shared -o %t.nocode.so %s
+// RUN: %clang_profgen -fuse-ld=lld -fcoverage-mapping -ffunction-sections -fdata-sections -Wl,--gc-sections -shared -o %t.nocode.so %s
 // RUN: llvm-nm -jgU %t.nocode.so | grep -vE "__start_.*|__stop_.*" > %t.nocode.syms
-// RUN: llvm-nm -jgU %t | grep -vE "main|foo|_start|__libc_.*" > %t.code.syms
+// RUN: llvm-nm -jgU %t | grep -vE "main|_start|__libc_.*" > %t.code.syms
 // RUN: diff %t.nocode.syms %t.code.syms
 
 // Note: We also check the IR instrumentation and expect foo() to be garbage
