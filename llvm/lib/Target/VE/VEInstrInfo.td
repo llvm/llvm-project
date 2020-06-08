@@ -112,13 +112,36 @@ def CCOP : SDNodeXForm<imm, [{
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
 
+// zero
+def ZeroAsmOperand : AsmOperandClass {
+  let Name = "Zero";
+}
+def zero : Operand<i32>, PatLeaf<(imm), [{
+    return N->getSExtValue() == 0; }]> {
+  let ParserMatchClass = ZeroAsmOperand;
+}
+
 // uimm1 - Generic immediate value.
 def uimm1 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<1>(N->getZExtValue()); }]>;
 
+// uimm3 - Generic immediate value.
+def UImm3AsmOperand : AsmOperandClass {
+  let Name = "UImm3";
+}
+def uimm3 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<3>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm3AsmOperand;
+}
+
 // uimm6 - Generic immediate value.
+def UImm6AsmOperand : AsmOperandClass {
+  let Name = "UImm6";
+}
 def uimm6 : Operand<i32>, PatLeaf<(imm), [{
-    return isUInt<6>(N->getZExtValue()); }]>;
+    return isUInt<6>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm6AsmOperand;
+}
 
 // uimm7 - Generic immediate value.
 def UImm7AsmOperand : AsmOperandClass {
@@ -700,6 +723,46 @@ multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
   defm na : BCRbpfm<opcStrAf, "", opc, (ins)>;
 }
 
+// Multiclass for communication register instructions.
+//   e.g. LCR
+let hasSideEffects = 1 in
+multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$sy),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ri : RR<opc, (outs RC:$sx), (ins RC:$sz, simm7:$sy),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def zr : RR<opc, (outs RC:$sx), (ins zero:$sz, RC:$sy),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def zi : RR<opc, (outs RC:$sx), (ins zero:$sz, simm7:$sy),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
+// Multiclass for communication register instructions.
+//   e.g. SCR
+let hasSideEffects = 1 in
+multiclass STORECRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rr : RR<opc, (outs), (ins RC:$sz, RC:$sy, RC:$sx),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ri : RR<opc, (outs), (ins RC:$sz, simm7:$sy, RC:$sx),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def zr : RR<opc, (outs), (ins zero:$sz, RC:$sy, RC:$sx),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def zi : RR<opc, (outs), (ins zero:$sz, simm7:$sy, RC:$sx),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
+// Multiclass for communication register instructions.
+//   e.g. FIDCR
+let cz = 0, hasSideEffects = 1 in
+multiclass FIDCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def ri : RR<opc, (outs RC:$sx), (ins RC:$sy, uimm3:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ii : RR<opc, (outs RC:$sx), (ins simm7:$sy, uimm3:$sz),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //
@@ -1143,22 +1206,65 @@ let Defs = [SX10], sx = 10 /* SX10 */, cy = 0, sy = 0, imm32 = 0,
 def CALLr : RM<0x08, (outs), (ins I64:$sz, variable_ops),
                "bsic %s10, (, $sz)", [(call i64:$sz)]>;
 
+//-----------------------------------------------------------------------------
+// Section 8.19 - Control Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.19.1 - SIC (Save Instruction Counter)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [IC] in
+def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
+
+// Section 8.19.2 - LPM (Load Program Mode Flags)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 1, Defs = [PSW] in
+def LPM : RR<0x3a, (outs), (ins I64:$sy), "lpm $sy">;
+
+// Section 8.19.3 - SPM (Save Program Mode Flags)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [PSW] in
+def SPM : RR<0x2a, (outs I64:$sx), (ins), "spm $sx">;
+
+// Section 8.19.4 - LFR (Load Flag Register)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 1, Defs = [PSW] in {
+  def LFRr : RR<0x69, (outs), (ins I64:$sy), "lfr $sy">;
+  let cy = 0 in def LFRi : RR<0x69, (outs), (ins uimm6:$sy), "lfr $sy">;
+}
+
+// Section 8.19.5 - SFR (Save Flag Register)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [PSW] in
+def SFR : RR<0x29, (outs I64:$sx), (ins), "sfr $sx">;
+
+// Section 8.19.6 - SMIR (Save Miscellaneous Register)
+let cy = 0, cz = 0, sz = 0, hasSideEffects = 1 in {
+  def SMIR : RR<0x22, (outs I64:$sx), (ins MISC:$sy), "smir $sx, $sy">;
+}
+
+// Section 8.19.7 - NOP (No Operation)
+let sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
+def NOP : RR<0x79, (outs), (ins), "nop">;
+
+// Section 8.19.8 - MONC (Monitor Call)
+let sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1 in {
+  def MONC : RR<0x3F, (outs), (ins), "monc">;
+  let cx = 1, isTrap = 1 in def MONCHDB : RR<0x3F, (outs), (ins), "monc.hdb">;
+}
+
+// Section 8.19.9 - LCR (Load Communication Register)
+defm LCR : LOADCRm<"lcr", 0x40, I64>;
+
+// Section 8.19.10 - SCR (Save Communication Register)
+defm SCR : STORECRm<"scr", 0x50, I64>;
+
+// Section 8.19.11 - TSCR (Test & Set Communication Register)
+defm TSCR : LOADCRm<"tscr", 0x41, I64>;
+
+// Section 8.19.12 - FIDCR (Fetch & Increment/Decrement CR)
+defm FIDCR : FIDCRm<"fidcr", 0x51, I64>;
+
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
 def SHMri : RM<
     0x31, (outs), (ins MEMASri:$addr, I64:$sx),
     "shm.l $sx, $addr">;
 }
-
-let cx = 0, sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
-def MONC : RR<
-    0x3F, (outs), (ins),
-    "monc">;
-
-// Save Instruction Counter
-
-let cx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 /* , Uses = [IC] */ in
-def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
 
 //===----------------------------------------------------------------------===//
 // Instructions for CodeGenOnly
