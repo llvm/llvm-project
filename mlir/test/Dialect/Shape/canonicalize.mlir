@@ -325,6 +325,42 @@ func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> !shape.shape {
 }
 
 // -----
+// assuming with a known passing witness can be removed
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: source
+  // CHECK-NEXT: sink
+  // CHECK-NEXT: return
+  %0 = shape.const_witness true
+  %1 = shape.assuming %0 -> index {
+    %2 = "test.source"() : () -> (index)
+    shape.assuming_yield %2 : index
+  }
+  "test.sink"(%1) : (index) -> ()
+  return
+}
+
+// -----
+// assuming without a known passing passing witness cannot be removed
+// CHECK-LABEL: func @f
+func @f() {
+  // CHECK-NEXT: test.source
+  // CHECK-NEXT: shape.assuming
+  // CHECK-NEXT:   test.source
+  // CHECK-NEXT:   shape.assuming_yield
+  // CHECK-NEXT: }
+  // CHECK-NEXT: test.sink
+  // CHECK-NEXT: return
+  %0 = "test.source"() : () -> (!shape.witness)
+  %1 = shape.assuming %0 -> index {
+    %2 = "test.source"() : () -> (index)
+    shape.assuming_yield %2 : index
+  }
+  "test.sink"(%1) : (index) -> ()
+  return
+}
+
+// -----
 // Broadcastable with broadcastable constant shapes can be removed.
 // CHECK-LABEL: func @f
 func @f() {
