@@ -143,7 +143,7 @@ public:
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
 
-    static void dumpTableHeader(raw_ostream &OS);
+    static void dumpTableHeader(raw_ostream &OS, unsigned Indent);
 
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return std::tie(LHS.Address.SectionIndex, LHS.Address.Address) <
