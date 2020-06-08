@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 
-#include "AMDGPU.h"
 #include "Cuda.h"
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Driver/Compilation.h"
@@ -126,9 +125,6 @@ public:
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
 
-  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CC1Args) const override;
-
   bool getWindowsSDKLibraryPath(std::string &path) const;
   /// Check if Universal CRT should be used if available
   bool getUniversalCRTLibraryPath(std::string &path) const;
@@ -159,7 +155,6 @@ private:
   std::string VCToolChainPath;
   ToolsetLayout VSLayout = ToolsetLayout::OlderVS;
   CudaInstallationDetector CudaInstallation;
-  RocmInstallationDetector RocmInstallation;
 };
 
 } // end namespace toolchains
