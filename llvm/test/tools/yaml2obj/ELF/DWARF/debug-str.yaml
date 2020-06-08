@@ -15,7 +15,7 @@
 
 # RUN: llvm-readelf -S %t1.o | FileCheck %s --check-prefix=SHDRS-DEFAULT
 
-#                Name       Type     Address          Offset Size   ES Flg Lk Inf Al
+# SHDRS-DEFAULT: Name       Type     Address          Off    Size   ES Flg Lk Inf Al
 # SHDRS-DEFAULT: .debug_str PROGBITS 0000000000000000 000040 000006 01 MS  0  0   1
 
 --- !ELF
@@ -36,7 +36,7 @@ DWARF:
 # RUN: llvm-readelf --string-dump=.debug_str %t2.o | FileCheck %s --check-prefix=DWARF-DEFAULT
 # RUN: llvm-readelf -S %t2.o | FileCheck %s --check-prefix=SHDRS
 
-#        Name       Type     Address          Offset Size   ES Flg Lk Inf Al
+# SHDRS: Name       Type     Address          Off    Size   ES Flg Lk Inf Al
 # SHDRS: .debug_str PROGBITS 0000000000000000 000040 000006 01 MS  0  0   0
 
 --- !ELF
@@ -56,7 +56,7 @@ Sections:
 # RUN: llvm-readelf -S %t3.o | FileCheck %s --check-prefix=SIZE
 # RUN: llvm-readelf --hex-dump=.debug_str %t3.o | FileCheck %s --check-prefix=SIZE-CONTENT
 
-#       Name       Type     Address          Offset Size   ES Flg Lk Inf Al
+# SIZE: Name       Type     Address          Off    Size   ES Flg Lk Inf Al
 # SIZE: .debug_str PROGBITS 0000000000000000 000040 000010 01 MS  0  0   0
 
 #       SIZE-CONTENT: Hex dump of section '.debug_str':
@@ -120,7 +120,7 @@ DWARF:
 # RUN: yaml2obj --docnum=6 %s -o %t6.o
 # RUN: llvm-readelf -S %t6.o | FileCheck %s --check-prefix=OVERRIDDEN
 
-#             Index Name       Type   Address          Offset Size   ES Flg Lk Inf Al
+# OVERRIDDEN: [Nr]  Name       Type   Address          Off    Size   ES Flg Lk Inf Al
 # OVERRIDDEN: [ 1]  .sec       STRTAB 0000000000000000 000040 000000 00     0  0   0
 # OVERRIDDEN: [ 2]  .debug_str STRTAB 0000000000002020 000050 000006 02 A   1  1   2
 
@@ -142,7 +142,7 @@ Sections:
     AddressAlign: 2                  # 0 by default.
     Address:      0x0000000000002020 # 0x00 by default.
     Offset:       0x00000050         # 0x40 for the first section.
-    Size:         6                  # Set the "Size" so that we can reuse the check tag "OVERRIEDDEN"
+    Size:         6                  # Set the "Size" so that we can reuse the check tag "OVERRIDDEN"
 
 ## g) Test that all the properties can be overridden by the section header when
 ## the "debug_str" entry is used.
@@ -189,9 +189,9 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
 
-## i) Test that if we try to initialize the .debug_str section with a preserved "Type", e.g.,
-## SHT_DYNAMIC, yaml2obj will treat it as a dynamic section and discard the content in the
-## "DWARF" entry.
+## i) Test that if we try to initialize the .debug_str section with a "Type" with non-standard
+## syntax, e.g., SHT_DYNAMIC, yaml2obj will treat it as a dynamic section and discard the
+## content in the "DWARF" entry.
 
 # RUN: yaml2obj --docnum=9 %s -o %t9.o
 # RUN: llvm-readelf -S %t9.o | FileCheck %s --check-prefix=DYN-SHDR
@@ -201,8 +201,8 @@ DWARF:
 # RUN: llvm-readelf -S %t10.o | FileCheck %s --check-prefix=DYN-SHDR
 # RUN: llvm-readelf -d %t10.o | FileCheck %s --check-prefix=DYNAMIC
 
-#           Name       Type    Address          Offset Size   ES Flg Lk Inf Al
-# DYN-SHDR: .debug_str DYNAMIC 0000000000000000 000040 000010 10      0   0  0
+# DYN-SHDR: Name       Type    Address          Off    Size   ES Flg Lk Inf Al
+# DYN-SHDR: .debug_str DYNAMIC 0000000000000000 000040 000010 10     0  0   0
 
 #      DYNAMIC: Dynamic section at offset 0x40 contains 1 entries:
 # DYNAMIC-NEXT:  Tag                Type   Name/Value
