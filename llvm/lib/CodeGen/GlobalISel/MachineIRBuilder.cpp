@@ -33,47 +33,9 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.Observer = nullptr;
 }
 
-void MachineIRBuilder::setMBB(MachineBasicBlock &MBB) {
-  State.MBB = &MBB;
-  State.II = MBB.end();
-  assert(&getMF() == MBB.getParent() &&
-         "Basic block is in a different function");
-}
-
-void MachineIRBuilder::setInstr(MachineInstr &MI) {
-  assert(MI.getParent() && "Instruction is not part of a basic block");
-  setMBB(*MI.getParent());
-  State.II = MI.getIterator();
-}
-
-void MachineIRBuilder::setCSEInfo(GISelCSEInfo *Info) { State.CSEInfo = Info; }
-
-void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator II) {
-  assert(MBB.getParent() == &getMF() &&
-         "Basic block is in a different function");
-  State.MBB = &MBB;
-  State.II = II;
-}
-
-void MachineIRBuilder::recordInsertion(MachineInstr *InsertedInstr) const {
-  if (State.Observer)
-    State.Observer->createdInstr(*InsertedInstr);
-}
-
-void MachineIRBuilder::setChangeObserver(GISelChangeObserver &Observer) {
-  State.Observer = &Observer;
-}
-
-void MachineIRBuilder::stopObservingChanges() { State.Observer = nullptr; }
-
 //------------------------------------------------------------------------------
 // Build instruction variants.
 //------------------------------------------------------------------------------
-
-MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opcode) {
-  return insertInstr(buildInstrNoInsert(Opcode));
-}
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
   MachineInstrBuilder MIB = BuildMI(getMF(), getDL(), getTII().get(Opcode));
