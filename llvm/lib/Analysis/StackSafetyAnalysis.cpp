@@ -87,7 +87,7 @@ struct UseInfo {
   // List of calls which pass address as an argument.
   SmallVector<PassAsArgInfo, 4> Calls;
 
-  explicit UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
+  UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
   void updateRange(const ConstantRange &R) {
     assert(!R.isUpperSignWrapped());
@@ -140,7 +140,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
 }
 
 struct FunctionInfo {
-  SmallVector<UseInfo, 4> Allocas;
+  std::map<const AllocaInst *, UseInfo> Allocas;
   SmallVector<UseInfo, 4> Params;
   // TODO: describe return value as depending on one or more of its arguments.
 
@@ -165,13 +165,11 @@ struct FunctionInfo {
 
     O << "    allocas uses:\n";
     if (F) {
-      size_t Pos = 0;
       for (auto &I : instructions(F)) {
         if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-          auto &AS = Allocas[Pos];
+          auto &AS = Allocas.find(AI)->second;
           O << "      " << AI->getName() << "["
             << getStaticAllocaSizeRange(*AI).getUpper() << "]: " << AS << "\n";
-          ++Pos;
         }
       }
     } else {
@@ -391,8 +389,7 @@ FunctionInfo StackSafetyLocalAnalysis::run() {
 
   for (auto &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      Info.Allocas.emplace_back(PointerSize);
-      UseInfo &AS = Info.Allocas.back();
+      UseInfo &AS = Info.Allocas.emplace(AI, PointerSize).first->second;
       analyzeAllUses(AI, AS);
     }
   }
@@ -602,19 +599,18 @@ GVToSSI createGlobalStackSafetyInfo(
 
   for (auto &F : SSDFA.run()) {
     auto FI = F.second;
-    size_t Pos = 0;
     auto &SrcF = Functions[F.first];
-    for (auto &A : FI.Allocas) {
+    for (auto &KV : FI.Allocas) {
+      auto &A = KV.second;
       resolveAllCalls(A);
       for (auto &C : A.Calls) {
         A.updateRange(
             SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
       }
       // FIXME: This is needed only to preserve calls in print() results.
-      A.Calls = SrcF.Allocas[Pos].Calls;
-      ++Pos;
+      A.Calls = SrcF.Allocas.find(KV.first)->second.Calls;
     }
-    Pos = 0;
+    size_t Pos = 0;
     for (auto &P : FI.Params) {
       P.Calls = SrcF.Params[Pos].Calls;
       ++Pos;
@@ -662,20 +658,11 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
     }
     Info.reset(
         new InfoTy{createGlobalStackSafetyInfo(std::move(Functions)), {}});
-    for (auto &KV : Info->Info) {
-      if (!KV.first->isDeclaration()) {
-        size_t Pos = 0;
-        // FIXME: Convert FunctionInfo::Allocas into map<AllocaInst*, UseInfo>
-        // and do not rely on alloca index.
-        for (auto &I : instructions(*cast<Function>(KV.first))) {
-          if (const auto &AI = dyn_cast<AllocaInst>(&I)) {
-            if (getStaticAllocaSizeRange(*AI).contains(
-                    KV.second.Allocas[Pos].Range)) {
-              Info->SafeAllocas.insert(AI);
-            }
-            ++Pos;
-          }
-        }
+    for (auto &FnKV : Info->Info) {
+      for (auto &KV : FnKV.second.Allocas) {
+        const AllocaInst *AI = KV.first;
+        if (getStaticAllocaSizeRange(*AI).contains(KV.second.Range))
+          Info->SafeAllocas.insert(AI);
       }
     }
     if (StackSafetyPrint)
