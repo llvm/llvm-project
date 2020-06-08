@@ -187,6 +187,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
                              "option not supported by llvm-objcopy for MachO");
   }
 
+  // Dump sections before add/remove for compatibility with GNU objcopy.
+  for (StringRef Flag : Config.DumpSection) {
+    StringRef SectionName;
+    StringRef FileName;
+    std::tie(SectionName, FileName) = Flag.split('=');
+    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+      return E;
+  }
+
   if (Error E = removeSections(Config, Obj))
     return E;
 
@@ -200,14 +209,6 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     for (LoadCommand &LC : Obj.LoadCommands)
       for (std::unique_ptr<Section> &Sec : LC.Sections)
         Sec->Relocations.clear();
-
-  for (const StringRef &Flag : Config.DumpSection) {
-    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-    StringRef SecName = SecPair.first;
-    StringRef File = SecPair.second;
-    if (Error E = dumpSectionToFile(SecName, File, Obj))
-      return E;
-  }
 
   for (const auto &Flag : Config.AddSection) {
     std::pair<StringRef, StringRef> SecPair = Flag.split("=");
