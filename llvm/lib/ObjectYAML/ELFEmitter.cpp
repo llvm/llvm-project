@@ -849,11 +849,11 @@ uint64_t emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
                    const DWARFYAML::Data &DWARF, raw_ostream &OS) {
   uint64_t BeginOffset = OS.tell();
   if (Name == ".debug_str")
-    DWARFYAML::EmitDebugStr(OS, DWARF);
+    DWARFYAML::emitDebugStr(OS, DWARF);
   else if (Name == ".debug_aranges")
-    DWARFYAML::EmitDebugAranges(OS, DWARF);
+    DWARFYAML::emitDebugAranges(OS, DWARF);
   else if (Name == ".debug_ranges")
-    DWARFYAML::EmitDebugRanges(OS, DWARF);
+    DWARFYAML::emitDebugRanges(OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 
