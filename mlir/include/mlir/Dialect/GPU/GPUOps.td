@@ -249,7 +249,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
-      return getOperation()->getNumOperands() - getType().getNumInputs() -
+      return getBody().front().getNumArguments() - getType().getNumInputs() -
           getNumWorkgroupAttributions();
     }
  
