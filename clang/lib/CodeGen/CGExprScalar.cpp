@@ -2081,15 +2081,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       }
     }
 
-    // Update heapallocsite metadata when there is an explicit pointer cast.
-    if (auto *CI = dyn_cast<llvm::CallBase>(Src)) {
-      if (CI->getMetadata("heapallocsite") && isa<ExplicitCastExpr>(CE)) {
-        QualType PointeeType = DestTy->getPointeeType();
-        if (!PointeeType.isNull())
-          CGF.getDebugInfo()->addHeapAllocSiteMetadata(CI, PointeeType,
-                                                       CE->getExprLoc());
-      }
-    }
+    // Update heapallocsite metadata when there is an explicit cast.
+    if (llvm::CallInst *CI = dyn_cast<llvm::CallInst>(Src))
+      if (CI->getMetadata("heapallocsite") && isa<ExplicitCastExpr>(CE))
+          CGF.getDebugInfo()->
+              addHeapAllocSiteMetadata(CI, CE->getType(), CE->getExprLoc());
 
     return Builder.CreateBitCast(Src, DstTy);
   }
