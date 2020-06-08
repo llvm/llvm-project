@@ -77,11 +77,8 @@ TEST(StringPrinterTests, CxxASCII) {
   EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
   EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
-  // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
-  // that these are not valid utf8 sequences, but that's OK, the raw values
-  // should still be printed out.
-  EXPECT_NE(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
-  EXPECT_NE(fmt("\xfe"), QUOTE(R"(\xfe)")); // \xfe is 254 in decimal.
+  EXPECT_EQ(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
+  EXPECT_EQ(fmt("\xfe"), QUOTE(R"(\xfe)")); // \xfe is 254 in decimal.
 }
 
 // Test UTF8 formatting for C++.
@@ -114,11 +111,8 @@ TEST(StringPrinterTests, CxxUTF8) {
   EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
   EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
-  // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
-  // that these are not valid utf8 sequences, but that's OK, the raw values
-  // should still be printed out.
-  EXPECT_NE(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
-  EXPECT_NE(fmt("\xfe"), QUOTE(R"(\xfe)")); // \xfe is 254 in decimal.
+  EXPECT_EQ(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
+  EXPECT_EQ(fmt("\xfe"), QUOTE(R"(\xfe)")); // \xfe is 254 in decimal.
 }
 
 // Test UTF8 formatting for Swift.
@@ -151,9 +145,6 @@ TEST(StringPrinterTests, SwiftUTF8) {
   EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
   EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
-  // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
-  // that these are not valid utf8 sequences, but that's OK, the raw values
-  // should still be printed out.
-  EXPECT_NE(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
-  EXPECT_NE(fmt("\xfe"), QUOTE(R"(\xfe)")); // \xfe is 254 in decimal.
+  EXPECT_EQ(fmt("\376"), QUOTE(R"(\u{fe})")); // \376 is 254 in decimal.
+  EXPECT_EQ(fmt("\xfe"), QUOTE(R"(\u{fe})")); // \xfe is 254 in decimal.
 }
