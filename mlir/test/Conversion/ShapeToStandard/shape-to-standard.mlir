@@ -62,3 +62,16 @@ func @from_extent_tensor(%tensor : tensor<?xindex>) -> !shape.shape {
       : (tensor<?xindex>) -> !shape.shape
   return %shape : !shape.shape
 }
+
+// -----
+
+// Lower binary ops.
+// CHECK-LABEL: @binary_ops
+// CHECK-SAME: (%[[LHS:.*]]: index, %[[RHS:.*]]: index)
+func @binary_ops(%lhs : !shape.size, %rhs : !shape.size) {
+  %sum = "shape.add"(%lhs, %rhs) : (!shape.size, !shape.size) -> !shape.size
+  // CHECK-NEXT: addi %[[LHS]], %[[RHS]] : index
+  %product = shape.mul %lhs, %rhs
+  // CHECK-NEXT: muli %[[LHS]], %[[RHS]] : index
+  return
+}
