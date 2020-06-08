@@ -19,12 +19,6 @@ X86_VENDOR(VENDOR_INTEL, "intel")
 X86_VENDOR(VENDOR_AMD,   "amd")
 #undef X86_VENDOR
 
-// This macro is used to implement CPU types that have an alias. As of now
-// there is only ever one alias.
-#ifndef X86_CPU_TYPE_COMPAT_WITH_ALIAS
-#define X86_CPU_TYPE_COMPAT_WITH_ALIAS(ARCHNAME, ENUM, STR, ALIAS) X86_CPU_TYPE_COMPAT(ARCHNAME, ENUM, STR)
-#endif
-
 // This macro is used for cpu types present in compiler-rt/libgcc.
 #ifndef X86_CPU_TYPE_COMPAT
 #define X86_CPU_TYPE_COMPAT(ARCHNAME, ENUM, STR) X86_CPU_TYPE(ARCHNAME, ENUM)
@@ -33,42 +27,54 @@ X86_VENDOR(VENDOR_AMD,   "amd")
 #ifndef X86_CPU_TYPE
 #define X86_CPU_TYPE(ARCHNAME, ENUM)
 #endif
+
+#ifndef X86_CPU_TYPE_COMPAT_ALIAS
+#define X86_CPU_TYPE_COMPAT_ALIAS(ENUM, STR)
+#endif
+
 // The first part of this list must match what is implemented in libgcc and
 // compilert-rt. Clang uses this to know how to implement __builtin_cpu_is.
-X86_CPU_TYPE_COMPAT_WITH_ALIAS("bonnell",       INTEL_BONNELL,       "bonnell", "atom")
-X86_CPU_TYPE_COMPAT           ("core2",         INTEL_CORE2,         "core2")
-X86_CPU_TYPE_COMPAT           ("nehalem",       INTEL_COREI7,        "corei7")
-X86_CPU_TYPE_COMPAT_WITH_ALIAS("amdfam10",      AMDFAM10H,           "amdfam10h", "amdfam10")
-X86_CPU_TYPE_COMPAT_WITH_ALIAS("bdver1",        AMDFAM15H,           "amdfam15h", "amdfam15")
-X86_CPU_TYPE_COMPAT_WITH_ALIAS("silvermont",    INTEL_SILVERMONT,    "silvermont", "slm")
-X86_CPU_TYPE_COMPAT           ("knl",           INTEL_KNL,           "knl")
-X86_CPU_TYPE_COMPAT           ("btver1",        AMD_BTVER1,          "btver1")
-X86_CPU_TYPE_COMPAT           ("btver2",        AMD_BTVER2,          "btver2")
-X86_CPU_TYPE_COMPAT           ("znver1",        AMDFAM17H,           "amdfam17h")
-X86_CPU_TYPE_COMPAT           ("knm",           INTEL_KNM,           "knm")
-X86_CPU_TYPE_COMPAT           ("goldmont",      INTEL_GOLDMONT,      "goldmont")
-X86_CPU_TYPE_COMPAT           ("goldmont-plus", INTEL_GOLDMONT_PLUS, "goldmont-plus")
-X86_CPU_TYPE_COMPAT           ("tremont",       INTEL_TREMONT,       "tremont")
+X86_CPU_TYPE_COMPAT("bonnell",       INTEL_BONNELL,       "bonnell")
+X86_CPU_TYPE_COMPAT("core2",         INTEL_CORE2,         "core2")
+X86_CPU_TYPE_COMPAT("nehalem",       INTEL_COREI7,        "corei7")
+X86_CPU_TYPE_COMPAT("amdfam10",      AMDFAM10H,           "amdfam10h")
+X86_CPU_TYPE_COMPAT("bdver1",        AMDFAM15H,           "amdfam15h")
+X86_CPU_TYPE_COMPAT("silvermont",    INTEL_SILVERMONT,    "silvermont")
+X86_CPU_TYPE_COMPAT("knl",           INTEL_KNL,           "knl")
+X86_CPU_TYPE_COMPAT("btver1",        AMD_BTVER1,          "btver1")
+X86_CPU_TYPE_COMPAT("btver2",        AMD_BTVER2,          "btver2")
+X86_CPU_TYPE_COMPAT("znver1",        AMDFAM17H,           "amdfam17h")
+X86_CPU_TYPE_COMPAT("knm",           INTEL_KNM,           "knm")
+X86_CPU_TYPE_COMPAT("goldmont",      INTEL_GOLDMONT,      "goldmont")
+X86_CPU_TYPE_COMPAT("goldmont-plus", INTEL_GOLDMONT_PLUS, "goldmont-plus")
+X86_CPU_TYPE_COMPAT("tremont",       INTEL_TREMONT,       "tremont")
 // Entries below this are not in libgcc/compiler-rt.
-X86_CPU_TYPE                  ("i386",        INTEL_i386)
-X86_CPU_TYPE                  ("i486",        INTEL_i486)
-X86_CPU_TYPE                  ("pentium",     INTEL_PENTIUM)
-X86_CPU_TYPE                  ("pentium-mmx", INTEL_PENTIUM_MMX)
-X86_CPU_TYPE                  ("pentiumpro",  INTEL_PENTIUM_PRO)
-X86_CPU_TYPE                  ("pentium2",    INTEL_PENTIUM_II)
-X86_CPU_TYPE                  ("pentium3",    INTEL_PENTIUM_III)
-X86_CPU_TYPE                  ("pentium4",    INTEL_PENTIUM_IV)
-X86_CPU_TYPE                  ("pentium-m",   INTEL_PENTIUM_M)
-X86_CPU_TYPE                  ("yonah",       INTEL_CORE_DUO)
-X86_CPU_TYPE                  ("nocona",      INTEL_NOCONA)
-X86_CPU_TYPE                  ("prescott",    INTEL_PRESCOTT)
-X86_CPU_TYPE                  ("i486",        AMD_i486)
-X86_CPU_TYPE                  ("pentium",     AMDPENTIUM)
-X86_CPU_TYPE                  ("athlon",      AMD_ATHLON)
-X86_CPU_TYPE                  ("athlon-xp",   AMD_ATHLON_XP)
-X86_CPU_TYPE                  ("k8",          AMD_K8)
-X86_CPU_TYPE                  ("k8-sse3",     AMD_K8SSE3)
-#undef X86_CPU_TYPE_COMPAT_WITH_ALIAS
+X86_CPU_TYPE       ("i386",          INTEL_i386)
+X86_CPU_TYPE       ("i486",          INTEL_i486)
+X86_CPU_TYPE       ("pentium",       INTEL_PENTIUM)
+X86_CPU_TYPE       ("pentium-mmx",   INTEL_PENTIUM_MMX)
+X86_CPU_TYPE       ("pentiumpro",    INTEL_PENTIUM_PRO)
+X86_CPU_TYPE       ("pentium2",      INTEL_PENTIUM_II)
+X86_CPU_TYPE       ("pentium3",      INTEL_PENTIUM_III)
+X86_CPU_TYPE       ("pentium4",      INTEL_PENTIUM_IV)
+X86_CPU_TYPE       ("pentium-m",     INTEL_PENTIUM_M)
+X86_CPU_TYPE       ("yonah",         INTEL_CORE_DUO)
+X86_CPU_TYPE       ("nocona",        INTEL_NOCONA)
+X86_CPU_TYPE       ("prescott",      INTEL_PRESCOTT)
+X86_CPU_TYPE       ("i486",          AMD_i486)
+X86_CPU_TYPE       ("pentium",       AMDPENTIUM)
+X86_CPU_TYPE       ("athlon",        AMD_ATHLON)
+X86_CPU_TYPE       ("athlon-xp",     AMD_ATHLON_XP)
+X86_CPU_TYPE       ("k8",            AMD_K8)
+X86_CPU_TYPE       ("k8-sse3",       AMD_K8SSE3)
+
+// Alternate names supported by __builtin_cpu_is and target multiversioning.
+X86_CPU_TYPE_COMPAT_ALIAS(INTEL_BONNELL,    "atom")
+X86_CPU_TYPE_COMPAT_ALIAS(AMDFAM10H,        "amdfam10")
+X86_CPU_TYPE_COMPAT_ALIAS(AMDFAM15H,        "amdfam15")
+X86_CPU_TYPE_COMPAT_ALIAS(INTEL_SILVERMONT, "slm")
+
+#undef X86_CPU_TYPE_COMPAT_ALIAS
 #undef X86_CPU_TYPE_COMPAT
 #undef X86_CPU_TYPE
 
