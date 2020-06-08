@@ -135,8 +135,8 @@ define void @test_f64(double* %p) {
 ; CHECK-LABEL: @test_f64(
 ; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P:%.*]], align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P]], align 8
-; CHECK-NEXT:    store volatile double 0x3FE6A09E667F3BCD, double* [[P]], align 8
-; CHECK-NEXT:    store volatile double 0x3FE6A09E667F3BCD, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 0x3FE6A09E667F3B{{.*}}, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 0x3FE6A09E667F3B{{.*}}, double* [[P]], align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, double* [[P]], align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, double* [[P]], align 8
 ; CHECK-NEXT:    store volatile double -1.000000e+00, double* [[P]], align 8
