@@ -1,0 +1,39 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -aarch64-load-store-renaming=true -o - %s | FileCheck %s
+--- |
+  define void @test_ld3(<8 x i8>* %a1) {
+  entry:
+    %s1 = alloca i64
+    ret void
+  }
+
+...
+---
+# CHECK-LABEL: name: test_ld3
+# CHECK: bb.0.entry:
+# CHECK:       renamable $x0, $d1_d2_d3 = LD3Threev8b_POST killed renamable $x0, $xzr
+# CHECK-NEXT:  STPDi renamable $d0, renamable $d1, $fp, -6 :: (store 8)
+# CHECK-NEXT:  renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load 24 from %ir.a1, align 32)
+# CHECK-NEXT:  STPDi $d3, renamable $d0, $fp, -4 :: (store 8 into %ir.s1), (store 8)
+# CHECK-NEXT:  STPDi renamable $d1, renamable $d2, $fp, -2 :: (store 8)
+# CHECK-NEXT:  RET undef $lr
+#
+name:            test_ld3
+alignment:       4
+tracksRegLiveness: true
+frameInfo: {}
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $lr, $fp
+
+    renamable $x0, renamable $d0_d1_d2 = LD3Threev8b_POST killed renamable $x0, $xzr
+    STURDi renamable $d0, $fp, -48 :: (store 8)
+    STURDi renamable $d1, $fp, -40 :: (store 8)
+    STURDi renamable $d2, $fp, -32, implicit killed $d0_d1_d2 :: (store 8 into %ir.s1)
+    renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load 24 from %ir.a1, align 32)
+    STURDi renamable $d0, $fp, -24 :: (store 8)
+    STURDi renamable $d1, $fp, -16 :: (store 8)
+    STURDi renamable $d2, $fp, -8, implicit killed $d0_d1_d2 :: (store 8)
+    RET undef $lr
+
+...
