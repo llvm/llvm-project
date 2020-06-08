@@ -5,10 +5,10 @@
 declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>)
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>)
 
-; Use widest possible vector for movmsk comparisons
+; Use widest possible vector for movmsk comparisons (PR37087)
 
-define i1 @movmskps_bitcast_v4f64(<4 x double> %a0) {
-; CHECK-LABEL: movmskps_bitcast_v4f64:
+define i1 @movmskps_noneof_bitcast_v4f64(<4 x double> %a0) {
+; CHECK-LABEL: movmskps_noneof_bitcast_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
@@ -22,6 +22,24 @@ define i1 @movmskps_bitcast_v4f64(<4 x double> %a0) {
   %3 = bitcast <4 x i64> %2 to <8 x float>
   %4 = tail call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %3)
   %5 = icmp eq i32 %4, 0
+  ret i1 %5
+}
+
+define i1 @movmskps_allof_bitcast_v4f64(<4 x double> %a0) {
+; CHECK-LABEL: movmskps_allof_bitcast_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovmskps %ymm0, %eax
+; CHECK-NEXT:    cmpl $255, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %1 = fcmp oeq <4 x double> %a0, zeroinitializer
+  %2 = sext <4 x i1> %1 to <4 x i64>
+  %3 = bitcast <4 x i64> %2 to <8 x float>
+  %4 = tail call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %3)
+  %5 = icmp eq i32 %4, 255
   ret i1 %5
 }
 
