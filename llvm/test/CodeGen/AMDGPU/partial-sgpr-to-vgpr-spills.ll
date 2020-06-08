@@ -563,9 +563,8 @@ ret:
 ; GCN: ; use s{{\[}}[[USE_TMP_LO]]:[[USE_TMP_HI]]{{\]}}
 
 ; GCN: buffer_load_dword v[[RESTORE_TMP:[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0
-; GCN: v_readfirstlane_b32 s[[USE_TMP_LO:[0-9]+]], v[[RESTORE_TMP]]
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0
-; GCN: v_readfirstlane_b32 s[[USE_TMP_HI:[0-9]+]], v[[RESTORE_TMP]]
+; GCN: v_readlane_b32 s[[USE_TMP_LO:[0-9]+]], v[[RESTORE_TMP]], 0
+; GCN: v_readlane_b32 s[[USE_TMP_HI:[0-9]+]], v[[RESTORE_TMP]], 1
 ; GCN: ;;#ASMSTART
 ; GCN: ; use s{{\[}}[[USE_TMP_LO]]:[[USE_TMP_HI]]{{\]}}
 define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
