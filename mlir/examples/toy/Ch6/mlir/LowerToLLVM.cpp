@@ -6,9 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a partial lowering of Toy operations to a combination of
-// affine loops and standard operations. This lowering expects that all calls
-// have been inlined, and all shapes have been resolved.
+// This file implements full lowering of Toy operations to LLVM MLIR dialect.
+// 'toy.print' is lowered to a loop nest that calls `printf` on each element of
+// the input array. The file also sets up the ToyToLLVMLoweringPass. This pass
+// lowers the combination of Affine + SCF + Standard dialects to the LLVM one:
+//
+//                         Affine --
+//                                  |
+//                                  v
+//                                  Standard --> LLVM (Dialect)
+//                                  ^
+//                                  |
+//     'toy.print' --> Loop (SCF) --
 //
 //===----------------------------------------------------------------------===//
 
