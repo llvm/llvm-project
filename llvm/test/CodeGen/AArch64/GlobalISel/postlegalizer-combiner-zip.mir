@@ -3,7 +3,7 @@
 # Check that we can recognize a shuffle mask for a zip instruction, and produce
 # G_ZIP1 or G_ZIP2 where appropriate.
 #
-# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner --aarch64postlegalizercombinerhelper-disable-rule=ext -verify-machineinstrs %s -o - | FileCheck %s
 
 ...
 ---
