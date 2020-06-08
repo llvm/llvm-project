@@ -639,7 +639,7 @@ public:
     return N->kind() == NodeKind::TrailingReturnType;
   }
   // TODO: add accessors for specifiers.
-  syntax::Leaf *arrow();
+  syntax::Leaf *arrowToken();
   syntax::SimpleDeclarator *declarator();
 };
 
