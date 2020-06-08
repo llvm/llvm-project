@@ -549,10 +549,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X86-AVX512F-NEXT:    kmovw %ecx, %k1
 ; X86-AVX512F-NEXT:    movzbl (%eax), %eax
 ; X86-AVX512F-NEXT:    kmovw %eax, %k2
+; X86-AVX512F-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512F-NEXT:    kandw %k2, %k0, %k0
-; X86-AVX512F-NEXT:    kxnorw %k0, %k0, %k3
-; X86-AVX512F-NEXT:    kxorw %k3, %k2, %k2
-; X86-AVX512F-NEXT:    kandw %k2, %k1, %k1
 ; X86-AVX512F-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
 ; X86-AVX512F-NEXT:    movb %al, (%edx)
@@ -567,10 +565,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X64-AVX512F-NEXT:    kmovw %eax, %k1
 ; X64-AVX512F-NEXT:    movzbl (%rdi), %eax
 ; X64-AVX512F-NEXT:    kmovw %eax, %k2
+; X64-AVX512F-NEXT:    kandnw %k1, %k2, %k1
 ; X64-AVX512F-NEXT:    kandw %k2, %k0, %k0
-; X64-AVX512F-NEXT:    kxnorw %k0, %k0, %k3
-; X64-AVX512F-NEXT:    kxorw %k3, %k2, %k2
-; X64-AVX512F-NEXT:    kandw %k2, %k1, %k1
 ; X64-AVX512F-NEXT:    korw %k1, %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    movb %al, (%rsi)
@@ -588,10 +584,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512BW-NEXT:    movzbl (%eax), %eax
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k2
+; X86-AVX512BW-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512BW-NEXT:    kandw %k2, %k0, %k0
-; X86-AVX512BW-NEXT:    kxnorw %k0, %k0, %k3
-; X86-AVX512BW-NEXT:    kxorw %k3, %k2, %k2
-; X86-AVX512BW-NEXT:    kandw %k2, %k1, %k1
 ; X86-AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512BW-NEXT:    movb %al, (%edx)
@@ -606,10 +600,8 @@ define void @vselect_v1i1(<1 x i1>* %w, <1 x i1>* %x, <1 x i1>* %y) nounwind {
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X64-AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k2
+; X64-AVX512BW-NEXT:    kandnw %k1, %k2, %k1
 ; X64-AVX512BW-NEXT:    kandw %k2, %k0, %k0
-; X64-AVX512BW-NEXT:    kxnorw %k0, %k0, %k3
-; X64-AVX512BW-NEXT:    kxorw %k3, %k2, %k2
-; X64-AVX512BW-NEXT:    kandw %k2, %k1, %k1
 ; X64-AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    movb %al, (%rsi)
