@@ -285,3 +285,25 @@ XcodeSDK::Type XcodeSDK::GetSDKTypeForTriple(const llvm::Triple &triple) {
     return XcodeSDK::unknown;
   }
 }
+
+std::string XcodeSDK::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
+  auto begin = llvm::sys::path::begin(path);
+  auto end = llvm::sys::path::end(path);
+
+  // Iterate over the path components until we find something that ends with
+  // .app. If the next component is Contents then we've found the Contents
+  // directory.
+  for (auto it = begin; it != end; ++it) {
+    if (it->endswith(".app")) {
+      auto next = it;
+      if (++next != end && *next == "Contents") {
+        llvm::SmallString<128> buffer;
+        llvm::sys::path::append(buffer, begin, ++next,
+                                llvm::sys::path::Style::posix);
+        return buffer.str().str();
+      }
+    }
+  }
+
+  return {};
+}

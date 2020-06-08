@@ -18,11 +18,10 @@
 #ifndef LLVM_ANALYSIS_ORDEREDINSTRUCTIONS_H
 #define LLVM_ANALYSIS_ORDEREDINSTRUCTIONS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Operator.h"
-
 namespace llvm {
+
+class DominatorTree;
+class Instruction;
 
 class OrderedInstructions {
   /// The dominator tree of the parent function.

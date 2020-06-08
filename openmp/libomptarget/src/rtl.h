@@ -26,6 +26,7 @@ struct __tgt_bin_desc;
 
 struct RTLInfoTy {
   typedef int32_t(is_valid_binary_ty)(void *);
+  typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
@@ -36,6 +37,9 @@ struct RTLInfoTy {
   typedef int32_t(data_retrieve_ty)(int32_t, void *, void *, int64_t);
   typedef int32_t(data_retrieve_async_ty)(int32_t, void *, void *, int64_t,
                                           __tgt_async_info *);
+  typedef int32_t(data_exchange_ty)(int32_t, void *, int32_t, void *, int64_t);
+  typedef int32_t(data_exchange_async_ty)(int32_t, void *, int32_t, void *,
+                                          int64_t, __tgt_async_info *);
   typedef int32_t(data_delete_ty)(int32_t, void *);
   typedef int32_t(run_region_ty)(int32_t, void *, void **, ptrdiff_t *,
                                  int32_t);
@@ -64,6 +68,7 @@ struct RTLInfoTy {
 
   // Functions implemented in the RTL.
   is_valid_binary_ty *is_valid_binary = nullptr;
+  is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;
   load_binary_ty *load_binary = nullptr;
@@ -72,6 +77,8 @@ struct RTLInfoTy {
   data_submit_async_ty *data_submit_async = nullptr;
   data_retrieve_ty *data_retrieve = nullptr;
   data_retrieve_async_ty *data_retrieve_async = nullptr;
+  data_exchange_ty *data_exchange = nullptr;
+  data_exchange_async_ty *data_exchange_async = nullptr;
   data_delete_ty *data_delete = nullptr;
   run_region_ty *run_region = nullptr;
   run_region_async_ty *run_region_async = nullptr;
@@ -100,6 +107,7 @@ struct RTLInfoTy {
     RTLName = r.RTLName;
 #endif
     is_valid_binary = r.is_valid_binary;
+    is_data_exchangable = r.is_data_exchangable;
     number_of_devices = r.number_of_devices;
     init_device = r.init_device;
     load_binary = r.load_binary;
@@ -108,6 +116,8 @@ struct RTLInfoTy {
     data_submit_async = r.data_submit_async;
     data_retrieve = r.data_retrieve;
     data_retrieve_async = r.data_retrieve_async;
+    data_exchange = r.data_exchange;
+    data_exchange_async = r.data_exchange_async;
     data_delete = r.data_delete;
     run_region = r.run_region;
     run_region_async = r.run_region_async;

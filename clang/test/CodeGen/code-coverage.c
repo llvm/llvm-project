@@ -1,8 +1,9 @@
-/// We support coverage versions 4.2, 4.7 and 4.8.
+/// We support coverage versions 3.4, 4.7 and 4.8.
+/// 3.4 redesigns the format and changed .da to .gcda
 /// 4.7 enables cfg_checksum.
 /// 4.8 (default, compatible with gcov 7) emits the exit block the second.
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-version='402*' %s -o - | \
-// RUN:   FileCheck --check-prefixes=CHECK,402 %s
+// RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-version='304*' %s -o - | \
+// RUN:   FileCheck --check-prefixes=CHECK,304 %s
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-version='407*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,407 %s
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data %s -o - | \
@@ -35,12 +36,17 @@ int test2(int b) {
   return b * 2;
 }
 
-// 402: private unnamed_addr constant [5 x i8] c"*204\00"
-// 407: private unnamed_addr constant [5 x i8] c"*704\00"
-// 408: private unnamed_addr constant [5 x i8] c"*804\00"
 
 // CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %0]
 // CHECK-SAME: [%0 zeroinitializer, %0 { i32 1, i32 0, i32 0 }]
+
+// CHECK: @__llvm_internal_gcov_emit_file_info = internal unnamed_addr constant [1 x %2]
+/// 0x3330342a '3' '0' '4' '*'
+// 304-SAME: i32 858797098
+/// 0x3430372a '4' '0' '7' '*'
+// 407-SAME: i32 875575082
+/// 0x3430382a '4' '0' '8' '*'
+// 408-SAME: i32 875575338
 
 // Check that the noredzone flag is set on the generated functions.
 

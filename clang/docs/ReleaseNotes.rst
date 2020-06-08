@@ -54,6 +54,10 @@ Improvements to Clang's diagnostics
 - -Wpointer-to-int-cast is a new warning group. This group warns about C-style
   casts of pointers to a integer type too small to hold all possible values.
 
+- -Wuninitialized-const-reference is a new warning controlled by 
+  -Wuninitialized. It warns on cases where uninitialized variables are passed
+  as const reference arguments to a function.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -90,8 +94,8 @@ New Compiler Flags
 ------------------
 
 - -fstack-clash-protection will provide a protection against the stack clash
-  attack for x86 architecture through automatic probing of each page of
-  allocated stack.
+  attack for x86 and s390x architectures through automatic probing of each page
+  of allocated stack.
 
 - -ffp-exception-behavior={ignore,maytrap,strict} allows the user to specify
   the floating-point exception behavior. The default setting is ``ignore``.

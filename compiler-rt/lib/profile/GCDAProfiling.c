@@ -349,7 +349,7 @@ static void unmap_file() {
  * started at a time.
  */
 COMPILER_RT_VISIBILITY
-void llvm_gcda_start_file(const char *orig_filename, const char version[4],
+void llvm_gcda_start_file(const char *orig_filename, uint32_t version,
                           uint32_t checksum) {
   const char *mode = "r+b";
   filename = mangle_filename(orig_filename);
@@ -406,20 +406,15 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
   }
 
   /* gcda file, version, stamp checksum. */
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  gcov_version = version[3] >= 'A'
-                     ? (version[3] - 'A') * 100 + (version[2] - '0') * 10 +
-                           version[1] - '0'
-                     : (version[3] - '0') * 10 + version[1] - '0';
-#else
-  gcov_version = version[0] >= 'A'
-                     ? (version[0] - 'A') * 100 + (version[1] - '0') * 10 +
-                           version[2] - '0'
-                     : (version[0] - '0') * 10 + version[2] - '0';
-#endif
-
+  {
+    uint8_t c3 = version >> 24;
+    uint8_t c2 = (version >> 16) & 255;
+    uint8_t c1 = (version >> 8) & 255;
+    gcov_version = c3 >= 'A' ? (c3 - 'A') * 100 + (c2 - '0') * 10 + c1 - '0'
+                             : (c3 - '0') * 10 + c1 - '0';
+  }
   write_32bit_value(GCOV_DATA_MAGIC);
-  write_bytes(version, 4);
+  write_32bit_value(version);
   write_32bit_value(checksum);
 
 #ifdef DEBUG_GCDAPROFILING
@@ -550,10 +545,15 @@ void llvm_gcda_summary_info() {
     }
 
     val = read_32bit_value(); /* length */
-    read_32bit_value();
-    if (gcov_version < 90)
+    uint32_t prev_runs;
+    if (gcov_version < 90) {
       read_32bit_value();
-    uint32_t prev_runs = read_32bit_value();
+      read_32bit_value();
+      prev_runs = read_32bit_value();
+    } else {
+      prev_runs = read_32bit_value();
+      read_32bit_value();
+    }
     for (uint32_t i = gcov_version < 90 ? 3 : 2; i < val; ++i)
       read_32bit_value();
     /* Add previous run count to new counter, if not already counted before. */

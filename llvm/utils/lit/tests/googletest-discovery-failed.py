@@ -5,6 +5,6 @@
 
 
 # CHECK: -- Testing:
-# CHECK: Failing Tests (1):
+# CHECK: Failed Tests (1):
 # CHECK:   googletest-discovery-failed :: subdir/OneTest.py/failed_to_discover_tests_from_gtest
-# CHECK: Unexpected Failures: 1
+# CHECK: Failed: 1

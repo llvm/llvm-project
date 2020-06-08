@@ -1109,11 +1109,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    const MaybeAlign StoreAlign = SI->getAlign();
-    const MaybeAlign LoadAlign = LI->getAlign();
-    if (StoreAlign == None || LoadAlign == None)
-      return false;
-    if (*StoreAlign < StoreSize || *LoadAlign < StoreSize)
+    const Align StoreAlign = SI->getAlign();
+    const Align LoadAlign = LI->getAlign();
+    if (StoreAlign < StoreSize || LoadAlign < StoreSize)
       return false;
 
     // If the element.atomic memcpy is not lowered into explicit
@@ -1127,7 +1125,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes,
+        StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
         StoreSize);
   }
   NewCall->setDebugLoc(SI->getDebugLoc());

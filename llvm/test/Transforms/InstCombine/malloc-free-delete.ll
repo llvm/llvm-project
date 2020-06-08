@@ -140,6 +140,31 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
+; Same optimization with even a builtin 'operator delete' would be
+; incorrect in general.
+; 'if (p) delete p;' cannot result in a call to 'operator delete(0)'.
+define void @test6a(i8* %foo) minsize {
+; CHECK-LABEL: @test6a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]])
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+entry:
+  %tobool = icmp eq i8* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @_ZdlPv(i8* %foo) builtin
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
 declare i8* @_ZnwmRKSt9nothrow_t(i64, i8*) nobuiltin
 declare void @_ZdlPvRKSt9nothrow_t(i8*, i8*) nobuiltin
 declare i32 @__gxx_personality_v0(...)

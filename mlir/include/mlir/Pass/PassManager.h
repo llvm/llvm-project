@@ -13,13 +13,13 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <functional>
 #include <vector>
 
 namespace llvm {
 class Any;
-raw_ostream &errs();
 } // end namespace llvm
 
 namespace mlir {

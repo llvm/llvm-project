@@ -106,8 +106,8 @@ struct LinalgPromotionOptions {
   /// If true all operands unspecified by `useFullTileBuffers` will use the full
   /// view, otherwise the partial view.
   bool useFullTileBuffersDefault = false;
-  LinalgPromotionOptions &useFullTileBuffersByDefault() {
-    useFullTileBuffersDefault = true;
+  LinalgPromotionOptions &setUseFullTileBuffersByDefault(bool use) {
+    useFullTileBuffersDefault = use;
     return *this;
   }
   /// Allow the use of dynamicaly-sized buffers.
@@ -400,8 +400,7 @@ enum class LinalgLoweringType {
   AffineLoops = 2,
   ParallelLoops = 3
 };
-template <typename OpTy>
-struct LinalgLoweringPattern : public RewritePattern {
+template <typename OpTy> struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(MLIRContext *context, LinalgLoweringType loweringType,
                         LinalgMarker marker = LinalgMarker(),
                         PatternBenefit benefit = 1)

@@ -29,6 +29,15 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
 def ADJDYNALLOC : Pseudo<(outs GR64:$dst), (ins dynalloc12only:$src),
                          [(set GR64:$dst, dynalloc12only:$src)]>;
 
+let Defs = [R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
+    usesCustomInserter = 1 in
+  def PROBED_ALLOCA : Pseudo<(outs GR64:$dst),
+                             (ins GR64:$oldSP, GR64:$space),
+           [(set GR64:$dst, (z_probed_alloca GR64:$oldSP, GR64:$space))]>;
+
+let Defs = [R1D, R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in
+  def PROBED_STACKALLOC : Pseudo<(outs), (ins i64imm:$stacksize), []>;
 
 //===----------------------------------------------------------------------===//
 // Branch instructions

@@ -26,6 +26,11 @@ EVT EVT::changeExtendedVectorElementTypeToInteger() const {
                      isScalableVector());
 }
 
+EVT EVT::changeExtendedVectorElementType(EVT EltVT) const {
+  LLVMContext &Context = LLVMTy->getContext();
+  return getVectorVT(Context, EltVT, getVectorElementCount());
+}
+
 EVT EVT::getExtendedIntegerVT(LLVMContext &Context, unsigned BitWidth) {
   EVT VT;
   VT.LLVMTy = IntegerType::get(Context, BitWidth);

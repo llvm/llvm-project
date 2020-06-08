@@ -50,8 +50,7 @@ class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1On
 
   let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
 
-  // FIXME
-  // let mayRaiseFPException = ReadsModeReg;
+  let mayRaiseFPException = ReadsModeReg;
 
   let VOP1 = 1;
   let VALU = 1;

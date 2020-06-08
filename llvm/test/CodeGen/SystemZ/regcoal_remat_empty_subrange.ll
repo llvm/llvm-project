@@ -5,6 +5,7 @@
 ; during coalescing.
 ;
 ; PR46154
+; REQUIRES: asserts
 
 @g_39 = external dso_local unnamed_addr global i64, align 8
 @g_151 = external dso_local global i32, align 4

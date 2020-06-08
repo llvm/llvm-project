@@ -215,6 +215,7 @@ def OP_UNAVAILABLE : Operation {
 // f: float
 // h: half-float
 // d: double
+// b: bfloat16
 //
 // Typespec modifiers
 // ------------------
@@ -236,6 +237,7 @@ def OP_UNAVAILABLE : Operation {
 // S: change to signed integer category.
 // U: change to unsigned integer category.
 // F: change to floating category.
+// B: change to BFloat16
 // P: change to polynomial category.
 // p: change polynomial to equivalent integer category. Otherwise nop.
 //
@@ -265,7 +267,6 @@ class Inst <string n, string p, string t, Operation o> {
   string ArchGuard = "";
 
   Operation Operation = o;
-  bit CartesianProductOfTypes = 0;
   bit BigEndianSafe = 0;
   bit isShift = 0;
   bit isScalarShift = 0;
@@ -287,6 +288,8 @@ class Inst <string n, string p, string t, Operation o> {
   // this. Ex: vset_lane which outputs vmov instructions.
   bit isHiddenWInst = 0;
   bit isHiddenLInst = 0;
+
+  string CartesianProductWith = "";
 }
 
 // The following instruction classes are implemented via builtins.

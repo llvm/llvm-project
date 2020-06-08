@@ -260,7 +260,7 @@ EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
 const char *PlatformiOSSimulator::GetSDKDirectoryAsCString() {
   std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory.empty()) {
-    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+    if (FileSpec fspec = HostInfo::GetXcodeDeveloperDirectory()) {
       std::string developer_dir = fspec.GetPath();
       char sdks_directory[PATH_MAX];
       char sdk_dirname[PATH_MAX];

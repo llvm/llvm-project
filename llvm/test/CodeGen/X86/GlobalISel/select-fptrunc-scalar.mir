@@ -27,8 +27,8 @@ body:             |
     ; ALL: liveins: $xmm0
     ; ALL: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
     ; ALL: [[COPY1:%[0-9]+]]:fr64 = COPY [[COPY]]
-    ; ALL: [[CVTSD2SSrr:%[0-9]+]]:fr32 = CVTSD2SSrr [[COPY1]]
-    ; ALL: [[COPY2:%[0-9]+]]:vr128 = COPY [[CVTSD2SSrr]]
+    ; ALL: %2:fr32 = nofpexcept CVTSD2SSrr [[COPY1]], implicit $mxcsr
+    ; ALL: [[COPY2:%[0-9]+]]:vr128 = COPY %2
     ; ALL: $xmm0 = COPY [[COPY2]]
     ; ALL: RET 0, implicit $xmm0
     %1:vecr(s128) = COPY $xmm0

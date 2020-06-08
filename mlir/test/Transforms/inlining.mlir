@@ -32,7 +32,7 @@ func @func_with_multi_return(%a : i1) -> (i32) {
 
 // CHECK-LABEL: func @inline_with_multi_return() -> i32
 func @inline_with_multi_return() -> i32 {
-// CHECK-NEXT:    [[VAL_7:%.*]] = constant 0 : i1
+// CHECK-NEXT:    [[VAL_7:%.*]] = constant false
 // CHECK-NEXT:    cond_br [[VAL_7]], ^bb1, ^bb2
 // CHECK:       ^bb1:
 // CHECK-NEXT:    [[VAL_8:%.*]] = constant 0 : i32
@@ -43,7 +43,7 @@ func @inline_with_multi_return() -> i32 {
 // CHECK:       ^bb3([[VAL_10:%.*]]: i32):
 // CHECK-NEXT:    return [[VAL_10]] : i32
 
-  %false = constant 0 : i1
+  %false = constant false
   %x = call @func_with_multi_return(%false) : (i1) -> i32
   return %x : i32
 }

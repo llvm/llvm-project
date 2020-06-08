@@ -33,6 +33,21 @@ template <class IRBuilderTy> class MatrixBuilder {
   IRBuilderTy &B;
   Module *getModule() { return B.GetInsertBlock()->getParent()->getParent(); }
 
+  std::pair<Value *, Value *> splatScalarOperandIfNeeded(Value *LHS,
+                                                         Value *RHS) {
+    assert((LHS->getType()->isVectorTy() || RHS->getType()->isVectorTy()) &&
+           "One of the operands must be a matrix (embedded in a vector)");
+    if (LHS->getType()->isVectorTy() && !RHS->getType()->isVectorTy())
+      RHS = B.CreateVectorSplat(
+          cast<VectorType>(LHS->getType())->getNumElements(), RHS,
+          "scalar.splat");
+    else if (!LHS->getType()->isVectorTy() && RHS->getType()->isVectorTy())
+      LHS = B.CreateVectorSplat(
+          cast<VectorType>(RHS->getType())->getNumElements(), LHS,
+          "scalar.splat");
+    return {LHS, RHS};
+  }
+
 public:
   MatrixBuilder(IRBuilderTy &Builder) : B(Builder) {}
 
@@ -164,15 +179,13 @@ public:
                : B.CreateSub(LHS, RHS);
   }
 
-  /// Multiply matrix \p LHS with scalar \p RHS.
+  /// Multiply matrix \p LHS with scalar \p RHS or scalar \p LHS with matrix \p
+  /// RHS.
   Value *CreateScalarMultiply(Value *LHS, Value *RHS) {
-    Value *ScalarVector =
-        B.CreateVectorSplat(cast<VectorType>(LHS->getType())->getNumElements(),
-                            RHS, "scalar.splat");
-    if (RHS->getType()->isFloatingPointTy())
-      return B.CreateFMul(LHS, ScalarVector);
-
-    return B.CreateMul(LHS, ScalarVector);
+    std::tie(LHS, RHS) = splatScalarOperandIfNeeded(LHS, RHS);
+    if (LHS->getType()->getScalarType()->isFloatingPointTy())
+      return B.CreateFMul(LHS, RHS);
+    return B.CreateMul(LHS, RHS);
   }
 
   /// Extracts the element at (\p RowIdx, \p ColumnIdx) from \p Matrix.

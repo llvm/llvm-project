@@ -460,10 +460,12 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
   EpilogueBegin = false;
 }
 
-void DWARFDebugLine::Row::dumpTableHeader(raw_ostream &OS) {
-  OS << "Address            Line   Column File   ISA Discriminator Flags\n"
-     << "------------------ ------ ------ ------ --- ------------- "
-        "-------------\n";
+void DWARFDebugLine::Row::dumpTableHeader(raw_ostream &OS, unsigned Indent) {
+  OS.indent(Indent)
+      << "Address            Line   Column File   ISA Discriminator Flags\n";
+  OS.indent(Indent)
+      << "------------------ ------ ------ ------ --- ------------- "
+         "-------------\n";
 }
 
 void DWARFDebugLine::Row::dump(raw_ostream &OS) const {
@@ -494,7 +496,7 @@ void DWARFDebugLine::LineTable::dump(raw_ostream &OS,
 
   if (!Rows.empty()) {
     OS << '\n';
-    Row::dumpTableHeader(OS);
+    Row::dumpTableHeader(OS, 0);
     for (const Row &R : Rows) {
       R.dump(OS);
     }
@@ -737,6 +739,10 @@ Error DWARFDebugLine::LineTable::parse(
   ParsingState State(this, DebugLineOffset, RecoverableErrorHandler);
 
   *OffsetPtr = DebugLineOffset + Prologue.getLength();
+  if (OS && *OffsetPtr < EndOffset) {
+    *OS << '\n';
+    Row::dumpTableHeader(*OS, 12);
+  }
   while (*OffsetPtr < EndOffset) {
     if (OS)
       *OS << format("0x%08.08" PRIx64 ": ", *OffsetPtr);

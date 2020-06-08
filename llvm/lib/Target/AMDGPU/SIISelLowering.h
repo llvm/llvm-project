@@ -203,6 +203,11 @@ public:
   /// and not emit a relocation for an LDS global.
   bool shouldUseLDSConstAddress(const GlobalValue *GV) const;
 
+  /// Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
+  /// expanded into a set of cmp/select instructions.
+  static bool shouldExpandVectorDynExt(unsigned EltSize, unsigned NumElem,
+                                       bool IsDivergentIdx);
+
 private:
   // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
   // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
@@ -398,11 +403,9 @@ public:
 
   void finalizeLowering(MachineFunction &MF) const override;
 
-  void computeKnownBitsForFrameIndex(const SDValue Op,
+  void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
-                                     const APInt &DemandedElts,
-                                     const SelectionDAG &DAG,
-                                     unsigned Depth = 0) const override;
+                                     const MachineFunction &MF) const override;
 
   bool isSDNodeSourceOfDivergence(const SDNode *N,
     FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;

@@ -24,12 +24,16 @@ tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
 add_public_tablegen_target(AArch64CommonTableGen)
 
 add_llvm_target(AArch64CodeGen
+  GISel/AArch64CallLowering.cpp
+  GISel/AArch64InstructionSelector.cpp
+  GISel/AArch64LegalizerInfo.cpp
+  GISel/AArch64PreLegalizerCombiner.cpp
+  GISel/AArch64PostLegalizerCombiner.cpp
   AArch64A57FPLoadBalancing.cpp
   AArch64AdvSIMDScalarPass.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchTargets.cpp
   AArch64CallingConvention.cpp
-  AArch64CallLowering.cpp
   AArch64CleanupLocalDynamicTLSPass.cpp
   AArch64CollectLOH.cpp
   AArch64CondBrTuning.cpp
@@ -47,14 +51,10 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
-  AArch64InstructionSelector.cpp
-  AArch64LegalizerInfo.cpp
   AArch64LoadStoreOptimizer.cpp
   AArch64MachineFunctionInfo.cpp
   AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp
-  AArch64PreLegalizerCombiner.cpp
-  AArch64PostLegalizerCombiner.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterBankInfo.cpp

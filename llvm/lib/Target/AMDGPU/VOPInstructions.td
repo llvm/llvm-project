@@ -122,9 +122,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
 
   let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
 
-  // FIXME: Set this. Right now it seems regular IR operations don't
-  // automatically imply no FP exceptions.
-  // let mayRaiseFPException = ReadsModeReg;
+  let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
@@ -500,9 +498,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
 
   let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
 
-  // FIXME: Set this. Right now it seems regular IR operations don't
-  // automatically imply no FP exceptions.
-  // let mayRaiseFPException = ReadsModeReg;
+  let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
   let SubtargetPredicate = HasSDWA;
@@ -623,9 +619,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
 
   let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
 
-  // FIXME: Set this. Right now it seems regular IR operations don't
-  // automatically imply no FP exceptions.
-  // let mayRaiseFPException = ReadsModeReg;
+  let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let isConvergent = 1;
 

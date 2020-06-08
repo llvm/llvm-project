@@ -1,4 +1,3 @@
-UNSUPPORTED: host-byteorder-big-endian
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 

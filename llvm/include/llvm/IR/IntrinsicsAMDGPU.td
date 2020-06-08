@@ -1834,7 +1834,7 @@ class AMDGPUBufferAtomicNoRtn : Intrinsic <
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(SGPR/VGPR/imm)
    llvm_i1_ty],       // slc(imm)
-  [], "", [SDNPMemOperand]>,
+  [ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1, 0>;
 
 class AMDGPUGlobalAtomicNoRtn : Intrinsic <

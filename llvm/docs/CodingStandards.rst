@@ -1200,8 +1200,7 @@ unconditionally a bug (not originating from user input; see below) of some kind.
 Use of ``assert`` should always include a testable predicate (as opposed to
 ``assert(false)``).
 
-Neither assertions or ``llvm_unreachable`` will abort the program on a release
-build. If the error condition can be triggered by user input then the
+If the error condition can be triggered by user input then the
 recoverable error mechanism described in :doc:`ProgrammersManual` should be
 used instead. In cases where this is not practical, ``report_fatal_error`` may
 be used.

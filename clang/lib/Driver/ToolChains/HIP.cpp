@@ -427,6 +427,11 @@ void HIPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
+void HIPToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                     ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
 SanitizerMask HIPToolChain::getSupportedSanitizers() const {
   // The HIPToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host

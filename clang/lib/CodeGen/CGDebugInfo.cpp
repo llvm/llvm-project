@@ -772,6 +772,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Float:
   case BuiltinType::LongDouble:
   case BuiltinType::Float16:
+  case BuiltinType::BFloat16:
   case BuiltinType::Float128:
   case BuiltinType::Double:
     // FIXME: For targets where long double and __float128 have the same size,
@@ -2145,16 +2146,14 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
   return T;
 }
 
-void CGDebugInfo::addHeapAllocSiteMetadata(llvm::Instruction *CI,
-                                           QualType D,
+void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
+                                           QualType AllocatedTy,
                                            SourceLocation Loc) {
   llvm::MDNode *node;
-  if (D.getTypePtr()->isVoidPointerType()) {
+  if (AllocatedTy->isVoidType())
     node = llvm::MDNode::get(CGM.getLLVMContext(), None);
-  } else {
-    QualType PointeeTy = D.getTypePtr()->getPointeeType();
-    node = getOrCreateType(PointeeTy, getOrCreateFile(Loc));
-  }
+  else
+    node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
 
   CI->setMetadata("heapallocsite", node);
 }

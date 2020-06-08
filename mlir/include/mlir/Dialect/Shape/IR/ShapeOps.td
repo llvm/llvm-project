@@ -123,7 +123,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [ConstantLike, NoSideEffect]> {
   let arguments = (ins IndexAttr:$value);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $value";
+  let assemblyFormat = "$value attr-dict";
   let hasFolder = 1;
 }
 
@@ -143,7 +143,7 @@ def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
   let arguments = (ins Variadic<Index>:$extents);
   let results = (outs Shape_ShapeType:$shape);
 
-  let assemblyFormat = "attr-dict $extents";
+  let assemblyFormat = "$extents attr-dict";
 
   let hasFolder = 1;
 }
@@ -219,7 +219,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let arguments = (ins Index:$arg);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
@@ -267,6 +267,8 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
 
   let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
   let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
@@ -274,17 +276,22 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let description = [{
     Returns the number of elements for a given shape which is the product of its
     dimensions.
+
+    ```mlir
+    %product = shape.mul %lhs, %rhs
+    ```
   }];
 
   let arguments = (ins Shape_ShapeType:$shape);
   let results = (outs Shape_SizeType:$result);
 
-  let assemblyFormat = "attr-dict $shape";
+  let assemblyFormat = "$shape attr-dict";
 
   let hasFolder = 1;
 }
 
-def Shape_ReduceOp : Shape_Op<"reduce", []> {
+def Shape_ReduceOp : Shape_Op<"reduce",
+    [SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Returns an expression reduced over a shape";
   let description = [{
     An operation that takes as input a shape, number of initial values and has a
@@ -304,25 +311,32 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
     number of elements
 
     ```mlir
-    func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
-      %0 = "shape.constant_dim"() {value = 1 : i32} : () -> !shape.size
-      %1 = "shape.reduce"(%shape, %0) ( {
-        ^bb0(%index: i32, %dim: !shape.size, %lci: !shape.size):
-          %acc = "shape.mul"(%lci, %dim) :
+    func @reduce(%shape : !shape.shape, %init : !shape.size) -> !shape.size {
+      %num_elements = shape.reduce(%shape, %init) -> !shape.size  {
+        ^bb0(%index: index, %dim: !shape.size, %acc: !shape.size):
+          %updated_acc = "shape.mul"(%acc, %dim) :
             (!shape.size, !shape.size) -> !shape.size
-          shape.yield %acc : !shape.size
-        }) : (!shape.shape, !shape.size) -> (!shape.size)
-      return %1 : !shape.size
+          shape.yield %updated_acc : !shape.size
+      }
+      return %num_elements : !shape.size
     }
     ```
 
     If the shape is unranked, then the results of the op is also unranked.
   }];
 
-  let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$args);
+  let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$result);
-
   let regions = (region SizedRegion<1>:$body);
+
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "Value shape, ValueRange initVals">,
+  ];
+
+  let verifier = [{ return ::verify(*this); }];
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
@@ -331,7 +345,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
 
-  let assemblyFormat = "attr-dict $arg `:` type($arg)";
+  let assemblyFormat = "$arg `:` type($arg) attr-dict";
 
   let hasFolder = 1;
 }
@@ -348,12 +362,16 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let arguments = (ins Shape_SizeType:$arg);
   let results = (outs Index:$result);
 
-  let assemblyFormat = "attr-dict $arg";
+  let assemblyFormat = "$arg attr-dict";
 
   let hasFolder = 1;
 }
 
-def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
+def Shape_YieldOp : Shape_Op<"yield", 
+    [HasParent<"ReduceOp">,
+     NoSideEffect,
+     ReturnLike,
+     Terminator]> {
   let summary = "Returns the value to parent op";
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -362,6 +380,7 @@ def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
     "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
   >];
 
+  let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
@@ -432,7 +451,7 @@ def Shape_ConcatOp : Shape_Op<"concat", []> {
 //===----------------------------------------------------------------------===//
 
 //TODO(tpopp): Move the code below and witnesses to a different file.
-def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
+def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
   let summary = "Return any combination of the input shapes";
   let description = [{
     This operation takes multiple input shapes and returns some combination of
@@ -443,8 +462,8 @@ def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
 
     Example:
     ```mlir
-      %s0 = shape.any [2,?], [?,3] // [2,3]
-      %s1 = shape.any [?,?], [1,2] // [1,2]
+    %s0 = shape.any [2,?], [?,3] // [2,3]
+    %s1 = shape.any [?,?], [1,2] // [1,2]
     ```
   }];
 
@@ -452,9 +471,11 @@ def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
   let results = (outs Shape_ShapeType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
+
+  let hasFolder = 1;
 }
 
-def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
+def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> {
   let summary = "Return a logical AND of all witnesses";
   let description = [{
     Used to simplify constraints as any single failing precondition is enough
@@ -467,11 +488,11 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
-      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
-      %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
-      %wf = shape.assuming_all %w0, %w1 // Failure
-      %wt = shape.assuming_all %w0, %w2 // Success
+    %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
+    %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
+    %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
+    %wf = shape.assuming_all %w0, %w1 // Failure
+    %wt = shape.assuming_all %w0, %w2 // Passing
     ```
   }];
 
@@ -479,6 +500,8 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
+
+  let hasFolder = 1;
 }
 
 def Shape_AssumingOp : Shape_Op<"assuming",
@@ -499,6 +522,8 @@ def Shape_AssumingOp : Shape_Op<"assuming",
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let hasCanonicalizer = 1;
 }
 
 def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
@@ -531,8 +556,8 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
-      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
+    %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
+    %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
     ```
   }];
 
@@ -551,8 +576,8 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
-      %w1 = shape.cstr_eq [2,2], [1,2] // Failure
+    %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
+    %w1 = shape.cstr_eq [2,2], [1,2] // Failure
     ```
   }];
   let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
@@ -561,6 +586,28 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
   let assemblyFormat = "$inputs attr-dict";
 }
 
-// Canonicalization patterns.
+def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect]> {
+  let summary = "An operation that returns a statically known witness value";
+  let description = [{
+  This operation represents a statically known witness result. This can be
+  often used to canonicalize/fold constraint and assuming code that will always
+  pass.
+
+  ```mlir
+  %0 = shape.const_shape [1,2,3]
+  %1 = shape.const_shape [1, 2, 3]
+  %w0 = shape.cstr_eq(%0, %1) // Can be folded to "const_witness true"
+  %w1 = shape.const_witness true
+  %w2 = shape.assuming_all(%w0, %w2) // Can be folded to "const_witness true"
+  ```
+  }];
+  let arguments = (ins BoolAttr:$passing);
+  let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$passing attr-dict";
+
+  let hasFolder = 1;
+}
+
 
 #endif // SHAPE_OPS

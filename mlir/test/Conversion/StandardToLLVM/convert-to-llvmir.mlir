@@ -1228,3 +1228,12 @@ func @mlir_cast_from_llvm(%0 : !llvm.half) -> f16 {
   // CHECK-NEXT: llvm.return %[[ARG]]
   return %1 : f16
 }
+
+// -----
+
+// CHECK-LABEL: func @bfloat
+// CHECK-SAME: !llvm.bfloat) -> !llvm.bfloat
+func @bfloat(%arg0: bf16) -> bf16 {
+  return %arg0 : bf16
+}
+// CHECK-NEXT: return %{{.*}} : !llvm.bfloat

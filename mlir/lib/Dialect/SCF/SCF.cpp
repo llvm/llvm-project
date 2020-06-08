@@ -480,8 +480,6 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
   bool condition;
   if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
     condition = condAttr.getValue().isOneValue();
-  } else if (auto condAttr = operands.front().dyn_cast_or_null<BoolAttr>()) {
-    condition = condAttr.getValue();
   } else {
     // If the condition isn't constant, both regions may be executed.
     regions.push_back(RegionSuccessor(&thenRegion()));

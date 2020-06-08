@@ -117,8 +117,11 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
   }
   auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
                                 /*InMemory=*/true, /*Callback=*/nullptr);
-  return codeComplete(testPath(TU.Filename), Inputs.CompileCommand,
-                      Preamble.get(), TU.Code, Point, Inputs.FS, Opts);
+  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, TU.Code};
+  ParseInput.Opts.BuildRecoveryAST = true;
+  ParseInput.Opts.PreserveRecoveryASTType = true;
+  return codeComplete(testPath(TU.Filename), Point, Preamble.get(), ParseInput,
+                      Opts);
 }
 
 // Runs code completion.
@@ -148,8 +151,10 @@ CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
 
   MockFSProvider FS;
   Annotations Test(Text);
-  return codeComplete(FilePath, tooling::CompileCommand(), /*Preamble=*/nullptr,
-                      Test.code(), Test.point(), FS.getFileSystem(), Opts);
+  ParseInputs ParseInput{tooling::CompileCommand(), FS.getFileSystem(),
+                         Test.code().str()};
+  return codeComplete(FilePath, Test.point(), /*Preamble=*/nullptr, ParseInput,
+                      Opts);
 }
 
 Symbol withReferences(int N, Symbol S) {
@@ -753,8 +758,7 @@ TEST(CompletionTest, CompletionInPreamble) {
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 }
 
-// FIXME: enable it.
-TEST(CompletionTest, DISABLED_CompletionRecoveryASTType) {
+TEST(CompletionTest, CompletionRecoveryASTType) {
   auto Results = completions(R"cpp(
     struct S { int member; };
     S overloaded(int);
@@ -1067,8 +1071,11 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
     ADD_FAILURE() << "Couldn't build Preamble";
     return {};
   }
-  return signatureHelp(testPath(TU.Filename), Inputs.CompileCommand, *Preamble,
-                       Text, Point, Inputs.FS, Index.get());
+  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, Text.str()};
+  ParseInput.Index = Index.get();
+  ParseInput.Opts.BuildRecoveryAST = true;
+  ParseInput.Opts.PreserveRecoveryASTType = true;
+  return signatureHelp(testPath(TU.Filename), Point, *Preamble, ParseInput);
 }
 
 SignatureHelp signatures(llvm::StringRef Text,
@@ -1219,9 +1226,10 @@ TEST(SignatureHelpTest, StalePreamble) {
     void bar() { foo(^2); })cpp");
   TU.Code = Test.code().str();
   Inputs = TU.inputs();
-  auto Results =
-      signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
-                    *EmptyPreamble, TU.Code, Test.point(), Inputs.FS, nullptr);
+
+  ParseInputs ParseInput{Inputs.CompileCommand, Inputs.FS, TU.Code};
+  auto Results = signatureHelp(testPath(TU.Filename), Test.point(),
+                               *EmptyPreamble, ParseInput);
   EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);

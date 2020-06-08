@@ -181,6 +181,11 @@ public:
     return !(Lhs < Rhs) && !(Rhs < Lhs);
   }
 
+  /// Inequality operator
+  friend bool operator!=(const DocNode &Lhs, const DocNode &Rhs) {
+    return !(Lhs == Rhs);
+  }
+
   /// Convert this node to a string, assuming it is scalar.
   std::string toString() const;
 

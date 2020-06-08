@@ -591,6 +591,7 @@ KEYWORD(__bool                      , KEYALTIVEC|KEYZVECTOR)
 
 // ARM NEON extensions.
 ALIAS("__fp16", half                , KEYALL)
+KEYWORD(__bf16                      , KEYALL)
 
 // OpenCL Extension.
 KEYWORD(half                        , HALFSUPPORT)

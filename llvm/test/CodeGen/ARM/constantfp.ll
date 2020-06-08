@@ -9,7 +9,10 @@
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE %s
 
 ; RUN: llc -mtriple=thumbv7meb -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
-; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE %s
+; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE  --check-prefix=CHECK-XO-DOUBLE-BE-FPREGS %s
+
+; RUN: llc -mtriple=thumbv7meb -mattr=+execute-only -mcpu=cortex-m3 %s -o - \
+; RUN: | FileCheck --check-prefix=CHECK-XO-DOUBLE-BE %s
 
 ; RUN: llc -mtriple=thumbv7m -mattr=+execute-only -mcpu=cortex-m4 -relocation-model=ropi %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-ROPI %s
@@ -94,8 +97,8 @@ define arm_aapcs_vfpcc double @test_vmov_double_imm() {
 ; CHECK-XO-DOUBLE-NOT: vldr
 
 ; CHECK-XO-DOUBLE-BE-LABEL: test_vmov_double_imm:
-; CHECK-XO-DOUBLE-BE: movs [[REG:r[0-9]+]], #0
-; CHECK-XO-DOUBLE-BE: vmov {{d[0-9]+}}, [[REG]], [[REG]]
+; CHECK-XO-DOUBLE-BE-FPREGS: movs [[REG:r[0-9]+]], #0
+; CHECK-XO-DOUBLE-BE-FPREGS: vmov {{d[0-9]+}}, [[REG]], [[REG]]
 ; CHECK-XO-DOUBLE-NOT: vldr
   ret double 0.0
 }
@@ -116,8 +119,8 @@ define arm_aapcs_vfpcc double @test_vmvn_double_imm() {
 ; CHECK-XO-DOUBLE-NOT: vldr
 
 ; CHECK-XO-DOUBLE-BE-LABEL: test_vmvn_double_imm:
-; CHECK-XO-DOUBLE-BE: mvn [[REG:r[0-9]+]], #-1342177280
-; CHECK-XO-DOUBLE-BE: vmov {{d[0-9]+}}, [[REG]], [[REG]]
+; CHECK-XO-DOUBLE-BE-FPREGS: mvn [[REG:r[0-9]+]], #-1342177280
+; CHECK-XO-DOUBLE-BE-FPREGS: vmov {{d[0-9]+}}, [[REG]], [[REG]]
 ; CHECK-XO-DOUBLE-BE-NOT: vldr
   ret double 0x4fffffff4fffffff
 }
@@ -141,9 +144,9 @@ define arm_aapcs_vfpcc double @test_notvmvn_double_imm() {
 ; CHECK-XO-DOUBLE-NOT: vldr
 
 ; CHECK-XO-DOUBLE-BE-LABEL: test_notvmvn_double_imm:
-; CHECK-XO-DOUBLE-BE: mov.w [[REG1:r[0-9]+]], #-1
-; CHECK-XO-DOUBLE-BE: mvn [[REG2:r[0-9]+]], #-1342177280
-; CHECK-XO-DOUBLE-BE: vmov {{d[0-9]+}}, [[REG2]], [[REG1]]
+; CHECK-XO-DOUBLE-BE: mvn [[REG1:r[0-9]+]], #-1342177280
+; CHECK-XO-DOUBLE-BE: mov.w [[REG2:r[0-9]+]], #-1
+; CHECK-XO-DOUBLE-BE-FPREGS: vmov {{d[0-9]+}}, [[REG2]], [[REG1]]
 ; CHECK-XO-DOUBLE-BE-NOT: vldr
   ret double 0x4fffffffffffffff
 }
@@ -173,11 +176,11 @@ define arm_aapcs_vfpcc double @lower_const_f64_xo() {
 ; CHECK-XO-DOUBLE-NOT: vldr
 
 ; CHECK-XO-DOUBLE-BE-LABEL: lower_const_f64_xo
-; CHECK-XO-DOUBLE-BE: movw [[REG1:r[0-9]+]], #27263
-; CHECK-XO-DOUBLE-BE: movw [[REG2:r[0-9]+]], #6291
-; CHECK-XO-DOUBLE-BE: movt [[REG1]], #29884
-; CHECK-XO-DOUBLE-BE: movt [[REG2]], #16340
-; CHECK-XO-DOUBLE-BE: vmov {{d[0-9]+}}, [[REG2]], [[REG1]]
+; CHECK-XO-DOUBLE-BE: movw [[REG1:r[0-9]+]], #6291
+; CHECK-XO-DOUBLE-BE: movw [[REG2:r[0-9]+]], #27263
+; CHECK-XO-DOUBLE-BE: movt [[REG1]], #16340
+; CHECK-XO-DOUBLE-BE: movt [[REG2]], #29884
+; CHECK-XO-DOUBLE-BE-FPREGS: vmov {{d[0-9]+}}, [[REG2]], [[REG1]]
 ; CHECK-XO-DOUBLE-BE-NOT: vldr
   ret double 3.140000e-01
 }

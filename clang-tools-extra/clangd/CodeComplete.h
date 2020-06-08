@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
+#include "Compiler.h"
 #include "Headers.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -270,21 +271,16 @@ struct SpeculativeFuzzyFind {
 /// the speculative result is used by code completion (e.g. speculation failed),
 /// the speculative result is not consumed, and `SpecFuzzyFind` is only
 /// destroyed when the async request finishes.
-CodeCompleteResult codeComplete(PathRef FileName,
-                                const tooling::CompileCommand &Command,
+CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
                                 const PreambleData *Preamble,
-                                StringRef Contents, Position Pos,
-                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                                const ParseInputs &ParseInput,
                                 CodeCompleteOptions Opts,
                                 SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(PathRef FileName,
-                            const tooling::CompileCommand &Command,
-                            const PreambleData &Preamble, StringRef Contents,
-                            Position Pos,
-                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                            const SymbolIndex *Index);
+SignatureHelp signatureHelp(PathRef FileName, Position Pos,
+                            const PreambleData &Preamble,
+                            const ParseInputs &ParseInput);
 
 // For index-based completion, we only consider:
 //   * symbols in namespaces or translation unit scopes (e.g. no class

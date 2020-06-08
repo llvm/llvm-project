@@ -543,7 +543,7 @@ StackSafetyDataFlowAnalysis<CalleeTy>::run() {
 
 const Function *findCalleeInModule(const GlobalValue *GV) {
   while (GV) {
-    if (GV->isInterposable() || !GV->isDSOLocal())
+    if (GV->isDeclaration() || GV->isInterposable() || !GV->isDSOLocal())
       return nullptr;
     if (const Function *F = dyn_cast<Function>(GV))
       return F;
@@ -684,7 +684,7 @@ StackSafetyGlobalInfo::~StackSafetyGlobalInfo() = default;
 
 bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   const auto &Info = getInfo();
-  return Info.SafeAllocas.find(&AI) != Info.SafeAllocas.end();
+  return Info.SafeAllocas.count(&AI);
 }
 
 void StackSafetyGlobalInfo::print(raw_ostream &O) const {

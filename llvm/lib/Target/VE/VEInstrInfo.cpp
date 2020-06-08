@@ -41,29 +41,53 @@ VEInstrInfo::VEInstrInfo(VESubtarget &ST)
 static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
 
 static VECC::CondCode GetOppositeBranchCondition(VECC::CondCode CC) {
-  switch(CC) {
-  case VECC::CC_IG:     return VECC::CC_ILE;
-  case VECC::CC_IL:     return VECC::CC_IGE;
-  case VECC::CC_INE:    return VECC::CC_IEQ;
-  case VECC::CC_IEQ:    return VECC::CC_INE;
-  case VECC::CC_IGE:    return VECC::CC_IL;
-  case VECC::CC_ILE:    return VECC::CC_IG;
-  case VECC::CC_AF:     return VECC::CC_AT;
-  case VECC::CC_G:      return VECC::CC_LENAN;
-  case VECC::CC_L:      return VECC::CC_GENAN;
-  case VECC::CC_NE:     return VECC::CC_EQNAN;
-  case VECC::CC_EQ:     return VECC::CC_NENAN;
-  case VECC::CC_GE:     return VECC::CC_LNAN;
-  case VECC::CC_LE:     return VECC::CC_GNAN;
-  case VECC::CC_NUM:    return VECC::CC_NAN;
-  case VECC::CC_NAN:    return VECC::CC_NUM;
-  case VECC::CC_GNAN:   return VECC::CC_LE;
-  case VECC::CC_LNAN:   return VECC::CC_GE;
-  case VECC::CC_NENAN:  return VECC::CC_EQ;
-  case VECC::CC_EQNAN:  return VECC::CC_NE;
-  case VECC::CC_GENAN:  return VECC::CC_L;
-  case VECC::CC_LENAN:  return VECC::CC_G;
-  case VECC::CC_AT:     return VECC::CC_AF;
+  switch (CC) {
+  case VECC::CC_IG:
+    return VECC::CC_ILE;
+  case VECC::CC_IL:
+    return VECC::CC_IGE;
+  case VECC::CC_INE:
+    return VECC::CC_IEQ;
+  case VECC::CC_IEQ:
+    return VECC::CC_INE;
+  case VECC::CC_IGE:
+    return VECC::CC_IL;
+  case VECC::CC_ILE:
+    return VECC::CC_IG;
+  case VECC::CC_AF:
+    return VECC::CC_AT;
+  case VECC::CC_G:
+    return VECC::CC_LENAN;
+  case VECC::CC_L:
+    return VECC::CC_GENAN;
+  case VECC::CC_NE:
+    return VECC::CC_EQNAN;
+  case VECC::CC_EQ:
+    return VECC::CC_NENAN;
+  case VECC::CC_GE:
+    return VECC::CC_LNAN;
+  case VECC::CC_LE:
+    return VECC::CC_GNAN;
+  case VECC::CC_NUM:
+    return VECC::CC_NAN;
+  case VECC::CC_NAN:
+    return VECC::CC_NUM;
+  case VECC::CC_GNAN:
+    return VECC::CC_LE;
+  case VECC::CC_LNAN:
+    return VECC::CC_GE;
+  case VECC::CC_NENAN:
+    return VECC::CC_EQ;
+  case VECC::CC_EQNAN:
+    return VECC::CC_NE;
+  case VECC::CC_GENAN:
+    return VECC::CC_L;
+  case VECC::CC_LENAN:
+    return VECC::CC_G;
+  case VECC::CC_AT:
+    return VECC::CC_AF;
+  case VECC::UNKNOWN:
+    return VECC::UNKNOWN;
   }
   llvm_unreachable("Invalid cond code");
 }

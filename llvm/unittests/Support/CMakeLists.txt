@@ -75,6 +75,7 @@ add_llvm_unittest(SupportTests
   ThreadPool.cpp
   Threading.cpp
   TimerTest.cpp
+  ToolOutputFileTest.cpp
   TypeNameTest.cpp
   TypeTraitsTest.cpp
   TrailingObjectsTest.cpp

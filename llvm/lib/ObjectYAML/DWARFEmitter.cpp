@@ -15,6 +15,7 @@
 #include "DWARFVisitor.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
@@ -94,7 +95,11 @@ void DWARFYAML::EmitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
 void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Range : DI.ARanges) {
     auto HeaderStart = OS.tell();
-    writeInitialLength(Range.Length, OS, DI.IsLittleEndian);
+    if (Range.Format == dwarf::DWARF64) {
+      writeInteger((uint32_t)dwarf::DW_LENGTH_DWARF64, OS, DI.IsLittleEndian);
+      writeInteger((uint64_t)Range.Length, OS, DI.IsLittleEndian);
+    } else
+      writeInteger((uint32_t)Range.Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
     writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
@@ -118,7 +123,9 @@ void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
   for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
-    assert(DebugRanges.Offset <= CurrOffset);
+    assert(DebugRanges.Offset >= CurrOffset &&
+           "Offset should be greater than or equal to the bytes that we have "
+           "written");
     if (DebugRanges.Offset > CurrOffset)
       ZeroFillBytes(OS, DebugRanges.Offset - CurrOffset);
     for (auto Entry : DebugRanges.Entries) {

@@ -13,6 +13,16 @@
 using namespace llvm;
 using namespace msgpack;
 
+TEST(MsgPackDocument, DocNodeTest) {
+  Document Doc;
+
+  DocNode Int1 = Doc.getNode(1), Int2 = Doc.getNode(2);
+  DocNode Str1 = Doc.getNode("ab"), Str2 = Doc.getNode("ab");
+
+  ASSERT_TRUE(Int1 != Int2);
+  ASSERT_TRUE(Str1 == Str2);
+}
+
 TEST(MsgPackDocument, TestReadInt) {
   Document Doc;
   bool Ok = Doc.readFromBlob(StringRef("\xd0\x00", 2), /*Multi=*/false);

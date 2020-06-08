@@ -16,21 +16,12 @@ define void @_Z2azv() local_unnamed_addr {
 ; CHECK-NEXT:    [[DOTSROA_RAW_IDX_7:%.*]] = getelementptr inbounds %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76", %"struct.std::h.0.4.8.12.16.20.24.28.248.0.1.2.3.76"* undef, i64 7, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DOTSROA_CAST_4]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <8 x i32> [[TMP1]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP1]], <8 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <8 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp sgt <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], undef
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[OP_EXTRA]], undef
-; CHECK-NEXT:    [[OP_EXTRA7:%.*]] = select i1 [[TMP4]], i32 [[OP_EXTRA]], i32 undef
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_EXTRA7]]
+; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[TMP4]], i32 [[OP_EXTRA]], i32 undef
+; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_EXTRA1]]
 ; CHECK-NEXT:    [[CMP_I1_10:%.*]] = icmp slt i32 [[DOTSROA_SPECULATED_9]], undef
 ; CHECK-NEXT:    ret void
 ;

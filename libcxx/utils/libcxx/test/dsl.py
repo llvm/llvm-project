@@ -48,13 +48,33 @@ def _makeConfigTest(config):
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
   if not os.path.exists(sourceRoot):
     os.makedirs(sourceRoot)
-  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False)
+  tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix='.cpp')
   tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
     def __enter__(self):       return self
     def __exit__(self, *args): os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
+
+def sourceBuilds(config, source):
+  """
+  Return whether the program in the given string builds successfully.
+
+  This is done by compiling and linking a program that consists of the given
+  source with the %{cxx} substitution, and seeing whether that succeeds.
+  """
+  with _makeConfigTest(config) as test:
+    with open(test.getSourcePath(), 'w') as sourceFile:
+      sourceFile.write(source)
+    commands = [
+      "mkdir -p %T",
+      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
+    ]
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])
+    _executeScriptInternal(test, cleanup)
+    return exitCode == 0
 
 def hasCompileFlag(config, flag):
   """
@@ -88,7 +108,7 @@ def hasLocale(config, locale):
       """)
     commands = [
       "mkdir -p %T",
-      "%{cxx} -xc++ %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
+      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
       "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
     ]
     commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])

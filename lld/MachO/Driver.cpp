@@ -73,21 +73,18 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   return args;
 }
 
-// This is for -lfoo. We'll look for libfoo.dylib from search paths.
-static Optional<std::string> findDylib(StringRef name) {
-  for (StringRef dir : config->searchPaths) {
-    std::string path = (dir + "/lib" + name + ".dylib").str();
-    if (fs::exists(path))
-      return path;
-  }
-  return None;
-}
+static Optional<std::string> findLibrary(StringRef name) {
+  std::string shared = (llvm::Twine("lib") + name + ".dylib").str();
+  std::string archive = (llvm::Twine("lib") + name + ".a").str();
+  llvm::SmallString<260> location;
 
-static Optional<std::string> findArchive(StringRef name) {
   for (StringRef dir : config->searchPaths) {
-    std::string path = (dir + "/lib" + name + ".a").str();
-    if (fs::exists(path))
-      return path;
+    for (StringRef library : {shared, archive}) {
+      location = dir;
+      llvm::sys::path::append(location, library);
+      if (fs::exists(location))
+        return location.str().str();
+    }
   }
   return None;
 }
@@ -296,12 +293,11 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       break;
     case OPT_l: {
       StringRef name = arg->getValue();
-      if (Optional<std::string> path = findDylib(name))
+      if (Optional<std::string> path = findLibrary(name)) {
         addFile(*path);
-      else if (Optional<std::string> path = findArchive(name))
-        addFile(*path);
-      else
-        error("library not found for -l" + name);
+        break;
+      }
+      error("library not found for -l" + name);
       break;
     }
     case OPT_platform_version: {

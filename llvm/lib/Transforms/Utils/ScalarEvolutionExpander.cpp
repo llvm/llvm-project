@@ -287,14 +287,14 @@ static bool FactorOutConstant(const SCEV *&S, const SCEV *&Remainder,
   if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
     // Size is known, check if there is a constant operand which is a multiple
     // of the given factor. If so, we can factor it.
-    const SCEVConstant *FC = cast<SCEVConstant>(Factor);
-    if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
-      if (!C->getAPInt().srem(FC->getAPInt())) {
-        SmallVector<const SCEV *, 4> NewMulOps(M->op_begin(), M->op_end());
-        NewMulOps[0] = SE.getConstant(C->getAPInt().sdiv(FC->getAPInt()));
-        S = SE.getMulExpr(NewMulOps);
-        return true;
-      }
+    if (const SCEVConstant *FC = dyn_cast<SCEVConstant>(Factor))
+      if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
+        if (!C->getAPInt().srem(FC->getAPInt())) {
+          SmallVector<const SCEV *, 4> NewMulOps(M->op_begin(), M->op_end());
+          NewMulOps[0] = SE.getConstant(C->getAPInt().sdiv(FC->getAPInt()));
+          S = SE.getMulExpr(NewMulOps);
+          return true;
+        }
   }
 
   // In an AddRec, check if both start and step are divisible.
@@ -504,6 +504,10 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     if (ArrayType *ATy = dyn_cast<ArrayType>(ElTy))
       ElTy = ATy->getElementType();
     else
+      // FIXME: Handle VectorType.
+      // E.g., If ElTy is scalable vector, then ElSize is not a compile-time
+      // constant, therefore can not be factored out. The generated IR is less
+      // ideal with base 'V' cast to i8* and do ugly getelementptr over that.
       break;
   }
 

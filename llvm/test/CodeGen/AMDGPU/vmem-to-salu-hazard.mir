@@ -254,7 +254,7 @@ body:             |
   bb.1:
     successors: %bb.2
     S_WAITCNT 0
-    $vgpr2 = V_ADD_I32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $exec
+    $vgpr2, $vcc_lo = V_ADD_I32_e64 $vgpr1, $vgpr1, 0, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

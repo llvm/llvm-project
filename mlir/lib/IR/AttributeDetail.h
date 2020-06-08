@@ -65,28 +65,6 @@ struct ArrayAttributeStorage : public AttributeStorage {
   ArrayRef<Attribute> value;
 };
 
-/// An attribute representing a boolean value.
-struct BoolAttributeStorage : public AttributeStorage {
-  using KeyTy = std::pair<MLIRContext *, bool>;
-
-  BoolAttributeStorage(Type type, bool value)
-      : AttributeStorage(type), value(value) {}
-
-  /// We only check equality for and hash with the boolean key parameter.
-  bool operator==(const KeyTy &key) const { return key.second == value; }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_value(key.second);
-  }
-
-  static BoolAttributeStorage *construct(AttributeStorageAllocator &allocator,
-                                         const KeyTy &key) {
-    return new (allocator.allocate<BoolAttributeStorage>())
-        BoolAttributeStorage(IntegerType::get(1, key.first), key.second);
-  }
-
-  bool value;
-};
-
 /// An attribute representing a dictionary of sorted named attributes.
 struct DictionaryAttributeStorage final
     : public AttributeStorage,
@@ -154,9 +132,7 @@ struct FloatAttributeStorage final
 
   /// Construct a key with a type and double.
   static KeyTy getKey(Type type, double value) {
-    // Treat BF16 as double because it is not supported in LLVM's APFloat.
-    // TODO(b/121118307): add BF16 support to APFloat?
-    if (type.isBF16() || type.isF64())
+    if (type.isF64())
       return KeyTy(type, APFloat(value));
 
     // This handles, e.g., F16 because there is no APFloat constructor for it.
@@ -377,10 +353,6 @@ inline size_t getDenseElementBitWidth(Type eltType) {
   // Align the width for complex to 8 to make storage and interpretation easier.
   if (ComplexType comp = eltType.dyn_cast<ComplexType>())
     return llvm::alignTo<8>(getDenseElementBitWidth(comp.getElementType())) * 2;
-  // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
-  // with double semantics.
-  if (eltType.isBF16())
-    return 64;
   if (eltType.isIndex())
     return IndexType::kInternalStorageBitWidth;
   return eltType.getIntOrFloatBitWidth();

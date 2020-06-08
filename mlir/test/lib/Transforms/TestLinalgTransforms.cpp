@@ -158,14 +158,14 @@ static void applyPatterns(FuncOp funcOp) {
   // Linalg subview operands promotion.
   //===--------------------------------------------------------------------===//
   patterns.insert<LinalgPromotionPattern<MatmulOp>>(
-      ctx, LinalgPromotionOptions().useFullTileBuffersByDefault(),
+      ctx, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
       LinalgMarker(Identifier::get("_promote_views_", ctx),
                    Identifier::get("_views_promoted_", ctx)));
   patterns.insert<LinalgPromotionPattern<MatmulOp>>(
       ctx,
       LinalgPromotionOptions()
           .setOperandsToPromote({0})
-          .useFullTileBuffersByDefault(),
+          .setUseFullTileBuffersByDefault(true),
       LinalgMarker(Identifier::get("_promote_first_view_", ctx),
                    Identifier::get("_first_view_promoted_", ctx)));
   patterns.insert<LinalgPromotionPattern<FillOp>>(
@@ -196,7 +196,7 @@ static void fillL1TilingAndMatmulToVectorPatterns(
                    Identifier::get("L1", ctx))));
 
   patternsVector.emplace_back(LinalgPromotionPattern<MatmulOp>(
-      ctx, LinalgPromotionOptions().useFullTileBuffersByDefault(),
+      ctx, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
       LinalgMarker(Identifier::get("L1", ctx), Identifier::get("VEC", ctx))));
 
   patternsVector.emplace_back(LinalgVectorizationPattern<MatmulOp>(

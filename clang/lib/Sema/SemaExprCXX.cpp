@@ -8307,8 +8307,6 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   if (FullExpr.isInvalid()) {
     // Typo-correction fails, we rebuild the broken AST with the typos degraded
     // to RecoveryExpr.
-    // FIXME: we lose source locations for RecoveryExpr, as TypoExpr doesn't
-    // track source locations.
     struct TyposReplace : TreeTransform<TyposReplace> {
       TyposReplace(Sema &SemaRef) : TreeTransform(SemaRef) {}
       ExprResult TransformTypoExpr(TypoExpr *E) {

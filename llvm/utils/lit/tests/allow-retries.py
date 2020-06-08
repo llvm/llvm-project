@@ -5,18 +5,18 @@
 #
 # RUN: rm -f %t.counter
 # RUN: %{lit} -j 1 %{inputs}/allow-retries/succeeds-within-limit.py -Dcounter=%t.counter -Dpython=%{python} | FileCheck --check-prefix=CHECK-TEST1 %s
-# CHECK-TEST1: Passes With Retry: 1
+# CHECK-TEST1: Passed With Retry: 1
 
 # Test that a per-file ALLOW_RETRIES overwrites the config-wide test_retry_attempts property, if any.
 #
 # RUN: rm -f %t.counter
 # RUN: %{lit} -j 1 %{inputs}/allow-retries/succeeds-within-limit.py -Dtest_retry_attempts=2 -Dcounter=%t.counter -Dpython=%{python} | FileCheck --check-prefix=CHECK-TEST2 %s
-# CHECK-TEST2: Passes With Retry: 1
+# CHECK-TEST2: Passed With Retry: 1
 
 # This test does not succeed within the allowed retry limit
 #
 # RUN: not %{lit} -j 1 %{inputs}/allow-retries/does-not-succeed-within-limit.py | FileCheck --check-prefix=CHECK-TEST3 %s
-# CHECK-TEST3: Failing Tests (1):
+# CHECK-TEST3: Failed Tests (1):
 # CHECK-TEST3: allow-retries :: does-not-succeed-within-limit.py
 
 # This test should be UNRESOLVED since it has more than one ALLOW_RETRIES
@@ -38,4 +38,4 @@
 #
 # RUN: rm -f %t.counter
 # RUN: %{lit} -j 1 %{inputs}/test_retry_attempts/test.py -Dcounter=%t.counter -Dpython=%{python} | FileCheck --check-prefix=CHECK-TEST6 %s
-# CHECK-TEST6: Passes With Retry: 1
+# CHECK-TEST6: Passed With Retry: 1

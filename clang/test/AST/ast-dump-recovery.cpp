@@ -13,9 +13,9 @@ int invalid_call = some_func(123);
 void test_invalid_call(int s) {
   // CHECK:      CallExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} 'some_func'
-  // CHECK-NEXT: |-RecoveryExpr {{.*}} <<invalid sloc>>
-  // CHECK-NEXT: `-BinaryOperator {{.*}} <<invalid sloc>, col:28>
-  // CHECK-NEXT:   |-RecoveryExpr {{.*}} <<invalid sloc>>
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} <col:13>
+  // CHECK-NEXT: `-BinaryOperator {{.*}}
+  // CHECK-NEXT:   |-RecoveryExpr {{.*}}
   // CHECK-NEXT:   `-IntegerLiteral {{.*}} <col:28> 'int' 1
   some_func(undef1, undef2+1);
 
