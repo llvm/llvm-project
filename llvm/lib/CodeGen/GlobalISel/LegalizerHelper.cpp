@@ -100,7 +100,7 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
 }
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
-  LLVM_DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
+  LLVM_DEBUG(dbgs() << "Legalizing: " << MI);
 
   if (MI.getOpcode() == TargetOpcode::G_INTRINSIC ||
       MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
