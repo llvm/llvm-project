@@ -64,6 +64,11 @@ struct TestClangConfig {
            Language == Lang_CXX17 || Language == Lang_CXX20;
   }
 
+  bool isCXX14OrLater() const {
+    return Language == Lang_CXX14 || Language == Lang_CXX17 ||
+           Language == Lang_CXX20;
+  }
+
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14;
@@ -321,7 +326,7 @@ int b = 42;
   |-SimpleDeclarator
   | |-b
   | |-=
-  | `-UnknownExpression
+  | `-IntegerLiteralExpression
   |   `-42
   `-;
 )txt"));
@@ -378,7 +383,7 @@ int main() {
     |-IfStatement
     | |-if
     | |-(
-    | |-UnknownExpression
+    | |-IntegerLiteralExpression
     | | `-1
     | |-)
     | `-CompoundStatement
@@ -387,7 +392,7 @@ int main() {
     |-IfStatement
     | |-if
     | |-(
-    | |-UnknownExpression
+    | |-IntegerLiteralExpression
     | | `-1
     | |-)
     | |-CompoundStatement
@@ -397,7 +402,7 @@ int main() {
     | `-IfStatement
     |   |-if
     |   |-(
-    |   |-UnknownExpression
+    |   |-IntegerLiteralExpression
     |   | `-0
     |   |-)
     |   `-CompoundStatement
@@ -468,7 +473,7 @@ void test() {
     | |   |-a
     | |   `-ArraySubscript
     | |     |-[
-    | |     |-UnknownExpression
+    | |     |-IntegerLiteralExpression
     | |     | `-3
     | |     `-]
     | `-;
@@ -513,7 +518,7 @@ void test() {
     | | `-SimpleDeclarator
     | |   |-a
     | |   |-=
-    | |   `-UnknownExpression
+    | |   `-IntegerLiteralExpression
     | |     `-10
     | `-;
     `-}
@@ -544,14 +549,14 @@ void test() {
     |-SwitchStatement
     | |-switch
     | |-(
-    | |-UnknownExpression
+    | |-IntegerLiteralExpression
     | | `-1
     | |-)
     | `-CompoundStatement
     |   |-{
     |   |-CaseStatement
     |   | |-case
-    |   | |-UnknownExpression
+    |   | |-IntegerLiteralExpression
     |   | | `-0
     |   | |-:
     |   | `-DefaultStatement
@@ -585,7 +590,7 @@ void test() {
     |-WhileStatement
     | |-while
     | |-(
-    | |-UnknownExpression
+    | |-IntegerLiteralExpression
     | | `-1
     | |-)
     | `-CompoundStatement
@@ -627,7 +632,7 @@ int main() {
     | |-:
     | `-ReturnStatement
     |   |-return
-    |   |-UnknownExpression
+    |   |-IntegerLiteralExpression
     |   | `-100
     |   `-;
     `-}
@@ -665,7 +670,7 @@ void test() {
     |-IfStatement
     | |-if
     | |-(
-    | |-UnknownExpression
+    | |-IntegerLiteralExpression
     | | `-1
     | |-)
     | |-ExpressionStatement
@@ -711,6 +716,149 @@ void test() {
     |-ExpressionStatement
     | |-CxxNullPtrExpression
     | | `-nullptr
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, IntegerLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  12;
+  12u;
+  12l;
+  12ul;
+  014;
+  0XC;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12u
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12l
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12ul
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-014
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-0XC
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, IntegerLiteralLongLong) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  12ll;
+  12ull;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12ll
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-12ull
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, IntegerLiteralBinary) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  0b1100;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-0b1100
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, IntegerLiteralWithDigitSeparators) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  1'2'0ull;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-IntegerLiteralExpression
+    | | `-1'2'0ull
     | `-;
     `-}
 )txt"));
@@ -931,18 +1079,18 @@ void test(int a) {
     |-{
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | |--
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-2
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | |-==
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-2
     | `-;
     |-ExpressionStatement
@@ -950,7 +1098,7 @@ void test(int a) {
     | | |-UnknownExpression
     | | | `-a
     | | |-=
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-1
     | `-;
     |-ExpressionStatement
@@ -958,23 +1106,23 @@ void test(int a) {
     | | |-UnknownExpression
     | | | `-a
     | | |-<<=
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-1
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | |-||
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-0
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | |-&
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-2
     | `-;
     |-ExpressionStatement
@@ -982,7 +1130,7 @@ void test(int a) {
     | | |-UnknownExpression
     | | | `-a
     | | |-^=
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-3
     | `-;
     `-}
@@ -1035,10 +1183,10 @@ void test(int a) {
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | |-bitand
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-2
     | `-;
     |-ExpressionStatement
@@ -1046,7 +1194,7 @@ void test(int a) {
     | | |-UnknownExpression
     | | | `-a
     | | |-xor_eq
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-3
     | `-;
     `-}
@@ -1089,20 +1237,20 @@ void test(int a, int b) {
     | | |-UnknownExpression
     | | | |-(
     | | | |-BinaryOperatorExpression
-    | | | | |-UnknownExpression
+    | | | | |-IntegerLiteralExpression
     | | | | | `-1
     | | | | |-+
-    | | | | `-UnknownExpression
+    | | | | `-IntegerLiteralExpression
     | | | |   `-2
     | | | `-)
     | | |-*
     | | `-UnknownExpression
     | |   |-(
     | |   |-BinaryOperatorExpression
-    | |   | |-UnknownExpression
+    | |   | |-IntegerLiteralExpression
     | |   | | `-4
     | |   | |-/
-    | |   | `-UnknownExpression
+    | |   | `-IntegerLiteralExpression
     | |   |   `-2
     | |   `-)
     | `-;
@@ -1115,7 +1263,7 @@ void test(int a, int b) {
     | | | `-UnknownExpression
     | | |   `-b
     | | |-+
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-42
     | `-;
     |-ExpressionStatement
@@ -1127,7 +1275,7 @@ void test(int a, int b) {
     | |   |-UnknownExpression
     | |   | `-b
     | |   |-=
-    | |   `-UnknownExpression
+    | |   `-IntegerLiteralExpression
     | |     `-42
     | `-;
     |-ExpressionStatement
@@ -1140,10 +1288,10 @@ void test(int a, int b) {
     | | |   |-UnknownExpression
     | | |   | `-b
     | | |   |-*
-    | | |   `-UnknownExpression
+    | | |   `-IntegerLiteralExpression
     | | |     `-4
     | | |-+
-    | | `-UnknownExpression
+    | | `-IntegerLiteralExpression
     | |   `-2
     | `-;
     |-ExpressionStatement
@@ -1152,14 +1300,14 @@ void test(int a, int b) {
     | | | |-UnknownExpression
     | | | | `-a
     | | | |-%
-    | | | `-UnknownExpression
+    | | | `-IntegerLiteralExpression
     | | |   `-2
     | | |-+
     | | `-BinaryOperatorExpression
     | |   |-UnknownExpression
     | |   | `-b
     | |   |-*
-    | |   `-UnknownExpression
+    | |   `-IntegerLiteralExpression
     | |     `-42
     | `-;
     `-}
@@ -1582,7 +1730,7 @@ template <class T> int fun() {}
 |   |-SimpleDeclarator
 |   | |-var
 |   | |-=
-|   | `-UnknownExpression
+|   | `-IntegerLiteralExpression
 |   |   `-10
 |   `-;
 `-TemplateDeclaration
@@ -1944,10 +2092,10 @@ void test() {
     | |-I: if
     | |-I: (
     | |-I: BinaryOperatorExpression
-    | | |-I: UnknownExpression
+    | | |-I: IntegerLiteralExpression
     | | | `-I: 1
     | | |-I: +
-    | | `-I: UnknownExpression
+    | | `-I: IntegerLiteralExpression
     | |   `-I: 1
     | |-I: )
     | |-I: CompoundStatement
@@ -1992,14 +2140,14 @@ void test() {
     |-CompoundStatement
     | |-{
     | |-ExpressionStatement
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-1
     | | `-;
     | `-}
     |-CompoundStatement
     | |-{
     | |-ExpressionStatement
-    | | |-UnknownExpression
+    | | |-IntegerLiteralExpression
     | | | `-2
     | | `-;
     | `-}
@@ -2022,7 +2170,7 @@ int c[] = {1,2,3};
 | | |-a
 | | `-ArraySubscript
 | |   |-[
-| |   |-UnknownExpression
+| |   |-IntegerLiteralExpression
 | |   | `-10
 | |   `-]
 | `-;
@@ -2032,17 +2180,17 @@ int c[] = {1,2,3};
 | | |-b
 | | |-ArraySubscript
 | | | |-[
-| | | |-UnknownExpression
+| | | |-IntegerLiteralExpression
 | | | | `-1
 | | | `-]
 | | |-ArraySubscript
 | | | |-[
-| | | |-UnknownExpression
+| | | |-IntegerLiteralExpression
 | | | | `-2
 | | | `-]
 | | `-ArraySubscript
 | |   |-[
-| |   |-UnknownExpression
+| |   |-IntegerLiteralExpression
 | |   | `-3
 | |   `-]
 | `-;
@@ -2057,13 +2205,13 @@ int c[] = {1,2,3};
   | `-UnknownExpression
   |   `-UnknownExpression
   |     |-{
-  |     |-UnknownExpression
+  |     |-IntegerLiteralExpression
   |     | `-1
   |     |-,
-  |     |-UnknownExpression
+  |     |-IntegerLiteralExpression
   |     | `-2
   |     |-,
-  |     |-UnknownExpression
+  |     |-IntegerLiteralExpression
   |     | `-3
   |     `-}
   `-;
@@ -2093,7 +2241,7 @@ void f(int xs[static 10]);
   |   |   `-ArraySubscript
   |   |     |-[
   |   |     |-static
-  |   |     |-UnknownExpression
+  |   |     |-IntegerLiteralExpression
   |   |     | `-10
   |   |     `-]
   |   `-)
@@ -2579,7 +2727,7 @@ const int const *const *volatile b;
 | | |-=
 | | `-PrefixUnaryOperatorExpression
 | |   |--
-| |   `-UnknownExpression
+| |   `-IntegerLiteralExpression
 | |     `-1
 | `-;
 |-SimpleDeclaration
@@ -2588,7 +2736,7 @@ const int const *const *volatile b;
 | |-SimpleDeclarator
 | | |-east
 | | |-=
-| | `-UnknownExpression
+| | `-IntegerLiteralExpression
 | |   `-1
 | `-;
 |-SimpleDeclaration
@@ -2598,7 +2746,7 @@ const int const *const *volatile b;
 | |-SimpleDeclarator
 | | |-universal
 | | |-=
-| | `-UnknownExpression
+| | `-IntegerLiteralExpression
 | |   `-0
 | `-;
 `-SimpleDeclaration
