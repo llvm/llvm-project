@@ -17,7 +17,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
@@ -39,8 +41,8 @@ protected:
       return;
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
+    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+        T->createTargetMachine("AArch64", "", "", Options, None, None,
                                CodeGenOpt::Aggressive)));
     if (!TM)
       return;
@@ -65,14 +67,6 @@ protected:
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr);
-  }
-
-  TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeAction(Context, VT);
-  }
-
-  EVT getTypeToTransformTo(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeToTransformTo(Context, VT);
   }
 
   LLVMContext Context;
@@ -383,59 +377,4 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTO
   EXPECT_EQ(SplatIdx, 0);
 }
 
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableMVT) {
-  if (!TM)
-    return;
-
-  MVT VT = MVT::nxv4i64;
-  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
-  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
-}
-
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_PromoteScalableMVT) {
-  if (!TM)
-    return;
-
-  MVT VT = MVT::nxv2i32;
-  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypePromoteInteger);
-  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
-}
-
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeMVT_nxv1f32) {
-  if (!TM)
-    return;
-
-  MVT VT = MVT::nxv1f32;
-  EXPECT_NE(getTypeAction(VT), TargetLoweringBase::TypeScalarizeVector);
-  ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
-}
-
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableEVT) {
-  if (!TM)
-    return;
-
-  EVT VT = EVT::getVectorVT(Context, MVT::i64, 256, true);
-  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
-  EXPECT_EQ(getTypeToTransformTo(VT), VT.getHalfNumVectorElementsVT(Context));
-}
-
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_WidenScalableEVT) {
-  if (!TM)
-    return;
-
-  EVT FromVT = EVT::getVectorVT(Context, MVT::i64, 6, true);
-  EVT ToVT = EVT::getVectorVT(Context, MVT::i64, 8, true);
-
-  EXPECT_EQ(getTypeAction(FromVT), TargetLoweringBase::TypeWidenVector);
-  EXPECT_EQ(getTypeToTransformTo(FromVT), ToVT);
-}
-
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeEVT_nxv1f128) {
-  if (!TM)
-    return;
-
-  EVT FromVT = EVT::getVectorVT(Context, MVT::f128, 1, true);
-  EXPECT_DEATH(getTypeAction(FromVT), "Cannot legalize this vector");
-}
-
-} // end namespace llvm
+} // end anonymous namespace

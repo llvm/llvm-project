@@ -245,9 +245,6 @@ bool DAGTypeLegalizer::run() {
       case TargetLowering::TypeLegal:
         LLVM_DEBUG(dbgs() << "Legal result type\n");
         break;
-      case TargetLowering::TypeScalarizeScalableVector:
-        report_fatal_error(
-            "Scalarization of scalable vectors is not supported.");
       // The following calls must take care of *all* of the node's results,
       // not just the illegal result they were passed (this includes results
       // with a legal type).  Results can be remapped using ReplaceValueWith,
@@ -310,9 +307,6 @@ ScanOperands:
       case TargetLowering::TypeLegal:
         LLVM_DEBUG(dbgs() << "Legal operand\n");
         continue;
-      case TargetLowering::TypeScalarizeScalableVector:
-        report_fatal_error(
-            "Scalarization of scalable vectors is not supported.");
       // The following calls must either replace all of the node's results
       // using ReplaceValueWith, and return "false"; or update the node's
       // operands in place, and return "true".
