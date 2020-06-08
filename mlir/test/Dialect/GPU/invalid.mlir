@@ -423,3 +423,15 @@ module {
     }
   }
 }
+
+// -----
+
+module {
+  gpu.module @gpu_funcs {
+    // expected-error @+1 {{'gpu.func' op expected at least 5 arguments to body region}}
+    "gpu.func"() ( {
+    ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
+      "gpu.return"() : () -> ()
+    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 3: i64} : () -> ()
+  }
+}
