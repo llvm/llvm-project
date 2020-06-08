@@ -14,8 +14,8 @@
 #ifndef LLVM_ANALYSIS_CFG_H
 #define LLVM_ANALYSIS_CFG_H
 
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include <utility>
 
 namespace llvm {
 
@@ -24,6 +24,7 @@ class DominatorTree;
 class Function;
 class Instruction;
 class LoopInfo;
+template <typename T> class SmallVectorImpl;
 
 /// Analyze the specified function to find all of the loop backedges in the
 /// function and return them.  This is a relatively cheap (compared to
