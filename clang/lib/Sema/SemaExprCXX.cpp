@@ -7595,13 +7595,13 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
       // a difference in ARC, but outside of ARC the resulting block literal
       // follows the normal lifetime rules for block literals instead of being
       // autoreleased.
-      DiagnosticErrorTrap Trap(Diags);
       PushExpressionEvaluationContext(
           ExpressionEvaluationContext::PotentiallyEvaluated);
       ExprResult BlockExp = BuildBlockForLambdaConversion(
           Exp.get()->getExprLoc(), Exp.get()->getExprLoc(), Method, Exp.get());
       PopExpressionEvaluationContext();
 
+      // FIXME: This note should be produced by a CodeSynthesisContext.
       if (BlockExp.isInvalid())
         Diag(Exp.get()->getExprLoc(), diag::note_lambda_to_block_conv);
       return BlockExp;
