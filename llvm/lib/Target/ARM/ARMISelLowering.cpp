@@ -6644,8 +6644,6 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
       case MVT::f64: {
         SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
         SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
-        if (!ST->isLittle())
-          std::swap(Lo, Hi);
         return DAG.getNode(ARMISD::VMOVDRR, DL, MVT::f64, Lo, Hi);
       }
       case MVT::f32:
