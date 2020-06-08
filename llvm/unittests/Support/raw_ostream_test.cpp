@@ -350,6 +350,26 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
             format_bytes_with_ascii_str(B.take_front(12), 0, 7, 1));
 }
 
+#ifdef LLVM_ON_UNIX
+TEST(raw_ostreamTest, Colors) {
+  {
+    std::string S;
+    raw_string_ostream Sos(S);
+    Sos.enable_colors(false);
+    Sos.changeColor(raw_ostream::YELLOW);
+    EXPECT_EQ("", Sos.str());
+  }
+
+  {
+    std::string S;
+    raw_string_ostream Sos(S);
+    Sos.enable_colors(true);
+    Sos.changeColor(raw_ostream::YELLOW);
+    EXPECT_EQ("\x1B[0;33m", Sos.str());
+  }
+}
+#endif
+
 TEST(raw_fd_ostreamTest, multiple_raw_fd_ostream_to_stdout) {
   std::error_code EC;
 
