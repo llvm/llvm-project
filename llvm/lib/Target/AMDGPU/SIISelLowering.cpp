@@ -11153,13 +11153,9 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     Info->reserveVGPRforSGPRSpills(MF);
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
-                                                     KnownBits &Known,
-                                                     const APInt &DemandedElts,
-                                                     const SelectionDAG &DAG,
-                                                     unsigned Depth) const {
-  TargetLowering::computeKnownBitsForFrameIndex(Op, Known, DemandedElts,
-                                                DAG, Depth);
+void SITargetLowering::computeKnownBitsForFrameIndex(
+  const int FI, KnownBits &Known, const MachineFunction &MF) const {
+  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
 
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
