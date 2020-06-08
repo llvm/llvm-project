@@ -5,16 +5,19 @@
 define i8 @popcount128(i128* nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount128:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    ldr x8, [x0, #8]
+; CHECK-NEXT:    ldr d0, [x0, #8]
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.d[1], x8
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
 Entry:
   %1 = load i128, i128* %0, align 16
@@ -30,27 +33,33 @@ declare i128 @llvm.ctpop.i128(i128)
 define i16 @popcount256(i256* nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount256:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    ldr x8, [x0, #8]
-; CHECK-NEXT:    ldr x9, [x0, #24]
+; CHECK-NEXT:    ldr d0, [x0, #24]
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    ldr d0, [x0, #16]
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.d[1], x9
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    ldr d0, [x0, #8]
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.d[1], x8
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
 Entry:
   %1 = load i256, i256* %0, align 16
@@ -65,17 +74,23 @@ declare i256 @llvm.ctpop.i256(i256)
 define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-LABEL: popcount1x128:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    // implicit-def: $q0
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w2, s2
+; CHECK-NEXT:    mov w8, w2
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w0, s1
-; CHECK-NEXT:    // kill: def $x0 killed $w0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x1, v0.d[1]
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h1, v0.8b
+; CHECK-NEXT:    // implicit-def: $q2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    fmov w2, s2
+; CHECK-NEXT:    mov w9, w2
+; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    mov x1, v2.d[1]
 ; CHECK-NEXT:    ret
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1.i128(<1 x i128> %0)
