@@ -11,4 +11,4 @@
 # RUN: not llvm-ar p %t/permission.b 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b
 
-# NO-PERMISSION: error: error opening '[[ARCHIVE]]': {{[pP]}}ermission denied
+# NO-PERMISSION: error: unable to open '[[ARCHIVE]]': {{[pP]}}ermission denied
