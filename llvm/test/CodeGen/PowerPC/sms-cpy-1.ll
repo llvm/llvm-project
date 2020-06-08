@@ -22,35 +22,35 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 7, -1
 ; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 7, -1
+; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    bdz .LBB0_6
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addi 3, 3, 1
+; CHECK-NEXT:    addi 8, 7, -1
 ; CHECK-NEXT:    xori 6, 5, 84
 ; CHECK-NEXT:    clrldi 5, 7, 32
 ; CHECK-NEXT:    lbz 5, 0(5)
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    addi 8, 7, -1
 ; CHECK-NEXT:    bdz .LBB0_5
 ; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    srwi 7, 6, 5
 ; CHECK-NEXT:    xori 6, 5, 84
 ; CHECK-NEXT:    clrldi 5, 8, 32
 ; CHECK-NEXT:    addi 8, 8, -1
 ; CHECK-NEXT:    lbz 5, 0(5)
-; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    clrldi 10, 8, 32
+; CHECK-NEXT:    addi 8, 8, -1
 ; CHECK-NEXT:    cntlzw 9, 6
 ; CHECK-NEXT:    xori 6, 5, 84
 ; CHECK-NEXT:    lbz 5, 0(10)
-; CHECK-NEXT:    addi 8, 8, -1
-; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    add 4, 4, 7
 ; CHECK-NEXT:    srwi 7, 9, 5
 ; CHECK-NEXT:    bdnz .LBB0_3
