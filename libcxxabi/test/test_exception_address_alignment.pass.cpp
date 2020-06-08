@@ -9,14 +9,13 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++03
 
-// The system unwind.h on older OSX versions provided an incorrectly aligned
-// _Unwind_Exception type. That causes these tests to fail on those platforms.
-// XFAIL: macosx10.14 && libcxxabi-has-system-unwinder
-// XFAIL: macosx10.13 && libcxxabi-has-system-unwinder
-// XFAIL: macosx10.12 && libcxxabi-has-system-unwinder
-// XFAIL: macosx10.11 && libcxxabi-has-system-unwinder
-// XFAIL: macosx10.10 && libcxxabi-has-system-unwinder
-// XFAIL: macosx10.9 && libcxxabi-has-system-unwinder
+// The <unwind.h> header provided in the SDK of older Xcodes used to provide
+// an incorrectly aligned _Unwind_Exception type. That causes these tests to
+// fail with those SDKs. Note that we use the AppleClang version as a cheap
+// proxy for the SDK version.
+// XFAIL: apple-clang-11 && libcxxabi-has-system-unwinder
+// XFAIL: apple-clang-10 && libcxxabi-has-system-unwinder
+// XFAIL: apple-clang-9 && libcxxabi-has-system-unwinder
 
 // Test that the address of the exception object is properly aligned as required
 // by the relevant ABI
