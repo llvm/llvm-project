@@ -131,6 +131,44 @@ std::future<T> runAsync(llvm::unique_function<T()> Action) {
       std::move(Action), Context::current().clone());
 }
 
+/// Memoize is a cache to store and reuse computation results based on a key.
+///
+///   Memoize<DenseMap<int, bool>> PrimeCache;
+///   for (int I : RepetitiveNumbers)
+///     if (PrimeCache.get(I, [&] { return expensiveIsPrime(I); }))
+///       llvm::errs() << "Prime: " << I << "\n";
+///
+/// The computation will only be run once for each key.
+/// This class is threadsafe. Concurrent calls for the same key may run the
+/// computation multiple times, but each call will return the same result.
+template <typename Container> class Memoize {
+  mutable Container Cache;
+  std::unique_ptr<std::mutex> Mu;
+
+public:
+  Memoize() : Mu(std::make_unique<std::mutex>()) {}
+
+  template <typename T, typename Func>
+  typename Container::mapped_type get(T &&Key, Func Compute) const {
+    {
+      std::lock_guard<std::mutex> Lock(*Mu);
+      auto It = Cache.find(Key);
+      if (It != Cache.end())
+        return It->second;
+    }
+    // Don't hold the mutex while computing.
+    auto V = Compute();
+    {
+      std::lock_guard<std::mutex> Lock(*Mu);
+      auto R = Cache.try_emplace(std::forward<T>(Key), V);
+      // Insert into cache may fail if we raced with another thread.
+      if (!R.second)
+        return R.first->second; // Canonical value, from other thread.
+    }
+    return V;
+  }
+};
+
 } // namespace clangd
 } // namespace clang
 #endif
