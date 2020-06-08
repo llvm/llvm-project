@@ -762,7 +762,7 @@ function(cxx_link_system_libraries target)
     target_link_libraries(${target} PRIVATE gcc_s)
   endif()
 
-  if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
+  if (LIBCXX_HAS_ATOMIC_LIB)
     target_link_libraries(${target} PRIVATE atomic)
   endif()
 
