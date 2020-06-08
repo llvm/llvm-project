@@ -425,36 +425,35 @@ private:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     // TRI can be null.
     void dump(const TargetRegisterInfo *TRI, raw_ostream &Out = dbgs()) const {
-      dbgs() << "VarLoc(";
+      Out << "VarLoc(";
       switch (Kind) {
       case RegisterKind:
       case EntryValueKind:
       case EntryValueBackupKind:
       case EntryValueCopyBackupKind:
-        dbgs() << printReg(Loc.RegNo, TRI);
+        Out << printReg(Loc.RegNo, TRI);
         break;
       case SpillLocKind:
-        dbgs() << printReg(Loc.SpillLocation.SpillBase, TRI);
-        dbgs() << "[" << Loc.SpillLocation.SpillOffset << "]";
+        Out << printReg(Loc.SpillLocation.SpillBase, TRI);
+        Out << "[" << Loc.SpillLocation.SpillOffset << "]";
         break;
       case ImmediateKind:
-        dbgs() << Loc.Immediate;
+        Out << Loc.Immediate;
         break;
       case InvalidKind:
         llvm_unreachable("Invalid VarLoc in dump method");
       }
 
-      dbgs() << ", \"" << Var.getVariable()->getName() << "\", " << *Expr
-             << ", ";
+      Out << ", \"" << Var.getVariable()->getName() << "\", " << *Expr << ", ";
       if (Var.getInlinedAt())
-        dbgs() << "!" << Var.getInlinedAt()->getMetadataID() << ")\n";
+        Out << "!" << Var.getInlinedAt()->getMetadataID() << ")\n";
       else
-        dbgs() << "(null))";
+        Out << "(null))";
 
       if (isEntryBackupLoc())
-        dbgs() << " (backup loc)\n";
+        Out << " (backup loc)\n";
       else
-        dbgs() << "\n";
+        Out << "\n";
     }
 #endif
 
