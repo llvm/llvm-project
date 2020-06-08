@@ -91,6 +91,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
 
 /// A relation between a parent and child node, e.g. 'left-hand-side of
 /// a binary expression'. Used for implementing accessors.
+///
+/// Some roles describe parent/child relations that occur multiple times in
+/// language grammar. We define only one role to describe all instances of such
+/// recurring relations. For example, grammar for both "if" and "while"
+/// statements requires an opening paren and a closing paren. The opening
+/// paren token is assigned the OpenParen role regardless of whether it appears
+/// as a child of IfStatement or WhileStatement node. More generally, when
+/// grammar requires a certain fixed token (like a specific keyword, or an
+/// opening paren), we define a role for this token and use it across all
+/// grammar rules with the same requirement. Names of such reusable roles end
+/// with a ~Token or a ~Keyword suffix.
+///
+/// Some roles are assigned only to child nodes of one specific parent syntax
+/// node type. Names of such roles start with the name of the parent syntax tree
+/// node type. For example, a syntax node with a role
+/// BinaryOperatorExpression_leftHandSide can only appear as a child of a
+/// BinaryOperatorExpression node.
 enum class NodeRole : uint8_t {
   // Roles common to multiple node kinds.
   /// A node without a parent
@@ -103,19 +120,21 @@ enum class NodeRole : uint8_t {
   CloseParen,
   /// A keywords that introduces some grammar construct, e.g. 'if', 'try', etc.
   IntroducerKeyword,
+  /// A token that represents a literal, e.g. 'nullptr', '1', 'true', etc.
+  LiteralToken,
+  /// Tokens or Keywords
+  ArrowToken,
+  ExternKeyword,
   /// An inner statement for those that have only a single child of kind
   /// statement, e.g. loop body for while, for, etc; inner statement for case,
   /// default, etc.
   BodyStatement,
 
   // Roles specific to particular node kinds.
-  UnaryOperatorExpression_operatorToken,
+  OperatorExpression_operatorToken,
   UnaryOperatorExpression_operand,
   BinaryOperatorExpression_leftHandSide,
-  BinaryOperatorExpression_operatorToken,
   BinaryOperatorExpression_rightHandSide,
-  CxxNullPtrExpression_keyword,
-  IntegerLiteralExpression_literalToken,
   CaseStatement_value,
   IfStatement_thenStatement,
   IfStatement_elseKeyword,
@@ -127,10 +146,8 @@ enum class NodeRole : uint8_t {
   StaticAssertDeclaration_message,
   SimpleDeclaration_declarator,
   TemplateDeclaration_declaration,
-  ExplicitTemplateInstantiation_externKeyword,
   ExplicitTemplateInstantiation_declaration,
   ArraySubscript_sizeExpression,
-  TrailingReturnType_arrow,
   TrailingReturnType_declarator,
   ParametersAndQualifiers_parameter,
   ParametersAndQualifiers_trailingReturn
