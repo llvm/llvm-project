@@ -116,14 +116,23 @@ def uimm7 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<7>(N->getZExtValue()); }]>;
 
 // simm7 - Generic immediate value.
+def SImm7AsmOperand : AsmOperandClass {
+  let Name = "SImm7";
+}
 def simm7 : Operand<i32>, PatLeaf<(imm), [{
     return isInt<7>(N->getSExtValue()); }], LO7> {
+  let ParserMatchClass = SImm7AsmOperand;
   let DecoderMethod = "DecodeSIMM7";
 }
 
 // mimm - Special immediate value of sequential bit stream of 0 or 1.
+def MImmAsmOperand : AsmOperandClass {
+  let Name = "MImm";
+  let ParserMethod = "parseMImmOperand";
+}
 def mimm : Operand<i32>, PatLeaf<(imm), [{
     return isMImmVal(getImmVal(N)); }], MIMM> {
+  let ParserMatchClass = MImmAsmOperand;
   let PrintMethod = "printMImmOperand";
 }
 
@@ -817,6 +826,7 @@ let cx = 1 in defm MULSWZX : RRm<"muls.w.zx", 0x4B, I32, i32>;
 defm MULSL : RRm<"muls.l", 0x6E, I64, i64, mul>;
 
 // Section 8.4.10 - MPD (Multiply)
+defm MULSLW : RRbm<"muls.l.w", 0x6B, I64, i64, I32, i32>;
 
 // Section 8.4.11 - DIV (Divide)
 defm DIVUL : RRNCm<"divu.l", 0x6F, I64, i64, udiv>;
