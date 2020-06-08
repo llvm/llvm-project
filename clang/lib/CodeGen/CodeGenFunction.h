@@ -684,18 +684,18 @@ public:
   /// Manages parent directive for scan directives.
   class ParentLoopDirectiveForScanRegion {
     CodeGenFunction &CGF;
-    const OMPExecutableDirective &ParentLoopDirectiveForScan;
+    const OMPExecutableDirective *ParentLoopDirectiveForScan;
 
   public:
     ParentLoopDirectiveForScanRegion(
         CodeGenFunction &CGF,
         const OMPExecutableDirective &ParentLoopDirectiveForScan)
         : CGF(CGF),
-          ParentLoopDirectiveForScan(*CGF.OMPParentLoopDirectiveForScan) {
+          ParentLoopDirectiveForScan(CGF.OMPParentLoopDirectiveForScan) {
       CGF.OMPParentLoopDirectiveForScan = &ParentLoopDirectiveForScan;
     }
     ~ParentLoopDirectiveForScanRegion() {
-      CGF.OMPParentLoopDirectiveForScan = &ParentLoopDirectiveForScan;
+      CGF.OMPParentLoopDirectiveForScan = ParentLoopDirectiveForScan;
     }
   };
 
