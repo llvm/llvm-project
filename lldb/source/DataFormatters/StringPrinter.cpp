@@ -30,9 +30,7 @@ using StringElementType = StringPrinter::StringElementType;
 /// DecodedCharBuffer stores the decoded contents of a single character. It
 /// avoids managing memory on the heap by copying decoded bytes into an in-line
 /// buffer.
-struct DecodedCharBuffer {
-  static constexpr unsigned MaxLength = 16;
-
+class DecodedCharBuffer {
 public:
   DecodedCharBuffer(std::nullptr_t) {}
 
@@ -50,6 +48,8 @@ public:
   size_t GetSize() const { return m_size; }
 
 private:
+  static constexpr unsigned MaxLength = 16;
+
   size_t m_size = 0;
   uint8_t m_data[MaxLength] = {0};
 };
