@@ -940,6 +940,30 @@ define <vscale x 2 x i1> @cmpne_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
   ret <vscale x 2 x i1> %out
 }
 
+
+define <vscale x 16 x i1> @cmpgt_wide_splat_b(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, i64 %b) {
+; CHECK-LABEL: cmpgt_wide_splat_b:
+; CHECK: cmpgt p0.b, p0/z, z0.b, z1.d
+; CHECK-NEXT: ret
+  %splat = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.wide.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                      <vscale x 16 x i8> %a,
+                                                                      <vscale x 2 x i64> %splat)
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpls_wide_splat_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, i64 %b) {
+; CHECK-LABEL: cmpls_wide_splat_s:
+; CHECK: cmpls p0.s, p0/z, z0.s, z1.d
+; CHECK-NEXT: ret
+  %splat = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpls.wide.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                     <vscale x 4 x i32> %a,
+                                                                     <vscale x 2 x i64> %splat)
+  ret <vscale x 4 x i1> %out
+}
+
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpeq.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.cmpeq.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
@@ -1003,3 +1027,5 @@ declare <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1>, <vs
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 2 x i64>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 2 x i64>)
+
+declare <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64)
