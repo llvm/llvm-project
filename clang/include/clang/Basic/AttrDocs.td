@@ -324,7 +324,7 @@ function marked with the ``sycl_kernel`` attribute:
   compiler uses function object type fields to generate OpenCL kernel
   parameters.
 - The function must return void. The compiler reuses the body of marked functions to
-  generate the OpenCL kernel body, and the OpenCL kernel must return `void`.
+  generate the OpenCL kernel body, and the OpenCL kernel must return ``void``.
 
 The SYCL kernel in the previous code sample meets these expectations.
   }];
@@ -1177,7 +1177,7 @@ def ObjCRuntimeNameDocs : Documentation {
     let Category = DocCatDecl;
     let Content = [{
 By default, the Objective-C interface or protocol identifier is used
-in the metadata name for that object. The `objc_runtime_name`
+in the metadata name for that object. The ``objc_runtime_name``
 attribute allows annotated interfaces or protocols to use the
 specified string argument in the object's metadata name instead of the
 default name.
@@ -1740,7 +1740,7 @@ expression are discarded under suspicious circumstances. A diagnostic is
 generated when a function or its return type is marked with ``[[nodiscard]]``
 (or ``__attribute__((warn_unused_result))``) and the function call appears as a
 potentially-evaluated discarded-value expression that is not explicitly cast to
-`void`.
+``void``.
 
 A string literal may optionally be provided to the attribute, which will be
 reproduced in any resulting diagnostics. Redeclarations using different forms
@@ -1944,7 +1944,7 @@ Clang supports the GNU style ``__attribute__((micromips))`` and
 may be attached to a function definition and instructs the backend to generate
 or not to generate microMIPS code for that function.
 
-These attributes override the `-mmicromips` and `-mno-micromips` options
+These attributes override the ``-mmicromips`` and ``-mno-micromips`` options
 on the command line.
   }];
 }
@@ -2941,11 +2941,13 @@ The ``trivial_abi`` attribute can be applied to a C++ class, struct, or union.
 It instructs the compiler to pass and return the type using the C ABI for the
 underlying type when the type would otherwise be considered non-trivial for the
 purpose of calls.
-A class annotated with `trivial_abi` can have non-trivial destructors or copy/move constructors without automatically becoming non-trivial for the purposes of calls. For example:
+A class annotated with ``trivial_abi`` can have non-trivial destructors or
+copy/move constructors without automatically becoming non-trivial for the
+purposes of calls. For example:
 
   .. code-block:: c++
 
-    // A is trivial for the purposes of calls because `trivial_abi` makes the
+    // A is trivial for the purposes of calls because ``trivial_abi`` makes the
     // user-provided special functions trivial.
     struct __attribute__((trivial_abi)) A {
       ~A();
@@ -3473,15 +3475,15 @@ def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";
   let Content = [{
-The `declare simd` construct can be applied to a function to enable the creation
+The ``declare simd`` construct can be applied to a function to enable the creation
 of one or more versions that can process multiple arguments using SIMD
-instructions from a single invocation in a SIMD loop. The `declare simd`
-directive is a declarative directive. There may be multiple `declare simd`
-directives for a function. The use of a `declare simd` construct on a function
+instructions from a single invocation in a SIMD loop. The ``declare simd``
+directive is a declarative directive. There may be multiple ``declare simd``
+directives for a function. The use of a ``declare simd`` construct on a function
 enables the creation of SIMD versions of the associated function that can be
 used to process multiple arguments from a single invocation from a SIMD loop
 concurrently.
-The syntax of the `declare simd` construct is as follows:
+The syntax of the ``declare simd`` construct is as follows:
 
   .. code-block:: none
 
@@ -3574,7 +3576,7 @@ def OMPDeclareTargetDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare target";
   let Content = [{
-The `declare target` directive specifies that variables and functions are mapped
+The ``declare target`` directive specifies that variables and functions are mapped
 to a device for OpenMP offload mechanism.
 
 The syntax of the declare target directive is as follows:
@@ -3612,10 +3614,10 @@ def OMPDeclareVariantDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare variant";
   let Content = [{
-The `declare variant` directive declares a specialized variant of a base
+The ``declare variant`` directive declares a specialized variant of a base
 function and specifies the context in which that specialized variant is used.
 The declare variant directive is a declarative directive.
-The syntax of the `declare variant` construct is as follows:
+The syntax of the ``declare variant`` construct is as follows:
 
   .. code-block:: none
 
@@ -3630,10 +3632,11 @@ where clause is one of the following:
 
     match(context-selector-specification)
 
-and where `variant-func-id` is the name of a function variant that is either a
+and where ``variant-func-id`` is the name of a function variant that is either a
 base language identifier or, for C++, a template-id.
 
-Clang provides the following context selector extensions, used via `implementation={extension(EXTENSION)}`:
+Clang provides the following context selector extensions, used via
+``implementation={extension(EXTENSION)}``:
 
   .. code-block:: none
 
@@ -3642,8 +3645,8 @@ Clang provides the following context selector extensions, used via `implementati
     match_none
 
 The match extensions change when the *entire* context selector is considered a
-match for an OpenMP context. The default is `all`, with `none` no trait in the
-selector is allowed to be in the OpenMP context, with `any` a single trait in
+match for an OpenMP context. The default is ``all``, with ``none`` no trait in the
+selector is allowed to be in the OpenMP context, with ``any`` a single trait in
 both the selector and OpenMP context is sufficient. Only a single match
 extension trait is allowed per context selector.
 
@@ -3730,7 +3733,7 @@ def NoThrowDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Clang supports the GNU style ``__attribute__((nothrow))`` and Microsoft style
-``__declspec(nothrow)`` attribute as an equivalent of `noexcept` on function
+``__declspec(nothrow)`` attribute as an equivalent of ``noexcept`` on function
 declarations. This attribute informs the compiler that the annotated function
 does not throw an exception. This prevents exception-unwinding. This attribute
 is particularly useful on functions in the C Standard Library that are
@@ -4130,10 +4133,10 @@ that have a hot path and a cold path. The hot path is usually a small piece
 of code that doesn't use many registers. The cold path might need to call out to
 another function and therefore only needs to preserve the caller-saved
 registers, which haven't already been saved by the caller. The
-`preserve_most` calling convention is very similar to the ``cold`` calling
+``preserve_most`` calling convention is very similar to the ``cold`` calling
 convention in terms of caller/callee-saved registers, but they are used for
 different types of function calls. ``coldcc`` is for function calls that are
-rarely executed, whereas `preserve_most` function calls are intended to be
+rarely executed, whereas ``preserve_most`` function calls are intended to be
 on the hot path and definitely executed a lot. Furthermore ``preserve_most``
 doesn't prevent the inliner from inlining the function call.
 
@@ -4187,11 +4190,11 @@ Consider the function declaration for a hypothetical function ``f``:
 
   void f(void) __attribute__((deprecated("message", "replacement")));
 
-When spelled as `__attribute__((deprecated))`, the deprecated attribute can have
+When spelled as ``__attribute__((deprecated))``, the deprecated attribute can have
 two optional string arguments. The first one is the message to display when
 emitting the warning; the second one enables the compiler to provide a Fix-It
 to replace the deprecated name with a new name. Otherwise, when spelled as
-`[[gnu::deprecated]] or [[deprecated]]`, the attribute can have one optional
+``[[gnu::deprecated]]`` or ``[[deprecated]]``, the attribute can have one optional
 string argument which is the message to display when emitting the warning.
   }];
 }
@@ -4290,7 +4293,7 @@ initialized classes. A non-lazy class will be initialized eagerly when the
 Objective-C runtime is loaded. This is required for certain system classes which
 have instances allocated in non-standard ways, such as the classes for blocks
 and constant strings. Adding this attribute is essentially equivalent to
-providing a trivial `+load` method but avoids the (fairly small) load-time
+providing a trivial ``+load`` method but avoids the (fairly small) load-time
 overheads associated with defining and calling such a method.
   }];
 }
@@ -4595,7 +4598,7 @@ complete object is complete. For instance:
     }
   }
 
-Here, if the construction of `array[9]` fails with an exception, `array[0..8]`
+Here, if the construction of ``array[9]`` fails with an exception, ``array[0..8]``
 will be destroyed, so the element's destructor needs to be accessible.
   }];
 }
@@ -4644,7 +4647,7 @@ arguments, are identified by their parameter name or position (starting with
 1!) in the annotated function. The first position in the attribute identifies
 the callback callee, the following positions declare describe its arguments.
 The callback callee is required to be callable with the number, and order, of
-the specified arguments. The index `0`, or the identifier `this`, is used to
+the specified arguments. The index ``0``, or the identifier ``this``, is used to
 represent an implicit "this" pointer in class methods. If there is no implicit
 "this" pointer it shall not be referenced. The index '-1', or the name "__",
 represents an unknown callback callee argument. This can be a value which is
@@ -4661,13 +4664,13 @@ position, it is undefined if that parameter is used for anything other than the
 actual callback. Inspected, captured, or modified parameters shall not be
 listed in the ``callback`` metadata.
 
-Example encodings for the callback performed by `pthread_create` are shown
+Example encodings for the callback performed by ``pthread_create`` are shown
 below. The explicit attribute annotation indicates that the third parameter
-(`start_routine`) is called zero or more times by the `pthread_create` function,
-and that the fourth parameter (`arg`) is passed along. Note that the callback
-behavior of `pthread_create` is automatically recognized by Clang. In addition,
-the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for
-`#pragma omp target teams` and `#pragma omp parallel`, respectively, are also
+(``start_routine``) is called zero or more times by the ``pthread_create`` function,
+and that the fourth parameter (``arg``) is passed along. Note that the callback
+behavior of ``pthread_create`` is automatically recognized by Clang. In addition,
+the declarations of ``__kmpc_fork_teams`` and ``__kmpc_fork_call``, generated for
+``#pragma omp target teams`` and ``#pragma omp parallel``, respectively, are also
 automatically recognized as broker functions. Further functions might be added
 in the future.
 
@@ -5053,7 +5056,7 @@ def UseHandleDocs : Documentation {
   let Category = HandleDocs;
   let Content = [{
 A function taking a handle by value might close the handle. If a function
-parameter is annotated with `use_handle` it is assumed to not to change
+parameter is annotated with ``use_handle`` it is assumed to not to change
 the state of the handle. It is also assumed to require an open handle to work with.
 
 .. code-block:: c++
@@ -5067,7 +5070,7 @@ the state of the handle. It is also assumed to require an open handle to work wi
 def ReleaseHandleDocs : Documentation {
   let Category = HandleDocs;
   let Content = [{
-If a function parameter is annotated with `release_handle` it is assumed to
+If a function parameter is annotated with ``release_handle`` it is assumed to
 close the handle. It is also assumed to require an open handle to work with.
 
 .. code-block:: c++
