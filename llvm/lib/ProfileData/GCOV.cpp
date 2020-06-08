@@ -57,7 +57,7 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
 
   uint32_t tag, length;
   GCOVFunction *fn;
-  while (buf.readInt(tag) && tag) {
+  while ((tag = buf.getWord())) {
     if (!buf.readInt(length))
       return false;
     if (tag == GCOV_TAG_FUNCTION) {
@@ -163,7 +163,7 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
   uint32_t dummy, tag, length;
   uint32_t ident;
   GCOVFunction *fn = nullptr;
-  while (buf.readInt(tag) && tag) {
+  while ((tag = buf.getWord())) {
     if (!buf.readInt(length))
       return false;
     uint32_t pos = buf.cursor.tell();

@@ -11,9 +11,10 @@ RUN: cd %t
 RUN: cp %p/Inputs/test* .
 
 # Basic behaviour with no flags
-RUN: llvm-cov gcov test.c | FileCheck %s --check-prefixes=OUT,OUTFILE --match-full-lines --strict-whitespace
+RUN: llvm-cov gcov test.c 2> %t.err | FileCheck %s --check-prefixes=OUT,OUTFILE --match-full-lines --strict-whitespace
 RUN: FileCheck %s --check-prefix=C --match-full-lines --strict-whitespace < test.cpp.gcov
 RUN: diff -aub test_no_options.h.gcov test.h.gcov
+RUN: count 0 < %t.err
 
 # Same, but specifying the object directory
 RUN: mkdir -p %t/objdir
