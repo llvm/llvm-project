@@ -11,28 +11,28 @@ RUN: cd %t
 RUN: cp %p/Inputs/test* .
 
 # Basic behaviour with no flags
-RUN: llvm-cov gcov test.c | diff -u test_no_options.output -
-RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=C
+RUN: llvm-cov gcov test.c | FileCheck %s --check-prefixes=OUT,OUTFILE --match-full-lines --strict-whitespace
+RUN: FileCheck %s --check-prefix=C --match-full-lines --strict-whitespace < test.cpp.gcov
 RUN: diff -aub test_no_options.h.gcov test.h.gcov
 
 # Same, but specifying the object directory
 RUN: mkdir -p %t/objdir
 RUN: cp test.gcno test.gcda %t/objdir
-RUN: llvm-cov gcov -o objdir test.c | diff -u test_no_options.output -
+RUN: llvm-cov gcov -o objdir test.c | FileCheck %s --check-prefixes=OUT,OUTFILE
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
 OBJDIR:      0:Graph:objdir/test.gcno
 OBJDIR-NEXT: 0:Data:objdir/test.gcda
 
 # Specifying an object file
-RUN: llvm-cov gcov -o objdir/test.o test.c | diff -u test_no_options.output -
+RUN: llvm-cov gcov -o objdir/test.o test.c
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
 
 # Specifying an object file that could be ambiguous with a directory
-RUN: llvm-cov gcov -o objdir/test test.c | diff -u test_no_options.output -
+RUN: llvm-cov gcov -o objdir/test test.c
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
 
 # With gcov output disabled
-RUN: llvm-cov gcov -n test.c | diff -u test_no_output.output -
+RUN: llvm-cov gcov -n test.c | FileCheck %s --check-prefix=OUT
 
 # Print to stdout.
 RUN: llvm-cov gcov -t test.c > stdout
@@ -43,13 +43,13 @@ RUN: llvm-cov gcov -n -t test.c | count 0
 RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=MISSING
 RUN: ls a.c.gcov
 MISSING: File 'src/./n/../a.c'
-MISSING: src/./n/../a.c:creating 'a.c.gcov'
+MISSING: Creating 'a.c.gcov'
 
 # Preserve paths. This mangles the output filenames.
 RUN: llvm-cov gcov -p test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=PRESERVE
 RUN: ls src#n#^#a.c.gcov
 PRESERVE: File 'src/./n/../a.c'
-PRESERVE: src/./n/../a.c:creating 'src#n#^#a.c.gcov'
+PRESERVE: Creating 'src#n#^#a.c.gcov'
 
 # Long file names.
 RUN: llvm-cov gcov -l test_paths.cpp
@@ -64,27 +64,87 @@ RUN: llvm-cov gcov -x -gcno test_paths.gcno -gcda test_paths.gcda src/../test_pa
 RUN: ls a.c##4784150e272908907eaa7380ca3eced8.gcov
 
 # Function summaries. This changes stdout, but not the gcov files.
-RUN: llvm-cov gcov test.c -f | diff -u test_-f.output -
+RUN: llvm-cov gcov test.c -f | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-F
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=C
 RUN: FileCheck --input-file=test.h.gcov %s --check-prefix=H
 
 # All blocks. This doesn't affect stdout, only the gcov files.
-RUN: llvm-cov gcov test.c -a | diff -u test_no_options.output -
+RUN: llvm-cov gcov test.c -a | FileCheck %s --check-prefixes=OUT,OUTFILE
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A
 RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A
 
 # Branch probabilities.
-RUN: llvm-cov gcov test.c -a -b | diff -u test_-b.output -
+RUN: llvm-cov gcov test.c -a -b | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-B
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B
 RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B
 
 # Function summaries including branch probabilities.
-RUN: llvm-cov gcov test.c -a -b -f | not diff -u test_-b_-f.output - >/dev/null
-RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B
-RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B
+RUN: llvm-cov gcov test.c -a -b -f | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-F,OUT-B,OUT-FB --match-full-lines --strict-whitespace
+RUN: FileCheck %s --check-prefixes=C,C-A,C-B --match-full-lines --strict-whitespace < test.cpp.gcov
+RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitespace < test.h.gcov
+
+       OUT-F:Function '_ZN1AC2Ev'
+  OUT-F-NEXT:Lines executed:100.00% of 1
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_ZN1A1BEv'
+  OUT-F-NEXT:Lines executed:100.00% of 1
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z7uselessv'
+  OUT-F-NEXT:Lines executed:0.00% of 1
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z12more_uselessv'
+  OUT-F-NEXT:Lines executed:0.00% of 2
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z3foov'
+  OUT-F-NEXT:Lines executed:100.00% of 3
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z3barv'
+  OUT-F-NEXT:Lines executed:0.00% of 3
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z6assignii'
+  OUT-F-NEXT:Lines executed:100.00% of 3
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_Z15initialize_gridv'
+  OUT-F-NEXT:Lines executed:100.00% of 5
+ OUT-FB-NEXT:Branches executed:100.00% of 4
+ OUT-FB-NEXT:Taken at least once:100.00% of 4
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function 'main'
+  OUT-F-NEXT:Lines executed:92.00% of 25
+ OUT-FB-NEXT:Branches executed:100.00% of 11
+ OUT-FB-NEXT:Taken at least once:81.82% of 11
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+         OUT:File './test.h'
+    OUT-NEXT:Lines executed:100.00% of 1
+  OUT-B-NEXT:No branches
+  OUT-B-NEXT:No calls
+OUTFILE-NEXT:Creating 'test.h.gcov'
+   OUT-EMPTY:
+    OUT-NEXT:File 'test.cpp'
+    OUT-NEXT:Lines executed:81.40% of 43
+  OUT-B-NEXT:Branches executed:100.00% of 15
+  OUT-B-NEXT:Taken at least once:86.67% of 15
+  OUT-B-NEXT:No calls
+OUTFILE-NEXT:Creating 'test.cpp.gcov'
 
 # Summarize unconditional branches too.
-RUN: llvm-cov gcov test.c -a -b -u | diff -u test_-b.output -
+RUN: llvm-cov gcov test.c -a -b -u | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-B
 RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B,C-U
 RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B,H-U
 
@@ -94,9 +154,16 @@ RUN: FileCheck --input-file=test.h.gcov %s --check-prefix=H-C
 H-C: unconditional  0 taken 1
 
 # Missing gcda file just gives 0 counts.
-RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | diff -u test_no_gcda.output -
+RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | FileCheck %s --check-prefix=NO-GCDA
 RUN: diff -aub test_no_gcda.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_no_gcda.h.gcov test.h.gcov
+NO-GCDA:       File './test.h'
+NO-GCDA-NEXT:  Lines executed:0.00% of 1
+NO-GCDA-NEXT:  Creating 'test.h.gcov'
+NO-GCDA-EMPTY:
+NO-GCDA-NEXT:  File 'test.cpp'
+NO-GCDA-NEXT:  Lines executed:0.00% of 43
+NO-GCDA-NEXT:  Creating 'test.cpp.gcov'
 
 # Invalid gcno file.
 RUN: llvm-cov gcov test.c -gcno=test_read_fail.gcno
