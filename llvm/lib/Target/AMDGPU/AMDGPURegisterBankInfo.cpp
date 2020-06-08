@@ -1856,6 +1856,88 @@ static void extendLow32IntoHigh32(MachineIRBuilder &B,
   }
 }
 
+bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  const OperandsMapper &OpdMapper) const {
+
+  Register VecReg = MI.getOperand(1).getReg();
+  Register Idx = MI.getOperand(2).getReg();
+
+  const RegisterBank &IdxBank =
+    *OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
+
+  bool IsDivergentIdx = IdxBank == AMDGPU::VGPRRegBank;
+
+  LLT VecTy = MRI.getType(VecReg);
+  unsigned EltSize = VecTy.getScalarSizeInBits();
+  unsigned NumElem = VecTy.getNumElements();
+
+  if (!SITargetLowering::shouldExpandVectorDynExt(EltSize, NumElem,
+                                                  IsDivergentIdx))
+    return false;
+
+  MachineIRBuilder B(MI);
+  LLT S32 = LLT::scalar(32);
+
+  const RegisterBank &DstBank =
+    *OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+  const RegisterBank &SrcBank =
+    *OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+
+  const RegisterBank &CCBank =
+    (DstBank == AMDGPU::SGPRRegBank &&
+     SrcBank == AMDGPU::SGPRRegBank &&
+     IdxBank == AMDGPU::SGPRRegBank) ? AMDGPU::SGPRRegBank
+                                     : AMDGPU::VCCRegBank;
+  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? S32 : LLT::scalar(1);
+
+  if (CCBank == AMDGPU::VCCRegBank && IdxBank == AMDGPU::SGPRRegBank) {
+    Idx = B.buildCopy(S32, Idx)->getOperand(0).getReg();
+    MRI.setRegBank(Idx, AMDGPU::VGPRRegBank);
+  }
+
+  LLT EltTy = VecTy.getScalarType();
+  SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
+  unsigned NumLanes = DstRegs.size();
+  if (!NumLanes)
+    NumLanes = 1;
+  else
+    EltTy = MRI.getType(DstRegs[0]);
+
+  auto UnmergeToEltTy = B.buildUnmerge(EltTy, VecReg);
+  SmallVector<Register, 2> Res(NumLanes);
+  for (unsigned L = 0; L < NumLanes; ++L)
+    Res[L] = UnmergeToEltTy.getReg(L);
+
+  for (unsigned I = 1; I < NumElem; ++I) {
+    auto IC = B.buildConstant(S32, I);
+    MRI.setRegBank(IC->getOperand(0).getReg(), AMDGPU::SGPRRegBank);
+    auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CCTy, Idx, IC);
+    MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
+
+    for (unsigned L = 0; L < NumLanes; ++L) {
+      auto S = B.buildSelect(EltTy, Cmp,
+                             UnmergeToEltTy.getReg(I * NumLanes + L), Res[L]);
+
+      for (unsigned N : { 0, 2, 3 })
+        MRI.setRegBank(S->getOperand(N).getReg(), DstBank);
+
+      Res[L] = S->getOperand(0).getReg();
+    }
+  }
+
+  for (unsigned L = 0; L < NumLanes; ++L) {
+    Register DstReg = (NumLanes == 1) ? MI.getOperand(0).getReg() : DstRegs[L];
+    B.buildCopy(DstReg, Res[L]);
+    MRI.setRegBank(DstReg, DstBank);
+  }
+
+  MRI.setRegBank(MI.getOperand(0).getReg(), DstBank);
+  MI.eraseFromParent();
+
+  return true;
+}
+
 void AMDGPURegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -2449,6 +2531,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     const LLT S32 = LLT::scalar(32);
     LLT DstTy = MRI.getType(DstReg);
     LLT SrcTy = MRI.getType(SrcReg);
+
+    if (foldExtractEltToCmpSelect(MI, MRI, OpdMapper))
+      return;
 
     MachineIRBuilder B(MI);
 
