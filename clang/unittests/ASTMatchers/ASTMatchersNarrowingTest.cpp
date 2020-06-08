@@ -1330,33 +1330,30 @@ TEST(Matcher, MatchesPureMethod) {
 }
 
 TEST(Matcher, MatchesCopyAssignmentOperator) {
-  EXPECT_TRUE(matches("class X { X &operator=(X); };",
-                      cxxMethodDecl(isCopyAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(X &); };",
-                      cxxMethodDecl(isCopyAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(const X &); };",
-                      cxxMethodDecl(isCopyAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(volatile X &); };",
-                      cxxMethodDecl(isCopyAssignmentOperator())));
+  auto CopyAssignment =
+      cxxMethodDecl(isCopyAssignmentOperator(), unless(isImplicit()));
+  EXPECT_TRUE(matches("class X { X &operator=(X); };", CopyAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(X &); };", CopyAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(const X &); };", CopyAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(volatile X &); };", //
+                      CopyAssignment));
   EXPECT_TRUE(matches("class X { X &operator=(const volatile X &); };",
-                      cxxMethodDecl(isCopyAssignmentOperator())));
-  EXPECT_TRUE(notMatches("class X { X &operator=(X &&); };",
-                         cxxMethodDecl(isCopyAssignmentOperator())));
+                      CopyAssignment));
+  EXPECT_TRUE(notMatches("class X { X &operator=(X &&); };", CopyAssignment));
 }
 
 TEST(Matcher, MatchesMoveAssignmentOperator) {
-  EXPECT_TRUE(notMatches("class X { X &operator=(X); };",
-                         cxxMethodDecl(isMoveAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(X &&); };",
-                      cxxMethodDecl(isMoveAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(const X &&); };",
-                      cxxMethodDecl(isMoveAssignmentOperator())));
-  EXPECT_TRUE(matches("class X { X &operator=(volatile X &&); };",
-                      cxxMethodDecl(isMoveAssignmentOperator())));
+  auto MoveAssignment =
+      cxxMethodDecl(isMoveAssignmentOperator(), unless(isImplicit()));
+  EXPECT_TRUE(notMatches("class X { X &operator=(X); };", MoveAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(X &&); };", MoveAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(const X &&); };", //
+                      MoveAssignment));
+  EXPECT_TRUE(matches("class X { X &operator=(volatile X &&); };", //
+                      MoveAssignment));
   EXPECT_TRUE(matches("class X { X &operator=(const volatile X &&); };",
-                      cxxMethodDecl(isMoveAssignmentOperator())));
-  EXPECT_TRUE(notMatches("class X { X &operator=(X &); };",
-                         cxxMethodDecl(isMoveAssignmentOperator())));
+                      MoveAssignment));
+  EXPECT_TRUE(notMatches("class X { X &operator=(X &); };", MoveAssignment));
 }
 
 TEST(Matcher, MatchesConstMethod) {
