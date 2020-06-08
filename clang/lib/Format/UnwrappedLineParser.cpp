@@ -1459,8 +1459,14 @@ void UnwrappedLineParser::parseStructuralElement() {
       // followed by a curly.
       if (FormatTok->is(TT_JsFatArrow)) {
         nextToken();
-        if (FormatTok->is(tok::l_brace))
+        if (FormatTok->is(tok::l_brace)) {
+          // C# may break after => if the next character is a newline.
+          if (Style.isCSharp() && Style.BraceWrapping.AfterFunction == true) {
+            // calling `addUnwrappedLine()` here causes odd parsing errors.
+            FormatTok->MustBreakBefore = true;
+          }
           parseChildBlock();
+        }
         break;
       }
 
