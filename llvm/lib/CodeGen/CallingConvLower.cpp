@@ -42,8 +42,7 @@ CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
 /// its parameter attribute.
 void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo, int MinSize,
-                          int MinAlignment, ISD::ArgFlagsTy ArgFlags) {
-  Align MinAlign(MinAlignment);
+                          Align MinAlign, ISD::ArgFlagsTy ArgFlags) {
   Align Alignment = ArgFlags.getNonZeroByValAlign();
   unsigned Size  = ArgFlags.getByValSize();
   if (MinSize > (int)Size)
@@ -51,8 +50,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (MinAlign > Alignment)
     Alignment = MinAlign;
   ensureMaxAlignment(Alignment);
-  MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size,
-                                                     Alignment.value());
+  MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Alignment);
   Size = unsigned(alignTo(Size, MinAlign));
   unsigned Offset = AllocateStack(Size, Alignment.value());
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
