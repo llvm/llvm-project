@@ -1031,7 +1031,7 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   const PreambleData &Preamble;
-  llvm::Optional<const PreamblePatch> Patch;
+  const llvm::Optional<PreamblePatch> Patch;
   llvm::StringRef Contents;
   size_t Offset;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
