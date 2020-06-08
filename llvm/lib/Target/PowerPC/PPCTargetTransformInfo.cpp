@@ -859,6 +859,9 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 MaybeAlign Alignment, unsigned AddressSpace,
                                 TTI::TargetCostKind CostKind,
                                 const Instruction *I) {
+  if (TLI->getValueType(DL, Src,  true) == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind);
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
