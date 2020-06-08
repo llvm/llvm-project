@@ -22,6 +22,13 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
+# Generate arm_bf16.h
+clang_tablegen("arm_bf16") {
+  args = [ "-gen-arm-bf16" ]
+  td_file = "//clang/include/clang/Basic/arm_bf16.td"
+  output_name = "arm_bf16.h"
+}
+
 # Generate arm_mve.h
 clang_tablegen("arm_mve") {
   args = [ "-gen-arm-mve-header" ]
@@ -39,6 +46,7 @@ clang_tablegen("arm_cde") {
 copy("arm_headers") {
   visibility = [ ":Headers" ]
   deps = [
+    ":arm_bf16",
     ":arm_cde",
     ":arm_fp16",
     ":arm_mve",
