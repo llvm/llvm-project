@@ -28,15 +28,15 @@ namespace DWARFYAML {
 struct Data;
 struct PubSection;
 
-void emitDebugAbbrev(raw_ostream &OS, const Data &DI);
-void emitDebugStr(raw_ostream &OS, const Data &DI);
+Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
+Error emitDebugStr(raw_ostream &OS, const Data &DI);
 
-void emitDebugAranges(raw_ostream &OS, const Data &DI);
-void emitDebugRanges(raw_ostream &OS, const Data &DI);
-void emitPubSection(raw_ostream &OS, const PubSection &Sect,
-                    bool IsLittleEndian);
-void emitDebugInfo(raw_ostream &OS, const Data &DI);
-void emitDebugLine(raw_ostream &OS, const Data &DI);
+Error emitDebugAranges(raw_ostream &OS, const Data &DI);
+Error emitDebugRanges(raw_ostream &OS, const Data &DI);
+Error emitPubSection(raw_ostream &OS, const PubSection &Sect,
+                     bool IsLittleEndian);
+Error emitDebugInfo(raw_ostream &OS, const Data &DI);
+Error emitDebugLine(raw_ostream &OS, const Data &DI);
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
 emitDebugSections(StringRef YAMLString, bool ApplyFixups = false,

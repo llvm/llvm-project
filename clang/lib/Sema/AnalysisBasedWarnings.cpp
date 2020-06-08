@@ -1700,6 +1700,14 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                : getNotes();
   }
 
+  OptionalNotes makeUnlockedHereNote(SourceLocation LocUnlocked,
+                                     StringRef Kind) {
+    return LocUnlocked.isValid()
+               ? getNotes(PartialDiagnosticAt(
+                     LocUnlocked, S.PDiag(diag::note_unlocked_here) << Kind))
+               : getNotes();
+  }
+
  public:
   ThreadSafetyReporter(Sema &S, SourceLocation FL, SourceLocation FEL)
     : S(S), FunLocation(FL), FunEndLocation(FEL),
@@ -1726,13 +1734,14 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
-  void handleUnmatchedUnlock(StringRef Kind, Name LockName,
-                             SourceLocation Loc) override {
+  void handleUnmatchedUnlock(StringRef Kind, Name LockName, SourceLocation Loc,
+                             SourceLocation LocPreviousUnlock) override {
     if (Loc.isInvalid())
       Loc = FunLocation;
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_unlock_but_no_lock)
                                          << Kind << LockName);
-    Warnings.emplace_back(std::move(Warning), getNotes());
+    Warnings.emplace_back(std::move(Warning),
+                          makeUnlockedHereNote(LocPreviousUnlock, Kind));
   }
 
   void handleIncorrectUnlockKind(StringRef Kind, Name LockName,

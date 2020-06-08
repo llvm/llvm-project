@@ -204,14 +204,14 @@ TEST(DWARFExpression, DW_OP_convert) {
       llvm::HasValue(GetScalar(64, 0xffffffffffeeddcc, is_signed)));
 
   // Truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
-                               DW_OP_convert, offs_uchar}),
-                       llvm::HasValue(GetScalar(8, 'A', not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_uchar}),
+      llvm::HasValue(GetScalar(8, 'A', not_signed)));
 
   // Also truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
-                               DW_OP_convert, offs_schar}),
-                       llvm::HasValue(GetScalar(8, 'A', is_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_schar}),
+      llvm::HasValue(GetScalar(8, 'A', is_signed)));
 
   //
   // Errors.
@@ -247,4 +247,11 @@ TEST(DWARFExpression, DW_OP_piece) {
       // Note that the "00" should really be "undef", but we can't
       // represent that yet.
       llvm::HasValue(GetScalar(16, 0xff00, true)));
+}
+
+TEST(DWARFExpression, DW_OP_unknown) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({0xff}),
+      llvm::FailedWithMessage(
+          "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
 }

@@ -434,7 +434,9 @@ public:
   }
 
   // FIXME: Deprecate this function when transition to Align is over.
-  unsigned AllocateStack(unsigned Size, unsigned Alignment) {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
+                                                   unsigned Alignment),
+                            "Use the version that takes Align instead.") {
     return AllocateStack(Size, Align(Alignment));
   }
 
@@ -444,7 +446,10 @@ public:
   }
 
   /// Version of AllocateStack with extra register to be shadowed.
-  unsigned AllocateStack(unsigned Size, unsigned Align, unsigned ShadowReg) {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
+                                                   unsigned Align,
+                                                   unsigned ShadowReg),
+                            "Use the version that takes Align instead.") {
     MarkAllocated(ShadowReg);
     return AllocateStack(Size, Align);
   }

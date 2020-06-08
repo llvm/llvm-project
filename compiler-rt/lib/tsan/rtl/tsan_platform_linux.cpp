@@ -8,25 +8,26 @@
 //
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
-// Linux- and FreeBSD-specific code.
+// Linux- and BSD-specific code.
 //===----------------------------------------------------------------------===//
 
-
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
+    SANITIZER_OPENBSD
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
+#include "sanitizer_common/sanitizer_platform_limits_openbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
-#include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_stoptheworld.h"
+#include "tsan_flags.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
-#include "tsan_flags.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -512,4 +513,5 @@ void cur_thread_finalize() {
 
 }  // namespace __tsan
 
-#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
+#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
+        // SANITIZER_OPENBSD

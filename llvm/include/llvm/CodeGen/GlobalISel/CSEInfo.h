@@ -176,13 +176,13 @@ public:
   // Profiling methods.
   const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
   const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
-  const GISelInstProfileBuilder &addNodeIDRegType(const unsigned) const;
+  const GISelInstProfileBuilder &addNodeIDRegType(const Register) const;
 
   const GISelInstProfileBuilder &
   addNodeIDRegType(const TargetRegisterClass *RC) const;
   const GISelInstProfileBuilder &addNodeIDRegType(const RegisterBank *RB) const;
 
-  const GISelInstProfileBuilder &addNodeIDRegNum(unsigned Reg) const;
+  const GISelInstProfileBuilder &addNodeIDRegNum(Register Reg) const;
 
   const GISelInstProfileBuilder &addNodeIDImmediate(int64_t Imm) const;
   const GISelInstProfileBuilder &

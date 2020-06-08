@@ -2434,8 +2434,11 @@ StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
     QualType RangeType = Range->getType();
 
     if (RequireCompleteType(RangeLoc, RangeType,
-                            diag::err_for_range_incomplete_type))
+                            diag::err_for_range_incomplete_type)) {
+      if (LoopVar->getType()->isUndeducedType())
+        LoopVar->setInvalidDecl();
       return StmtError();
+    }
 
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).

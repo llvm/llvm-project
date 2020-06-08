@@ -177,12 +177,14 @@ def mimm : Operand<i32>, PatLeaf<(imm), [{
 def simm7fp : Operand<i32>, PatLeaf<(fpimm), [{
     return isInt<7>(getFpImmVal(N));
   }], LO7FP> {
+  let ParserMatchClass = SImm7AsmOperand;
   let DecoderMethod = "DecodeSIMM7";
 }
 
 // mimmfp - Special fp immediate value of sequential bit stream of 0 or 1.
 def mimmfp : Operand<i32>, PatLeaf<(fpimm), [{
     return isMImmVal(getFpImmVal(N)); }], MIMMFP> {
+  let ParserMatchClass = MImmAsmOperand;
   let PrintMethod = "printMImmOperand";
 }
 
@@ -190,6 +192,7 @@ def mimmfp : Operand<i32>, PatLeaf<(fpimm), [{
 //   Float value places at higher bits, so ignore lower 32 bits.
 def mimmfp32 : Operand<i32>, PatLeaf<(fpimm), [{
     return isMImm32Val(getFpImmVal(N) >> 32); }], MIMMFP> {
+  let ParserMatchClass = MImmAsmOperand;
   let PrintMethod = "printMImmOperand";
 }
 
@@ -1127,9 +1130,17 @@ let cw = 1, cx = 1 in
 defm FMINS : RRFm<"fmin.s", 0x3E, F32, f32, fminnum, simm7fp, mimmfp32>;
 
 // Section 8.7.7 - FAQ (Floating Add Quadruple)
+defm FADDQ : RRFm<"fadd.q", 0x6C, F128, f128>;
+
 // Section 8.7.8 - FSQ (Floating Subtract Quadruple)
+defm FSUBQ : RRFm<"fsub.q", 0x7C, F128, f128>;
+
 // Section 8.7.9 - FMQ (Floating Subtract Quadruple)
+defm FMULQ : RRFm<"fmul.q", 0x6D, F128, f128>;
+
 // Section 8.7.10 - FCQ (Floating Compare Quadruple)
+defm FCMPQ : RRNCbm<"fcmp.q", 0x7D, I64, f64, F128, f128, null_frag, simm7fp,
+                    mimmfp>;
 
 // Section 8.7.11 - FIX (Convert to Fixed Point)
 // cx: double/float, cw: sx/zx, sz{0-3} = round

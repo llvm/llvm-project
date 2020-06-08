@@ -23,6 +23,7 @@
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
@@ -134,6 +135,7 @@ template <class ELFT> class ELFState {
   bool HasError = false;
   yaml::ErrorHandler ErrHandler;
   void reportError(const Twine &Msg);
+  void reportError(Error Err);
 
   std::vector<Elf_Sym> toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
                                     const StringTableBuilder &Strtab);
@@ -845,17 +847,23 @@ static bool shouldEmitDWARF(DWARFYAML::Data &DWARF, StringRef Name) {
 }
 
 template <class ELFT>
-uint64_t emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
-                   const DWARFYAML::Data &DWARF, raw_ostream &OS) {
+Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
+                             const DWARFYAML::Data &DWARF, raw_ostream &OS) {
   uint64_t BeginOffset = OS.tell();
+  Error Err = Error::success();
+  cantFail(std::move(Err));
+
   if (Name == ".debug_str")
-    DWARFYAML::emitDebugStr(OS, DWARF);
+    Err = DWARFYAML::emitDebugStr(OS, DWARF);
   else if (Name == ".debug_aranges")
-    DWARFYAML::emitDebugAranges(OS, DWARF);
+    Err = DWARFYAML::emitDebugAranges(OS, DWARF);
   else if (Name == ".debug_ranges")
-    DWARFYAML::emitDebugRanges(OS, DWARF);
+    Err = DWARFYAML::emitDebugRanges(OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
+
+  if (Err)
+    return std::move(Err);
 
   return OS.tell() - BeginOffset;
 }
@@ -878,8 +886,13 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
       reportError("cannot specify section '" + Name +
                   "' contents in the 'DWARF' entry and the 'Content' "
                   "or 'Size' in the 'Sections' entry at the same time");
-    else
-      SHeader.sh_size = emitDWARF<ELFT>(SHeader, Name, *Doc.DWARF, CBA.getOS());
+    else {
+      if (Expected<uint64_t> ShSizeOrErr =
+              emitDWARF<ELFT>(SHeader, Name, *Doc.DWARF, CBA.getOS()))
+        SHeader.sh_size = *ShSizeOrErr;
+      else
+        reportError(ShSizeOrErr.takeError());
+    }
   } else if (RawSec)
     SHeader.sh_size = writeContent(CBA.getOS(), RawSec->Content, RawSec->Size);
   else
@@ -908,6 +921,12 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 template <class ELFT> void ELFState<ELFT>::reportError(const Twine &Msg) {
   ErrHandler(Msg);
   HasError = true;
+}
+
+template <class ELFT> void ELFState<ELFT>::reportError(Error Err) {
+  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &Err) {
+    reportError(Err.message());
+  });
 }
 
 template <class ELFT>

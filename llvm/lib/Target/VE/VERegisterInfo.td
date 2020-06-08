@@ -31,6 +31,8 @@ let Namespace = "VE" in {
   def sub_i16     : SubRegIndex<16, 48>;        // Low 16 bit (48..63)
   def sub_i32     : SubRegIndex<32, 32>;        // Low 32 bit (32..63)
   def sub_f32     : SubRegIndex<32>;            // High 32 bit (0..31)
+  def sub_even    : SubRegIndex<64>;            // High 64 bit (0..63)
+  def sub_odd     : SubRegIndex<64, 64>;        // Low 64 bit (64..127)
   def AsmName     : RegAltNameIndex;
 }
 
@@ -98,6 +100,18 @@ foreach I = 0-63 in
   def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)],
                    ["s"#I]>, DwarfRegNum<[I]>;
 
+// Aliases of the S* registers used to hold 128-bit for values (long doubles).
+// Following foreach represents something like:
+//   def Q0 : VEReg<0, "q0", [SX0, SX1], ["s0"]>;
+//   def Q1 : VEReg<2, "q2", [SX2, SX3], ["s2"]>;
+//   ...
+let SubRegIndices = [sub_even, sub_odd], CoveredBySubRegs = 1 in
+foreach I = 0-31 in
+  def Q#I : VEReg<!shl(I,1), "q"#I,
+                  [!cast<VEReg>("SX"#!shl(I,1)),
+                   !cast<VEReg>("SX"#!add(!shl(I,1),1))],
+                  ["s"#!shl(I,1)]>;
+
 } // RegAltNameIndices = [AsmName]
 
 // Register classes.
@@ -124,3 +138,7 @@ def F32 : RegisterClass<"VE", [f32], 32,
                         (add (sequence "SF%u", 0, 7),
                              (sequence "SF%u", 34, 63),
                              (sequence "SF%u", 8, 33))>;
+def F128 : RegisterClass<"VE", [f128], 128,
+                        (add (sequence "Q%u", 0, 3),
+                             (sequence "Q%u", 17, 31),
+                             (sequence "Q%u", 4, 16))>;
