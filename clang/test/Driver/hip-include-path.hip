@@ -19,7 +19,7 @@
 // NOWRAP-NOT: clang/{{.*}}/include/cuda_wrappers
 // HIP: {{.*}}Inputs/rocm/include
 // NOHIP-NOT: {{.*}}Inputs/rocm/include
-// COMMON: {{.*}}include/c++
+// skip check of standard C++ include path
 // COMMON: clang/{{.*}}/include
 
 // COMMON-LABEL: clang{{.*}} -cc1 -triple x86_64
@@ -27,5 +27,5 @@
 // NOWRAP-NOT: clang/{{.*}}/include/cuda_wrappers
 // HIP: {{.*}}Inputs/rocm/include
 // NOHIP-NOT: {{.*}}Inputs/rocm/include
-// COMMON: {{.*}}include/c++
+// skip check of standard C++ include path
 // COMMON: clang/{{.*}}/include
