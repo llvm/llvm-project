@@ -36,6 +36,7 @@
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
+#include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Threading.h"
 #include "support/Trace.h"
@@ -1060,9 +1061,6 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const SemaCompleteInput &Input,
                       IncludeStructure *Includes = nullptr) {
   trace::Span Tracer("Sema completion");
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = Input.ParseInput.FS;
-  if (Input.Preamble.StatCache)
-    VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
 
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Input.ParseInput, IgnoreDiags);
@@ -1103,6 +1101,10 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     Input.Patch->apply(*CI);
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+      Input.ParseInput.FSProvider->getFileSystem();
+  if (Input.Preamble.StatCache)
+    VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
   auto Clang = prepareCompilerInstance(
       std::move(CI), !CompletingInPreamble ? &Input.Preamble.Preamble : nullptr,
       std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);
@@ -1272,9 +1274,9 @@ public:
       assert(Recorder && "Recorder is not set");
       CCContextKind = Recorder->CCContext.getKind();
       IsUsingDeclaration = Recorder->CCContext.isUsingDeclaration();
-      auto Style = getFormatStyleForFile(SemaCCInput.FileName,
-                                         SemaCCInput.ParseInput.Contents,
-                                         SemaCCInput.ParseInput.FS.get());
+      auto Style = getFormatStyleForFile(
+          SemaCCInput.FileName, SemaCCInput.ParseInput.Contents,
+          SemaCCInput.ParseInput.FSProvider->getFileSystem().get());
       // If preprocessor was run, inclusions from preprocessor callback should
       // already be added to Includes.
       Inserter.emplace(
@@ -1759,8 +1761,9 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
       FileName, Preamble ? Preamble->Includes : IncludeStructure(),
       SpecFuzzyFind, Opts);
   return (!Preamble || Opts.RunParser == CodeCompleteOptions::NeverParse)
-             ? std::move(Flow).runWithoutSema(ParseInput.Contents, *Offset,
-                                              ParseInput.FS)
+             ? std::move(Flow).runWithoutSema(
+                   ParseInput.Contents, *Offset,
+                   ParseInput.FSProvider->getFileSystem())
              : std::move(Flow).run({FileName, *Offset, *Preamble,
                                     // We want to serve code completions with
                                     // low latency, so don't bother patching.

@@ -50,6 +50,7 @@ IncludeStructure
 collectPatchedIncludes(llvm::StringRef ModifiedContents,
                        llvm::StringRef BaselineContents,
                        llvm::StringRef MainFileName = "main.cpp") {
+  MockFSProvider FS;
   auto TU = TestTU::withCode(BaselineContents);
   TU.Filename = MainFileName.str();
   // ms-compatibility changes meaning of #import, make sure it is turned off.
@@ -57,7 +58,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   auto BaselinePreamble = TU.preamble();
   // Create the patch.
   TU.Code = ModifiedContents.str();
-  auto PI = TU.inputs();
+  auto PI = TU.inputs(FS);
   auto PP = PreamblePatch::create(testPath(TU.Filename), PI, *BaselinePreamble);
   // Collect patch contents.
   IgnoreDiagnostics Diags;
@@ -73,7 +74,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
       prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
                               llvm::MemoryBuffer::getMemBufferCopy(
                                   ModifiedContents.slice(0, Bounds.Size).str()),
-                              PI.FS, Diags);
+                              PI.FSProvider->getFileSystem(), Diags);
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     ADD_FAILURE() << "failed begin source file";
@@ -164,6 +165,7 @@ TEST(PreamblePatchTest, MainFileIsEscaped) {
 }
 
 TEST(PreamblePatchTest, PatchesPreambleIncludes) {
+  MockFSProvider FS;
   IgnoreDiagnostics Diags;
   auto TU = TestTU::withCode(R"cpp(
     #include "a.h"
@@ -172,7 +174,7 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   TU.AdditionalFiles["a.h"] = "#include \"b.h\"";
   TU.AdditionalFiles["b.h"] = "";
   TU.AdditionalFiles["c.h"] = "";
-  auto PI = TU.inputs();
+  auto PI = TU.inputs(FS);
   auto BaselinePreamble = buildPreamble(
       TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true, nullptr);
   // We drop c.h from modified and add a new header. Since the latter is patched
@@ -181,7 +183,7 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
     #include "a.h"
     #include "b.h"
   )cpp";
-  auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(),
+  auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(FS),
                                   *BaselinePreamble);
   // Only a.h should exists in the preamble, as c.h has been dropped and b.h was
   // newly introduced.
@@ -199,14 +201,15 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
   }
 
   IgnoreDiagnostics Diags;
+  MockFSProvider FS;
   auto TU = TestTU::withCode(Modified);
-  auto CI = buildCompilerInvocation(TU.inputs(), Diags);
+  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   if (!CI) {
     ADD_FAILURE() << "Failed to build compiler invocation";
     return llvm::None;
   }
-  return ParsedAST::build(testPath(TU.Filename), TU.inputs(), std::move(CI), {},
-                          BaselinePreamble);
+  return ParsedAST::build(testPath(TU.Filename), TU.inputs(FS), std::move(CI),
+                          {}, BaselinePreamble);
 }
 
 std::string getPreamblePatch(llvm::StringRef Baseline,
@@ -216,8 +219,9 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
     ADD_FAILURE() << "Failed to build baseline preamble";
     return "";
   }
+  MockFSProvider FS;
   auto TU = TestTU::withCode(Modified);
-  return PreamblePatch::create(testPath("main.cpp"), TU.inputs(),
+  return PreamblePatch::create(testPath("main.cpp"), TU.inputs(FS),
                                *BaselinePreamble)
       .text()
       .str();
