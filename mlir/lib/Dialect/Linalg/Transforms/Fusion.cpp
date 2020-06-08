@@ -937,6 +937,11 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
         return FuseTensorReshapeOpAsProducer<GenericOp>::fuse(
             reshapeOpProducer, genericOpConsumer, consumerIdx, rewriter,
             folder);
+      } else if (auto indexedGenericOpConsumer =
+                     dyn_cast<IndexedGenericOp>(consumer)) {
+        return FuseTensorReshapeOpAsProducer<IndexedGenericOp>::fuse(
+            reshapeOpProducer, indexedGenericOpConsumer, consumerIdx, rewriter,
+            folder);
       }
     } else if (auto constantOpProducer = dyn_cast<ConstantOp>(producer)) {
       if (auto genericOpConsumer = dyn_cast<GenericOp>(consumer)) {
@@ -954,6 +959,11 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
       if (genericOpProducer.hasTensorSemantics())
         return FuseTensorReshapeOpAsConsumer<GenericOp>::fuse(
             genericOpProducer, reshapeOp, consumerIdx, rewriter, folder);
+    } else if (auto indexedGenericOpProducer =
+                   dyn_cast<IndexedGenericOp>(producer)) {
+      if (indexedGenericOpProducer.hasTensorSemantics())
+        return FuseTensorReshapeOpAsConsumer<IndexedGenericOp>::fuse(
+            indexedGenericOpProducer, reshapeOp, consumerIdx, rewriter, folder);
     }
     return nullptr;
   }
