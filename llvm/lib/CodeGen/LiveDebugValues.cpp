@@ -200,25 +200,6 @@ private:
 
   enum struct TransferKind { TransferCopy, TransferSpill, TransferRestore };
 
-  /// Keeps track of lexical scopes associated with a user value's source
-  /// location.
-  class UserValueScopes {
-    DebugLoc DL;
-    LexicalScopes &LS;
-    SmallPtrSet<const MachineBasicBlock *, 4> LBlocks;
-
-  public:
-    UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(std::move(D)), LS(L) {}
-
-    /// Return true if current scope dominates at least one machine
-    /// instruction in a given machine basic block.
-    bool dominates(MachineBasicBlock *MBB) {
-      if (LBlocks.empty())
-        LS.getMachineBasicBlocks(DL, LBlocks);
-      return LBlocks.count(MBB) != 0 || LS.dominates(DL, MBB);
-    }
-  };
-
   using FragmentInfo = DIExpression::FragmentInfo;
   using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
 
@@ -247,7 +228,6 @@ private:
     /// is moved.
     const MachineInstr &MI;
 
-    mutable UserValueScopes UVS;
     enum VarLocKind {
       InvalidKind = 0,
       RegisterKind,
@@ -272,7 +252,7 @@ private:
     VarLoc(const MachineInstr &MI, LexicalScopes &LS)
         : Var(MI.getDebugVariable(), MI.getDebugExpression(),
               MI.getDebugLoc()->getInlinedAt()),
-          Expr(MI.getDebugExpression()), MI(MI), UVS(MI.getDebugLoc(), LS) {
+          Expr(MI.getDebugExpression()), MI(MI) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -438,7 +418,9 @@ private:
 
     /// Determine whether the lexical scope of this value's debug location
     /// dominates MBB.
-    bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
+    bool dominates(LexicalScopes &LS, MachineBasicBlock &MBB) const {
+      return LS.dominates(MI.getDebugLoc().get(), &MBB);
+    }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     // TRI can be null.
@@ -1615,7 +1597,7 @@ bool LiveDebugValues::join(
   if (!IsArtificial) {
     for (uint64_t ID : InLocsT) {
       LocIndex Idx = LocIndex::fromRawInteger(ID);
-      if (!VarLocIDs[Idx].dominates(MBB)) {
+      if (!VarLocIDs[Idx].dominates(LS, MBB)) {
         KillSet.set(ID);
         LLVM_DEBUG({
           auto Name = VarLocIDs[Idx].Var.getVariable()->getName();
