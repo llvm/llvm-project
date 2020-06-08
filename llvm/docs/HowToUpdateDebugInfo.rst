@@ -34,10 +34,9 @@ possible outcome. However, it's often possible to do better:
   ``Value::replaceAllUsesWith`` API transparently updates debug uses of the
   dying instruction to point to the replacement value.
 
-* If the dying instruction cannot be RAUW'd, call
-  ``llvm::salvageDebugInfoOrMarkUndef`` on it. This makes a best-effort attempt
-  to rewrite debug uses of the dying instruction by describing its effect as a
-  ``DIExpression``.
+* If the dying instruction cannot be RAUW'd, call ``llvm::salvageDebugInfo`` on
+  it. This makes a best-effort attempt to rewrite debug uses of the dying
+  instruction by describing its effect as a ``DIExpression``.
 
 * If one of the **operands** of a dying instruction would become trivially
   dead, use ``llvm::replaceAllDbgUsesWith`` to rewrite the debug uses of that
@@ -88,30 +87,15 @@ You may have noticed that ``%simplified`` is narrower than ``%c``: this is not
 a problem, because ``llvm::replaceAllDbgUsesWith`` takes care of inserting the
 necessary conversion operations into the DIExpressions of updated debug uses.
 
-Hoisting an Instruction
------------------------
+Deleting a MIR-level MachineInstr
+---------------------------------
 
 TODO
 
-Sinking an Instruction
-----------------------
+How to automatically convert tests into debug info tests
+========================================================
 
-TODO
-
-Cloning an Instruction
-----------------------
-
-TODO
-
-Merging two Instructions
-------------------------
-
-TODO
-
-Creating an artificial Instruction
-----------------------------------
-
-TODO
+.. _IRDebugify:
 
 Mutation testing for IR-level transformations
 ---------------------------------------------
@@ -221,7 +205,7 @@ In order for ``check-debugify`` to work, the DI must be coming from
 
 There is also a MIR-level debugify pass that can be run before each backend
 pass, see:
-:ref:`Mutation testing for MIR-level transformations`.
+:ref:`Mutation testing for MIR-level transformations<MIRDebugify>`.
 
 ``debugify`` in regression tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -235,42 +219,17 @@ tests. Changes to this pass are not allowed to break existing tests.
    check lines. In cases where this can't be avoided (say, if a test wouldn't
    be precise enough), moving the test to its own file is preferred.
 
-MIR-level transformations
-=========================
-
-Deleting a MachineInstr
------------------------
-
-TODO
-
-Hoisting a MachineInstr
------------------------
-
-TODO
-
-Sinking a MachineInstr
-----------------------
-
-TODO
-
-Cloning a MachineInstr
-----------------------
-
-TODO
-
-Creating an artificial MachineInstr
------------------------------------
-
-TODO
+.. _MIRDebugify:
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------
 
-A varaint of the ``debugify`` utility described in :ref:`Mutation testing for
-IR-level transformations` can be used for MIR-level transformations as well:
-much like the IR-level pass, ``mir-debugify`` inserts sequentially increasing
-line locations to each ``MachineInstr`` in a ``Module`` (although there is no
-equivalent MIR-level ``check-debugify`` pass).
+A variant of the ``debugify`` utility described in
+:ref:`Mutation testing for IR-level transformations<IRDebugify>` can be used
+for MIR-level transformations as well: much like the IR-level pass,
+``mir-debugify`` inserts sequentially increasing line locations to each
+``MachineInstr`` in a ``Module`` (although there is no equivalent MIR-level
+``check-debugify`` pass).
 
 For example, here is a snippet before:
 
@@ -305,7 +264,7 @@ and after running ``llc -run-pass=mir-debugify``:
 
 By default, ``mir-debugify`` inserts ``DBG_VALUE`` instructions **everywhere**
 it is legal to do so.  In particular, every (non-PHI) machine instruction that
-defines a register should be followed by a ``DBG_VALUE`` use of that def.  If
+defines a register must be followed by a ``DBG_VALUE`` use of that def.  If
 an instruction does not define a register, but can be followed by a debug inst,
 MIRDebugify inserts a ``DBG_VALUE`` that references a constant.  Insertion of
 ``DBG_VALUE``'s can be disabled by setting ``-debugify-level=locations``.
@@ -345,7 +304,7 @@ For example, to run the AArch64 backend tests with all normal passes
 
   $ llvm-lit test/CodeGen/AArch64 -Dllc="llc -debugify-and-strip-all-safe"
 
-Using the LostDebugLocObserver
-------------------------------
+Using LostDebugLocObserver
+--------------------------
 
 TODO
