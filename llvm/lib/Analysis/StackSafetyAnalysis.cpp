@@ -21,6 +21,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
@@ -141,7 +142,7 @@ ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
 
 struct FunctionInfo {
   std::map<const AllocaInst *, UseInfo> Allocas;
-  SmallVector<UseInfo, 4> Params;
+  std::map<uint32_t, UseInfo> Params;
   // TODO: describe return value as depending on one or more of its arguments.
 
   // StackSafetyDataFlowAnalysis counter stored here for faster access.
@@ -154,13 +155,13 @@ struct FunctionInfo {
       << ((F && F->isInterposable()) ? " interposable" : "") << "\n";
 
     O << "    args uses:\n";
-    size_t Pos = 0;
-    for (auto &P : Params) {
-      StringRef Name = "<N/A>";
+    for (auto &KV : Params) {
+      O << "      ";
       if (F)
-        Name = F->getArg(Pos)->getName();
-      O << "      " << Name << "[]: " << P << "\n";
-      ++Pos;
+        O << F->getArg(KV.first)->getName();
+      else
+        O << formatv("arg{0}", KV.first);
+      O << "[]: " << KV.second << "\n";
     }
 
     O << "    allocas uses:\n";
@@ -389,15 +390,16 @@ FunctionInfo StackSafetyLocalAnalysis::run() {
 
   for (auto &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      UseInfo &AS = Info.Allocas.emplace(AI, PointerSize).first->second;
-      analyzeAllUses(AI, AS);
+      auto &UI = Info.Allocas.emplace(AI, PointerSize).first->second;
+      analyzeAllUses(AI, UI);
     }
   }
 
   for (Argument &A : make_range(F.arg_begin(), F.arg_end())) {
-    Info.Params.emplace_back(PointerSize);
-    UseInfo &PS = Info.Params.back();
-    analyzeAllUses(&A, PS);
+    if (A.getType()->isPointerTy()) {
+      auto &UI = Info.Params.emplace(A.getArgNo(), PointerSize).first->second;
+      analyzeAllUses(&A, UI);
+    }
   }
 
   LLVM_DEBUG(Info.print(dbgs(), F.getName(), &F));
@@ -414,7 +416,6 @@ class StackSafetyDataFlowAnalysis {
   // Callee-to-Caller multimap.
   DenseMap<const GlobalValue *, SmallVector<const GlobalValue *, 4>> Callers;
   SetVector<const GlobalValue *> WorkList;
-
 
   bool updateOneUse(UseInfo &US, bool UpdateToFullSet);
   void updateOneNode(const GlobalValue *Callee, FunctionInfo &FS);
@@ -445,17 +446,18 @@ public:
 ConstantRange StackSafetyDataFlowAnalysis::getArgumentAccessRange(
     const GlobalValue *Callee, unsigned ParamNo,
     const ConstantRange &Offsets) const {
-  auto IT = Functions.find(Callee);
+  auto FnIt = Functions.find(Callee);
   // Unknown callee (outside of LTO domain or an indirect call).
-  if (IT == Functions.end())
+  if (FnIt == Functions.end())
     return UnknownRange;
-  const FunctionInfo &FS = IT->second;
-  if (ParamNo >= FS.Params.size()) // possibly vararg
+  auto &FS = FnIt->second;
+  auto ParamIt = FS.Params.find(ParamNo);
+  if (ParamIt == FS.Params.end())
     return UnknownRange;
-  auto &Access = FS.Params[ParamNo].Range;
+  auto &Access = ParamIt->second.Range;
   if (Access.isEmptySet())
     return Access;
-  if (Access.isFullSet() || Offsets.isFullSet())
+  if (Access.isFullSet())
     return UnknownRange;
   if (Offsets.signedAddMayOverflow(Access) !=
       ConstantRange::OverflowResult::NeverOverflows)
@@ -487,8 +489,8 @@ void StackSafetyDataFlowAnalysis::updateOneNode(const GlobalValue *Callee,
                                                 FunctionInfo &FS) {
   bool UpdateToFullSet = FS.UpdateCount > StackSafetyMaxIterations;
   bool Changed = false;
-  for (auto &PS : FS.Params)
-    Changed |= updateOneUse(PS, UpdateToFullSet);
+  for (auto &KV : FS.Params)
+    Changed |= updateOneUse(KV.second, UpdateToFullSet);
 
   if (Changed) {
     LLVM_DEBUG(dbgs() << "=== update [" << FS.UpdateCount
@@ -509,9 +511,8 @@ void StackSafetyDataFlowAnalysis::runDataFlow() {
   SmallVector<const GlobalValue *, 16> Callees;
   for (auto &F : Functions) {
     Callees.clear();
-    FunctionInfo &FS = F.second;
-    for (auto &PS : FS.Params)
-      for (auto &CS : PS.Calls)
+    for (auto &KV : F.second.Params)
+      for (auto &CS : KV.second.Calls)
         Callees.push_back(CS.Callee);
 
     llvm::sort(Callees);
@@ -574,11 +575,6 @@ void resolveAllCalls(UseInfo &Use) {
   }
 }
 
-void resolveAllCalls(SmallVectorImpl<UseInfo> &Values) {
-  for (auto &V : Values)
-    resolveAllCalls(V);
-}
-
 GVToSSI createGlobalStackSafetyInfo(
     std::map<const GlobalValue *, FunctionInfo> Functions) {
   GVToSSI SSI;
@@ -588,8 +584,9 @@ GVToSSI createGlobalStackSafetyInfo(
   // FIXME: Simplify printing and remove copying here.
   auto Copy = Functions;
 
-  for (auto &FI : Copy)
-    resolveAllCalls(FI.second.Params);
+  for (auto &FnKV : Copy)
+    for (auto &KV : FnKV.second.Params)
+      resolveAllCalls(KV.second);
 
   uint32_t PointerSize = Copy.begin()
                              ->first->getParent()
@@ -610,10 +607,9 @@ GVToSSI createGlobalStackSafetyInfo(
       // FIXME: This is needed only to preserve calls in print() results.
       A.Calls = SrcF.Allocas.find(KV.first)->second.Calls;
     }
-    size_t Pos = 0;
-    for (auto &P : FI.Params) {
-      P.Calls = SrcF.Params[Pos].Calls;
-      ++Pos;
+    for (auto &KV : FI.Params) {
+      auto &P = KV.second;
+      P.Calls = SrcF.Params.find(KV.first)->second.Calls;
     }
     SSI[F.first] = std::move(FI);
   }
