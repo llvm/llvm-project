@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, c++98, c++03
+// UNSUPPORTED: libcpp-has-no-threads, c++03
 // REQUIRES: libatomic
 // FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -latomic

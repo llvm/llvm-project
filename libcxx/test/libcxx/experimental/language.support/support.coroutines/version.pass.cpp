@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 // REQUIRES: fcoroutines-ts
 // ADDITIONAL_COMPILE_FLAGS: -fcoroutines-ts
 

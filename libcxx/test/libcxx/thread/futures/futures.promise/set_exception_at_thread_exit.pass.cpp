@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: windows
 // UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
 

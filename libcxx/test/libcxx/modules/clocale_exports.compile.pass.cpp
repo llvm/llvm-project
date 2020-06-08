@@ -14,7 +14,7 @@
 // but still gets built as part of the 'std' module, which breaks the build.
 // XFAIL: libcpp-has-no-threads
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // REQUIRES: modules-support
 // ADDITIONAL_COMPILE_FLAGS: -fmodules

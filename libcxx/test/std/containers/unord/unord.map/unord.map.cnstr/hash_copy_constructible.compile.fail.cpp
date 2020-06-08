@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 // The test requires access control SFINAE.
 
 // GCC 5 does not evaluate static assertions dependent on a template parameter.

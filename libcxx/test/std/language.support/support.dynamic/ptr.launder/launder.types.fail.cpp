@@ -12,7 +12,7 @@
 // template <class T> constexpr T* launder(T* p) noexcept;
 // The program is ill-formed if T is a function type or cv void.
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <new>
 #include <cassert>

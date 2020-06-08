@@ -8,7 +8,7 @@
 
 // <functional>
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++03, c++11
 
 // default searcher
 // template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>

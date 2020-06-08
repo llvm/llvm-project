@@ -13,7 +13,7 @@
 // template <class Alloc>
 //   EXPLICIT tuple(allocator_arg_t, const Alloc& a, const Types&...);
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 #include <tuple>
 #include <memory>

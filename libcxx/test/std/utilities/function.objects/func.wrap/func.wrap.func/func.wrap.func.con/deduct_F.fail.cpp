@@ -12,7 +12,7 @@
 // template<class F>
 // function(F) -> function<see-below>;
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
 
 // The deduction guides for std::function do not handle rvalue-ref qualified

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++03
 
 // Test that libc++ does not generate a warning diagnostic about the comparator
 // or the hasher too early for containers of incomplete types.

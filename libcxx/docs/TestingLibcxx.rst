@@ -123,7 +123,7 @@ default.
 
 .. option:: std=<standard version>
 
-  **Values**: c++98, c++03, c++11, c++14, c++17, c++2a
+  **Values**: c++03, c++11, c++14, c++17, c++2a
 
   Change the standard version used when building the tests.
 
