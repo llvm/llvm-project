@@ -12,7 +12,7 @@ struct A {
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -44,7 +44,7 @@ struct C {
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -55,7 +55,7 @@ struct C {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int a;
@@ -69,7 +69,7 @@ struct C {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int c;
@@ -91,7 +91,7 @@ struct C {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int e, f;
@@ -113,7 +113,7 @@ struct D {
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -138,7 +138,7 @@ union E {
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -170,7 +170,7 @@ union G {
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-  // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+  // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
   // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -181,7 +181,7 @@ union G {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -198,7 +198,7 @@ union G {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
@@ -221,7 +221,7 @@ union G {
     // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
     // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
-    // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+    // CHECK-NEXT: CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
     // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 

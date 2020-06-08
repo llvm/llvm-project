@@ -713,13 +713,6 @@ public:
   }
 
   /// \c true if we know for sure that this class has a single,
-  /// accessible, unambiguous copy assignment operator that is not deleted.
-  bool hasSimpleCopyAssignment() const {
-    return !hasUserDeclaredCopyAssignment() &&
-           !data().DefaultedCopyAssignmentIsDeleted;
-  }
-
-  /// \c true if we know for sure that this class has a single,
   /// accessible, unambiguous move assignment operator that is not deleted.
   bool hasSimpleMoveAssignment() const {
     return !hasUserDeclaredMoveAssignment() && hasMoveAssignment() &&
@@ -879,15 +872,6 @@ public:
     return data().UserDeclaredSpecialMembers & SMF_CopyAssignment;
   }
 
-  /// Set that we attempted to declare an implicit copy assignment
-  /// operator, but overload resolution failed so we deleted it.
-  void setImplicitCopyAssignmentIsDeleted() {
-    assert((data().DefaultedCopyAssignmentIsDeleted ||
-            needsOverloadResolutionForCopyAssignment()) &&
-           "copy assignment should not be deleted");
-    data().DefaultedCopyAssignmentIsDeleted = true;
-  }
-
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
@@ -897,16 +881,7 @@ public:
   /// Determine whether we need to eagerly declare a defaulted copy
   /// assignment operator for this class.
   bool needsOverloadResolutionForCopyAssignment() const {
-    // C++20 [class.copy.assign]p2:
-    //   If the class definition declares a move constructor or move assignment
-    //   operator, the implicitly declared copy assignment operator is defined
-    //   as deleted.
-    // In MSVC mode, sometimes a declared move constructor does not delete an
-    // implicit copy assignment, so defer this choice to Sema.
-    if (data().UserDeclaredSpecialMembers &
-        (SMF_MoveConstructor | SMF_MoveAssignment))
-      return true;
-    return data().NeedOverloadResolutionForCopyAssignment;
+    return data().HasMutableFields;
   }
 
   /// Determine whether an implicit copy assignment operator for this
