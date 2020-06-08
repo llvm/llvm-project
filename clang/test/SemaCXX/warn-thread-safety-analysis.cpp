@@ -2625,9 +2625,12 @@ void Foo::test5() {
 
 namespace RelockableScopedLock {
 
+class DeferTraits {};
+
 class SCOPED_LOCKABLE RelockableExclusiveMutexLock {
 public:
   RelockableExclusiveMutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  RelockableExclusiveMutexLock(Mutex *mu, DeferTraits) LOCKS_EXCLUDED(mu);
   ~RelockableExclusiveMutexLock() EXCLUSIVE_UNLOCK_FUNCTION();
 
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
@@ -2639,6 +2642,7 @@ struct ExclusiveTraits {};
 
 class SCOPED_LOCKABLE RelockableMutexLock {
 public:
+  RelockableMutexLock(Mutex *mu, DeferTraits) LOCKS_EXCLUDED(mu);
   RelockableMutexLock(Mutex *mu, SharedTraits) SHARED_LOCK_FUNCTION(mu);
   RelockableMutexLock(Mutex *mu, ExclusiveTraits) EXCLUSIVE_LOCK_FUNCTION(mu);
   ~RelockableMutexLock() UNLOCK_FUNCTION();
@@ -2667,6 +2671,13 @@ void relock() {
 
   scope.Lock();
   x = 4;
+}
+
+void deferLock() {
+  RelockableExclusiveMutexLock scope(&mu, DeferTraits{});
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  scope.Lock();
+  x = 3;
 }
 
 void relockExclusive() {
@@ -2701,6 +2712,14 @@ void relockShared() {
   scope.PromoteShared();
   print(x);
   x = 5;
+}
+
+void deferLockShared() {
+  RelockableMutexLock scope(&mu, DeferTraits{});
+  print(x); // expected-warning {{reading variable 'x' requires holding mutex 'mu'}}
+  scope.ReaderLock();
+  print(x);
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
 }
 
 void doubleUnlock() {
