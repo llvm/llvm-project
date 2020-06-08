@@ -1,6 +1,3 @@
-Function '_ZN1AC1Ev'
-Lines executed:100.00% of 1
-
 Function '_ZN1AC2Ev'
 Lines executed:100.00% of 1
 
@@ -11,28 +8,28 @@ Function '_Z7uselessv'
 Lines executed:0.00% of 1
 
 Function '_Z12more_uselessv'
-Lines executed:0.00% of 1
+Lines executed:0.00% of 2
 
 Function '_Z3foov'
-Lines executed:100.00% of 2
+Lines executed:100.00% of 3
 
 Function '_Z3barv'
-Lines executed:0.00% of 2
+Lines executed:0.00% of 3
 
 Function '_Z6assignii'
 Lines executed:100.00% of 3
 
 Function '_Z15initialize_gridv'
-Lines executed:100.00% of 4
+Lines executed:100.00% of 5
 
 Function 'main'
-Lines executed:91.67% of 24
+Lines executed:92.00% of 25
 
 File './test.h'
 Lines executed:100.00% of 1
 ./test.h:creating 'test.h.gcov'
 
 File 'test.cpp'
-Lines executed:84.21% of 38
+Lines executed:81.40% of 43
 test.cpp:creating 'test.cpp.gcov'
 

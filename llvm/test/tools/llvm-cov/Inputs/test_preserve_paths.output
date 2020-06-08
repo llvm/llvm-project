@@ -1,5 +1,5 @@
-File 'srcdir/./nested_dir/../test.cpp'
-Lines executed:84.21% of 38
+File 'src/./n/../a.c'
+Lines executed:100.00% of 1
 srcdir/./nested_dir/../test.cpp:creating 'srcdir#nested_dir#^#test.cpp.gcov'
 
 File 'srcdir/./nested_dir/../test.h'

@@ -12,25 +12,24 @@ RUN: cp %p/Inputs/test* .
 
 # Basic behaviour with no flags
 RUN: llvm-cov gcov test.c | diff -u test_no_options.output -
-RUN: diff -aub test_no_options.cpp.gcov test.cpp.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=C
 RUN: diff -aub test_no_options.h.gcov test.h.gcov
 
 # Same, but specifying the object directory
 RUN: mkdir -p %t/objdir
 RUN: cp test.gcno test.gcda %t/objdir
 RUN: llvm-cov gcov -o objdir test.c | diff -u test_no_options.output -
-RUN: diff -aub test_objdir.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_objdir.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
+OBJDIR:      0:Graph:objdir/test.gcno
+OBJDIR-NEXT: 0:Data:objdir/test.gcda
 
 # Specifying an object file
 RUN: llvm-cov gcov -o objdir/test.o test.c | diff -u test_no_options.output -
-RUN: diff -aub test_objdir.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_objdir.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
 
 # Specifying an object file that could be ambiguous with a directory
 RUN: llvm-cov gcov -o objdir/test test.c | diff -u test_no_options.output -
-RUN: diff -aub test_objdir.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_objdir.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=OBJDIR
 
 # With gcov output disabled
 RUN: llvm-cov gcov -n test.c | diff -u test_no_output.output -
@@ -41,72 +40,58 @@ RUN: llvm-cov gcov --stdout test.c | cmp stdout -
 RUN: cat test_no_options.h.gcov test_no_options.cpp.gcov | diff -u - stdout
 RUN: llvm-cov gcov -n -t test.c | count 0
 
-# Missing source files. This test is fragile, as it depends on being
-# run before we copy some sources into place in the next test.
-RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | diff -u test_missing.output -
-RUN: diff -aub test_missing.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_missing.h.gcov test.h.gcov
+RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=MISSING
+RUN: ls a.c.gcov
+MISSING: File 'src/./n/../a.c'
+MISSING: src/./n/../a.c:creating 'a.c.gcov'
 
 # Preserve paths. This mangles the output filenames.
-RUN: mkdir -p %t/srcdir/nested_dir
-RUN: cp test.cpp test.h %t/srcdir
-RUN: llvm-cov gcov -p test_paths.cpp | diff -u test_preserve_paths.output -
-RUN: diff -aub test_paths.cpp.gcov srcdir#nested_dir#^#test.cpp.gcov
-RUN: diff -aub test_paths.h.gcov srcdir#nested_dir#^#test.h.gcov
-
-# Don't preserve paths. Same results as preserve paths, but no mangling.
-RUN: llvm-cov gcov test_paths.cpp | diff -u test_no_preserve_paths.output -
-RUN: diff -aub test_paths.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_paths.h.gcov test.h.gcov
+RUN: llvm-cov gcov -p test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=PRESERVE
+RUN: ls src#n#^#a.c.gcov
+PRESERVE: File 'src/./n/../a.c'
+PRESERVE: src/./n/../a.c:creating 'src#n#^#a.c.gcov'
 
 # Long file names.
-RUN: llvm-cov gcov -l test_paths.cpp | diff -u test_long_file_names.output -
-RUN: diff -aub test_paths.cpp.gcov test_paths.cpp##test.cpp.gcov
-RUN: diff -aub test_paths.h.gcov test_paths.cpp##test.h.gcov
+RUN: llvm-cov gcov -l test_paths.cpp
+RUN: ls test_paths.cpp##a.c.gcov
 
 # Long file names and preserve paths.
-RUN: llvm-cov gcov -lp -gcno test_paths.gcno -gcda test_paths.gcda srcdir/../test_paths.cpp | diff -u test_long_paths.output -
-RUN: diff -aub test_paths.cpp.gcov srcdir#^#test_paths.cpp##srcdir#nested_dir#^#test.cpp.gcov
-RUN: diff -aub test_paths.h.gcov srcdir#^#test_paths.cpp##srcdir#nested_dir#^#test.h.gcov
+RUN: mkdir -p src && llvm-cov gcov -lp -gcno test_paths.gcno -gcda test_paths.gcda src/../test_paths.cpp
+RUN: ls src#^#test_paths.cpp##src#n#^#a.c.gcov
 
 # Hash pathnames.
-RUN: llvm-cov gcov -x -gcno test_paths.gcno -gcda test_paths.gcda srcdir/../test_paths.cpp | diff -u test_hash.output -
-RUN: diff -aub test_paths.cpp.gcov test.cpp##a806e5b3093cd6f683da88c0da150daf.gcov
-RUN: diff -aub test_paths.h.gcov test.h##0cbee7e2421fa4517420ac4f935620ca.gcov
+RUN: llvm-cov gcov -x -gcno test_paths.gcno -gcda test_paths.gcda src/../test_paths.cpp
+RUN: ls a.c##4784150e272908907eaa7380ca3eced8.gcov
 
 # Function summaries. This changes stdout, but not the gcov files.
 RUN: llvm-cov gcov test.c -f | diff -u test_-f.output -
-RUN: diff -aub test_no_options.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_no_options.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefix=C
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefix=H
 
 # All blocks. This doesn't affect stdout, only the gcov files.
 RUN: llvm-cov gcov test.c -a | diff -u test_no_options.output -
-RUN: diff -aub test_-a.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_-a.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A
 
 # Branch probabilities.
 RUN: llvm-cov gcov test.c -a -b | diff -u test_-b.output -
-RUN-DIABLED: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_-a_-b.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B
 
 # Function summaries including branch probabilities.
-
-# FIXME: We don't correctly handle calls when -b and -f are used
-# together, so our output differs from gcov. Remove the 'not' from
-# this test once this is fixed.
 RUN: llvm-cov gcov test.c -a -b -f | not diff -u test_-b_-f.output - >/dev/null
-RUN-DISABLED: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_-a_-b.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B
 
 # Summarize unconditional branches too.
 RUN: llvm-cov gcov test.c -a -b -u | diff -u test_-b.output -
-RUN-DIABLED: diff -aub test_-a_-b_-u.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_-a_-b_-u.h.gcov test.h.gcov
+RUN: FileCheck --input-file=test.cpp.gcov %s --check-prefixes=C,C-A,C-B,C-U
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefixes=H,H-A,H-B,H-U
 
 # Absolute counts for branches.
-RUN: llvm-cov gcov test.c -a -b -c -u | diff -u test_-b.output -
-RUN-DISABLED: diff -aub test_-a_-b_-c_-u.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_-a_-b_-c_-u.h.gcov test.h.gcov
+RUN: llvm-cov gcov test.c -a -b -c -u
+RUN: FileCheck --input-file=test.h.gcov %s --check-prefix=H-C
+H-C: unconditional  0 taken 1
 
 # Missing gcda file just gives 0 counts.
 RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | diff -u test_no_gcda.output -
@@ -126,4 +111,193 @@ RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda
 RUN-DISABLED: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS
 EXIT_BLOCK_ARCS: (main) has arcs from exit block.
 
-XFAIL: host-byteorder-big-endian
+
+     C:        -:    0:Source:test.cpp
+C-NEXT:        -:    0:Graph:test.gcno
+C-NEXT:        -:    0:Data:test.gcda
+C-NEXT:        -:    0:Runs:1
+C-NEXT:        -:    0:Programs:1
+C-NEXT:        -:    1:#include "test.h"
+C-NEXT:        -:    2:#include <cstdlib>
+C-NEXT:        -:    3:
+C-NEXT:        -:    4:bool on = false;
+C-NEXT:        -:    5:int len = 42;
+C-NEXT:        -:    6:double grid[10][10] = {0};
+C-NEXT:        -:    7:const char * hello = "world";
+C-NEXT:        -:    8:const char * world = "hello";
+C-NEXT:        -:    9:
+   C-B:function _ZN1A1BEv called 4294967296 returned 100% blocks executed 100%
+C-NEXT:4294967296:   10:void A::B() {}
+   C-A:4294967296:   10-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:4294967296:   10-block  1
+   C-U:unconditional  1 taken 100%
+C-NEXT:        -:   11:
+   C-B:function _Z7uselessv called 0 returned 0% blocks executed 0%
+C-NEXT:    #####:   12:void useless() {}
+   C-A:    $$$$$:   12-block  0
+   C-U:unconditional  0 never executed
+   C-A:    $$$$$:   12-block  1
+   C-U:unconditional  1 never executed
+C-NEXT:        -:   13:
+   C-B:function _Z12more_uselessv called 0 returned 0% blocks executed 0%
+C-NEXT:    #####:   14:double more_useless() {
+C-NEXT:    #####:   15:  return 0;
+   C-A:    $$$$$:   15-block  0
+   C-U:unconditional  0 never executed
+   C-A:    $$$$$:   15-block  1
+   C-U:unconditional  1 never executed
+C-NEXT:        -:   16:}
+C-NEXT:        -:   17:
+   C-B:function _Z3foov called 1 returned 100% blocks executed 100%
+C-NEXT:        1:   18:int foo() {
+C-NEXT:        1:   19:  on = true;
+   C-A:        1:   19-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        1:   20:  return 3;
+   C-A:        1:   20-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   21:}
+C-NEXT:        -:   22:
+   C-B:function _Z3barv called 0 returned 0% blocks executed 0%
+C-NEXT:    #####:   23:int bar() {
+C-NEXT:    #####:   24:  len--;
+   C-A:    $$$$$:   24-block  0
+   C-U:unconditional  0 never executed
+C-NEXT:    #####:   25:  return foo() + 45;
+   C-A:    $$$$$:   25-block  0
+   C-U:unconditional  0 never executed
+C-NEXT:        -:   26:}
+C-NEXT:        -:   27:
+   C-B:function _Z6assignii called 4 returned 100% blocks executed 100%
+C-NEXT:        4:   28:void assign(int ii, int jj) {
+   C-A:        4:   28-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        4:   29:  grid[ii][jj] = (ii+1) * (jj+1);
+C-NEXT:        4:   30:}
+   C-A:        4:   30-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   31:
+   C-B:function _Z15initialize_gridv called 1 returned 100% blocks executed 100%
+C-NEXT:        1:   32:void initialize_grid() {
+C-NEXT:        3:   33:  for (int ii = 0; ii < 2; ii++)
+   C-A:        1:   33-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:        1:   33-block  1
+   C-U:unconditional  1 taken 100%
+   C-A:        3:   33-block  2
+   C-B:branch  {{[02]}} taken 67%
+   C-B:branch  {{[13]}} taken 33%
+   C-A:        2:   33-block  3
+   C-U:unconditional  4 taken 100%
+C-NEXT:        6:   34:    for (int jj = 0; jj < 2; jj++)
+   C-A:        2:   34-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:        6:   34-block  1
+   C-B:branch  {{[01]}} taken 67%
+   C-B:branch  {{[12]}} taken 33%
+   C-A:        4:   34-block  2
+   C-U:unconditional  3 taken 100%
+C-NEXT:        6:   35:      assign(ii, jj);
+   C-A:        4:   35-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:        2:   35-block  1
+   C-U:unconditional  1 taken 100%
+C-NEXT:        1:   36:}
+   C-A:        1:   36-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   37:
+   C-B:function main called 1 returned 100% blocks executed 94%
+C-NEXT:        1:   38:int main() {
+   C-A:        1:   38-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        1:   39:  initialize_grid();
+C-NEXT:        -:   40:
+C-NEXT:        1:   41:  int a = 2;
+C-NEXT:        1:   42:  on = rand() % 2;
+C-NEXT:        1:   43:  if (on) {
+   C-A:        1:   43-block  0
+   C-B:branch  0 taken 100%
+   C-B:branch  1 taken 0%
+C-NEXT:        1:   44:    foo();
+C-NEXT:        1:   45:    ++a;
+C-NEXT:        1:   46:  } else {
+   C-A:        1:   46-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:    #####:   47:    bar();
+C-NEXT:    #####:   48:    a += rand();
+   C-A:    $$$$$:   48-block  0
+   C-U:unconditional  0 never executed
+C-NEXT:        -:   49:  }
+C-NEXT:        -:   50:
+C-NEXT:       11:   51:  for (int ii = 0; ii < 10; ++ii) {
+   C-A:        1:   51-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:       11:   51-block  1
+   C-B:branch  {{[01]}} taken 91%
+   C-B:branch  {{[12]}} taken 9%
+   C-A:       10:   51-block  2
+   C-U:unconditional  3 taken 100%
+C-NEXT:       10:   52:    switch (rand() % 5) {
+   C-A:       10:   52-block  0
+   C-B:branch  0 taken 10%
+   C-B:branch  1 taken 20%
+   C-B:branch  2 taken 0%
+   C-B:branch  3 taken 40%
+   C-B:branch  4 taken 30%
+C-NEXT:        -:   53:      case 0:
+C-NEXT:        2:   54:        a += rand();
+C-NEXT:        2:   55:        break;
+   C-A:        2:   55-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   56:      case 1:
+C-NEXT:        -:   57:      case 2:
+C-NEXT:        4:   58:        a += rand() / rand();
+C-NEXT:        4:   59:        break;
+   C-A:        4:   59-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   60:      case 3:
+C-NEXT:        3:   61:        a -= rand();
+C-NEXT:        3:   62:        break;
+   C-A:        3:   62-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   63:      default:
+C-NEXT:        1:   64:        a = -1;
+C-NEXT:        1:   65:    }
+   C-A:        1:   65-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:       10:   66:  }
+   C-A:       10:   66-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   67:
+C-NEXT:        1:   68:  A thing;
+C-NEXT:4294967297:   69:  for (uint64_t ii = 0; ii < 4294967296; ++ii)
+   C-A:        1:   69-block  0
+   C-U:unconditional  0 taken 100%
+   C-A:4294967297:   69-block  1
+   C-B:branch  {{[01]}} taken 99%
+   C-B:branch  {{[12]}} taken 1%
+   C-A:4294967296:   69-block  2
+   C-U:unconditional  3 taken 100%
+C-NEXT:4294967296:   70:    thing.B();
+   C-A:4294967296:   70-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   71:
+C-NEXT:        1:   72:  return a + 8 + grid[2][3] + len;
+   C-A:        1:   72-block  0
+   C-U:unconditional  0 taken 100%
+C-NEXT:        -:   73:  return more_useless();
+C-NEXT:        -:   74:}
+
+     H:        -:    0:Source:./test.h
+H-NEXT:        -:    0:Graph:test.gcno
+H-NEXT:        -:    0:Data:test.gcda
+H-NEXT:        -:    0:Runs:1
+H-NEXT:        -:    0:Programs:1
+H-NEXT:        -:    1:#include <stdint.h>
+   H-B:function _ZN1AC2Ev called 1 returned 100% blocks executed 100%
+H-NEXT:        1:    2:struct A {
+   H-A:        1:    2-block  0
+   H-U:unconditional  0 taken 100%
+H-NEXT:        -:    3:  virtual void B();
+H-NEXT:        -:    4:};
