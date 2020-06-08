@@ -24,7 +24,7 @@ static cl::opt<bool>
 static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
   return Cand.SU->getInstr()->getOpcode() == PPC::ADDI ||
          Cand.SU->getInstr()->getOpcode() == PPC::ADDI8;
-};
+}
 
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
