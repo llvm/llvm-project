@@ -14,7 +14,8 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-namespace mlir {
+using namespace mlir;
+
 namespace {
 
 /// Conversion patterns.
@@ -90,7 +91,7 @@ class ConvertShapeToStandardPass
 
 } // namespace
 
-void populateShapeToStandardConversionPatterns(
+void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   // clang-format off
   patterns.insert<
@@ -99,8 +100,7 @@ void populateShapeToStandardConversionPatterns(
   // clang-format on
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> createConvertShapeToStandardPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertShapeToStandardPass() {
   return std::make_unique<ConvertShapeToStandardPass>();
 }
-
-} // namespace mlir
