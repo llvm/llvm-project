@@ -54,7 +54,7 @@ if (LLDB_ENABLE_PYTHON)
         --prefix=${CMAKE_BINARY_DIR}
         ${PREPARE_BINDINGS_ARGS}
     VERBATIM
-    COMMENT "Builds LLDB Python wrapper")
+    COMMENT "Building LLDB Python wrapper")
 
   add_custom_target(swig_wrapper ALL DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
@@ -75,7 +75,7 @@ if (LLDB_ENABLE_LUA)
         -o ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapLua.cpp
         ${LLDB_SOURCE_DIR}/bindings/lua.swig
     VERBATIM
-    COMMENT "Builds LLDB Lua wrapper")
+    COMMENT "Building LLDB Lua wrapper")
 
   add_custom_target(swig_wrapper_lua ALL DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapLua.cpp
