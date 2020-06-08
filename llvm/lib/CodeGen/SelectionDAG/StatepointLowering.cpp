@@ -820,11 +820,6 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
          "anyregcc is not supported on statepoints!");
 
 #ifndef NDEBUG
-  // If this is a malformed statepoint, report it early to simplify debugging.
-  // This should catch any IR level mistake that's made when constructing or
-  // transforming statepoints.
-  ISP.verify();
-
   // Check that the associated GCStrategy expects to encounter statepoints.
   assert(GFI->getStrategy().useStatepoints() &&
          "GCStrategy does not expect to encounter statepoints");

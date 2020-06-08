@@ -238,20 +238,13 @@ public:
     return StatepointCall;
   }
 
-  size_t arg_size() const { return getCall()->actual_arg_size(); }
-  arg_iterator arg_begin() const { return getCall()->actual_arg_begin(); }
-  arg_iterator arg_end() const { return getCall()->actual_arg_end(); }
-  iterator_range<arg_iterator> call_args() const {
-    return getCall()->actual_args();
-  }
-
   /// Number of GC transition args.
   int getNumTotalGCTransitionArgs() const {
-    const Value *NumGCTransitionArgs = *arg_end();
+    const Value *NumGCTransitionArgs = *getCall()->actual_arg_end();
     return cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
   }
   arg_iterator gc_transition_args_begin() const {
-    auto I = arg_end() + 1;
+    auto I = getCall()->actual_arg_end() + 1;
     assert((getCall()->arg_end() - I) >= 0);
     return I;
   }
@@ -288,34 +281,6 @@ public:
   iterator_range<arg_iterator> deopt_operands() const {
     return make_range(deopt_begin(), deopt_end());
   }
-
-  arg_iterator gc_args_begin() const {
-    auto I = getCall()->gc_args_begin();
-    assert(I == deopt_end());
-    return I;
-  }
-  arg_iterator gc_args_end() const { return getCall()->gc_args_end(); }
-  unsigned gcArgsStartIdx() const { return getCall()->gcArgsStartIdx(); }
-  iterator_range<arg_iterator> gc_args() const {
-    return getCall()->gc_args();
-  }
-
-#ifndef NDEBUG
-  /// Asserts if this statepoint is malformed.  Common cases for failure
-  /// include incorrect length prefixes for variable length sections or
-  /// illegal values for parameters.
-  void verify() {
-    // The internal asserts in the iterator accessors do the rest.
-    (void)arg_begin();
-    (void)arg_end();
-    (void)gc_transition_args_begin();
-    (void)gc_transition_args_end();
-    (void)deopt_begin();
-    (void)deopt_end();
-    (void)gc_args_begin();
-    (void)gc_args_end();
-  }
-#endif
 };
 
 /// A specialization of it's base class for read only access
