@@ -52,7 +52,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
   ensureMaxAlignment(Alignment);
   MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Alignment);
   Size = unsigned(alignTo(Size, MinAlign));
-  unsigned Offset = AllocateStack(Size, Alignment.value());
+  unsigned Offset = AllocateStack(Size, Alignment);
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 }
 
