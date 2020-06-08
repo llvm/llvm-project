@@ -840,9 +840,9 @@ bool DyldNeedsEnvVariable() {
   if (!&dyldVersionNumber) return true;
   // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
   // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
-  // GetMacosAlignedVersion() doesn't work for the simulator. Let's instead check
-  // `dyldVersionNumber`, which is exported by dyld, against a known version
-  // number from the first OS release where this appeared.
+  // GetMacosAlignedVersion() doesn't work for the simulator. Let's instead
+  // check `dyldVersionNumber`, which is exported by dyld, against a known
+  // version number from the first OS release where this appeared.
   return dyldVersionNumber < kMinDyldVersionWithAutoInterposition;
 }
 
