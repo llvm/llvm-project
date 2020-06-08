@@ -245,8 +245,7 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
 
   // Cleanup potential unconditional branch to successor block.
   // Note that updateTerminator may change the size of the blocks.
-  NewBB->updateTerminator();
-  OrigBB->updateTerminator();
+  OrigBB->updateTerminator(NewBB);
 
   // Figure out how large the OrigBB is.  As the first half of the original
   // block, it cannot contain a tablejump.  The size includes

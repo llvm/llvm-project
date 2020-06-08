@@ -514,11 +514,13 @@ public:
     return getSectionID() == MBB->getSectionID();
   }
 
-  /// Update the terminator instructions in block to account for changes to the
-  /// layout. If the block previously used a fallthrough, it may now need a
-  /// branch, and if it previously used branching it may now be able to use a
-  /// fallthrough.
-  void updateTerminator();
+  /// Update the terminator instructions in block to account for changes to
+  /// block layout which may have been made. PreviousLayoutSuccessor should be
+  /// set to the block which may have been used as fallthrough before the block
+  /// layout was modified.  If the block previously fell through to that block,
+  /// it may now need a branch. If it previously branched to another block, it
+  /// may now be able to fallthrough to the current layout successor.
+  void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor);
 
   // Machine-CFG mutators
 
