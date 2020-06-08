@@ -12,13 +12,13 @@ func @main() {
 
   %reps = constant 1 : index
 
-  %t_start = call @rtclock() : () -> f16
+  %t_start = call @rtclock() : () -> f64
   affine.for %arg0 = 0 to 5 {
     linalg.fill(%C, %cf1) : memref<16x16xf32>, f32
     call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
   }
-  %t_end = call @rtclock() : () -> f16
-  %t = subf %t_end, %t_start : f16
+  %t_end = call @rtclock() : () -> f64
+  %t = subf %t_end, %t_start : f64
 
   %pC = memref_cast %C : memref<16x16xf32> to memref<*xf32>
   call @print_memref_f32(%pC) : (memref<*xf32>) -> ()
@@ -35,9 +35,9 @@ func @main() {
   %f3 = muli %c2, %f2 : index
   %num_flops = muli %reps, %f3 : index
   %num_flops_i = index_cast %num_flops : index to i16
-  %num_flops_f = sitofp %num_flops_i : i16 to f16
-  %flops = divf %num_flops_f, %t : f16
-  call @print_flops(%flops) : (f16) -> ()
+  %num_flops_f = sitofp %num_flops_i : i16 to f64
+  %flops = divf %num_flops_f, %t : f64
+  call @print_flops(%flops) : (f64) -> ()
 
   return
 }
@@ -66,6 +66,6 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
   return
 }
 
-func @print_flops(f16)
-func @rtclock() -> f16
+func @print_flops(f64)
+func @rtclock() -> f64
 func @print_memref_f32(memref<*xf32>)
