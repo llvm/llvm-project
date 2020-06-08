@@ -124,7 +124,7 @@ func @composite_extract_invalid_index_type_1() -> () {
 // -----
 
 func @composite_extract_invalid_index_type_2(%arg0 : !spv.array<4x!spv.array<4xf32>>) -> () {
-  // expected-error @+1 {{op attribute 'indices' failed to satisfy constraint: 32-bit integer array attribute}}
+  // expected-error @+1 {{attribute 'indices' failed to satisfy constraint: 32-bit integer array attribute}}
   %0 = spv.CompositeExtract %arg0[1] : !spv.array<4x!spv.array<4xf32>>
   return
 }

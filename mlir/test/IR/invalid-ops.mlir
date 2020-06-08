@@ -58,7 +58,7 @@ func @constant_wrong_type() {
 func @affine_apply_no_map() {
 ^bb0:
   %i = constant 0 : index
-  %x = "affine.apply" (%i) { } : (index) -> (index) //  expected-error {{'affine.apply' op requires attribute 'map'}}
+  %x = "affine.apply" (%i) { } : (index) -> (index) //  expected-error {{requires attribute 'map'}}
   return
 }
 
@@ -1205,7 +1205,7 @@ func @assume_alignment(%0: memref<4x4xf16>) {
 
 // 0 alignment value.
 func @assume_alignment(%0: memref<4x4xf16>) {
-  // expected-error@+1 {{'std.assume_alignment' op attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
+  // expected-error@+1 {{attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
   std.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }
