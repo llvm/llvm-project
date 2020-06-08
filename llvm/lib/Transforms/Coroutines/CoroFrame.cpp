@@ -899,6 +899,23 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
     FramePtrBB->splitBasicBlock(FramePtr->getNextNode(), "AllocaSpillBB");      
   SpillBlock->splitBasicBlock(&SpillBlock->front(), "PostSpill");
   Shape.AllocaSpillBlock = SpillBlock;
+
+  // retcon and retcon.once lowering assumes all uses have been sunk.
+  if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce) {
+    // If we found any allocas, replace all of their remaining uses with Geps.
+    Builder.SetInsertPoint(&SpillBlock->front());
+    for (auto &P : Allocas) {
+      auto *G = GetFramePointer(P.second, P.first);
+
+      // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G))
+      // here, as we are changing location of the instruction.
+      G->takeName(P.first);
+      P.first->replaceAllUsesWith(G);
+      P.first->eraseFromParent();
+    }
+    return FramePtr;
+  }
+
   // If we found any alloca, replace all of their remaining uses with GEP
   // instructions. Because new dbg.declare have been created for these alloca,
   // we also delete the original dbg.declare and replace other uses with undef.
@@ -1482,6 +1499,55 @@ static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
   }
 }
 
+/// retcon and retcon.once conventions assume that all spill uses can be sunk
+/// after the coro.begin intrinsic.
+static void sinkSpillUsesAfterCoroBegin(Function &F, const SpillInfo &Spills,
+                                        CoroBeginInst *CoroBegin) {
+  DominatorTree Dom(F);
+
+  SmallSetVector<Instruction *, 32> ToMove;
+  SmallVector<Instruction *, 32> Worklist;
+
+  // Collect all users that precede coro.begin.
+  for (auto const &Entry : Spills) {
+    auto *SpillDef = Entry.def();
+    for (User *U : SpillDef->users()) {
+      auto Inst = cast<Instruction>(U);
+      if (Inst->getParent() != CoroBegin->getParent() ||
+          Dom.dominates(CoroBegin, Inst))
+        continue;
+      if (ToMove.insert(Inst))
+        Worklist.push_back(Inst);
+    }
+  }
+  // Recursively collect users before coro.begin.
+  while (!Worklist.empty()) {
+    auto *Def = Worklist.back();
+    Worklist.pop_back();
+    for (User *U : Def->users()) {
+      auto Inst = cast<Instruction>(U);
+      if (Dom.dominates(CoroBegin, Inst))
+        continue;
+      if (ToMove.insert(Inst))
+        Worklist.push_back(Inst);
+    }
+  }
+
+  // Sort by dominance.
+  SmallVector<Instruction *, 64> InsertionList(ToMove.begin(), ToMove.end());
+  std::sort(InsertionList.begin(), InsertionList.end(),
+            [&Dom](Instruction *A, Instruction *B) -> bool {
+              // If a dominates b it should preceed (<) b.
+              return Dom.dominates(A, B);
+            });
+
+  Instruction *InsertPt = CoroBegin->getNextNode();
+  for (Instruction *Inst : InsertionList)
+    Inst->moveBefore(InsertPt);
+
+  return;
+}
+
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   eliminateSwiftError(F, Shape);
 
@@ -1618,6 +1684,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     }
   }
   LLVM_DEBUG(dump("Spills", Spills));
+  if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce)
+    sinkSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, Spills);
   Shape.FramePtr = insertSpills(Spills, Shape);
   lowerLocalAllocas(LocalAllocas, DeadInstructions);
