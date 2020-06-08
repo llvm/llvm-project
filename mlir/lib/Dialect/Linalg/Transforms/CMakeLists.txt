@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   Fusion.cpp
+  Hoisting.cpp
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
