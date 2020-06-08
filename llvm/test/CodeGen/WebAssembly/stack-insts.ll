@@ -8,7 +8,7 @@ declare void @foo1()
 
 ; Tests if br_table is printed correctly with a tab.
 ; CHECK-LABEL: test0:
-; CHECK: br_table {0, 1, 0, 1, 2}
+; CHECK: br_table {0, 1, 0, 1, 0}
 define void @test0(i32 %n) {
 entry:
   switch i32 %n, label %sw.epilog [
