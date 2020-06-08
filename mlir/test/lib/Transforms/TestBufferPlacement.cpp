@@ -21,17 +21,22 @@
 using namespace mlir;
 
 namespace {
-/// This pass tests the computeAllocPosition helper method and two provided
-/// operation converters, FunctionAndBlockSignatureConverter and
-/// BufferAssignmentReturnOpConverter. Furthermore, this pass converts linalg
-/// operations on tensors to linalg operations on buffers to prepare them for
-/// the BufferPlacement pass that can be applied afterwards.
+/// This pass tests the computeAllocPosition helper method and buffer assignment
+/// operation converters. Furthermore, this pass converts linalg operations on
+/// tensors to linalg operations on buffers to prepare them for the
+/// BufferPlacement pass that can be applied afterwards.
+/// `allowMemrefFunctionResults` informs the buffer placement to allow functions
+/// that have memref typed results. Buffer assignment operation converters will
+/// be adapted respectively. It will also allow memref typed results to escape
+/// from the deallocation.
+template <bool allowMemrefFunctionResults>
 struct TestBufferPlacementPreparationPass
-    : mlir::PassWrapper<TestBufferPlacementPreparationPass,
-                        OperationPass<ModuleOp>> {
+    : mlir::PassWrapper<
+          TestBufferPlacementPreparationPass<allowMemrefFunctionResults>,
+          OperationPass<ModuleOp>> {
 
-  /// Converts tensor-type generic linalg operations to memref ones using buffer
-  /// assignment.
+  /// Converts tensor-type generic linalg operations to memref ones using
+  /// buffer assignment.
   class GenericOpConverter
       : public BufferAssignmentOpConversionPattern<linalg::GenericOp> {
   public:
@@ -104,19 +109,14 @@ struct TestBufferPlacementPreparationPass
   void populateTensorLinalgToBufferLinalgConversionPattern(
       MLIRContext *context, BufferAssignmentPlacer *placer,
       TypeConverter *converter, OwningRewritePatternList *patterns) {
-    // clang-format off
-    patterns->insert<
-                   BufferAssignmentCallOpConverter,
-                   FunctionAndBlockSignatureConverter,
-                   GenericOpConverter,
-                   BufferAssignmentReturnOpConverter<
-                      ReturnOp, ReturnOp, linalg::CopyOp>
-    >(context, placer, converter);
-    // clang-format on
+    populateWithBufferAssignmentOpConversionPatterns<
+        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp,
+        allowMemrefFunctionResults>(context, placer, converter, patterns);
+    patterns->insert<GenericOpConverter>(context, placer, converter);
   }
 
   void runOnOperation() override {
-    MLIRContext &context = getContext();
+    MLIRContext &context = this->getContext();
     ConversionTarget target(context);
     BufferAssignmentTypeConverter converter;
 
@@ -150,7 +150,7 @@ struct TestBufferPlacementPreparationPass
     });
 
     // Walk over all the functions to apply buffer assignment.
-    getOperation().walk([&](FuncOp function) -> WalkResult {
+    this->getOperation().walk([&](FuncOp function) -> WalkResult {
       OwningRewritePatternList patterns;
       BufferAssignmentPlacer placer(function);
       populateTensorLinalgToBufferLinalgConversionPattern(
@@ -165,9 +165,18 @@ struct TestBufferPlacementPreparationPass
 
 namespace mlir {
 void registerTestBufferPlacementPreparationPass() {
-  PassRegistration<TestBufferPlacementPreparationPass>(
+  PassRegistration<
+      TestBufferPlacementPreparationPass</*allowMemrefFunctionResults=*/false>>(
       "test-buffer-placement-preparation",
       "Tests buffer placement helper methods including its "
       "operation-conversion patterns");
+}
+
+void registerTestPreparationPassWithAllowedMemrefResults() {
+  PassRegistration<
+      TestBufferPlacementPreparationPass</*allowMemrefFunctionResults=*/true>>(
+      "test-buffer-placement-preparation-with-allowed-memref-results",
+      "Tests the helper operation converters of buffer placement for allowing "
+      "functions to have memref typed results.");
 }
 } // end namespace mlir
