@@ -2535,9 +2535,10 @@ bool DWARFExpression::Evaluate(
     }
 
     default:
-      LLDB_LOGF(log, "Unhandled opcode %s in DWARFExpression.",
-                DW_OP_value_to_name(op));
-      break;
+      if (error_ptr)
+        error_ptr->SetErrorStringWithFormatv(
+            "Unhandled opcode {0} in DWARFExpression", LocationAtom(op));
+      return false;
     }
   }
 
