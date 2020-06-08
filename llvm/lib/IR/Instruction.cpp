@@ -774,12 +774,3 @@ Instruction *Instruction::clone() const {
   New->copyMetadata(*this);
   return New;
 }
-
-void Instruction::setProfWeight(uint64_t W) {
-  assert(isa<CallBase>(this) &&
-         "Can only set weights for call like instructions");
-  SmallVector<uint32_t, 1> Weights;
-  Weights.push_back(W);
-  MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
-}
