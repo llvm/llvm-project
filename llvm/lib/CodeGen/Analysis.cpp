@@ -530,24 +530,23 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
 
   // If I will have a chain, make sure no other instruction that will have a
   // chain interposes between I and the return.
-  if (Call.mayHaveSideEffects() || Call.mayReadFromMemory() ||
-      !isSafeToSpeculativelyExecute(&Call))
-    for (BasicBlock::const_iterator BBI = std::prev(ExitBB->end(), 2);; --BBI) {
-      if (&*BBI == &Call)
-        break;
-      // Debug info intrinsics do not get in the way of tail call optimization.
-      if (isa<DbgInfoIntrinsic>(BBI))
+  // Check for all calls including speculatable functions.
+  for (BasicBlock::const_iterator BBI = std::prev(ExitBB->end(), 2);; --BBI) {
+    if (&*BBI == &Call)
+      break;
+    // Debug info intrinsics do not get in the way of tail call optimization.
+    if (isa<DbgInfoIntrinsic>(BBI))
+      continue;
+    // A lifetime end or assume intrinsic should not stop tail call
+    // optimization.
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
+      if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
+          II->getIntrinsicID() == Intrinsic::assume)
         continue;
-      // A lifetime end or assume intrinsic should not stop tail call
-      // optimization.
-      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
-        if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
-            II->getIntrinsicID() == Intrinsic::assume)
-          continue;
-      if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
-          !isSafeToSpeculativelyExecute(&*BBI))
-        return false;
-    }
+    if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
+        !isSafeToSpeculativelyExecute(&*BBI))
+      return false;
+  }
 
   const Function *F = ExitBB->getParent();
   return returnTypeIsEligibleForTailCall(
