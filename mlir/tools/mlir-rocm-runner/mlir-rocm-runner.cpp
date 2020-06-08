@@ -33,8 +33,11 @@
 #include "mlir/Target/ROCDLIR.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -58,6 +61,9 @@
 // lld headers.
 #include "lld/Common/Driver.h"
 
+// HIP headers.
+#include "hip/hip_version.h"
+
 using namespace mlir;
 using namespace llvm;
 
@@ -67,15 +73,17 @@ static cl::opt<std::string> tripleName("triple", cl::desc("target triple"),
                                        cl::value_desc("triple string"),
                                        cl::init("amdgcn-amd-amdhsa"));
 
-// TODO(whchung): Add feature to automatically detect available AMD GCN ISA
-// version via `rocm-agent-enumerator` utility.
 static cl::opt<std::string> targetChip("target", cl::desc("target chip"),
                                        cl::value_desc("AMDGPU ISA version"),
-                                       cl::init("gfx900"));
+                                       cl::init(""));
 
 static cl::opt<std::string> features("feature", cl::desc("target features"),
                                      cl::value_desc("AMDGPU target features"),
-                                     cl::init("-code-object-v3"));
+                                     cl::init(""));
+
+static constexpr const char kRunnerProgram[] = "mlir-rocm-runner";
+static constexpr const char kRocmAgentEnumerator[] = "rocm_agent_enumerator";
+static constexpr const char kDefaultTargetChip[] = "gfx900";
 
 static LogicalResult assembleIsa(const std::string isa, StringRef name,
                                  Blob &result) {
@@ -211,9 +219,85 @@ static OwnedBlob compileISAToHsaco(const std::string isa, Location loc,
   return {};
 }
 
+static void configTargetChip() {
+  // Set targetChip to default value first.
+  targetChip = kDefaultTargetChip;
+
+  // Locate rocm_agent_enumerator.
+  llvm::ErrorOr<std::string> rocmAgentEnumerator = llvm::sys::findProgramByName(
+      kRocmAgentEnumerator, {__ROCM_PATH__ "/bin"});
+  std::error_code ec;
+  if (ec = rocmAgentEnumerator.getError()) {
+    WithColor::warning(errs(), kRunnerProgram)
+        << kRocmAgentEnumerator << " couldn't be located under "
+        << __ROCM_PATH__ << ", set target as " << kDefaultTargetChip << "\n";
+    return;
+  }
+
+  // Prepare temp file to hold the outputs.
+  int tempFd = -1;
+  SmallString<128> tempFilename;
+  ec = sys::fs::createTemporaryFile("rocm_agent", "txt", tempFd, tempFilename);
+  if (ec) {
+    WithColor::warning(errs(), kRunnerProgram)
+        << "temporary file for " << kRocmAgentEnumerator
+        << " creation error, set target as " << kDefaultTargetChip << "\n";
+    return;
+  }
+  FileRemover cleanup(tempFilename);
+
+  // Invoke rocm_agent_enumerator.
+  std::string errorMessage;
+  SmallVector<StringRef, 2> args{"-t", "GPU"};
+  Optional<StringRef> redirects[3] = {{""}, tempFilename.str(), {""}};
+  int result =
+      llvm::sys::ExecuteAndWait(rocmAgentEnumerator.get(), args, llvm::None,
+                                redirects, 0, 0, &errorMessage);
+  if (result) {
+    WithColor::warning(errs(), kRunnerProgram)
+        << kRocmAgentEnumerator << " invocation error: " << errorMessage
+        << ", set target as " << kDefaultTargetChip << "\n";
+    return;
+  }
+
+  // Load and parse the result.
+  auto gfxIsaList = mlir::openInputFile(tempFilename);
+  if (!gfxIsaList) {
+    WithColor::error(errs(), kRunnerProgram)
+        << "read ROCm agent list temp file error, set target as "
+        << kDefaultTargetChip << "\n";
+    return;
+  }
+  for (line_iterator lines(*gfxIsaList); !lines.is_at_end(); ++lines) {
+    // Skip the line with content "gfx000".
+    if (*lines == "gfx000")
+      continue;
+    // Use the first ISA version found.
+    targetChip = lines->str();
+    break;
+  }
+}
+
+static void configTargetFeatures() {
+  if (features.size() > 0)
+    features += ",";
+  // After ROCm 3.5, adopt HSA code object V3.
+  if (HIP_VERSION_MAJOR >= 3 && HIP_VERSION_MINOR >= 5)
+    features += "+code-object-v3";
+  else
+    features += "-code-object-v3";
+}
+
 static LogicalResult runMLIRPasses(ModuleOp m) {
   PassManager pm(m.getContext());
   applyPassManagerCLOptions(pm);
+
+  // Configure target chip ISA version if it has not been specified.
+  if (!targetChip.size())
+    configTargetChip();
+
+  // Configure target features per ROCm / HIP version.
+  configTargetFeatures();
 
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
