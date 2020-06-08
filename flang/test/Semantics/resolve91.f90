@@ -51,3 +51,15 @@ module m5
   !ERROR: The type of 'a' has already been implicitly declared
   character(len=len(b)) :: a
 end module m5
+
+module m6
+  integer, dimension(3) :: iarray
+  !ERROR: Derived type 'ubound' not found
+  character(len=ubound(iarray)(1)) :: first
+end module m6
+
+module m7
+  integer, dimension(2) :: iarray
+  !ERROR: Derived type 'ubound' not found
+  integer :: ivar = ubound(iarray)(1)
+end module m7
