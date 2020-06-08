@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-import SATestAdd
-import SATestBuild
-import SATestUpdateDiffs
-import CmpRuns
-
-from ProjectMap import ProjectInfo, ProjectMap
-
 import argparse
 import sys
 import os
@@ -22,6 +15,9 @@ DEFAULT_LLVM_DIR = os.path.realpath(os.path.join(SCRIPTS_DIR,
 
 
 def add(parser, args):
+    import SATestAdd
+    from ProjectMap import ProjectInfo
+
     if args.source == "git" and (args.origin == "" or args.commit == ""):
         parser.error(
             "Please provide both --origin and --commit if source is 'git'")
@@ -37,6 +33,9 @@ def add(parser, args):
 
 
 def build(parser, args):
+    import SATestBuild
+    from ProjectMap import ProjectMap
+
     SATestBuild.VERBOSE = args.verbose
 
     project_map = ProjectMap()
@@ -72,6 +71,16 @@ def build(parser, args):
 
 
 def compare(parser, args):
+    import CmpRuns
+
+    choices = [CmpRuns.HistogramType.RELATIVE.value,
+               CmpRuns.HistogramType.LOG_RELATIVE.value,
+               CmpRuns.HistogramType.ABSOLUTE.value]
+
+    if args.histogram is not None and args.histogram not in choices:
+        parser.error("Incorrect histogram type, available choices are {}"
+                     .format(choices))
+
     dir_old = CmpRuns.ResultsDirectory(args.old[0], args.root_old)
     dir_new = CmpRuns.ResultsDirectory(args.new[0], args.root_new)
 
@@ -83,6 +92,9 @@ def compare(parser, args):
 
 
 def update(parser, args):
+    import SATestUpdateDiffs
+    from ProjectMap import ProjectMap
+
     project_map = ProjectMap()
     for project in project_map.projects:
         SATestUpdateDiffs.update_reference_results(project)
@@ -145,8 +157,7 @@ def main():
                             "(please provide --origin and --commit), "
                             "'zip' for unpacking source from a zip file, "
                             "'script' for downloading source by running "
-                            "a custom script {}"
-                            .format(SATestBuild.DOWNLOAD_SCRIPT))
+                            "a custom script")
     add_parser.add_argument("--origin", action="store", default="",
                             help="Origin link for a git repository")
     add_parser.add_argument("--commit", action="store", default="",
@@ -207,9 +218,6 @@ def main():
                             dest="show_stats", default=False,
                             help="Show change in statistics")
     cmp_parser.add_argument("--histogram", action="store", default=None,
-                            choices=[CmpRuns.HistogramType.RELATIVE.value,
-                                     CmpRuns.HistogramType.LOG_RELATIVE.value,
-                                     CmpRuns.HistogramType.ABSOLUTE.value],
                             help="Show histogram of paths differences. "
                             "Requires matplotlib")
     cmp_parser.add_argument("old", nargs=1, help="Directory with old results")
@@ -231,6 +239,8 @@ def main():
 
     dock_parser.add_argument("--build-image", action="store_true",
                              help="Build docker image for running tests.")
+    dock_parser.add_argument("--shell", action="store_true",
+                             help="Start a shell on docker.")
     dock_parser.add_argument("--llvm-project-dir", action="store",
                              default=DEFAULT_LLVM_DIR,
                              help="Path to LLVM source code. Defaults "
