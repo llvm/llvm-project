@@ -14,5 +14,3 @@ add_mlir_dialect_library(MLIRShape
   MLIRIR
   MLIRSideEffectInterfaces
   )
-
-add_subdirectory(Transforms)

@@ -36,10 +36,6 @@ This document describes the available MLIR passes and their contracts.
 
 [include "QuantPasses.md"]
 
-## `shape` Dialect Passes
-
-[include "ShapePasses.md"]
-
 ## `spv` Dialect Passes
 
 [include "SPIRVPasses.md"]

@@ -1064,7 +1064,7 @@ public:
   }
 
 protected:
-  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
+  virtual void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };

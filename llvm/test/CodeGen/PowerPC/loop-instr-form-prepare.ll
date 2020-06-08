@@ -500,12 +500,12 @@ define i64 @test_ds_cross_basic_blocks(i8* %0, i32 signext %1) {
 ; CHECK-NEXT:    ld r0, -8(r6)
 ; CHECK-NEXT:    add r29, r0, r29
 ; CHECK-NEXT:  .LBB6_3: #
+; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    mulld r0, r29, r28
 ; CHECK-NEXT:    mulld r0, r0, r30
 ; CHECK-NEXT:    mulld r0, r0, r12
 ; CHECK-NEXT:    mulld r0, r0, r11
 ; CHECK-NEXT:    maddld r3, r0, r7, r3
-; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    bdz .LBB6_9
 ; CHECK-NEXT:  .LBB6_4: #
 ; CHECK-NEXT:    lbzu r0, 1(r5)
