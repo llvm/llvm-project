@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++2a-or-later %s readability-use-anyofallof %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-use-anyofallof %t
 
 bool good_any_of() {
   int v[] = {1, 2, 3};

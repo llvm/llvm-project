@@ -441,7 +441,7 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
 }
 
 TEST_F(DocumentSymbolsTest, Concepts) {
-  CDB.ExtraClangFlags = {"-std=c++2a"};
+  CDB.ExtraClangFlags = {"-std=c++20"};
   std::string FilePath = testPath("foo.cpp");
   addFile(FilePath,
           "template <typename T> concept C = requires(T t) { t.foo(); };");
