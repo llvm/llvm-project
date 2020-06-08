@@ -44765,11 +44765,11 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
-  // FIXME: Handle strict fp nodes.
+  bool IsStrict = N->isTargetStrictFPOpcode();
   EVT VT = N->getValueType(0);
 
   // Convert a full vector load into vzload when not all bits are needed.
-  SDValue In = N->getOperand(0);
+  SDValue In = N->getOperand(IsStrict ? 1 : 0);
   MVT InVT = In.getSimpleValueType();
   if (VT.getVectorNumElements() < InVT.getVectorNumElements() &&
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
@@ -44780,9 +44780,16 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
     MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
     if (SDValue VZLoad = narrowLoadToVZLoad(LN, MemVT, LoadVT, DAG)) {
       SDLoc dl(N);
-      SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
-                                    DAG.getBitcast(InVT, VZLoad));
-      DCI.CombineTo(N, Convert);
+      if (IsStrict) {
+        SDValue Convert =
+            DAG.getNode(N->getOpcode(), dl, {VT, MVT::Other},
+                        {N->getOperand(0), DAG.getBitcast(InVT, VZLoad)});
+        DCI.CombineTo(N, Convert, Convert.getValue(1));
+      } else {
+        SDValue Convert =
+            DAG.getNode(N->getOpcode(), dl, VT, DAG.getBitcast(InVT, VZLoad));
+        DCI.CombineTo(N, Convert);
+      }
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
       DCI.recursivelyDeleteUnusedNodes(LN);
       return SDValue(N, 0);
@@ -47991,8 +47998,11 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CVTUI2P:     return combineX86INT_TO_FP(N, DAG, DCI);
   case X86ISD::CVTP2SI:
   case X86ISD::CVTP2UI:
+  case X86ISD::STRICT_CVTTP2SI:
   case X86ISD::CVTTP2SI:
-  case X86ISD::CVTTP2UI:    return combineCVTP2I_CVTTP2I(N, DAG, DCI);
+  case X86ISD::STRICT_CVTTP2UI:
+  case X86ISD::CVTTP2UI:
+                            return combineCVTP2I_CVTTP2I(N, DAG, DCI);
   case X86ISD::STRICT_CVTPH2PS:
   case X86ISD::CVTPH2PS:    return combineCVTPH2PS(N, DAG, DCI);
   case X86ISD::BT:          return combineBT(N, DAG, DCI);
