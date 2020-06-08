@@ -28,18 +28,18 @@ namespace DWARFYAML {
 struct Data;
 struct PubSection;
 
-void EmitDebugAbbrev(raw_ostream &OS, const Data &DI);
-void EmitDebugStr(raw_ostream &OS, const Data &DI);
+void emitDebugAbbrev(raw_ostream &OS, const Data &DI);
+void emitDebugStr(raw_ostream &OS, const Data &DI);
 
-void EmitDebugAranges(raw_ostream &OS, const Data &DI);
-void EmitDebugRanges(raw_ostream &OS, const Data &DI);
-void EmitPubSection(raw_ostream &OS, const PubSection &Sect,
+void emitDebugAranges(raw_ostream &OS, const Data &DI);
+void emitDebugRanges(raw_ostream &OS, const Data &DI);
+void emitPubSection(raw_ostream &OS, const PubSection &Sect,
                     bool IsLittleEndian);
-void EmitDebugInfo(raw_ostream &OS, const Data &DI);
-void EmitDebugLine(raw_ostream &OS, const Data &DI);
+void emitDebugInfo(raw_ostream &OS, const Data &DI);
+void emitDebugLine(raw_ostream &OS, const Data &DI);
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-EmitDebugSections(StringRef YAMLString, bool ApplyFixups = false,
+emitDebugSections(StringRef YAMLString, bool ApplyFixups = false,
                   bool IsLittleEndian = sys::IsLittleEndianHost);
 } // end namespace DWARFYAML
 } // end namespace llvm

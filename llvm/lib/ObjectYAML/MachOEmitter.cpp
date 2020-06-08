@@ -287,25 +287,25 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
               "wrote too much data somewhere, section offsets don't line up");
         if (0 == strncmp(&Sec.segname[0], "__DWARF", 16)) {
           if (0 == strncmp(&Sec.sectname[0], "__debug_str", 16)) {
-            DWARFYAML::EmitDebugStr(OS, Obj.DWARF);
+            DWARFYAML::emitDebugStr(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_abbrev", 16)) {
-            DWARFYAML::EmitDebugAbbrev(OS, Obj.DWARF);
+            DWARFYAML::emitDebugAbbrev(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16)) {
-            DWARFYAML::EmitDebugAranges(OS, Obj.DWARF);
+            DWARFYAML::emitDebugAranges(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16)) {
-            DWARFYAML::EmitDebugRanges(OS, Obj.DWARF);
+            DWARFYAML::emitDebugRanges(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
             if (Obj.DWARF.PubNames)
-              DWARFYAML::EmitPubSection(OS, *Obj.DWARF.PubNames,
+              DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubNames,
                                         Obj.IsLittleEndian);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubtypes", 16)) {
             if (Obj.DWARF.PubTypes)
-              DWARFYAML::EmitPubSection(OS, *Obj.DWARF.PubTypes,
+              DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubTypes,
                                         Obj.IsLittleEndian);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16)) {
-            DWARFYAML::EmitDebugInfo(OS, Obj.DWARF);
+            DWARFYAML::emitDebugInfo(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16)) {
-            DWARFYAML::EmitDebugLine(OS, Obj.DWARF);
+            DWARFYAML::emitDebugLine(OS, Obj.DWARF);
           }
 
           continue;

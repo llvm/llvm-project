@@ -39,6 +39,10 @@ include "VEInstrFormats.td"
 //     e.g. 0.0 (0x00000000) or -2.0 (0xC0000000=(2)1).
 //===----------------------------------------------------------------------===//
 
+def ULO7 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0x7f,
+                                   SDLoc(N), MVT::i32);
+}]>;
 def LO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
                                    SDLoc(N), MVT::i32);
@@ -108,17 +112,45 @@ def CCOP : SDNodeXForm<imm, [{
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
 
+// zero
+def ZeroAsmOperand : AsmOperandClass {
+  let Name = "Zero";
+}
+def zero : Operand<i32>, PatLeaf<(imm), [{
+    return N->getSExtValue() == 0; }]> {
+  let ParserMatchClass = ZeroAsmOperand;
+}
+
 // uimm1 - Generic immediate value.
 def uimm1 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<1>(N->getZExtValue()); }]>;
 
+// uimm3 - Generic immediate value.
+def UImm3AsmOperand : AsmOperandClass {
+  let Name = "UImm3";
+}
+def uimm3 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<3>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm3AsmOperand;
+}
+
 // uimm6 - Generic immediate value.
+def UImm6AsmOperand : AsmOperandClass {
+  let Name = "UImm6";
+}
 def uimm6 : Operand<i32>, PatLeaf<(imm), [{
-    return isUInt<6>(N->getZExtValue()); }]>;
+    return isUInt<6>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm6AsmOperand;
+}
 
 // uimm7 - Generic immediate value.
+def UImm7AsmOperand : AsmOperandClass {
+  let Name = "UImm7";
+}
 def uimm7 : Operand<i32>, PatLeaf<(imm), [{
-    return isUInt<7>(N->getZExtValue()); }]>;
+    return isUInt<7>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm7AsmOperand;
+}
 
 // simm7 - Generic immediate value.
 def SImm7AsmOperand : AsmOperandClass {
@@ -493,6 +525,44 @@ multiclass RRIm<string opcStr, bits<8>opc,
               [(set Ty:$sx, (OpNode (Ty mimm:$sz), (i32 uimm7:$sy)))]>;
 }
 
+// Special RR multiclass for 128 bits shift left instruction.
+//   e.g. SLD
+let Constraints = "$hi = $sx", DisableEncoding = "$hi", hasSideEffects = 0 in
+multiclass RRILDm<string opcStr, bits<8>opc,
+                  RegisterClass RC, ValueType Ty,
+                  SDPatternOperator OpNode = null_frag> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$hi, RC:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cz = 0 in
+  def rmr : RR<opc, (outs RC:$sx), (ins RC:$hi, mimm:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0 in
+  def rri : RR<opc, (outs RC:$sx), (ins RC:$hi, RC:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0, cz = 0 in
+  def rmi : RR<opc, (outs RC:$sx), (ins RC:$hi, mimm:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+}
+
+// Special RR multiclass for 128 bits shift right instruction.
+//   e.g. SRD
+let Constraints = "$low = $sx", DisableEncoding = "$low", hasSideEffects = 0 in
+multiclass RRIRDm<string opcStr, bits<8>opc,
+                  RegisterClass RC, ValueType Ty,
+                  SDPatternOperator OpNode = null_frag> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$low, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cz = 0 in
+  def mrr : RR<opc, (outs RC:$sx), (ins mimm:$sz, RC:$low, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0 in
+  def rri : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$low, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0, cz = 0 in
+  def mri : RR<opc, (outs RC:$sx), (ins mimm:$sz, RC:$low, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+}
+
 // Generic RR multiclass with an argument.
 //   e.g. LDZ, PCNT, and  BRV
 let cy = 0, sy = 0, hasSideEffects = 0 in
@@ -651,6 +721,46 @@ multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
   defm a : BCRbpfm<opcStrAt, "", opc, (ins)>;
   let cy = 0, sy = 0, cz = 0, sz = 0, cf = 0 /* AF */ in
   defm na : BCRbpfm<opcStrAf, "", opc, (ins)>;
+}
+
+// Multiclass for communication register instructions.
+//   e.g. LCR
+let hasSideEffects = 1 in
+multiclass LOADCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$sy),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ri : RR<opc, (outs RC:$sx), (ins RC:$sz, simm7:$sy),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def zr : RR<opc, (outs RC:$sx), (ins zero:$sz, RC:$sy),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def zi : RR<opc, (outs RC:$sx), (ins zero:$sz, simm7:$sy),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
+// Multiclass for communication register instructions.
+//   e.g. SCR
+let hasSideEffects = 1 in
+multiclass STORECRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def rr : RR<opc, (outs), (ins RC:$sz, RC:$sy, RC:$sx),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ri : RR<opc, (outs), (ins RC:$sz, simm7:$sy, RC:$sx),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cz = 0 in def zr : RR<opc, (outs), (ins zero:$sz, RC:$sy, RC:$sx),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0, cz = 0 in
+  def zi : RR<opc, (outs), (ins zero:$sz, simm7:$sy, RC:$sx),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
+// Multiclass for communication register instructions.
+//   e.g. FIDCR
+let cz = 0, hasSideEffects = 1 in
+multiclass FIDCRm<string opcStr, bits<8>opc, RegisterClass RC> {
+  def ri : RR<opc, (outs RC:$sx), (ins RC:$sy, uimm3:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz")>;
+  let cy = 0 in def ii : RR<opc, (outs RC:$sx), (ins simm7:$sy, uimm3:$sz),
+                            !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -947,17 +1057,20 @@ def : MnemonicAlias<"cmov.s", "cmov.s.at">;
 defm SLL : RRIm<"sll", 0x65, I64, i64, shl>;
 
 // Section 8.6.2 - SLD (Shift Left Double)
+defm SLD : RRILDm<"sld", 0x64, I64, i64>;
 
 // Section 8.6.3 - SRL (Shift Right Logical)
 defm SRL : RRIm<"srl", 0x75, I64, i64, srl>;
 
 // Section 8.6.4 - SRD (Shift Right Double)
+defm SRD : RRIRDm<"srd", 0x74, I64, i64>;
 
 // Section 8.6.5 - SLA (Shift Left Arithmetic)
 defm SLAWSX : RRIm<"sla.w.sx", 0x66, I32, i32, shl>;
 let cx = 1 in defm SLAWZX : RRIm<"sla.w.zx", 0x66, I32, i32>;
 
 // Section 8.6.6 - SLAX (Shift Left Arithmetic)
+defm SLAL : RRIm<"sla.l", 0x57, I64, i64>;
 
 // Section 8.6.7 - SRA (Shift Right Arithmetic)
 defm SRAWSX : RRIm<"sra.w.sx", 0x76, I32, i32, sra>;
@@ -1093,22 +1206,65 @@ let Defs = [SX10], sx = 10 /* SX10 */, cy = 0, sy = 0, imm32 = 0,
 def CALLr : RM<0x08, (outs), (ins I64:$sz, variable_ops),
                "bsic %s10, (, $sz)", [(call i64:$sz)]>;
 
+//-----------------------------------------------------------------------------
+// Section 8.19 - Control Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.19.1 - SIC (Save Instruction Counter)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [IC] in
+def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
+
+// Section 8.19.2 - LPM (Load Program Mode Flags)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 1, Defs = [PSW] in
+def LPM : RR<0x3a, (outs), (ins I64:$sy), "lpm $sy">;
+
+// Section 8.19.3 - SPM (Save Program Mode Flags)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [PSW] in
+def SPM : RR<0x2a, (outs I64:$sx), (ins), "spm $sx">;
+
+// Section 8.19.4 - LFR (Load Flag Register)
+let sx = 0, cz = 0, sz = 0, hasSideEffects = 1, Defs = [PSW] in {
+  def LFRr : RR<0x69, (outs), (ins I64:$sy), "lfr $sy">;
+  let cy = 0 in def LFRi : RR<0x69, (outs), (ins uimm6:$sy), "lfr $sy">;
+}
+
+// Section 8.19.5 - SFR (Save Flag Register)
+let cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1, Uses = [PSW] in
+def SFR : RR<0x29, (outs I64:$sx), (ins), "sfr $sx">;
+
+// Section 8.19.6 - SMIR (Save Miscellaneous Register)
+let cy = 0, cz = 0, sz = 0, hasSideEffects = 1 in {
+  def SMIR : RR<0x22, (outs I64:$sx), (ins MISC:$sy), "smir $sx, $sy">;
+}
+
+// Section 8.19.7 - NOP (No Operation)
+let sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
+def NOP : RR<0x79, (outs), (ins), "nop">;
+
+// Section 8.19.8 - MONC (Monitor Call)
+let sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1 in {
+  def MONC : RR<0x3F, (outs), (ins), "monc">;
+  let cx = 1, isTrap = 1 in def MONCHDB : RR<0x3F, (outs), (ins), "monc.hdb">;
+}
+
+// Section 8.19.9 - LCR (Load Communication Register)
+defm LCR : LOADCRm<"lcr", 0x40, I64>;
+
+// Section 8.19.10 - SCR (Save Communication Register)
+defm SCR : STORECRm<"scr", 0x50, I64>;
+
+// Section 8.19.11 - TSCR (Test & Set Communication Register)
+defm TSCR : LOADCRm<"tscr", 0x41, I64>;
+
+// Section 8.19.12 - FIDCR (Fetch & Increment/Decrement CR)
+defm FIDCR : FIDCRm<"fidcr", 0x51, I64>;
+
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
 def SHMri : RM<
     0x31, (outs), (ins MEMASri:$addr, I64:$sx),
     "shm.l $sx, $addr">;
 }
-
-let cx = 0, sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
-def MONC : RR<
-    0x3F, (outs), (ins),
-    "monc">;
-
-// Save Instruction Counter
-
-let cx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 /* , Uses = [IC] */ in
-def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
 
 //===----------------------------------------------------------------------===//
 // Instructions for CodeGenOnly

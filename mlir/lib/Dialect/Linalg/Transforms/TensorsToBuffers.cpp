@@ -20,9 +20,6 @@
 #include "mlir/Transforms/BufferPlacement.h"
 
 using namespace mlir;
-using ReturnOpConverter =
-    BufferAssignmentReturnOpConverter<mlir::ReturnOp, mlir::ReturnOp,
-                                      linalg::CopyOp>;
 
 namespace {
 /// A pattern to convert Generic Linalg operations which work on tensors to
@@ -103,11 +100,11 @@ public:
 static void populateConvertLinalgOnTensorsToBuffersPattern(
     MLIRContext *context, BufferAssignmentPlacer *placer,
     TypeConverter *converter, OwningRewritePatternList *patterns) {
-  // clang-format off
-  patterns->insert<FunctionAndBlockSignatureConverter,
-                   GenericOpConverter,
-                   ReturnOpConverter>(context, placer, converter);
-  // clang-format on
+  populateWithBufferAssignmentOpConversionPatterns<
+      mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp,
+      /*allowMemrefFunctionResults=*/false>(context, placer, converter,
+                                            patterns);
+  patterns->insert<GenericOpConverter>(context, placer, converter);
 }
 
 /// Converts Linalg operations that work on tensor-type operands or results to

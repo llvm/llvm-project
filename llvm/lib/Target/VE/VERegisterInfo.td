@@ -20,6 +20,12 @@ class VEReg<bits<7> enc, string n, list<Register> subregs = [],
   let Aliases = aliases;
 }
 
+class VEMiscReg<bits<6> enc, string n>: Register<n> {
+  let HWEncoding{15-6} = 0;
+  let HWEncoding{5-0} = enc;
+  let Namespace = "VE";
+}
+
 let Namespace = "VE" in {
   def sub_i8      : SubRegIndex<8, 56>;         // Low 8 bit (56..63)
   def sub_i16     : SubRegIndex<16, 48>;        // Low 16 bit (48..63)
@@ -27,6 +33,35 @@ let Namespace = "VE" in {
   def sub_f32     : SubRegIndex<32>;            // High 32 bit (0..31)
   def AsmName     : RegAltNameIndex;
 }
+
+//-----------------------------------------------------------------------------
+// Miscellaneous Registers
+//-----------------------------------------------------------------------------
+
+def USRCC : VEMiscReg<0, "usrcc">;      // User clock counter
+def PSW : VEMiscReg<1, "psw">;          // Program status word
+def SAR : VEMiscReg<2, "sar">;          // Store address register
+def PMMR : VEMiscReg<7, "pmmr">;        // Performance monitor mode register
+
+// Performance monitor configuration registers
+foreach I = 0-3 in
+  def PMCR#I : VEMiscReg<!add(8,I), "pmcr"#I>;
+
+// Performance monitor counter
+foreach I = 0-14 in
+  def PMC#I : VEMiscReg<!add(16,I), "pmc"#I>;
+
+// Register classes.
+def MISC : RegisterClass<"VE", [i64], 64,
+                         (add USRCC, PSW, SAR, PMMR,
+                              (sequence "PMCR%u", 0, 3),
+                              (sequence "PMC%u", 0, 14))>;
+
+//-----------------------------------------------------------------------------
+// Instruction Counter Register
+//-----------------------------------------------------------------------------
+
+def IC : VEMiscReg<62, "ic">;
 
 //-----------------------------------------------------------------------------
 // Gneric Registers
