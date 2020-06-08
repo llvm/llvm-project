@@ -33,5 +33,3 @@ int main() {                                      // GCOV:      #####: [[@LINE]]
 // HEADER-NEXT:  -:    0:Runs:1{{$}}
 // HEADER-NEXT:  -:    0:Programs:1
 // HEADER-NEXT:  -:    1:/// Test that llvm-cov
-
-// XFAIL: host-byteorder-big-endian
