@@ -2524,6 +2524,10 @@ bool PPCInstrInfo::isADDIInstrEligibleForFolding(MachineInstr &ADDIMI,
   if (Opc != PPC::ADDI && Opc != PPC::ADDI8)
     return false;
 
+  // The operand may not necessarily be an immediate - it could be a relocation.
+  if (!ADDIMI.getOperand(2).isImm())
+    return false;
+
   Imm = ADDIMI.getOperand(2).getImm();
 
   return true;
