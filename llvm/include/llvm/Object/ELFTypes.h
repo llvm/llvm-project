@@ -615,6 +615,12 @@ public:
         Nhdr.n_descsz);
   }
 
+  /// Get the note's descriptor as StringRef
+  StringRef getDescAsStringRef() const {
+    auto &Desc = getDesc();
+    return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
+  }
+
   /// Get the note's type.
   Elf_Word getType() const { return Nhdr.n_type; }
 };
