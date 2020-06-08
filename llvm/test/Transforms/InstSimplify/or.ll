@@ -248,10 +248,7 @@ define <2 x i399> @test8_apint(<2 x i399> %V, <2 x i399> %M) {
 
 define i1 @or_with_not_op_commute1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @or_with_not_op_commute1(
-; CHECK-NEXT:    [[AB:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[AB]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[A]], [[NOT]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ab = and i1 %a, %b
   %not = xor i1 %ab, -1
@@ -263,10 +260,7 @@ define i1 @or_with_not_op_commute1(i1 %a, i1 %b) {
 
 define i8 @or_with_not_op_commute2(i8 %a, i8 %b) {
 ; CHECK-LABEL: @or_with_not_op_commute2(
-; CHECK-NEXT:    [[AB:%.*]] = and i8 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[AB]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[NOT]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %ab = and i8 %b, %a
   %not = xor i8 %ab, -1
