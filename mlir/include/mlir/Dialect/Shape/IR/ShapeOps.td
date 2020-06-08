@@ -17,6 +17,7 @@ include "mlir/Dialect/Shape/IR/ShapeBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 def Shape_WitnessType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
@@ -110,7 +111,11 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def Shape_ConstSizeOp : Shape_Op<"const_size", [ConstantLike, NoSideEffect]> {
+def Shape_ConstSizeOp : Shape_Op<"const_size", [
+    ConstantLike,
+    NoSideEffect,
+    DeclareOpInterfaceMethods<OpAsmOpInterface>
+  ]> {
   let summary = "Creates a constant of type `shape.size`";
   let description = [{
     Creates a `shape.size` type representing the constant size given by `value`.
