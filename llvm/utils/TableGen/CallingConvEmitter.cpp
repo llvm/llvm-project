@@ -199,9 +199,10 @@ void CallingConvEmitter::EmitAction(Record *Action,
       if (Align)
         O << "Align(" << Align << ")";
       else
-        O << "\n" << IndentStr
+        O << "\n"
+          << IndentStr
           << "  State.getMachineFunction().getDataLayout()."
-             "getABITypeAlignment(EVT(LocVT).getTypeForEVT(State.getContext()"
+             "getABITypeAlign(EVT(LocVT).getTypeForEVT(State.getContext()"
              "))";
       O << ");\n" << IndentStr
         << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
