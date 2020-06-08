@@ -1,13 +1,19 @@
+; REQUIRES: aarch64-registered-target
+
 ; RUN: llvm-as %s -o %t0.bc
 ; RUN: llvm-as %S/Inputs/ipa.ll -o %t1.bc
 ; RUN: llvm-link -disable-lazy-loading %t0.bc %t1.bc -o %t.combined.bc
+
 ; RUN: opt -S -analyze -stack-safety-local %t.combined.bc | FileCheck %s --check-prefixes=CHECK,LOCAL
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,LOCAL
-; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL
-; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
+; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-unknown-linux"
+
+attributes #0 = { noinline sanitize_memtag "target-features"="+mte,+neon" }
 
 declare void @Write1(i8* %p)
 declare void @Write4(i8* %p)
@@ -23,7 +29,7 @@ declare void @RecursiveNoOffset(i32* %p, i32 %size, i32* %acc)
 declare void @RecursiveWithOffset(i32 %size, i32* %acc)
 
 ; Basic out-of-bounds.
-define void @f1() {
+define void @f1() #0 {
 ; CHECK-LABEL: @f1 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -38,7 +44,7 @@ entry:
 }
 
 ; Basic in-bounds.
-define void @f2() {
+define void @f2() #0 {
 ; CHECK-LABEL: @f2 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -53,7 +59,7 @@ entry:
 }
 
 ; Another basic in-bounds.
-define void @f3() {
+define void @f3() #0 {
 ; CHECK-LABEL: @f3 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -68,7 +74,7 @@ entry:
 }
 
 ; In-bounds with offset.
-define void @f4() {
+define void @f4() #0 {
 ; CHECK-LABEL: @f4 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -84,7 +90,7 @@ entry:
 }
 
 ; Out-of-bounds with offset.
-define void @f5() {
+define void @f5() #0 {
 ; CHECK-LABEL: @f5 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -100,7 +106,7 @@ entry:
 }
 
 ; External call.
-define void @f6() {
+define void @f6() #0 {
 ; CHECK-LABEL: @f6 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -115,7 +121,7 @@ entry:
 }
 
 ; Call to dso_preemptable function
-define void @PreemptableCall() {
+define void @PreemptableCall() #0 {
 ; CHECK-LABEL: @PreemptableCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -130,12 +136,12 @@ entry:
 }
 
 ; Call to function with interposable linkage
-define void @InterposableCall() {
+define void @InterposableCall() #0 {
 ; CHECK-LABEL: @InterposableCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @InterposableWrite1(arg0, [0,1)){{$}}
-; GLOBAL-NEXT: x[4]: full-set, @InterposableWrite1(arg0, [0,1)){{$}}
+; NOLTO-NEXT: x[4]: full-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -145,7 +151,7 @@ entry:
 }
 
 ; Call to function with private linkage
-define void @PrivateCall() {
+define void @PrivateCall() #0 {
 ; CHECK-LABEL: @PrivateCall dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -159,7 +165,7 @@ entry:
   ret void
 }
 
-define private void @PrivateWrite1(i8* %p) {
+define private void @PrivateWrite1(i8* %p) #0 {
 ; CHECK-LABEL: @PrivateWrite1{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
@@ -172,7 +178,7 @@ entry:
 
 ; Caller returns a dependent value.
 ; FIXME: alloca considered unsafe even if the return value is unused.
-define void @f7() {
+define void @f7() #0 {
 ; CHECK-LABEL: @f7 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -186,7 +192,7 @@ entry:
   ret void
 }
 
-define void @f8left() {
+define void @f8left() #0 {
 ; CHECK-LABEL: @f8left dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -202,7 +208,7 @@ entry:
   ret void
 }
 
-define void @f8right() {
+define void @f8right() #0 {
 ; CHECK-LABEL: @f8right dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -218,7 +224,7 @@ entry:
   ret void
 }
 
-define void @f8oobleft() {
+define void @f8oobleft() #0 {
 ; CHECK-LABEL: @f8oobleft dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -234,7 +240,7 @@ entry:
   ret void
 }
 
-define void @f8oobright() {
+define void @f8oobright() #0 {
 ; CHECK-LABEL: @f8oobright dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -250,7 +256,7 @@ entry:
   ret void
 }
 
-define void @TwoArguments() {
+define void @TwoArguments() #0 {
 ; CHECK-LABEL: @TwoArguments dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -280,7 +286,7 @@ entry:
   ret void
 }
 
-define void @TwoArgumentsOOBOther() {
+define void @TwoArgumentsOOBOther() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBOther dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -296,7 +302,7 @@ entry:
   ret void
 }
 
-define void @TwoArgumentsOOBBoth() {
+define void @TwoArgumentsOOBBoth() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBBoth dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -329,7 +335,7 @@ entry:
   ret i32 %1
 }
 
-define void @TestRecursiveWithOffset(i32 %size) {
+define void @TestRecursiveWithOffset(i32 %size) #0 {
 ; CHECK-LABEL: @TestRecursiveWithOffset dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -343,7 +349,7 @@ entry:
 }
 
 ; FIXME: IPA should detect that access is safe
-define void @TestUpdateArg() {
+define void @TestUpdateArg() #0 {
 ; CHECK-LABEL: @TestUpdateArg dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -441,4 +447,10 @@ entry:
 ; LOCAL-NEXT: acc[]: [0,4), @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; GLOBAL-NEXT: acc[]: full-set, @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; CHECK-NEXT: allocas uses:
+; CHECK-NOT: ]:
+
+; CHECK-LABEL: @ReturnAlloca
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[8]: full-set
 ; CHECK-NOT: ]:
