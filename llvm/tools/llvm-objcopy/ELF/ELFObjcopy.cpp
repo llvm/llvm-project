@@ -270,7 +270,7 @@ static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
-  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks, 
+  if (Error E = DWOFile->removeSections(Config.AllowBrokenLinks,
                                         OnlyKeepDWOPred))
     return E;
   if (Config.OutputArch) {
@@ -578,11 +578,11 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    replaceDebugSections(Obj, RemovePred, isCompressable, 
+    replaceDebugSections(Obj, RemovePred, isCompressable,
                          [&Config, &Obj](const SectionBase *S) {
                            return &Obj.addSection<CompressedSection>(
                                 *S, Config.CompressionType);
-                        });
+                         });
   else if (Config.DecompressDebugSections)
     replaceDebugSections(
         Obj, RemovePred,
@@ -615,6 +615,15 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  // Dump sections before add/remove for compatibility with GNU objcopy.
+  for (StringRef Flag : Config.DumpSection) {
+    StringRef SectionName;
+    StringRef FileName;
+    std::tie(SectionName, FileName) = Flag.split('=');
+    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+      return E;
   }
 
   // It is important to remove the sections first. For example, we want to
@@ -723,14 +732,6 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         Obj.addSection<OwnedDataSection>(SecName, Data);
     if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
       NewSection.Type = SHT_NOTE;
-  }
-
-  for (const auto &Flag : Config.DumpSection) {
-    std::pair<StringRef, StringRef> SecPair = Flag.split("=");
-    StringRef SecName = SecPair.first;
-    StringRef File = SecPair.second;
-    if (Error E = dumpSectionToFile(SecName, File, Obj))
-      return E;
   }
 
   if (!Config.AddGnuDebugLink.empty())
