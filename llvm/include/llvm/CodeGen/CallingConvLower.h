@@ -424,14 +424,18 @@ public:
 
   /// AllocateStack - Allocate a chunk of stack space with the specified size
   /// and alignment.
-  unsigned AllocateStack(unsigned Size, unsigned Alignment) {
-    const Align CheckedAlignment(Alignment);
-    StackOffset = alignTo(StackOffset, CheckedAlignment);
+  unsigned AllocateStack(unsigned Size, Align Alignment) {
+    StackOffset = alignTo(StackOffset, Alignment);
     unsigned Result = StackOffset;
     StackOffset += Size;
-    MaxStackArgAlign = std::max(CheckedAlignment, MaxStackArgAlign);
-    ensureMaxAlignment(CheckedAlignment);
+    MaxStackArgAlign = std::max(Alignment, MaxStackArgAlign);
+    ensureMaxAlignment(Alignment);
     return Result;
+  }
+
+  // FIXME: Deprecate this function when transition to Align is over.
+  unsigned AllocateStack(unsigned Size, unsigned Alignment) {
+    return AllocateStack(Size, Align(Alignment));
   }
 
   void ensureMaxAlignment(Align Alignment) {
@@ -447,11 +451,11 @@ public:
 
   /// Version of AllocateStack with list of extra registers to be shadowed.
   /// Note that, unlike AllocateReg, this shadows ALL of the shadow registers.
-  unsigned AllocateStack(unsigned Size, unsigned Align,
+  unsigned AllocateStack(unsigned Size, Align Alignment,
                          ArrayRef<MCPhysReg> ShadowRegs) {
     for (unsigned i = 0; i < ShadowRegs.size(); ++i)
       MarkAllocated(ShadowRegs[i]);
-    return AllocateStack(Size, Align);
+    return AllocateStack(Size, Alignment);
   }
 
   // HandleByVal - Allocate a stack slot large enough to pass an argument by
