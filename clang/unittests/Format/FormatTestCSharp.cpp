@@ -741,6 +741,9 @@ foreach ((A a, B b) in someList) {
 })",
                Style);
 
+  // space after lock in `lock (processes)`.
+  verifyFormat("lock (process)", Style);
+
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
   verifyFormat(R"(string dirPath = args?[ 0 ];)", Style);
