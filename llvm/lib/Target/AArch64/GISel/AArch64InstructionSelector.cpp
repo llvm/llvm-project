@@ -1640,20 +1640,19 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
-  // Only do this for scalars for now.
-  if (PtrTy.isVector())
-    return false;
-
   MachineIRBuilder MIB(I);
-  const LLT s64 = LLT::scalar(64);
-  auto PtrToInt = MIB.buildPtrToInt(s64, AddOp1Reg);
+  const LLT CastPtrTy = PtrTy.isVector() ? LLT::vector(2, 64) : LLT::scalar(64);
+  auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
-  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
+  if (PtrTy.isVector())
+    MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(AArch64::FPRRegBankID));
+  else
+    MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
 
   // Now turn the %dst(p0) = G_PTR_ADD %base, off into:
-  // %dst(s64) = G_ADD %intbase, off
+  // %dst(intty) = G_ADD %intbase, off
   I.setDesc(TII.get(TargetOpcode::G_ADD));
-  MRI.setType(DstReg, s64);
+  MRI.setType(DstReg, CastPtrTy);
   I.getOperand(1).setReg(PtrToInt.getReg(0));
   if (!select(*PtrToInt)) {
     LLVM_DEBUG(dbgs() << "Failed to select G_PTRTOINT in convertPtrAddToAdd");
@@ -2504,6 +2503,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         if (!Extract)
           return false;
         I.eraseFromParent();
+        return true;
+      }
+
+      // We might have a vector G_PTRTOINT, in which case just emit a COPY.
+      if (Opcode == TargetOpcode::G_PTRTOINT) {
+        assert(DstTy.isVector() && "Expected an FPR ptrtoint to be a vector");
+        I.setDesc(TII.get(TargetOpcode::COPY));
         return true;
       }
     }
