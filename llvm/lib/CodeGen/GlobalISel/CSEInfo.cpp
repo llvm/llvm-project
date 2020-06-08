@@ -342,13 +342,13 @@ GISelInstProfileBuilder::addNodeIDImmediate(int64_t Imm) const {
 }
 
 const GISelInstProfileBuilder &
-GISelInstProfileBuilder::addNodeIDRegNum(unsigned Reg) const {
+GISelInstProfileBuilder::addNodeIDRegNum(Register Reg) const {
   ID.AddInteger(Reg);
   return *this;
 }
 
 const GISelInstProfileBuilder &
-GISelInstProfileBuilder::addNodeIDRegType(const unsigned Reg) const {
+GISelInstProfileBuilder::addNodeIDRegType(const Register Reg) const {
   addNodeIDMachineOperand(MachineOperand::CreateReg(Reg, false));
   return *this;
 }
