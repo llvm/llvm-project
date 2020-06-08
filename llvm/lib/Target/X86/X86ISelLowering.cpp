@@ -44865,18 +44865,22 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
     }
 
-    // FIXME: Shrink vector loads.
-    if (IsStrict)
-      return SDValue();
-
     // Convert a full vector load into vzload when not all bits are needed.
     if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
-      LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+      LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(IsStrict ? 1 : 0));
       if (SDValue VZLoad = narrowLoadToVZLoad(LN, MVT::i64, MVT::v2i64, DAG)) {
         SDLoc dl(N);
-        SDValue Convert = DAG.getNode(N->getOpcode(), dl, MVT::v4f32,
-                                      DAG.getBitcast(MVT::v8i16, VZLoad));
-        DCI.CombineTo(N, Convert);
+        if (IsStrict) {
+          SDValue Convert = DAG.getNode(
+              N->getOpcode(), dl, {MVT::v4f32, MVT::Other},
+              {N->getOperand(0), DAG.getBitcast(MVT::v8i16, VZLoad)});
+          DCI.CombineTo(N, Convert, Convert.getValue(1));
+        } else {
+          SDValue Convert = DAG.getNode(N->getOpcode(), dl, MVT::v4f32,
+                                        DAG.getBitcast(MVT::v8i16, VZLoad));
+          DCI.CombineTo(N, Convert);
+        }
+
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
         DCI.recursivelyDeleteUnusedNodes(LN);
         return SDValue(N, 0);
