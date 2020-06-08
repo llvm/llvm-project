@@ -36,7 +36,6 @@ body: |
     successors: %bb.4
 
   bb.4:
-    successors: %bb.4
         %5 = A2_tfrsi -234944521
         %6 = A2_tfrsi -360185632
         L4_and_memopw_io %6, 0, %5
