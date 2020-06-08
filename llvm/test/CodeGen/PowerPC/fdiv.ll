@@ -10,6 +10,6 @@ define dso_local float @foo(float %0, float %1) local_unnamed_addr {
 ; CHECK-NEXT:    xsmaddasp 0, 3, 1
 ; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
-  %3 = fdiv reassoc arcp float %0, %1
+  %3 = fdiv reassoc arcp nsz float %0, %1
   ret float %3
 }

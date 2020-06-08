@@ -429,9 +429,9 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P9-NEXT:    xsmaddasp 4, 1, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 3, 4
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %a)
-  %y = fmul reassoc float %x, %b
-  %z = fdiv reassoc arcp float %c, %y
+  %x = call reassoc arcp nsz float @llvm.sqrt.f32(float %a)
+  %y = fmul reassoc nsz float %x, %b
+  %z = fdiv reassoc arcp nsz float %c, %y
   ret float %z
 }
 
@@ -651,7 +651,7 @@ define float @goo2_fmf(float %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddasp 0, 3, 1
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp float %a, %b
+  %r = fdiv reassoc arcp nsz float %a, %b
   ret float %r
 }
 
@@ -705,7 +705,7 @@ define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvmaddasp 0, 1, 34
 ; CHECK-P9-NEXT:    xxlor 34, 0, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp <4 x float> %a, %b
+  %r = fdiv reassoc arcp nsz <4 x float> %a, %b
   ret <4 x float> %r
 }
 
