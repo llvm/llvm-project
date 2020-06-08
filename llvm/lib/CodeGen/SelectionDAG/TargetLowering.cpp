@@ -713,6 +713,22 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(1);
     break;
   }
+  case ISD::SHL: {
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    if (const APInt *MaxSA =
+            DAG.getValidMaximumShiftAmountConstant(Op, DemandedElts)) {
+      SDValue Op0 = Op.getOperand(0);
+      unsigned ShAmt = MaxSA->getZExtValue();
+      unsigned BitWidth = DemandedBits.getBitWidth();
+      unsigned NumSignBits =
+          DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+      unsigned UpperDemandedBits = BitWidth - DemandedBits.countTrailingZeros();
+      if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= (UpperDemandedBits))
+        return Op0;
+    }
+    break;
+  }
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
@@ -1440,6 +1456,18 @@ bool TargetLowering::SimplifyDemandedBits(
       if ((ShAmt < DemandedBits.getActiveBits()) &&
           ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
         return true;
+    }
+
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    if (const APInt *MaxSA =
+            TLO.DAG.getValidMaximumShiftAmountConstant(Op, DemandedElts)) {
+      unsigned ShAmt = MaxSA->getZExtValue();
+      unsigned NumSignBits =
+          TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+      unsigned UpperDemandedBits = BitWidth - DemandedBits.countTrailingZeros();
+      if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= (UpperDemandedBits))
+        return TLO.CombineTo(Op, Op0);
     }
     break;
   }
