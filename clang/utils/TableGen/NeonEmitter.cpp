@@ -99,7 +99,8 @@ enum EltType {
   Poly128,
   Float16,
   Float32,
-  Float64
+  Float64,
+  BFloat16
 };
 
 } // end namespace NeonTypeFlags
@@ -147,6 +148,7 @@ private:
     SInt,
     UInt,
     Poly,
+    BFloat16,
   };
   TypeKind Kind;
   bool Immediate, Constant, Pointer;
@@ -199,6 +201,7 @@ public:
   bool isInt() const { return isInteger() && ElementBitwidth == 32; }
   bool isLong() const { return isInteger() && ElementBitwidth == 64; }
   bool isVoid() const { return Kind == Void; }
+  bool isBFloat16() const { return Kind == BFloat16; }
   unsigned getNumElements() const { return Bitwidth / ElementBitwidth; }
   unsigned getSizeInBits() const { return Bitwidth; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
@@ -583,8 +586,11 @@ public:
   // runFP16 - Emit arm_fp16.h.inc
   void runFP16(raw_ostream &o);
 
-  // runHeader - Emit all the __builtin prototypes used in arm_neon.h
-	// and arm_fp16.h
+  // runBF16 - Emit arm_bf16.h.inc
+  void runBF16(raw_ostream &o);
+
+  // runHeader - Emit all the __builtin prototypes used in arm_neon.h,
+  // arm_fp16.h and arm_bf16.h
   void runHeader(raw_ostream &o);
 
   // runTests - Emit tests for all the Neon intrinsics.
@@ -609,6 +615,8 @@ std::string Type::str() const {
     S += "poly";
   else if (isFloating())
     S += "float";
+  else if (isBFloat16())
+    S += "bfloat";
   else
     S += "int";
 
@@ -648,7 +656,10 @@ std::string Type::builtin_str() const {
     case 128: S += "LLLi"; break;
     default: llvm_unreachable("Unhandled case!");
     }
-  else
+  else if (isBFloat16()) {
+    assert(ElementBitwidth == 16 && "BFloat16 can only be 16 bits");
+    S += "y";
+  } else
     switch (ElementBitwidth) {
     case 16: S += "h"; break;
     case 32: S += "f"; break;
@@ -702,6 +713,11 @@ unsigned Type::getNeonEnum() const {
     Base = (unsigned)NeonTypeFlags::Float16 + (Addend - 1);
   }
 
+  if (isBFloat16()) {
+    assert(Addend == 1 && "BFloat16 is only 16 bit");
+    Base = (unsigned)NeonTypeFlags::BFloat16;
+  }
+
   if (Bitwidth == 128)
     Base |= (unsigned)NeonTypeFlags::QuadFlag;
   if (isInteger() && !isSigned())
@@ -725,6 +741,9 @@ Type Type::fromTypedefName(StringRef Name) {
   } else if (Name.startswith("poly")) {
     T.Kind = Poly;
     Name = Name.drop_front(4);
+  } else if (Name.startswith("bfloat")) {
+    T.Kind = BFloat16;
+    Name = Name.drop_front(6);
   } else {
     assert(Name.startswith("int"));
     Name = Name.drop_front(3);
@@ -823,6 +842,10 @@ void Type::applyTypespec(bool &Quad) {
       if (isPoly())
         NumVectors = 0;
       break;
+    case 'b':
+      Kind = BFloat16;
+      ElementBitwidth = 16;
+      break;
     default:
       llvm_unreachable("Unhandled type code!");
     }
@@ -848,6 +871,10 @@ void Type::applyModifiers(StringRef Mods) {
       break;
     case 'U':
       Kind = UInt;
+      break;
+    case 'B':
+      Kind = BFloat16;
+      ElementBitwidth = 16;
       break;
     case 'F':
       Kind = Float;
@@ -930,6 +957,9 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
   if (CK == ClassB)
     return "";
 
+  if (T.isBFloat16())
+    return "bf16";
+
   if (T.isPoly())
     typeCode = 'p';
   else if (T.isInteger())
@@ -967,7 +997,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
 
   Type RetT = getReturnType();
   if ((LocalCK == ClassI || LocalCK == ClassW) && RetT.isScalar() &&
-      !RetT.isFloating())
+      !RetT.isFloating() && !RetT.isBFloat16())
     RetT.makeInteger(RetT.getElementSizeInBits(), false);
 
   // Since the return value must be one type, return a vector type of the
@@ -2162,83 +2192,8 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
   genIntrinsicRangeCheckCode(OS, Defs);
 }
 
-/// run - Read the records in arm_neon.td and output arm_neon.h.  arm_neon.h
-/// is comprised of type definitions and function declarations.
-void NeonEmitter::run(raw_ostream &OS) {
-  OS << "/*===---- arm_neon.h - ARM Neon intrinsics "
-        "------------------------------"
-        "---===\n"
-        " *\n"
-        " * Permission is hereby granted, free of charge, to any person "
-        "obtaining "
-        "a copy\n"
-        " * of this software and associated documentation files (the "
-        "\"Software\"),"
-        " to deal\n"
-        " * in the Software without restriction, including without limitation "
-        "the "
-        "rights\n"
-        " * to use, copy, modify, merge, publish, distribute, sublicense, "
-        "and/or sell\n"
-        " * copies of the Software, and to permit persons to whom the Software "
-        "is\n"
-        " * furnished to do so, subject to the following conditions:\n"
-        " *\n"
-        " * The above copyright notice and this permission notice shall be "
-        "included in\n"
-        " * all copies or substantial portions of the Software.\n"
-        " *\n"
-        " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, "
-        "EXPRESS OR\n"
-        " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
-        "MERCHANTABILITY,\n"
-        " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT "
-        "SHALL THE\n"
-        " * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR "
-        "OTHER\n"
-        " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, "
-        "ARISING FROM,\n"
-        " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
-        "DEALINGS IN\n"
-        " * THE SOFTWARE.\n"
-        " *\n"
-        " *===-----------------------------------------------------------------"
-        "---"
-        "---===\n"
-        " */\n\n";
-
-  OS << "#ifndef __ARM_NEON_H\n";
-  OS << "#define __ARM_NEON_H\n\n";
-
-  OS << "#if !defined(__ARM_NEON)\n";
-  OS << "#error \"NEON support not enabled\"\n";
-  OS << "#endif\n\n";
-
-  OS << "#include <stdint.h>\n\n";
-
-  // Emit NEON-specific scalar typedefs.
-  OS << "typedef float float32_t;\n";
-  OS << "typedef __fp16 float16_t;\n";
-
-  OS << "#ifdef __aarch64__\n";
-  OS << "typedef double float64_t;\n";
-  OS << "#endif\n\n";
-
-  // For now, signedness of polynomial types depends on target
-  OS << "#ifdef __aarch64__\n";
-  OS << "typedef uint8_t poly8_t;\n";
-  OS << "typedef uint16_t poly16_t;\n";
-  OS << "typedef uint64_t poly64_t;\n";
-  OS << "typedef __uint128_t poly128_t;\n";
-  OS << "#else\n";
-  OS << "typedef int8_t poly8_t;\n";
-  OS << "typedef int16_t poly16_t;\n";
-  OS << "typedef int64_t poly64_t;\n";
-  OS << "#endif\n";
-
-  // Emit Neon vector typedefs.
-  std::string TypedefTypes(
-      "cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl");
+static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
+  std::string TypedefTypes(types);
   std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
 
   // Emit vector typedefs.
@@ -2303,7 +2258,92 @@ void NeonEmitter::run(raw_ostream &OS) {
   }
   if (InIfdef)
     OS << "#endif\n";
-  OS << "\n";
+}
+
+/// run - Read the records in arm_neon.td and output arm_neon.h.  arm_neon.h
+/// is comprised of type definitions and function declarations.
+void NeonEmitter::run(raw_ostream &OS) {
+  OS << "/*===---- arm_neon.h - ARM Neon intrinsics "
+        "------------------------------"
+        "---===\n"
+        " *\n"
+        " * Permission is hereby granted, free of charge, to any person "
+        "obtaining "
+        "a copy\n"
+        " * of this software and associated documentation files (the "
+        "\"Software\"),"
+        " to deal\n"
+        " * in the Software without restriction, including without limitation "
+        "the "
+        "rights\n"
+        " * to use, copy, modify, merge, publish, distribute, sublicense, "
+        "and/or sell\n"
+        " * copies of the Software, and to permit persons to whom the Software "
+        "is\n"
+        " * furnished to do so, subject to the following conditions:\n"
+        " *\n"
+        " * The above copyright notice and this permission notice shall be "
+        "included in\n"
+        " * all copies or substantial portions of the Software.\n"
+        " *\n"
+        " * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, "
+        "EXPRESS OR\n"
+        " * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
+        "MERCHANTABILITY,\n"
+        " * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT "
+        "SHALL THE\n"
+        " * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR "
+        "OTHER\n"
+        " * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, "
+        "ARISING FROM,\n"
+        " * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
+        "DEALINGS IN\n"
+        " * THE SOFTWARE.\n"
+        " *\n"
+        " *===-----------------------------------------------------------------"
+        "---"
+        "---===\n"
+        " */\n\n";
+
+  OS << "#ifndef __ARM_NEON_H\n";
+  OS << "#define __ARM_NEON_H\n\n";
+
+  OS << "#if !defined(__ARM_NEON)\n";
+  OS << "#error \"NEON support not enabled\"\n";
+  OS << "#endif\n\n";
+
+  OS << "#include <stdint.h>\n\n";
+
+  OS << "#ifdef __ARM_FEATURE_BF16\n";
+  OS << "#include <arm_bf16.h>\n";
+  OS << "typedef __bf16 bfloat16_t;\n";
+  OS << "#endif\n\n";
+
+  // Emit NEON-specific scalar typedefs.
+  OS << "typedef float float32_t;\n";
+  OS << "typedef __fp16 float16_t;\n";
+
+  OS << "#ifdef __aarch64__\n";
+  OS << "typedef double float64_t;\n";
+  OS << "#endif\n\n";
+
+  // For now, signedness of polynomial types depends on target
+  OS << "#ifdef __aarch64__\n";
+  OS << "typedef uint8_t poly8_t;\n";
+  OS << "typedef uint16_t poly16_t;\n";
+  OS << "typedef uint64_t poly64_t;\n";
+  OS << "typedef __uint128_t poly128_t;\n";
+  OS << "#else\n";
+  OS << "typedef int8_t poly8_t;\n";
+  OS << "typedef int16_t poly16_t;\n";
+  OS << "typedef int64_t poly64_t;\n";
+  OS << "#endif\n";
+
+  emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl", OS);
+
+  OS << "#ifdef __ARM_FEATURE_BF16\n";
+  emitNeonTypeDefs("bQb", OS);
+  OS << "#endif\n\n";
 
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
@@ -2470,12 +2510,94 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   OS << "#endif /* __ARM_FP16_H */\n";
 }
 
+void NeonEmitter::runBF16(raw_ostream &OS) {
+  OS << "/*===---- arm_bf16.h - ARM BF16 intrinsics "
+        "-----------------------------------===\n"
+        " *\n"
+        " *\n"
+        " * Part of the LLVM Project, under the Apache License v2.0 with LLVM "
+        "Exceptions.\n"
+        " * See https://llvm.org/LICENSE.txt for license information.\n"
+        " * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
+        " *\n"
+        " *===-----------------------------------------------------------------"
+        "------===\n"
+        " */\n\n";
+
+  OS << "#ifndef __ARM_BF16_H\n";
+  OS << "#define __ARM_BF16_H\n\n";
+
+  OS << "typedef __bf16 bfloat16_t;\n";
+
+  OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
+        "__nodebug__))\n\n";
+
+  SmallVector<Intrinsic *, 128> Defs;
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  for (auto *I : Defs)
+    I->indexBody();
+
+  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
+
+  // Only emit a def when its requirements have been met.
+  // FIXME: This loop could be made faster, but it's fast enough for now.
+  bool MadeProgress = true;
+  std::string InGuard;
+  while (!Defs.empty() && MadeProgress) {
+    MadeProgress = false;
+
+    for (SmallVector<Intrinsic *, 128>::iterator I = Defs.begin();
+         I != Defs.end(); /*No step*/) {
+      bool DependenciesSatisfied = true;
+      for (auto *II : (*I)->getDependencies()) {
+        if (llvm::is_contained(Defs, II))
+          DependenciesSatisfied = false;
+      }
+      if (!DependenciesSatisfied) {
+        // Try the next one.
+        ++I;
+        continue;
+      }
+
+      // Emit #endif/#if pair if needed.
+      if ((*I)->getGuard() != InGuard) {
+        if (!InGuard.empty())
+          OS << "#endif\n";
+        InGuard = (*I)->getGuard();
+        if (!InGuard.empty())
+          OS << "#if " << InGuard << "\n";
+      }
+
+      // Actually generate the intrinsic code.
+      OS << (*I)->generate();
+
+      MadeProgress = true;
+      I = Defs.erase(I);
+    }
+  }
+  assert(Defs.empty() && "Some requirements were not satisfied!");
+  if (!InGuard.empty())
+    OS << "#endif\n";
+
+  OS << "\n";
+  OS << "#undef __ai\n\n";
+
+  OS << "#endif\n";
+}
+
 void clang::EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).run(OS);
 }
 
 void clang::EmitFP16(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runFP16(OS);
+}
+
+void clang::EmitBF16(RecordKeeper &Records, raw_ostream &OS) {
+  NeonEmitter(Records).runBF16(OS);
 }
 
 void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
