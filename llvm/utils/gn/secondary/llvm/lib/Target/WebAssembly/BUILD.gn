@@ -69,7 +69,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyExceptionInfo.cpp",
     "WebAssemblyExplicitLocals.cpp",
     "WebAssemblyFastISel.cpp",
-    "WebAssemblyFixBrTableDefaults.cpp",
     "WebAssemblyFixFunctionBitcasts.cpp",
     "WebAssemblyFixIrreducibleControlFlow.cpp",
     "WebAssemblyFrameLowering.cpp",
