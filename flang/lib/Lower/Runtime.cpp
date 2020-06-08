@@ -132,13 +132,6 @@ void Fortran::lower::genEventWaitStatement(
   noRuntimeSupport(converter.getCurrentLocation(), "EVENT WAIT");
 }
 
-void Fortran::lower::genFormTeamStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::FormTeamStmt &) {
-  // FIXME: There is no runtime call to make for this yet.
-  noRuntimeSupport(converter.getCurrentLocation(), "FORM TEAM");
-}
-
 void Fortran::lower::genLockStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::LockStmt &) {
