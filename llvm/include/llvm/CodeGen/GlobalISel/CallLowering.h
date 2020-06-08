@@ -61,7 +61,8 @@ public:
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
-      assert((Ty->isVoidTy() == (Regs.empty() || Regs[0] == 0)) &&
+      assert(((Ty->isVoidTy() || Ty->isEmptyTy()) ==
+              (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
 

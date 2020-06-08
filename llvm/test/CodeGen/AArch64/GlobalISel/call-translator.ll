@@ -279,3 +279,45 @@ define void @take_split_struct([2 x i64]* %ptr, i64, i64, i64,
   store [2 x i64] %in, [2 x i64]* %ptr
   ret void
 }
+
+%size0type = type { }
+declare %size0type @func.returns.size0.struct()
+
+; CHECK-LABEL: name: call_returns_size0_struct
+; CHECK: bb.1
+; CHECK-NEXT: ADJCALLSTACKDOWN
+; CHECK-NEXT: BL
+; CHECK-NEXT: ADJCALLSTACKUP
+; CHECK-NEXT: RET_ReallyLR
+define void @call_returns_size0_struct() {
+  ; FIXME: Why is this valid IR?
+  %call = call %size0type @func.returns.size0.struct()
+  ret void
+}
+
+declare [0 x i8] @func.returns.size0.array()
+
+; CHECK-LABEL: name: call_returns_size0_array
+; CHECK: bb.1
+; CHECK-NEXT: ADJCALLSTACKDOWN
+; CHECK-NEXT: BL
+; CHECK-NEXT: ADJCALLSTACKUP
+; CHECK-NEXT: RET_ReallyLR
+define void @call_returns_size0_array() {
+  ; FIXME: Why is this valid IR?
+  %call = call [0 x i8] @func.returns.size0.array()
+  ret void
+}
+
+declare [1 x %size0type] @func.returns.array.size0.struct()
+; CHECK-LABEL: name: call_returns_array_size0_struct
+; CHECK: bb.1
+; CHECK-NEXT: ADJCALLSTACKDOWN
+; CHECK-NEXT: BL
+; CHECK-NEXT: ADJCALLSTACKUP
+; CHECK-NEXT: RET_ReallyLR
+define void @call_returns_array_size0_struct() {
+  ; FIXME: Why is this valid IR?
+  %call = call [1 x %size0type] @func.returns.array.size0.struct()
+  ret void
+}
