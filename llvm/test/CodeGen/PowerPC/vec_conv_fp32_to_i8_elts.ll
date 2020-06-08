@@ -46,11 +46,11 @@ define i16 @test2elt(i64 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    mtfprd f1, r3
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    mtfprd f0, r3
+; CHECK-P9-NEXT:    addi r3, r1, -2
 ; CHECK-P9-NEXT:    xxswapd v2, vs1
 ; CHECK-P9-NEXT:    xxswapd v3, vs0
 ; CHECK-P9-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P9-NEXT:    vsldoi v2, v2, v2, 8
-; CHECK-P9-NEXT:    addi r3, r1, -2
 ; CHECK-P9-NEXT:    stxsihx v2, 0, r3
 ; CHECK-P9-NEXT:    lhz r3, -2(r1)
 ; CHECK-P9-NEXT:    blr
@@ -764,11 +764,11 @@ define i16 @test2elt_signed(i64 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    mtfprd f1, r3
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    mtfprd f0, r3
+; CHECK-P9-NEXT:    addi r3, r1, -2
 ; CHECK-P9-NEXT:    xxswapd v2, vs1
 ; CHECK-P9-NEXT:    xxswapd v3, vs0
 ; CHECK-P9-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P9-NEXT:    vsldoi v2, v2, v2, 8
-; CHECK-P9-NEXT:    addi r3, r1, -2
 ; CHECK-P9-NEXT:    stxsihx v2, 0, r3
 ; CHECK-P9-NEXT:    lhz r3, -2(r1)
 ; CHECK-P9-NEXT:    blr
