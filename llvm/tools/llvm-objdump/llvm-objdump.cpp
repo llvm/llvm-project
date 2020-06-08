@@ -1256,14 +1256,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
     for (const auto &ExportEntry : COFFObj->export_directories()) {
       StringRef Name;
-      if (Error E = ExportEntry.getSymbolName(Name))
-        reportError(std::move(E), Obj->getFileName());
+      if (std::error_code EC = ExportEntry.getSymbolName(Name))
+        reportError(errorCodeToError(EC), Obj->getFileName());
       if (Name.empty())
         continue;
 
       uint32_t RVA;
-      if (Error E = ExportEntry.getExportRVA(RVA))
-        reportError(std::move(E), Obj->getFileName());
+      if (std::error_code EC = ExportEntry.getExportRVA(RVA))
+        reportError(errorCodeToError(EC), Obj->getFileName());
 
       uint64_t VA = COFFObj->getImageBase() + RVA;
       auto Sec = partition_point(

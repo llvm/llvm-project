@@ -82,8 +82,8 @@ template <typename T> void COFFDumper::dumpOptionalHeader(T OptionalHeader) {
       OptionalHeader->SizeOfHeapCommit;
   unsigned I = 0;
   for (auto &DestDD : YAMLObj.OptionalHeader->DataDirectories) {
-    const object::data_directory *DD = Obj.getDataDirectory(I++);
-    if (!DD)
+    const object::data_directory *DD;
+    if (Obj.getDataDirectory(I++, DD))
       continue;
     DestDD = COFF::DataDirectory();
     DestDD->RelativeVirtualAddress = DD->RelativeVirtualAddress;
