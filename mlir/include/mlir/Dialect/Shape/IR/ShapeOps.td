@@ -267,6 +267,8 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
 
   let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
   let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "attr-dict $lhs `,` $rhs";
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
@@ -274,6 +276,10 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let description = [{
     Returns the number of elements for a given shape which is the product of its
     dimensions.
+
+    ```mlir
+    %product = shape.mul %lhs, %rhs
+    ```
   }];
 
   let arguments = (ins Shape_ShapeType:$shape);
