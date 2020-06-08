@@ -10,6 +10,7 @@
 #include "Compiler.h"
 #include "Headers.h"
 #include "SourceCode.h"
+#include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Basic/Diagnostic.h"
@@ -212,10 +213,29 @@ llvm::Expected<ScannedPreamble>
 scanPreamble(llvm::StringRef Contents,
              llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
              const tooling::CompileCommand &Cmd) {
+  // FIXME: Change PreambleStatCache to operate on FileSystemProvider rather
+  // than vfs::FileSystem, that way we can just use ParseInputs without this
+  // hack.
+  auto GetFSProvider = [](llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+    class VFSProvider : public FileSystemProvider {
+    public:
+      VFSProvider(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+          : VFS(std::move(FS)) {}
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+      getFileSystem() const override {
+        return VFS;
+      }
+
+    private:
+      const llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
+    };
+    return std::make_unique<VFSProvider>(std::move(FS));
+  };
+  auto FSProvider = GetFSProvider(std::move(VFS));
   // Build and run Preprocessor over the preamble.
   ParseInputs PI;
   PI.Contents = Contents.str();
-  PI.FS = std::move(VFS);
+  PI.FSProvider = FSProvider.get();
   PI.CompileCommand = Cmd;
   IgnoringDiagConsumer IgnoreDiags;
   auto CI = buildCompilerInvocation(PI, IgnoreDiags);
@@ -320,18 +340,19 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
-  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
+  auto VFS = Inputs.FSProvider->getFileSystem();
+  if (VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
     log("Couldn't set working directory when building the preamble.");
     // We proceed anyway, our lit-tests rely on results for non-existing working
     // dirs.
   }
 
   llvm::SmallString<32> AbsFileName(FileName);
-  Inputs.FS->makeAbsolute(AbsFileName);
+  VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
-      StatCache->getProducingFS(Inputs.FS),
+      StatCache->getProducingFS(VFS),
       std::make_shared<PCHContainerOperations>(), StoreInMemory,
       SerializedDeclsCollector);
 
@@ -365,7 +386,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
-                                    Inputs.FS.get());
+                                    Inputs.FSProvider->getFileSystem().get());
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
@@ -388,6 +409,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   trace::Span Tracer("CreatePreamblePatch");
   SPAN_ATTACH(Tracer, "File", FileName);
   assert(llvm::sys::path::is_absolute(FileName) && "relative FileName!");
+  auto VFS =
+      Baseline.StatCache->getConsumingFS(Modified.FSProvider->getFileSystem());
   // First scan preprocessor directives in Baseline and Modified. These will be
   // used to figure out newly added directives in Modified. Scanning can fail,
   // the code just bails out and creates an empty patch in such cases, as:
@@ -398,16 +421,14 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   //   there's nothing to do but generate an empty patch.
   auto BaselineScan = scanPreamble(
       // Contents needs to be null-terminated.
-      Baseline.Preamble.getContents().str(),
-      Baseline.StatCache->getConsumingFS(Modified.FS), Modified.CompileCommand);
+      Baseline.Preamble.getContents().str(), VFS, Modified.CompileCommand);
   if (!BaselineScan) {
     elog("Failed to scan baseline of {0}: {1}", FileName,
          BaselineScan.takeError());
     return PreamblePatch::unmodified(Baseline);
   }
-  auto ModifiedScan = scanPreamble(
-      Modified.Contents, Baseline.StatCache->getConsumingFS(Modified.FS),
-      Modified.CompileCommand);
+  auto ModifiedScan =
+      scanPreamble(Modified.Contents, std::move(VFS), Modified.CompileCommand);
   if (!ModifiedScan) {
     elog("Failed to scan modified contents of {0}: {1}", FileName,
          ModifiedScan.takeError());

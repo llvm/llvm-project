@@ -179,18 +179,16 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
-  auto FS = FSProvider.getFileSystem();
-
   ParseOptions Opts;
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   // FIXME: call tidy options builder on the worker thread, it can do IO.
   if (GetClangTidyOptions)
-    Opts.ClangTidyOpts = GetClangTidyOptions(*FS, File);
+    Opts.ClangTidyOpts = GetClangTidyOptions(*FSProvider.getFileSystem(), File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
-  Inputs.FS = FS;
+  Inputs.FSProvider = &FSProvider;
   Inputs.Contents = std::string(Contents);
   Inputs.Version = Version.str();
   Inputs.ForceRebuild = ForceRebuild;
@@ -214,8 +212,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  auto Task = [Pos, FS = FSProvider.getFileSystem(), CodeCompleteOpts,
-               File = File.str(), CB = std::move(CB),
+  auto Task = [Pos, CodeCompleteOpts, File = File.str(), CB = std::move(CB),
                this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
@@ -238,7 +235,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
         }
       }
     }
-    ParseInputs ParseInput{IP->Command, FS, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &FSProvider, IP->Contents.str()};
     ParseInput.Index = Index;
     ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
     ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
@@ -275,8 +272,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  Callback<SignatureHelp> CB) {
 
-  auto Action = [Pos, FS = FSProvider.getFileSystem(), File = File.str(),
-                 CB = std::move(CB),
+  auto Action = [Pos, File = File.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
@@ -286,7 +282,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
       return CB(llvm::createStringError(llvm::inconvertibleErrorCode(),
                                         "Failed to parse includes"));
 
-    ParseInputs ParseInput{IP->Command, FS, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &FSProvider, IP->Contents.str()};
     ParseInput.Index = Index;
     ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
     ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
@@ -399,8 +395,9 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
       return CB(Edits.takeError());
 
     if (Opts.WantFormat) {
-      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         InpAST->Inputs.FS.get());
+      auto Style = getFormatStyleForFile(
+          File, InpAST->Inputs.Contents,
+          InpAST->Inputs.FSProvider->getFileSystem().get());
       llvm::Error Err = llvm::Error::success();
       for (auto &E : *Edits)
         Err =
@@ -600,8 +597,9 @@ void ClangdServer::findHover(PathRef File, Position Pos,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    format::FormatStyle Style = getFormatStyleForFile(
-        File, InpAST->Inputs.Contents, InpAST->Inputs.FS.get());
+    format::FormatStyle Style =
+        getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                              InpAST->Inputs.FSProvider->getFileSystem().get());
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 

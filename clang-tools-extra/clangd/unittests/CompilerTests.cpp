@@ -19,19 +19,20 @@ namespace {
 using testing::IsEmpty;
 
 TEST(BuildCompilerInvocation, DropsPCH) {
+  MockFSProvider FS;
   IgnoreDiagnostics Diags;
   TestTU TU;
   TU.AdditionalFiles["test.h.pch"] = "";
 
   TU.ExtraArgs = {"-include-pch", "test.h.pch"};
-  EXPECT_THAT(buildCompilerInvocation(TU.inputs(), Diags)
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
                   ->getPreprocessorOpts()
                   .ImplicitPCHInclude,
               IsEmpty());
 
   // Transparent include translation
   TU.ExtraArgs = {"-include", "test.h"};
-  EXPECT_THAT(buildCompilerInvocation(TU.inputs(), Diags)
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
                   ->getPreprocessorOpts()
                   .ImplicitPCHInclude,
               IsEmpty());
@@ -40,11 +41,11 @@ TEST(BuildCompilerInvocation, DropsPCH) {
   TU.AdditionalFiles["test.pch"] = "";
   TU.ExtraArgs = {"--driver-mode=cl"};
   TU.ExtraArgs.push_back("/Yutest.h");
-  EXPECT_THAT(buildCompilerInvocation(TU.inputs(), Diags)
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
                   ->getPreprocessorOpts()
                   .ImplicitPCHInclude,
               IsEmpty());
-  EXPECT_THAT(buildCompilerInvocation(TU.inputs(), Diags)
+  EXPECT_THAT(buildCompilerInvocation(TU.inputs(FS), Diags)
                   ->getPreprocessorOpts()
                   .PCHThroughHeader,
               IsEmpty());
