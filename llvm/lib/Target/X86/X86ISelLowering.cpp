@@ -40234,15 +40234,19 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
 static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
                                   SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
-  // Only handle eq/ne against zero (any_of).
-  // TODO: Handle eq/ne against -1 (all_of) as well.
+  // Handle eq/ne against zero (any_of).
+  // Handle eq/ne against -1 (all_of).
   if (!(CC == X86::COND_E || CC == X86::COND_NE))
     return SDValue();
   if (EFLAGS.getValueType() != MVT::i32)
     return SDValue();
   unsigned CmpOpcode = EFLAGS.getOpcode();
-  if (CmpOpcode != X86ISD::CMP || !isNullConstant(EFLAGS.getOperand(1)))
+  if (CmpOpcode != X86ISD::CMP && CmpOpcode != X86ISD::SUB)
     return SDValue();
+  auto *CmpConstant = dyn_cast<ConstantSDNode>(EFLAGS.getOperand(1));
+  if (!CmpConstant)
+    return SDValue();
+  const APInt &CmpVal = CmpConstant->getAPIntValue();
 
   SDValue CmpOp = EFLAGS.getOperand(0);
   unsigned CmpBits = CmpOp.getValueSizeInBits();
@@ -40259,6 +40263,14 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   MVT VecVT = Vec.getSimpleValueType();
   assert((VecVT.is128BitVector() || VecVT.is256BitVector()) &&
          "Unexpected MOVMSK operand");
+  unsigned NumElts = VecVT.getVectorNumElements();
+  unsigned NumEltBits = VecVT.getScalarSizeInBits();
+
+  bool IsAnyOf = CmpOpcode == X86ISD::CMP && CmpVal.isNullValue();
+  bool IsAllOf = CmpOpcode == X86ISD::SUB && NumElts <= CmpVal.getBitWidth() &&
+                 CmpVal.isMask(NumElts);
+  if (!IsAnyOf && !IsAllOf)
+    return SDValue();
 
   // See if we can peek through to a vector with a wider element type, if the
   // signbits extend down to all the sub-elements as well.
@@ -40266,15 +40278,17 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // potential SimplifyDemandedBits/Elts cases.
   if (Vec.getOpcode() == ISD::BITCAST) {
     SDValue BC = peekThroughBitcasts(Vec);
-    unsigned NumEltBits = VecVT.getScalarSizeInBits();
-    unsigned BCNumEltBits = BC.getScalarValueSizeInBits();
+    MVT BCVT = BC.getSimpleValueType();
+    unsigned BCNumElts = BCVT.getVectorNumElements();
+    unsigned BCNumEltBits = BCVT.getScalarSizeInBits();
     if ((BCNumEltBits == 32 || BCNumEltBits == 64) &&
         BCNumEltBits > NumEltBits &&
         DAG.ComputeNumSignBits(BC) > (BCNumEltBits - NumEltBits)) {
       SDLoc DL(EFLAGS);
+      unsigned CmpMask = IsAnyOf ? 0 : ((1 << BCNumElts) - 1);
       return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                          DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, BC),
-                         DAG.getConstant(0, DL, MVT::i32));
+                         DAG.getConstant(CmpMask, DL, MVT::i32));
     }
   }
 
@@ -40282,7 +40296,8 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // For vXi16 cases we can use a v2Xi8 PMOVMSKB. We must mask out
   // sign bits prior to the comparison with zero unless we know that
   // the vXi16 splats the sign bit down to the lower i8 half.
-  if (Vec.getOpcode() == X86ISD::PACKSS && VecVT == MVT::v16i8) {
+  // TODO: Handle all_of patterns.
+  if (IsAnyOf && Vec.getOpcode() == X86ISD::PACKSS && VecVT == MVT::v16i8) {
     SDValue VecOp0 = Vec.getOperand(0);
     SDValue VecOp1 = Vec.getOperand(1);
     bool SignExt0 = DAG.ComputeNumSignBits(VecOp0) > 8;
