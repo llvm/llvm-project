@@ -105,34 +105,31 @@ public:
 
   /// readGCOVVersion - Read GCOV version.
   bool readGCOVVersion(GCOV::GCOVVersion &Version) {
-    StringRef str = de.getBytes(cursor, 4);
-    int Major, Minor;
+    std::string str(de.getBytes(cursor, 4));
     if (str.size() != 4)
       return false;
-    if (de.isLittleEndian()) {
-      Major = str[3] >= 'A' ? (str[3] - 'A') * 10 + str[2] - '0' : str[3] - '0';
-      Minor = str[1] - '0';
-    } else {
-      Major = str[0] >= 'A' ? (str[0] - 'A') * 10 + str[1] - '0' : str[0] - '0';
-      Minor = str[3] - '0';
-    }
-    if (Major >= 9) {
+    if (de.isLittleEndian())
+      std::reverse(str.begin(), str.end());
+    int ver = str[0] >= 'A'
+                  ? (str[0] - 'A') * 100 + (str[1] - '0') * 10 + str[2] - '0'
+                  : (str[0] - '0') * 10 + str[2] - '0';
+    if (ver >= 90) {
       // PR gcov-profile/84846, r269678
       Version = GCOV::V900;
       return true;
-    } else if (Major >= 8) {
+    } else if (ver >= 80) {
       // PR gcov-profile/48463
       Version = GCOV::V800;
       return true;
-    } else if (Major > 4 || (Major == 4 && Minor >= 8)) {
+    } else if (ver >= 48) {
       // r189778: the exit block moved from the last to the second.
       Version = GCOV::V408;
       return true;
-    } else if (Major == 4 && Minor >= 7) {
+    } else if (ver >= 47) {
       // r173147: split checksum into cfg checksum and line checksum.
       Version = GCOV::V407;
       return true;
-    } else if (Major == 4 || (Major == 3 && Minor >= 4)) {
+    } else if (ver >= 34) {
       Version = GCOV::V304;
       return true;
     }
