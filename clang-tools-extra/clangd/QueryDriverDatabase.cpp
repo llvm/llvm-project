@@ -88,7 +88,7 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
 std::vector<std::string>
 extractSystemIncludes(PathRef Driver, llvm::StringRef Lang,
                       llvm::ArrayRef<std::string> CommandLine,
-                      const llvm::Regex &QueryDriverRegex) {
+                      llvm::Regex &QueryDriverRegex) {
   trace::Span Tracer("Extract system includes");
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", Lang);
@@ -267,12 +267,19 @@ public:
 
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
+    auto Key = std::make_pair(Driver.str().str(), Lang.str());
 
-    std::vector<std::string> SystemIncludes =
-        QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
-          return extractSystemIncludes(Driver, Lang, Cmd->CommandLine,
-                                       QueryDriverRegex);
-        });
+    std::vector<std::string> SystemIncludes;
+    {
+      std::lock_guard<std::mutex> Lock(Mu);
+
+      auto It = DriverToIncludesCache.find(Key);
+      if (It != DriverToIncludesCache.end())
+        SystemIncludes = It->second;
+      else
+        DriverToIncludesCache[Key] = SystemIncludes = extractSystemIncludes(
+            Key.first, Key.second, Cmd->CommandLine, QueryDriverRegex);
+    }
 
     return addSystemIncludes(*Cmd, SystemIncludes);
   }
@@ -282,9 +289,12 @@ public:
   }
 
 private:
-  // Caches includes extracted from a driver. Key is driver:lang.
-  Memoize<llvm::StringMap<std::vector<std::string>>> QueriedDrivers;
-  llvm::Regex QueryDriverRegex;
+  mutable std::mutex Mu;
+  // Caches includes extracted from a driver.
+  mutable std::map<std::pair<std::string, std::string>,
+                   std::vector<std::string>>
+      DriverToIncludesCache;
+  mutable llvm::Regex QueryDriverRegex;
 
   std::unique_ptr<GlobalCompilationDatabase> Base;
   CommandChanged::Subscription BaseChanged;
