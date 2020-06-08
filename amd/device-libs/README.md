@@ -18,24 +18,18 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 ## BUILDING
 
-The library sources should be compiled using a clang compiler built from
-sources in the amd-stg-open branch of AMD-modified llvm-project repository.
-Use the following commands:
+The build requires clang and several llvm development tools. This can
+be built using the amd-stg-open branch of the RadeonOpenCompute
+modified llvm-project repository, but the upstream llvm-project should
+also work.
 
-    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open llvm_amd
-    cd llvm_amd
-    mkdir -p build
-    cd build
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
-        -DLLVM_ENABLE_PROJECTS="clang;lld"    \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86"  \
-        ../llvm
-    make
+There are two different methods to build the device libraries; as a
+standalone project or as an llvm external subproject.
 
-
-To build the library bitcodes, clone the amd_stg_open branch of this repository
+For a standalone build, this will find a preexisting clang and llvm
+tools using the standard cmake search mechanisms. If you wish to use a
+specific build, you can specify this with the CMAKE_PREFIX_PATH
+variable:
 
     git clone https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git -b amd-stg-open
 
@@ -43,25 +37,22 @@ and from its top level run the following commands:
 
     mkdir -p build
     cd build
-    export LLVM_BUILD=... (path to LLVM build directory created above)
-    CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD ..
+    export LLVM_BUILD=... (path to LLVM build directory created previously)
+    cmake -DCMAKE_PREFIX_PATH=$LLVM_BUILD ..
     make
 
-It is also possible to use a compiler that only has AMDGPU target enabled if you build prepare-builtins separately
-with the regular host compiler and pass explicit target option to CMake:
+To build as an llvm external project:
 
-    export LLVM_BUILD=... (path to LLVM build)
-    # Build prepare-builtins
-    cd utils
-    mkdir build
+    LLVM_PROJECT_ROOT=llvm-project-rocm
+    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open ${LLVM_PROJECT_ROOT}
+    cd ${LLVM_PROJECT_ROOT}
+    mkdir -p build
     cd build
-    cmake -DLLVM_DIR=$LLVM_BUILD ..
-    make
-    # Build bitcode libraries
-    cd ../..
-    mkdir build
-    cd build
-    CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DPREPARE_BUILTINS=`cd ../utils/build/prepare-builtins/; pwd`/prepare-builtins ..
+
+    cmake ${LLVM_PROJECT_ROOT}/llvm -DCMAKE_BUILD_TYPE=Release \
+          -DLLVM_ENABLE_PROJECTS="clang;lld" \
+          -DLLVM_EXTERNAL_PROJECTS="device-libs" \
+          -DLLVM_EXTERNAL_DEVICE_LIBS_SOURCE_DIR=/path/to/ROCm-Device-Libs
 
 Testing requires the amdhsacod utility from ROCm Runtime.
 
