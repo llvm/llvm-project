@@ -54,6 +54,9 @@ func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 //       CHECK:         affine.for %{{.*}} = 0 to %[[Q]] {
 //       CHECK:           affine.for %{{.*}} = 0 to %[[Z0]] {
 //       CHECK:            %[[SUM:.*]] = affine.apply #[[stride2Dilation1]](%{{.*}}, %{{.*}})
+//       No padding needed here; only affine loads.
+//       CHECK-NEXT:       affine.load
+//       CHECK-NEXT:       affine.load
 
 func @conv_padding(%arg0: memref<?x?x?x?xf32>,
                    %arg1: memref<?x?x?x?xf32>,
@@ -85,8 +88,8 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 //       CHECK:                 %[[SUM1:.*]] = affine.apply #{{.*}}(%{{.*}}, %{{.*}})
 //       CHECK:                 %[[IDX:.*]] = affine.max #[[clampMinMap]](%[[SUM0]])
 //       CHECK:                 %[[IDY:.*]] = affine.max #[[clampMinMap]](%[[SUM1]])
-// Padded conv involves an affine.max in the memory access which is not
-// allowed by affine.load. Override to always use an std.load.
+// Padded conv involves an affine.max in the memory access and this is not
+// allowed by affine.load. Use std.load in such cases.
 //       CHECK:                 %{{.*}} = load %{{.*}}[%{{.*}}, %[[IDX]], %[[IDY]], %{{.*}}] : memref<?x?x?x?xf32>
 //       CHECK:                 %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : f32
 //       CHECK:                 %{{.*}} = affine.load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32>
