@@ -23,8 +23,8 @@ void func() {
 // ASAN-NEXT: call void @__asan_version_mismatch_check
 // KASAN-NOT: call void @__asan_init
 // KASAN-NOT: call void @__asan_version_mismatch_check
-// ASAN-NEXT: call void @__asan_register_globals(i64 ptrtoint ({{.*}}, i64 6)
-// KASAN-NEXT: call void @__asan_register_globals(i64 ptrtoint ({{.*}}, i64 5)
+// ASAN-NEXT: call void @__asan_register_globals({{.*}}, i{{32|64}} 6)
+// KASAN-NEXT: call void @__asan_register_globals({{.*}}, i{{32|64}} 5)
 // CHECK-NEXT: ret void
 
 // CHECK-LABEL: define internal void @asan.module_dtor
