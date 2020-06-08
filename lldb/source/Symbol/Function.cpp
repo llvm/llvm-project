@@ -145,11 +145,7 @@ lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
 
 lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
                                           Target &target) const {
-  return GetLoadAddress(return_pc, caller, target);
-}
-
-lldb::addr_t CallEdge::GetCallInstPC(Function &caller, Target &target) const {
-  return GetLoadAddress(call_inst_pc, caller, target);
+  return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
 void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
@@ -313,36 +309,34 @@ llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
 
   // Sort the call edges to speed up return_pc lookups.
-  llvm::sort(m_call_edges.begin(), m_call_edges.end(),
-             [](const std::unique_ptr<CallEdge> &LHS,
-                const std::unique_ptr<CallEdge> &RHS) {
-               return LHS->GetUnresolvedReturnPCAddress() <
-                      RHS->GetUnresolvedReturnPCAddress();
-             });
+  llvm::sort(m_call_edges, [](const std::unique_ptr<CallEdge> &LHS,
+                              const std::unique_ptr<CallEdge> &RHS) {
+    return LHS->GetSortKey() < RHS->GetSortKey();
+  });
 
   return m_call_edges;
 }
 
 llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetTailCallingEdges() {
-  // Call edges are sorted by return PC, and tail calling edges have invalid
-  // return PCs. Find them at the end of the list.
-  return GetCallEdges().drop_until([](const std::unique_ptr<CallEdge> &edge) {
-    return edge->GetUnresolvedReturnPCAddress() == LLDB_INVALID_ADDRESS;
-  });
+  // Tail calling edges are sorted at the end of the list. Find them by dropping
+  // all non-tail-calls.
+  return GetCallEdges().drop_until(
+      [](const std::unique_ptr<CallEdge> &edge) { return edge->IsTailCall(); });
 }
 
 CallEdge *Function::GetCallEdgeForReturnAddress(addr_t return_pc,
                                                 Target &target) {
   auto edges = GetCallEdges();
   auto edge_it =
-      std::lower_bound(edges.begin(), edges.end(), return_pc,
-                       [&](const std::unique_ptr<CallEdge> &edge, addr_t pc) {
-                         return edge->GetReturnPCAddress(*this, target) < pc;
-                       });
+      llvm::partition_point(edges, [&](const std::unique_ptr<CallEdge> &edge) {
+        return std::make_pair(edge->IsTailCall(),
+                              edge->GetReturnPCAddress(*this, target)) <
+               std::make_pair(false, return_pc);
+      });
   if (edge_it == edges.end() ||
       edge_it->get()->GetReturnPCAddress(*this, target) != return_pc)
     return nullptr;
-  return &const_cast<CallEdge &>(*edge_it->get());
+  return edge_it->get();
 }
 
 Block &Function::GetBlock(bool can_create) {

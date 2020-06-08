@@ -3080,7 +3080,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
-      if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when))
+      if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when,
+                       Keywords.kw_lock))
         return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
                spaceRequiredBeforeParens(Right);
   } else if (Style.Language == FormatStyle::LK_JavaScript) {

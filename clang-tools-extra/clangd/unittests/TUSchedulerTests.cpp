@@ -735,15 +735,24 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 3u);
 }
 
-TEST_F(TUSchedulerTests, ForceRebuild) {
+// We rebuild if a completely missing header exists, but not if one is added
+// on a higher-priority include path entry (for performance).
+// (Previously we wouldn't automatically rebuild when files were added).
+TEST_F(TUSchedulerTests, MissingHeader) {
+  CDB.ExtraClangFlags.push_back("-I" + testPath("a"));
+  CDB.ExtraClangFlags.push_back("-I" + testPath("b"));
+  // Force both directories to exist so they don't get pruned.
+  FSProvider.Files.try_emplace("a/__unused__");
+  FSProvider.Files.try_emplace("b/__unused__");
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto Source = testPath("foo.cpp");
-  auto Header = testPath("foo.h");
+  auto HeaderA = testPath("a/foo.h");
+  auto HeaderB = testPath("b/foo.h");
 
   auto SourceContents = R"cpp(
       #include "foo.h"
-      int b = a;
+      int c = b;
     )cpp";
 
   ParseInputs Inputs = getInputs(Source, SourceContents);
@@ -758,37 +767,48 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
         EXPECT_THAT(Diags,
                     ElementsAre(Field(&Diag::Message, "'foo.h' file not found"),
                                 Field(&Diag::Message,
-                                      "use of undeclared identifier 'a'")));
+                                      "use of undeclared identifier 'b'")));
       });
   S.blockUntilIdle(timeoutSeconds(10));
 
-  // Add the header file. We need to recreate the inputs since we changed a
-  // file from underneath the test FS.
-  FSProvider.Files[Header] = "int a;";
-  FSProvider.Timestamps[Header] = time_t(1);
-  Inputs = getInputs(Source, SourceContents);
+  FSProvider.Files[HeaderB] = "int b;";
+  FSProvider.Timestamps[HeaderB] = time_t(1);
 
-  // The addition of the missing header file shouldn't trigger a rebuild since
-  // we don't track missing files.
+  // The addition of the missing header file triggers a rebuild, no errors.
   updateWithDiags(
       S, Source, Inputs, WantDiagnostics::Yes,
       [&DiagCount](std::vector<Diag> Diags) {
         ++DiagCount;
-        ADD_FAILURE() << "Did not expect diagnostics for missing header update";
+        EXPECT_THAT(Diags, IsEmpty());
       });
 
-  // Forcing the reload should should cause a rebuild which no longer has any
-  // errors.
+  // Ensure previous assertions are done before we touch the FS again.
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  // Add the high-priority header file, which should reintroduce the error.
+  FSProvider.Files[HeaderA] = "int a;";
+  FSProvider.Timestamps[HeaderA] = time_t(1);
+
+  // This isn't detected: we don't stat a/foo.h to validate the preamble.
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [&DiagCount](std::vector<Diag> Diags) {
+                    ++DiagCount;
+                    ADD_FAILURE()
+                        << "Didn't expect new diagnostics when adding a/foo.h";
+                  });
+
+  // Forcing the reload should should cause a rebuild.
   Inputs.ForceRebuild = true;
   updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
                   [&DiagCount](std::vector<Diag> Diags) {
                     ++DiagCount;
-                    EXPECT_THAT(Diags, IsEmpty());
+                    ElementsAre(Field(&Diag::Message,
+                                      "use of undeclared identifier 'b'"));
                   });
 
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  EXPECT_EQ(DiagCount, 2U);
+  EXPECT_EQ(DiagCount, 3U);
 }
+
 TEST_F(TUSchedulerTests, NoChangeDiags) {
   trace::TestTracer Tracer;
   TUScheduler S(CDB, optsForTest(), captureDiags());

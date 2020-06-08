@@ -128,7 +128,8 @@ public:
 private:
   PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
-                      llvm::StringMap<PreambleFileHash> FilesInPreamble);
+                      llvm::StringMap<PreambleFileHash> FilesInPreamble,
+                      llvm::StringSet<> MissingFiles);
 
   /// A temp file that would be deleted on destructor call. If destructor is not
   /// called for any reason, the file will be deleted at static objects'
@@ -249,6 +250,15 @@ private:
   /// If any of the files have changed from one compile to the next,
   /// the preamble must be thrown away.
   llvm::StringMap<PreambleFileHash> FilesInPreamble;
+  /// Files that were not found during preamble building. If any of these now
+  /// exist then the preamble should not be reused.
+  ///
+  /// Storing *all* the missing files that could invalidate the preamble would
+  /// make it too expensive to revalidate (when the include path has many
+  /// entries, each #include will miss half of them on average).
+  /// Instead, we track only files that could have satisfied an #include that
+  /// was ultimately not found.
+  llvm::StringSet<> MissingFiles;
   /// The contents of the file that was used to precompile the preamble. Only
   /// contains first PreambleBounds::Size bytes. Used to compare if the relevant
   /// part of the file has not changed, so that preamble can be reused.

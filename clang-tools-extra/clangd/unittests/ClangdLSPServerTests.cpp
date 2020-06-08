@@ -131,11 +131,19 @@ TEST_F(LSPTest, Diagnostics) {
 
 TEST_F(LSPTest, DiagnosticsHeaderSaved) {
   auto &Client = start();
-  FS.Files["foo.h"] = "#define VAR original";
   Client.didOpen("foo.cpp", R"cpp(
     #include "foo.h"
     int x = VAR;
   )cpp");
+  EXPECT_THAT(Client.diagnostics("foo.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("'foo.h' file not found"),
+                  DiagMessage("Use of undeclared identifier 'VAR'"))));
+  // Now create the header.
+  FS.Files["foo.h"] = "#define VAR original";
+  Client.notify(
+      "textDocument/didSave",
+      llvm::json::Object{{"textDocument", Client.documentID("foo.h")}});
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(
                   DiagMessage("Use of undeclared identifier 'original'"))));

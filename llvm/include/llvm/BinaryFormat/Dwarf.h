@@ -669,6 +669,11 @@ template <> struct EnumTraits<LineNumberOps> : public std::true_type {
   static constexpr char Type[4] = "LNS";
   static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
 };
+
+template <> struct EnumTraits<LocationAtom> : public std::true_type {
+  static constexpr char Type[3] = "OP";
+  static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
+};
 } // End of namespace dwarf
 
 /// Dwarf constants format_provider
