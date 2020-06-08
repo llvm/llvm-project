@@ -12,16 +12,7 @@
 define i32 @maxi8(i32) {
 ; CHECK-LABEL: @maxi8(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <8 x i32> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i32> [[TMP2]], <8 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <8 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i32> [[RDX_MINMAX_SELECT]], <8 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp sgt <8 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i32> [[RDX_MINMAX_SELECT3]], <8 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[RDX_MINMAX_SELECT6]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
@@ -52,19 +43,7 @@ define i32 @maxi8(i32) {
 define i32 @maxi16(i32) {
 ; CHECK-LABEL: @maxi16(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr to <16 x i32>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <16 x i32> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP]], <16 x i32> [[TMP2]], <16 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i32> [[RDX_MINMAX_SELECT]], <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <16 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP2]], <16 x i32> [[RDX_MINMAX_SELECT]], <16 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i32> [[RDX_MINMAX_SELECT3]], <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp sgt <16 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP5]], <16 x i32> [[RDX_MINMAX_SELECT3]], <16 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <16 x i32> [[RDX_MINMAX_SELECT6]], <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = icmp sgt <16 x i32> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP8]], <16 x i32> [[RDX_MINMAX_SELECT6]], <16 x i32> [[RDX_SHUF7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[RDX_MINMAX_SELECT9]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v16i32(<16 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
@@ -119,22 +98,7 @@ define i32 @maxi16(i32) {
 define i32 @maxi32(i32) {
 ; CHECK-LABEL: @maxi32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr to <32 x i32>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <32 x i32> [[TMP2]], <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <32 x i32> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP]], <32 x i32> [[TMP2]], <32 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <32 x i32> [[RDX_MINMAX_SELECT]], <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <32 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP2]], <32 x i32> [[RDX_MINMAX_SELECT]], <32 x i32> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <32 x i32> [[RDX_MINMAX_SELECT3]], <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp sgt <32 x i32> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP5]], <32 x i32> [[RDX_MINMAX_SELECT3]], <32 x i32> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x i32> [[RDX_MINMAX_SELECT6]], <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = icmp sgt <32 x i32> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP8]], <32 x i32> [[RDX_MINMAX_SELECT6]], <32 x i32> [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_SHUF10:%.*]] = shufflevector <32 x i32> [[RDX_MINMAX_SELECT9]], <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP11:%.*]] = icmp sgt <32 x i32> [[RDX_MINMAX_SELECT9]], [[RDX_SHUF10]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT12:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP11]], <32 x i32> [[RDX_MINMAX_SELECT9]], <32 x i32> [[RDX_SHUF10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <32 x i32> [[RDX_MINMAX_SELECT12]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v32i32(<32 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
@@ -237,16 +201,7 @@ define i32 @maxi32(i32) {
 define float @maxf8(float) {
 ; CHECK-LABEL: @maxf8(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr1 to <8 x float>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <8 x float> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x float> [[TMP2]], <8 x float> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x float> [[RDX_MINMAX_SELECT]], <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <8 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x float> [[RDX_MINMAX_SELECT]], <8 x float> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x float> [[RDX_MINMAX_SELECT3]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = fcmp fast ogt <8 x float> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x float> [[RDX_MINMAX_SELECT3]], <8 x float> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[RDX_MINMAX_SELECT6]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v8f32(<8 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -277,19 +232,7 @@ define float @maxf8(float) {
 define float @maxf16(float) {
 ; CHECK-LABEL: @maxf16(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr1 to <16 x float>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x float> [[TMP2]], <16 x float> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <16 x float> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP]], <16 x float> [[TMP2]], <16 x float> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x float> [[RDX_MINMAX_SELECT]], <16 x float> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <16 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP2]], <16 x float> [[RDX_MINMAX_SELECT]], <16 x float> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x float> [[RDX_MINMAX_SELECT3]], <16 x float> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = fcmp fast ogt <16 x float> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP5]], <16 x float> [[RDX_MINMAX_SELECT3]], <16 x float> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <16 x float> [[RDX_MINMAX_SELECT6]], <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = fcmp fast ogt <16 x float> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP8]], <16 x float> [[RDX_MINMAX_SELECT6]], <16 x float> [[RDX_SHUF7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[RDX_MINMAX_SELECT9]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v16f32(<16 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -344,22 +287,7 @@ define float @maxf16(float) {
 define float @maxf32(float) {
 ; CHECK-LABEL: @maxf32(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x float>, <32 x float>* bitcast ([32 x float]* @arr1 to <32 x float>*), align 16
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <32 x float> [[TMP2]], <32 x float> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <32 x float> [[TMP2]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP]], <32 x float> [[TMP2]], <32 x float> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <32 x float> [[RDX_MINMAX_SELECT]], <32 x float> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <32 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP2]], <32 x float> [[RDX_MINMAX_SELECT]], <32 x float> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <32 x float> [[RDX_MINMAX_SELECT3]], <32 x float> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = fcmp fast ogt <32 x float> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP5]], <32 x float> [[RDX_MINMAX_SELECT3]], <32 x float> [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x float> [[RDX_MINMAX_SELECT6]], <32 x float> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = fcmp fast ogt <32 x float> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP8]], <32 x float> [[RDX_MINMAX_SELECT6]], <32 x float> [[RDX_SHUF7]]
-; CHECK-NEXT:    [[RDX_SHUF10:%.*]] = shufflevector <32 x float> [[RDX_MINMAX_SELECT9]], <32 x float> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP11:%.*]] = fcmp fast ogt <32 x float> [[RDX_MINMAX_SELECT9]], [[RDX_SHUF10]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT12:%.*]] = select <32 x i1> [[RDX_MINMAX_CMP11]], <32 x float> [[RDX_MINMAX_SELECT9]], <32 x float> [[RDX_SHUF10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <32 x float> [[RDX_MINMAX_SELECT12]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v32f32(<32 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -494,13 +422,7 @@ define i32 @maxi8_mutiple_uses(i32) {
 ; AVX-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP2]], i32 [[TMP3]]
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
 ; AVX-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
-; AVX-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; AVX-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP6]], [[RDX_SHUF]]
-; AVX-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP6]], <4 x i32> [[RDX_SHUF]]
-; AVX-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; AVX-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; AVX-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; AVX-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; AVX-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP6]])
 ; AVX-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP8]], [[TMP7]]
 ; AVX-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
 ; AVX-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP10]], [[TMP5]]
@@ -518,13 +440,7 @@ define i32 @maxi8_mutiple_uses(i32) {
 ; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
 ; THRESH-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
-; THRESH-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; THRESH-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP5]], [[RDX_SHUF]]
-; THRESH-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP5]], <4 x i32> [[RDX_SHUF]]
-; THRESH-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; THRESH-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; THRESH-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; THRESH-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; THRESH-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
 ; THRESH-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> undef, i32 [[TMP7]], i32 0
 ; THRESH-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP3]], i32 1
 ; THRESH-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> undef, i32 [[TMP6]], i32 0
@@ -608,13 +524,7 @@ define i32 @maxi8_wrong_parent(i32) {
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
 ; AVX-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
 ; AVX-NEXT:    [[TMP8:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
-; AVX-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; AVX-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP6]], [[RDX_SHUF]]
-; AVX-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP6]], <4 x i32> [[RDX_SHUF]]
-; AVX-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; AVX-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; AVX-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; AVX-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; AVX-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP6]])
 ; AVX-NEXT:    [[TMP10:%.*]] = icmp sgt i32 [[TMP9]], [[TMP7]]
 ; AVX-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 [[TMP9]], i32 [[TMP7]]
 ; AVX-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[TMP11]], [[TMP8]]
@@ -633,13 +543,7 @@ define i32 @maxi8_wrong_parent(i32) {
 ; THRESH-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2) to <4 x i32>*), align 8
 ; THRESH-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
 ; THRESH-NEXT:    [[TMP8:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
-; THRESH-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; THRESH-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP6]], [[RDX_SHUF]]
-; THRESH-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP6]], <4 x i32> [[RDX_SHUF]]
-; THRESH-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; THRESH-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; THRESH-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
-; THRESH-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; THRESH-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP6]])
 ; THRESH-NEXT:    [[TMP10:%.*]] = icmp sgt i32 [[TMP9]], [[TMP7]]
 ; THRESH-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 [[TMP9]], i32 [[TMP7]]
 ; THRESH-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[TMP11]], [[TMP8]]

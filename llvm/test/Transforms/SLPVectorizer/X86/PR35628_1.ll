@@ -8,7 +8,7 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[BAIL_OUT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_EXTRA5:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_EXTRA3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 3
@@ -19,15 +19,11 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP8]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP10]], 1
-; CHECK-NEXT:    [[OP_EXTRA3:%.*]] = add i32 [[OP_EXTRA]], [[TMP7]]
-; CHECK-NEXT:    [[OP_EXTRA4:%.*]] = add i32 [[OP_EXTRA3]], [[TMP6]]
-; CHECK-NEXT:    [[OP_EXTRA5]] = add i32 [[OP_EXTRA4]], [[TMP5]]
+; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = add i32 [[OP_EXTRA]], [[TMP7]]
+; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = add i32 [[OP_EXTRA1]], [[TMP6]]
+; CHECK-NEXT:    [[OP_EXTRA3]] = add i32 [[OP_EXTRA2]], [[TMP5]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       bail_out:
 ; CHECK-NEXT:    ret void
