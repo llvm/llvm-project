@@ -484,6 +484,12 @@ def err_drv_trivial_auto_var_init_zero_disabled : Error<
   "-ftrivial-auto-var-init=zero hasn't been enabled. Enable it at your own peril for benchmarking purpose only with "
   "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">;
 
+def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
+  "-ftrivial-auto-var-init-stop-after=* is used without -ftrivial-auto-var-init=zero or -ftrivial-auto-var-init=pattern.">;
+
+def err_drv_trivial_auto_var_init_stop_after_invalid_value : Error<
+  "-ftrivial-auto-var-init-stop-after=* only accepts positive integers.">;
+
 def warn_drv_msp430_hwmult_unsupported : Warning<"the given MCU does not "
   "support hardware multiply, but -mhwmult is set to %0.">,
    InGroup<InvalidCommandLineArgument>;
