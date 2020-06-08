@@ -847,9 +847,8 @@ define i1 @andn_or_cmp_4(i32 %a, i32 %b, i32 %c) {
 
 define i32 @lowbitmask_casted_shift(i8 %x) {
 ; CHECK-LABEL: @lowbitmask_casted_shift(
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i8 %x, 1
@@ -858,12 +857,44 @@ define i32 @lowbitmask_casted_shift(i8 %x) {
   ret i32 %r
 }
 
+; Negative test - mask constant is too big.
+
+define i32 @lowbitmask_casted_shift_wrong_mask1(i8 %x) {
+; CHECK-LABEL: @lowbitmask_casted_shift_wrong_mask1(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 2147483647
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i8 %x, 2
+  %s = sext i8 %a to i32
+  %r = and i32 %s, 2147483647 ; 0x7fffffff
+  ret i32 %r
+}
+
+; Negative test - mask constant is too small.
+
+define i32 @lowbitmask_casted_shift_wrong_mask2(i8 %x) {
+; CHECK-LABEL: @lowbitmask_casted_shift_wrong_mask2(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 536870911
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i8 %x, 2
+  %s = sext i8 %a to i32
+  %r = and i32 %s, 536870911  ; 0x1fffffff
+  ret i32 %r
+}
+
+; Extra use of shift is ok.
+
 define i32 @lowbitmask_casted_shift_use1(i8 %x) {
 ; CHECK-LABEL: @lowbitmask_casted_shift_use1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[S]], 536870911
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i8 %x, 3
@@ -872,6 +903,8 @@ define i32 @lowbitmask_casted_shift_use1(i8 %x) {
   %r = and i32 %s, 536870911
   ret i32 %r
 }
+
+; Negative test - extra use of sext requires more instructions.
 
 define i32 @lowbitmask_casted_shift_use2(i8 %x) {
 ; CHECK-LABEL: @lowbitmask_casted_shift_use2(
@@ -888,11 +921,12 @@ define i32 @lowbitmask_casted_shift_use2(i8 %x) {
   ret i32 %r
 }
 
+; Vectors/weird types are ok.
+
 define <2 x i59> @lowbitmask_casted_shift_vec_splat(<2 x i47> %x) {
 ; CHECK-LABEL: @lowbitmask_casted_shift_vec_splat(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i47> [[X:%.*]], <i47 5, i47 5>
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i47> [[A]] to <2 x i59>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i59> [[S]], <i59 18014398509481983, i59 18014398509481983>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i47> [[X:%.*]] to <2 x i59>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i59> [[TMP1]], <i59 5, i59 5>
 ; CHECK-NEXT:    ret <2 x i59> [[R]]
 ;
   %a = ashr <2 x i47> %x, <i47 5, i47 5>
