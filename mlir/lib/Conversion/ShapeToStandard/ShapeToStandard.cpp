@@ -15,10 +15,26 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+using namespace mlir::shape;
 
 namespace {
 
 /// Conversion patterns.
+template <typename SrcOpTy, typename DstOpTy>
+class BinaryOpConversion : public OpConversionPattern<SrcOpTy> {
+public:
+  using OpConversionPattern<SrcOpTy>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SrcOpTy op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    typename SrcOpTy::OperandAdaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
+                                         adaptor.rhs());
+    return success();
+  }
+};
+
 class FromExtentTensorOpConversion
     : public OpConversionPattern<shape::FromExtentTensorOp> {
 public:
@@ -128,6 +144,8 @@ void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   // clang-format off
   patterns.insert<
+      BinaryOpConversion<AddOp, AddIOp>,
+      BinaryOpConversion<MulOp, MulIOp>,
       FromExtentTensorOpConversion,
       IndexToSizeOpConversion,
       SizeToIndexOpConversion,

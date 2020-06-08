@@ -450,8 +450,10 @@ static bool isNonASCII(char c) { return c & 0x80; }
 
 void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
                          bool ShowKindLabel) const {
+  ColorMode Mode = ShowColors ? ColorMode::Auto : ColorMode::Disable;
+
   {
-    WithColor S(OS, raw_ostream::SAVEDCOLOR, true, false, !ShowColors);
+    WithColor S(OS, raw_ostream::SAVEDCOLOR, true, false, Mode);
 
     if (ProgName && ProgName[0])
       S << ProgName << ": ";
@@ -488,8 +490,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
     }
   }
 
-  WithColor(OS, raw_ostream::SAVEDCOLOR, true, false, !ShowColors)
-      << Message << '\n';
+  WithColor(OS, raw_ostream::SAVEDCOLOR, true, false, Mode) << Message << '\n';
 
   if (LineNo == -1 || ColumnNo == -1)
     return;
@@ -536,7 +537,8 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
   printSourceLine(OS, LineContents);
 
   {
-    WithColor S(OS, raw_ostream::GREEN, true, false, !ShowColors);
+    ColorMode Mode = ShowColors ? ColorMode::Auto : ColorMode::Disable;
+    WithColor S(OS, raw_ostream::GREEN, true, false, Mode);
 
     // Print out the caret line, matching tabs in the source line.
     for (unsigned i = 0, e = CaretLine.size(), OutCol = 0; i != e; ++i) {

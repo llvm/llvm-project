@@ -18,8 +18,8 @@ static cl::opt<cl::boolOrDefault>
              cl::desc("Use colors in output (default=autodetect)"),
              cl::init(cl::BOU_UNSET));
 
-WithColor::WithColor(raw_ostream &OS, HighlightColor Color, bool DisableColors)
-    : OS(OS), DisableColors(DisableColors) {
+WithColor::WithColor(raw_ostream &OS, HighlightColor Color, ColorMode Mode)
+    : OS(OS), Mode(Mode) {
   // Detect color from terminal type unless the user passed the --color option.
   if (colorsEnabled()) {
     switch (Color) {
@@ -69,7 +69,9 @@ raw_ostream &WithColor::error(raw_ostream &OS, StringRef Prefix,
                               bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Error, DisableColors).get()
+  return WithColor(OS, HighlightColor::Error,
+                   DisableColors ? ColorMode::Disable : ColorMode::Auto)
+             .get()
          << "error: ";
 }
 
@@ -77,7 +79,9 @@ raw_ostream &WithColor::warning(raw_ostream &OS, StringRef Prefix,
                                 bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Warning, DisableColors).get()
+  return WithColor(OS, HighlightColor::Warning,
+                   DisableColors ? ColorMode::Disable : ColorMode::Auto)
+             .get()
          << "warning: ";
 }
 
@@ -85,23 +89,33 @@ raw_ostream &WithColor::note(raw_ostream &OS, StringRef Prefix,
                              bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Note, DisableColors).get() << "note: ";
+  return WithColor(OS, HighlightColor::Note,
+                   DisableColors ? ColorMode::Disable : ColorMode::Auto)
+             .get()
+         << "note: ";
 }
 
 raw_ostream &WithColor::remark(raw_ostream &OS, StringRef Prefix,
                                bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Remark, DisableColors).get()
+  return WithColor(OS, HighlightColor::Remark,
+                   DisableColors ? ColorMode::Disable : ColorMode::Auto)
+             .get()
          << "remark: ";
 }
 
 bool WithColor::colorsEnabled() {
-  if (DisableColors)
+  switch (Mode) {
+  case ColorMode::Enable:
+    return true;
+  case ColorMode::Disable:
     return false;
-  if (UseColor == cl::BOU_UNSET)
-    return OS.has_colors();
-  return UseColor == cl::BOU_TRUE;
+  case ColorMode::Auto:
+    return UseColor == cl::BOU_UNSET ? OS.has_colors()
+                                     : UseColor == cl::BOU_TRUE;
+  }
+  llvm_unreachable("All cases handled above.");
 }
 
 WithColor &WithColor::changeColor(raw_ostream::Colors Color, bool Bold,
