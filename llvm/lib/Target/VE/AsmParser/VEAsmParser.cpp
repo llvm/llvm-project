@@ -191,6 +191,17 @@ public:
   bool isMEMri() const { return Kind == k_MemoryRegImm; }
   bool isMEMzi() const { return Kind == k_MemoryZeroImm; }
   bool isCCOp() const { return Kind == k_CCOp; }
+  bool isUImm7() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<7>(Value);
+    }
+    return false;
+  }
   bool isSImm7() {
     if (!isImm())
       return false;
@@ -338,6 +349,10 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
     addExpr(Inst, Expr);
+  }
+
+  void addUImm7Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
   }
 
   void addSImm7Operands(MCInst &Inst, unsigned N) const {

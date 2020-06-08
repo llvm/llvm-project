@@ -39,6 +39,10 @@ include "VEInstrFormats.td"
 //     e.g. 0.0 (0x00000000) or -2.0 (0xC0000000=(2)1).
 //===----------------------------------------------------------------------===//
 
+def ULO7 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0x7f,
+                                   SDLoc(N), MVT::i32);
+}]>;
 def LO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(SignExtend32(N->getSExtValue(), 7),
                                    SDLoc(N), MVT::i32);
@@ -117,8 +121,13 @@ def uimm6 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<6>(N->getZExtValue()); }]>;
 
 // uimm7 - Generic immediate value.
+def UImm7AsmOperand : AsmOperandClass {
+  let Name = "UImm7";
+}
 def uimm7 : Operand<i32>, PatLeaf<(imm), [{
-    return isUInt<7>(N->getZExtValue()); }]>;
+    return isUInt<7>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm7AsmOperand;
+}
 
 // simm7 - Generic immediate value.
 def SImm7AsmOperand : AsmOperandClass {
@@ -491,6 +500,44 @@ multiclass RRIm<string opcStr, bits<8>opc,
   def mi : RR<opc, (outs RC:$sx), (ins mimm:$sz, uimm7:$sy),
               !strconcat(opcStr, " $sx, $sz, $sy"),
               [(set Ty:$sx, (OpNode (Ty mimm:$sz), (i32 uimm7:$sy)))]>;
+}
+
+// Special RR multiclass for 128 bits shift left instruction.
+//   e.g. SLD
+let Constraints = "$hi = $sx", DisableEncoding = "$hi", hasSideEffects = 0 in
+multiclass RRILDm<string opcStr, bits<8>opc,
+                  RegisterClass RC, ValueType Ty,
+                  SDPatternOperator OpNode = null_frag> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$hi, RC:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cz = 0 in
+  def rmr : RR<opc, (outs RC:$sx), (ins RC:$hi, mimm:$sz, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0 in
+  def rri : RR<opc, (outs RC:$sx), (ins RC:$hi, RC:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0, cz = 0 in
+  def rmi : RR<opc, (outs RC:$sx), (ins RC:$hi, mimm:$sz, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+}
+
+// Special RR multiclass for 128 bits shift right instruction.
+//   e.g. SRD
+let Constraints = "$low = $sx", DisableEncoding = "$low", hasSideEffects = 0 in
+multiclass RRIRDm<string opcStr, bits<8>opc,
+                  RegisterClass RC, ValueType Ty,
+                  SDPatternOperator OpNode = null_frag> {
+  def rrr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$low, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cz = 0 in
+  def mrr : RR<opc, (outs RC:$sx), (ins mimm:$sz, RC:$low, I32:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0 in
+  def rri : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$low, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
+  let cy = 0, cz = 0 in
+  def mri : RR<opc, (outs RC:$sx), (ins mimm:$sz, RC:$low, uimm7:$sy),
+              !strconcat(opcStr, " $sx, $sz, $sy")>;
 }
 
 // Generic RR multiclass with an argument.
@@ -947,17 +994,20 @@ def : MnemonicAlias<"cmov.s", "cmov.s.at">;
 defm SLL : RRIm<"sll", 0x65, I64, i64, shl>;
 
 // Section 8.6.2 - SLD (Shift Left Double)
+defm SLD : RRILDm<"sld", 0x64, I64, i64>;
 
 // Section 8.6.3 - SRL (Shift Right Logical)
 defm SRL : RRIm<"srl", 0x75, I64, i64, srl>;
 
 // Section 8.6.4 - SRD (Shift Right Double)
+defm SRD : RRIRDm<"srd", 0x74, I64, i64>;
 
 // Section 8.6.5 - SLA (Shift Left Arithmetic)
 defm SLAWSX : RRIm<"sla.w.sx", 0x66, I32, i32, shl>;
 let cx = 1 in defm SLAWZX : RRIm<"sla.w.zx", 0x66, I32, i32>;
 
 // Section 8.6.6 - SLAX (Shift Left Arithmetic)
+defm SLAL : RRIm<"sla.l", 0x57, I64, i64>;
 
 // Section 8.6.7 - SRA (Shift Right Arithmetic)
 defm SRAWSX : RRIm<"sra.w.sx", 0x76, I32, i32, sra>;
