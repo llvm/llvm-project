@@ -999,9 +999,6 @@ public:
     return static_cast<LambdaCaptureDefault>(getLambdaData().CaptureDefault);
   }
 
-  /// Set the captures for this lambda closure type.
-  void setCaptures(ArrayRef<LambdaCapture> Captures);
-
   /// For a closure type, retrieve the mapping from captured
   /// variables and \c this to the non-static data members that store the
   /// values or references of the captures.
@@ -1032,8 +1029,6 @@ public:
     return isLambda() ? captures_begin() + getLambdaData().NumCaptures
                       : nullptr;
   }
-
-  unsigned capture_size() const { return getLambdaData().NumCaptures; }
 
   using conversion_iterator = UnresolvedSetIterator;
 
