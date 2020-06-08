@@ -388,7 +388,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   // pthread_get_stacksize_np() returns an incorrect stack size for the main
   // thread on Mavericks. See
   // https://github.com/google/sanitizers/issues/261
-  if ((GetMacosVersion() >= MACOS_VERSION_MAVERICKS) && at_initialization &&
+  if ((GetMacosAlignedVersion() >= MacosVersion(10, 9)) && at_initialization &&
       stacksize == (1 << 19))  {
     struct rlimit rl;
     CHECK_EQ(getrlimit(RLIMIT_STACK, &rl), 0);
@@ -607,53 +607,27 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
-MacosVersion cached_macos_version = MACOS_VERSION_UNINITIALIZED;
-
-MacosVersion GetMacosVersionInternal() {
-  int mib[2] = { CTL_KERN, KERN_OSRELEASE };
-  char version[100];
-  uptr len = 0, maxlen = sizeof(version) / sizeof(version[0]);
-  for (uptr i = 0; i < maxlen; i++) version[i] = '\0';
-  // Get the version length.
-  CHECK_NE(internal_sysctl(mib, 2, 0, &len, 0, 0), -1);
-  CHECK_LT(len, maxlen);
-  CHECK_NE(internal_sysctl(mib, 2, version, &len, 0, 0), -1);
-
-  // Expect <major>.<minor>(.<patch>)
-  CHECK_GE(len, 3);
-  const char *p = version;
-  int major = internal_simple_strtoll(p, &p, /*base=*/10);
-  if (*p != '.') return MACOS_VERSION_UNKNOWN;
-  p += 1;
-  int minor = internal_simple_strtoll(p, &p, /*base=*/10);
-  if (*p != '.') return MACOS_VERSION_UNKNOWN;
-
-  switch (major) {
-    case 11: return MACOS_VERSION_LION;
-    case 12: return MACOS_VERSION_MOUNTAIN_LION;
-    case 13: return MACOS_VERSION_MAVERICKS;
-    case 14: return MACOS_VERSION_YOSEMITE;
-    case 15: return MACOS_VERSION_EL_CAPITAN;
-    case 16: return MACOS_VERSION_SIERRA;
-    case 17: return MACOS_VERSION_HIGH_SIERRA;
-    case 18: return MACOS_VERSION_MOJAVE;
-    case 19: return MACOS_VERSION_CATALINA;
-    default:
-      if (major < 9) return MACOS_VERSION_UNKNOWN;
-      return MACOS_VERSION_UNKNOWN_NEWER;
-  }
+static MacosVersion GetMacosAlignedVersionInternal() {
+  u16 kernel_major = GetDarwinKernelVersion().major;
+  const u16 version_offset = 4;
+  CHECK_GE(kernel_major, version_offset);
+  u16 macos_major = kernel_major - version_offset;
+  return MacosVersion(10, macos_major);
 }
 
-MacosVersion GetMacosVersion() {
-  atomic_uint32_t *cache =
-      reinterpret_cast<atomic_uint32_t*>(&cached_macos_version);
-  MacosVersion result =
-      static_cast<MacosVersion>(atomic_load(cache, memory_order_acquire));
-  if (result == MACOS_VERSION_UNINITIALIZED) {
-    result = GetMacosVersionInternal();
-    atomic_store(cache, result, memory_order_release);
+static_assert(sizeof(MacosVersion) == sizeof(atomic_uint32_t::Type),
+              "MacosVersion cache size");
+static atomic_uint32_t cached_macos_version;
+
+MacosVersion GetMacosAlignedVersion() {
+  atomic_uint32_t::Type result =
+      atomic_load(&cached_macos_version, memory_order_acquire);
+  if (!result) {
+    MacosVersion version = GetMacosAlignedVersionInternal();
+    result = *reinterpret_cast<atomic_uint32_t::Type *>(&version);
+    atomic_store(&cached_macos_version, result, memory_order_release);
   }
-  return result;
+  return *reinterpret_cast<MacosVersion *>(&result);
 }
 
 DarwinKernelVersion GetDarwinKernelVersion() {
@@ -719,7 +693,7 @@ void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
-  if (GetMacosVersion() >= MACOS_VERSION_YOSEMITE) {
+  if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
     // os_trace requires the message (format parameter) to be a string literal.
     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                          sizeof("AddressSanitizer") - 1) == 0)
@@ -866,7 +840,7 @@ bool DyldNeedsEnvVariable() {
   if (!&dyldVersionNumber) return true;
   // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
   // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
-  // GetMacosVersion() doesn't work for the simulator. Let's instead check
+  // GetMacosAlignedVersion() doesn't work for the simulator. Let's instead check
   // `dyldVersionNumber`, which is exported by dyld, against a known version
   // number from the first OS release where this appeared.
   return dyldVersionNumber < kMinDyldVersionWithAutoInterposition;

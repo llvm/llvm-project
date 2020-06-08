@@ -258,7 +258,7 @@ void InitializePlatform() {
       pthread_introspection_hook_install(&my_pthread_introspection_hook);
 #endif
 
-  if (GetMacosVersion() >= MACOS_VERSION_MOJAVE) {
+  if (GetMacosAlignedVersion() >= MacosVersion(10, 14)) {
     // Libsystem currently uses a process-global key; this might change.
     const unsigned kTLSLongjmpXorKeySlot = 0x7;
     longjmp_xor_key = (uptr)pthread_getspecific(kTLSLongjmpXorKeySlot);
@@ -267,7 +267,7 @@ void InitializePlatform() {
 
 #ifdef __aarch64__
 # define LONG_JMP_SP_ENV_SLOT \
-    ((GetMacosVersion() >= MACOS_VERSION_MOJAVE) ? 12 : 13)
+    ((GetMacosAlignedVersion() >= MacosVersion(10, 14)) ? 12 : 13)
 #else
 # define LONG_JMP_SP_ENV_SLOT 2
 #endif
