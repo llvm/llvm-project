@@ -55,16 +55,6 @@ enum class StatepointFlags {
 class GCRelocateInst;
 class GCResultInst;
 
-bool isStatepoint(const CallBase *Call);
-bool isStatepoint(const Value *V);
-bool isStatepoint(const Value &V);
-
-bool isGCRelocate(const CallBase *Call);
-bool isGCRelocate(const Value *V);
-
-bool isGCResult(const CallBase *Call);
-bool isGCResult(const Value *V);
-
 /// Represents a gc.statepoint intrinsic call.  This extends directly from
 /// CallBase as the IntrinsicInst only supports calls and gc.statepoint is
 /// invokable.
@@ -248,49 +238,11 @@ public:
     return StatepointCall;
   }
 
-  // Deprecated shims (update all callers to remove)
-  uint64_t getFlags() const { return getCall()->getFlags(); }
-  uint64_t getID() const { return getCall()->getID(); }
-  uint32_t getNumPatchBytes() const { return getCall()->getNumPatchBytes(); }
-  int getNumCallArgs() const { return getCall()->getNumCallArgs(); }
-  ValueTy *getCalledValue() const {
-    return getCall()->getActualCalledOperand();
-  }
-  Type *getActualReturnType() const { return getCall()->getActualReturnType(); }
-  FunTy *getCalledFunction() const {
-    return getCall()->getActualCalledFunction();
-  }
-
-  
-  // FIXME: Migrate users of this to `getCall` and remove it.
-  InstructionTy *getInstruction() const { return getCall(); }
-
-  /// Return the caller function for this statepoint.
-  FunTy *getCaller() const { return getCall()->getCaller(); }
-
-  /// Determine if the statepoint cannot unwind.
-  bool doesNotThrow() const {
-    Function *F = getCalledFunction();
-    return getCall()->doesNotThrow() || (F ? F->doesNotThrow() : false);
-  }
-
   size_t arg_size() const { return getCall()->actual_arg_size(); }
   arg_iterator arg_begin() const { return getCall()->actual_arg_begin(); }
   arg_iterator arg_end() const { return getCall()->actual_arg_end(); }
   iterator_range<arg_iterator> call_args() const {
     return getCall()->actual_args();
-  }
-
-  ValueTy *getArgument(unsigned Index) {
-    assert(Index < arg_size() && "out of bounds!");
-    return *(arg_begin() + Index);
-  }
-
-  /// Return true if the call or the callee has the given attribute.
-  bool paramHasAttr(unsigned i, Attribute::AttrKind A) const {
-    Function *F = getCalledFunction();
-    return getCall()->paramHasAttr(i + CallArgsBeginPos, A) ||
-           (F ? F->getAttributes().hasAttribute(i, A) : false);
   }
 
   /// Number of GC transition args.
@@ -348,21 +300,11 @@ public:
     return getCall()->gc_args();
   }
 
-  std::vector<const GCRelocateInst *> getRelocates() const {
-    return getCall()->getGCRelocates();
-  }
-  const GCResultInst *getGCResult() const {
-    return getCall()->getGCResult();
-  }
-
 #ifndef NDEBUG
   /// Asserts if this statepoint is malformed.  Common cases for failure
   /// include incorrect length prefixes for variable length sections or
   /// illegal values for parameters.
   void verify() {
-    assert(getNumCallArgs() >= 0 &&
-           "number of arguments to actually callee can't be negative");
-
     // The internal asserts in the iterator accessors do the rest.
     (void)arg_begin();
     (void)arg_end();
@@ -377,7 +319,7 @@ public:
 };
 
 /// A specialization of it's base class for read only access
-/// to a gc.statepoint.
+/// to a gc.statepoint.  DEPRECATED.  Use GCStatepointInst instead!
 class ImmutableStatepoint
     : public StatepointBase<const Function, const Instruction, const Value,
                             const GCStatepointInst> {
@@ -387,17 +329,6 @@ class ImmutableStatepoint
 public:
   explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
   explicit ImmutableStatepoint(const CallBase *Call) : Base(Call) {}
-};
-
-/// A specialization of it's base class for read-write access
-/// to a gc.statepoint.
-class Statepoint
-    : public StatepointBase<Function, Instruction, Value, GCStatepointInst> {
-  using Base = StatepointBase<Function, Instruction, Value, GCStatepointInst>;
-
-public:
-  explicit Statepoint(Instruction *I) : Base(I) {}
-  explicit Statepoint(CallBase *Call) : Base(Call) {}
 };
 
 /// Common base class for representing values projected from a statepoint.
