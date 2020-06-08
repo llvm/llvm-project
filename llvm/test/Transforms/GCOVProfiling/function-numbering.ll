@@ -1,6 +1,5 @@
 ; Test that GCOV instrumentation numbers functions correctly when some
 ; functions aren't emitted.
-; XFAIL: host-byteorder-big-endian
 
 ; Inject metadata to set the .gcno file location
 ; RUN: rm -rf %t && mkdir -p %t
