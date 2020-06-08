@@ -1,7 +1,3 @@
-set(LLVM_TARGET_DEFINITIONS IR/ShapeCanonicalization.td)
-mlir_tablegen(IR/ShapeCanonicalization.inc -gen-rewriters)
-add_public_tablegen_target(MLIRShapeCanonicalizationIncGen)
-
 add_mlir_dialect_library(MLIRShape
   IR/Shape.cpp
 
