@@ -878,6 +878,10 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 MaybeAlign Alignment, unsigned AddressSpace,
                                 TTI::TargetCostKind CostKind,
                                 const Instruction *I) {
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
   if (ST->hasNEON() && Src->isVectorTy() &&
