@@ -376,4 +376,82 @@ TEST(raw_fd_ostreamTest, multiple_raw_fd_ostream_to_stdout) {
   { raw_fd_ostream("-", EC, sys::fs::OpenFlags::OF_None); }
   { raw_fd_ostream("-", EC, sys::fs::OpenFlags::OF_None); }
 }
+
+TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
+  std::string TiedToBuffer;
+  raw_string_ostream TiedTo(TiedToBuffer);
+  TiedTo.SetBuffered();
+  TiedTo << "a";
+
+  std::string Buffer;
+  raw_string_ostream TiedStream(Buffer);
+  TiedStream.tie(&TiedTo);
+  // Sanity check that the stream hasn't already been flushed.
+  EXPECT_EQ("", TiedToBuffer);
+
+  // Empty string doesn't cause a flush of TiedTo.
+  TiedStream << "";
+  EXPECT_EQ("", TiedToBuffer);
+
+  // Non-empty strings trigger flush of TiedTo.
+  TiedStream << "abc";
+  EXPECT_EQ("a", TiedToBuffer);
+
+  // Single char write flushes TiedTo.
+  TiedTo << "c";
+  TiedStream << 'd';
+  EXPECT_EQ("ac", TiedToBuffer);
+
+  // Write to buffered stream without flush does not flush TiedTo.
+  TiedStream.SetBuffered();
+  TiedStream.SetBufferSize(2);
+  TiedTo << "e";
+  TiedStream << "f";
+  EXPECT_EQ("ac", TiedToBuffer);
+
+  // Explicit flush of buffered stream flushes TiedTo.
+  TiedStream.flush();
+  EXPECT_EQ("ace", TiedToBuffer);
+
+  // Explicit flush of buffered stream with empty buffer does not flush TiedTo.
+  TiedTo << "g";
+  TiedStream.flush();
+  EXPECT_EQ("ace", TiedToBuffer);
+
+  // Write of data to empty buffer that is greater than buffer size flushes
+  // TiedTo.
+  TiedStream << "hijklm";
+  EXPECT_EQ("aceg", TiedToBuffer);
+
+  // Write of data that overflows buffer size also flushes TiedTo.
+  TiedStream.flush();
+  TiedStream << "n";
+  TiedTo << "o";
+  TiedStream << "pq";
+  EXPECT_EQ("acego", TiedToBuffer);
+
+  // Streams can be tied to each other safely.
+  TiedStream.flush();
+  Buffer = "";
+  TiedTo.tie(&TiedStream);
+  TiedTo.SetBufferSize(2);
+  TiedStream << "r";
+  TiedTo << "s";
+  EXPECT_EQ("", Buffer);
+  EXPECT_EQ("acego", TiedToBuffer);
+  TiedTo << "tuv";
+  EXPECT_EQ("r", Buffer);
+  TiedStream << "wxy";
+  EXPECT_EQ("acegostuv", TiedToBuffer);
+  // The x remains in the buffer, since it was written after the flush of
+  // TiedTo.
+  EXPECT_EQ("rwx", Buffer);
+
+  // Calling tie with nullptr unties stream.
+  TiedStream.SetUnbuffered();
+  TiedStream.tie(nullptr);
+  TiedTo << "y";
+  TiedStream << "0";
+  EXPECT_EQ("acegostuv", TiedToBuffer);
+}
 }
