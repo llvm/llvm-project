@@ -199,40 +199,6 @@ void RocmInstallationDetector::print(raw_ostream &OS) const {
     OS << "Found ROCm installation: " << InstallPath << '\n';
 }
 
-void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
-                                                 ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
-    // HIP header includes standard library wrapper headers under clang
-    // cuda_wrappers directory. Since these wrapper headers include_next
-    // standard C++ headers, whereas libc++ headers include_next other clang
-    // headers. The include paths have to follow this order:
-    // - wrapper include path
-    // - standard C++ include path
-    // - other clang include path
-    // Since standard C++ and other clang include paths are added in other
-    // places after this function, here we only need to make sure wrapper
-    // include path is added.
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include");
-    llvm::sys::path::append(P, "cuda_wrappers");
-    CC1Args.push_back("-internal-isystem");
-    CC1Args.push_back(DriverArgs.MakeArgString(P));
-    CC1Args.push_back("-include");
-    CC1Args.push_back("__clang_hip_runtime_wrapper.h");
-  }
-
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
-    return;
-
-  if (!isValid()) {
-    D.Diag(diag::err_drv_no_rocm_installation);
-    return;
-  }
-
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
-}
-
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,

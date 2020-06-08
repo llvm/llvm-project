@@ -8,7 +8,7 @@
 // Test subtarget with flushing on by default.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx803 \
-// RUN:  --rocm-path=%S/Inputs/rocm   \
+// RUN:  --rocm-path=%S/Inputs/rocm-device-libs   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
@@ -16,7 +16,7 @@
 // Test subtarget with flushing off by ddefault.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx900 \
-// RUN:  --rocm-path=%S/Inputs/rocm \
+// RUN:  --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
@@ -25,7 +25,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fcuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
@@ -34,7 +34,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fno-cuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
@@ -43,7 +43,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fno-cuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
@@ -52,7 +52,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fcuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
@@ -61,7 +61,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fcuda-flush-denormals-to-zero -fno-cuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
@@ -69,7 +69,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fcuda-flush-denormals-to-zero -fno-cuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm   \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
 
@@ -77,7 +77,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -fno-cuda-flush-denormals-to-zero -fcuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm   \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
@@ -85,7 +85,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
 // RUN:   -fno-cuda-flush-denormals-to-zero -fcuda-flush-denormals-to-zero \
-// RUN:   --rocm-path=%S/Inputs/rocm \
+// RUN:   --rocm-path=%S/Inputs/rocm-device-libs \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
@@ -93,13 +93,13 @@
 // Test --hip-device-lib-path flag
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
-// RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
+// RUN:   --hip-device-lib-path=%S/Inputs/rocm-device-libs/amdgcn/bitcode   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
 
 
 // Test environment variable HIP_DEVICE_LIB_PATH
-// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm/amdgcn/bitcode \
+// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm-device-libs/amdgcn/bitcode \
 // RUN:   %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
