@@ -42,10 +42,6 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
 
-/// Creates sanitizer constructor function.
-/// \return Returns pointer to constructor.
-Function *createSanitizerCtor(Module &M, StringRef CtorName);
-
 /// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
