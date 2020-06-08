@@ -57,9 +57,9 @@ declare extern_weak void @foo_ext_weak(i32*)
 ; COMMON-NEXT:    .weak   .foo_ext_weak
 ; COMMON-NEXT:    .weak   foo_ext_weak[DS]
 ; COMMON-NEXT:    .toc
-; COMMON-NEXT: LC0:
+; COMMON-NEXT: L..C0:
 ; COMMON-NEXT:    .tc foo_ext_weak_p[TC],foo_ext_weak_p
-; COMMON-NEXT: LC1:
+; COMMON-NEXT: L..C1:
 ; COMMON-NEXT:    .tc b_w[TC],b_w[UA]
 
 ; CHECK-NOT:      .weak   .foo_ext_weak_ref

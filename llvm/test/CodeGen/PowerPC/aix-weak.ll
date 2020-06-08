@@ -92,9 +92,9 @@ entry:
 ; COMMON-NEXT:  b:
 ; COMMON-NEXT:          .vbyte	4, 0                       # 0x0
 ; COMMON-NEXT:          .toc
-; COMMON-NEXT:  LC0:
+; COMMON-NEXT:  L..C0:
 ; COMMON-NEXT:          .tc foo_weak_p[TC],foo_weak_p
-; COMMON-NEXT:  LC1:
+; COMMON-NEXT:  L..C1:
 ; COMMON-NEXT:          .tc b[TC],b
 
 
