@@ -331,7 +331,7 @@ Scalar &Scalar::operator=(unsigned long v) {
 
 Scalar &Scalar::operator=(long long v) {
   m_type = e_slonglong;
-  m_integer = llvm::APInt(sizeof(long) * 8, v, true);
+  m_integer = llvm::APInt(sizeof(long long) * 8, v, true);
   return *this;
 }
 
