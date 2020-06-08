@@ -438,7 +438,7 @@ def Shape_ConcatOp : Shape_Op<"concat", []> {
 //===----------------------------------------------------------------------===//
 
 //TODO(tpopp): Move the code below and witnesses to a different file.
-def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
+def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
   let summary = "Return any combination of the input shapes";
   let description = [{
     This operation takes multiple input shapes and returns some combination of
@@ -458,6 +458,8 @@ def Shape_AnyOp : Shape_Op<"any", [NoSideEffect]> {
   let results = (outs Shape_ShapeType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
+
+  let hasFolder = 1;
 }
 
 def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> {
