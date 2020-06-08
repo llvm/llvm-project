@@ -111,6 +111,16 @@ static const MCPhysReg F32Regs[64] = {
     VE::SF56, VE::SF57, VE::SF58, VE::SF59, VE::SF60, VE::SF61, VE::SF62,
     VE::SF63};
 
+static const MCPhysReg MISCRegs[31] = {
+    VE::USRCC,      VE::PSW,        VE::SAR,        VE::NoRegister,
+    VE::NoRegister, VE::NoRegister, VE::NoRegister, VE::PMMR,
+    VE::PMCR0,      VE::PMCR1,      VE::PMCR2,      VE::PMCR3,
+    VE::NoRegister, VE::NoRegister, VE::NoRegister, VE::NoRegister,
+    VE::PMC0,       VE::PMC1,       VE::PMC2,       VE::PMC3,
+    VE::PMC4,       VE::PMC5,       VE::PMC6,       VE::PMC7,
+    VE::PMC8,       VE::PMC9,       VE::PMC10,      VE::PMC11,
+    VE::PMC12,      VE::PMC13,      VE::PMC14};
+
 namespace {
 
 /// VEOperand - Instances of this class represent a parsed VE machine
@@ -191,12 +201,45 @@ public:
   bool isMEMri() const { return Kind == k_MemoryRegImm; }
   bool isMEMzi() const { return Kind == k_MemoryZeroImm; }
   bool isCCOp() const { return Kind == k_CCOp; }
+  bool isZero() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return Value == 0;
+    }
+    return false;
+  }
+  bool isUImm3() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<3>(Value);
+    }
+    return false;
+  }
+  bool isUImm6() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<6>(Value);
+    }
+    return false;
+  }
   bool isUImm7() {
     if (!isImm())
       return false;
 
     // Constant case
-    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
       int64_t Value = ConstExpr->getValue();
       return isUInt<7>(Value);
     }
@@ -207,7 +250,7 @@ public:
       return false;
 
     // Constant case
-    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
       int64_t Value = ConstExpr->getValue();
       return isInt<7>(Value);
     }
@@ -218,7 +261,7 @@ public:
       return false;
 
     // Constant case
-    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(MImm.Val)) {
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(MImm.Val)) {
       int64_t Value = ConstExpr->getValue();
       return isUInt<6>(Value);
     }
@@ -351,10 +394,21 @@ public:
     addExpr(Inst, Expr);
   }
 
-  void addUImm7Operands(MCInst &Inst, unsigned N) const {
+  void addZeroOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
+  void addUImm3Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void addUImm6Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void addUImm7Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
   void addSImm7Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
@@ -363,7 +417,7 @@ public:
     // Add as immediate when possible.  Null MCExpr = 0.
     if (!Expr)
       Inst.addOperand(MCOperand::createImm(0));
-    else if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
+    else if (const auto *CE = dyn_cast<MCConstantExpr>(Expr))
       Inst.addOperand(MCOperand::createImm(CE->getValue()));
     else
       Inst.addOperand(MCOperand::createExpr(Expr));
@@ -492,6 +546,18 @@ public:
     if (regIdx > 63)
       return false;
     Op.Reg.RegNum = F32Regs[regIdx];
+    return true;
+  }
+
+  static bool MorphToMISCReg(VEOperand &Op) {
+    const auto *ConstExpr = dyn_cast<MCConstantExpr>(Op.getImm());
+    if (!ConstExpr)
+      return false;
+    unsigned regIdx = ConstExpr->getValue();
+    if (regIdx > 31 || MISCRegs[regIdx] == VE::NoRegister)
+      return false;
+    Op.Kind = k_Register;
+    Op.Reg.RegNum = MISCRegs[regIdx];
     return true;
   }
 
@@ -1095,6 +1161,10 @@ unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
     break;
   case MCK_I32:
     if (Op.isReg() && VEOperand::MorphToI32Reg(Op))
+      return MCTargetAsmParser::Match_Success;
+    break;
+  case MCK_MISC:
+    if (Op.isImm() && VEOperand::MorphToMISCReg(Op))
       return MCTargetAsmParser::Match_Success;
     break;
   }

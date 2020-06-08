@@ -38,6 +38,9 @@ using namespace VE;
 void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   // Generic registers have identical register name among register classes.
   unsigned AltIdx = VE::AsmName;
+  // Misc registers have each own name, so no use alt-names.
+  if (MRI.getRegClass(VE::MISCRegClassID).contains(RegNo))
+    AltIdx = VE::NoRegAltName;
   OS << '%' << getRegisterName(RegNo, AltIdx);
 }
 
