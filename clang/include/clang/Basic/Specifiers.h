@@ -72,6 +72,7 @@ namespace clang {
     TST_Float16,      // C11 extension ISO/IEC TS 18661-3
     TST_Accum,        // ISO/IEC JTC1 SC22 WG14 N1169 Extension
     TST_Fract,
+    TST_BFloat16,
     TST_float,
     TST_double,
     TST_float128,

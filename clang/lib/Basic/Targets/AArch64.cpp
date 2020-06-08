@@ -71,6 +71,9 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   LongDoubleWidth = LongDoubleAlign = SuitableAlign = 128;
   LongDoubleFormat = &llvm::APFloat::IEEEquad();
 
+  BFloat16Width = BFloat16Align = 16;
+  BFloat16Format = &llvm::APFloat::BFloat();
+
   // Make __builtin_ms_va_list available.
   HasBuiltinMSVaList = true;
 
@@ -364,6 +367,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMTE = false;
   HasTME = false;
   HasMatMul = false;
+  HasBFloat16 = false;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -401,6 +405,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTME = true;
     if (Feature == "+i8mm")
       HasMatMul = true;
+    if (Feature == "+bf16")
+      HasBFloat16 = true;
   }
 
   setDataLayout();

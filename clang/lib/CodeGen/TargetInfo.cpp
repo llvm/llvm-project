@@ -5375,6 +5375,10 @@ private:
 
   bool isLegalVectorTypeForSwift(CharUnits totalSize, llvm::Type *eltTy,
                                  unsigned elts) const override;
+
+  bool allowBFloatArgsAndRet() const override {
+    return getTarget().hasBFloat16Type();
+  }
 };
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -5980,11 +5984,14 @@ public:
 
 private:
   ABIKind Kind;
+  bool IsFloatABISoftFP;
 
 public:
   ARMABIInfo(CodeGenTypes &CGT, ABIKind _Kind)
       : SwiftABIInfo(CGT), Kind(_Kind) {
     setCCs();
+    IsFloatABISoftFP = CGT.getCodeGenOpts().FloatABI == "softfp" ||
+        CGT.getCodeGenOpts().FloatABI == ""; // default
   }
 
   bool isEABI() const {
@@ -6014,6 +6021,10 @@ public:
   }
 
   ABIKind getABIKind() const { return Kind; }
+
+  bool allowBFloatArgsAndRet() const override {
+    return !IsFloatABISoftFP && getTarget().hasBFloat16Type();
+  }
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy, bool isVariadic,
@@ -6254,14 +6265,21 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty);
 
-  // _Float16 and __fp16 get passed as if it were an int or float, but with
-  // the top 16 bits unspecified. This is not done for OpenCL as it handles the
-  // half type natively, and does not need to interwork with AAPCS code.
+  // _Float16 and __fp16 get passed as if it were an int or float, but
+  // with the top 16 bits unspecified. This is not done for OpenCL as it handles
+  // the half type natively, and does not need to interwork with AAPCS code.
   if ((Ty->isFloat16Type() || Ty->isHalfType()) &&
       !getContext().getLangOpts().NativeHalfArgsAndReturns) {
     llvm::Type *ResType = IsAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(ResType);
+  }
+
+  // __bf16 gets passed using the bfloat IR type, or using i32 but
+  // with the top 16 bits unspecified.
+  if (Ty->isBFloat16Type() && IsFloatABISoftFP) {
+    llvm::Type *ResType = llvm::Type::getInt32Ty(getVMContext());
     return ABIArgInfo::getDirect(ResType);
   }
 
@@ -6458,10 +6476,13 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     // Large vector types should be returned via memory.
     if (getContext().getTypeSize(RetTy) > 128)
       return getNaturalAlignIndirect(RetTy);
-    // FP16 vectors should be converted to integer vectors
-    if (!getTarget().hasLegalHalfType() &&
+    // TODO: FP16/BF16 vectors should be converted to integer vectors
+    // This check is similar  to isIllegalVectorType - refactor?
+    if ((!getTarget().hasLegalHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
-         VT->getElementType()->isHalfType()))
+         VT->getElementType()->isHalfType())) ||
+        (IsFloatABISoftFP &&
+         VT->getElementType()->isBFloat16Type()))
       return coerceIllegalVector(RetTy);
   }
 
@@ -6472,6 +6493,15 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
       !getContext().getLangOpts().NativeHalfArgsAndReturns) {
     llvm::Type *ResType = IsAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
+      llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(ResType);
+  }
+
+  // if we're using the softfp float abi, __bf16 get returned as if it were an
+  // int but with the top 16 bits unspecified.
+  if (RetTy->isBFloat16Type()) {
+    llvm::Type *ResType = IsAAPCS_VFP ?
+      llvm::Type::getBFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());
     return ABIArgInfo::getDirect(ResType);
   }
@@ -6562,12 +6592,17 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
 /// isIllegalVector - check whether Ty is an illegal vector type.
 bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
   if (const VectorType *VT = Ty->getAs<VectorType> ()) {
-    // On targets that don't support FP16, FP16 is expanded into float, and we
-    // don't want the ABI to depend on whether or not FP16 is supported in
-    // hardware. Thus return false to coerce FP16 vectors into integer vectors.
-    if (!getTarget().hasLegalHalfType() &&
+    // On targets that don't support half, fp16 or bfloat, they are expanded
+    // into float, and we don't want the ABI to depend on whether or not they
+    // are supported in hardware. Thus return false to coerce vectors of these
+    // types into integer vectors.
+    // We do not depend on hasLegalHalfType for bfloat as it is a
+    // separate IR type.
+    if ((!getTarget().hasLegalHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
-         VT->getElementType()->isHalfType()))
+         VT->getElementType()->isHalfType())) ||
+        (IsFloatABISoftFP &&
+         VT->getElementType()->isBFloat16Type()))
       return true;
     if (isAndroid()) {
       // Android shipped using Clang 3.1, which supported a slightly different
@@ -6619,6 +6654,7 @@ bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
   } else {
     if (const VectorType *VT = Ty->getAs<VectorType>())
       return (VT->getElementType()->isFloat16Type() ||
+              VT->getElementType()->isBFloat16Type() ||
               VT->getElementType()->isHalfType());
     return false;
   }

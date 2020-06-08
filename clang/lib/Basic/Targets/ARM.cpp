@@ -25,6 +25,9 @@ void ARMTargetInfo::setABIAAPCS() {
   IsAAPCS = true;
 
   DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
+  BFloat16Width = BFloat16Align = 16;
+  BFloat16Format = &llvm::APFloat::BFloat();
+
   const llvm::Triple &T = getTriple();
 
   bool IsNetBSD = T.isOSNetBSD();
@@ -74,6 +77,8 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   else
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 32;
+  BFloat16Width = BFloat16Align = 16;
+  BFloat16Format = &llvm::APFloat::BFloat();
 
   WCharType = SignedInt;
 
@@ -428,6 +433,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMatMul = 0;
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
+  HasBFloat16 = false;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "-fp64".
@@ -498,6 +504,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                Feature <= "+cdecp7") {
       unsigned Coproc = Feature.back() - '0';
       ARMCDECoprocMask |= (1U << Coproc);
+    } else if (Feature == "+bf16") {
+      HasBFloat16 = true;
     }
   }
 
@@ -545,6 +553,10 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hwdiv-arm", HWDiv & HWDivARM)
       .Case("mve", hasMVE())
       .Default(false);
+}
+
+bool ARMTargetInfo::hasBFloat16Type() const {
+  return HasBFloat16 && !SoftFloat;
 }
 
 bool ARMTargetInfo::isValidCPUName(StringRef Name) const {

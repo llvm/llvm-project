@@ -60,6 +60,8 @@ namespace swiftcall {
 
     virtual bool supportsSwift() const { return false; }
 
+    virtual bool allowBFloatArgsAndRet() const { return false; }
+
     CodeGen::CGCXXABI &getCXXABI() const;
     ASTContext &getContext() const;
     llvm::LLVMContext &getVMContext() const;
