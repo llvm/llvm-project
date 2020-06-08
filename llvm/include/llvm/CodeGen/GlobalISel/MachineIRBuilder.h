@@ -14,8 +14,6 @@
 #define LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
-#include "llvm/CodeGen/GlobalISel/Types.h"
-
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
