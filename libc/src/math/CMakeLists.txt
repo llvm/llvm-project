@@ -64,6 +64,8 @@ add_entrypoint_object(
     fabs.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -74,6 +76,20 @@ add_entrypoint_object(
     fabsf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fabsl
+  SRCS
+    fabsl.cpp
+  HDRS
+    fabsl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -84,6 +100,8 @@ add_entrypoint_object(
     trunc.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -94,6 +112,20 @@ add_entrypoint_object(
     truncf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  truncl
+  SRCS
+    truncl.cpp
+  HDRS
+    truncl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -104,6 +136,8 @@ add_entrypoint_object(
     ceil.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -114,6 +148,8 @@ add_entrypoint_object(
     ceilf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -124,6 +160,8 @@ add_entrypoint_object(
     floor.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -134,6 +172,8 @@ add_entrypoint_object(
     floorf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
