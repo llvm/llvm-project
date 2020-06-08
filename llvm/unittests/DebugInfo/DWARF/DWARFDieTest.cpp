@@ -50,7 +50,7 @@ TEST(DWARFDie, getLocations) {
               - Value:           25
   )";
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
-      DWARFYAML::EmitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
+      DWARFYAML::emitDebugSections(StringRef(yamldata), /*ApplyFixups=*/true,
                                    /*IsLittleEndian=*/true);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   std::vector<uint8_t> Loclists{
