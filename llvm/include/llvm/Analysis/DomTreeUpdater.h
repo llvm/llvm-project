@@ -23,6 +23,8 @@
 #include <vector>
 
 namespace llvm {
+class PostDominatorTree;
+
 class DomTreeUpdater {
 public:
   enum class UpdateStrategy : unsigned char { Eager = 0, Lazy = 1 };
