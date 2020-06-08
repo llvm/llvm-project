@@ -140,6 +140,7 @@ FIELD(HasInheritedAssignment, 1, NO_MERGE)
 /// @{
 FIELD(NeedOverloadResolutionForCopyConstructor, 1, NO_MERGE)
 FIELD(NeedOverloadResolutionForMoveConstructor, 1, NO_MERGE)
+FIELD(NeedOverloadResolutionForCopyAssignment, 1, NO_MERGE)
 FIELD(NeedOverloadResolutionForMoveAssignment, 1, NO_MERGE)
 FIELD(NeedOverloadResolutionForDestructor, 1, NO_MERGE)
 /// @}
@@ -149,6 +150,7 @@ FIELD(NeedOverloadResolutionForDestructor, 1, NO_MERGE)
 /// @{
 FIELD(DefaultedCopyConstructorIsDeleted, 1, NO_MERGE)
 FIELD(DefaultedMoveConstructorIsDeleted, 1, NO_MERGE)
+FIELD(DefaultedCopyAssignmentIsDeleted, 1, NO_MERGE)
 FIELD(DefaultedMoveAssignmentIsDeleted, 1, NO_MERGE)
 FIELD(DefaultedDestructorIsDeleted, 1, NO_MERGE)
 /// @}
