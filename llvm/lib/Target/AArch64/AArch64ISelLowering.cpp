@@ -1256,7 +1256,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
 
 // Same as above but handling LLTs instead.
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
-    LLT Ty, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    LLT Ty, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     bool *Fast) const {
   if (Subtarget->requiresStrictAlign())
     return false;
@@ -1271,7 +1271,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
             // Code that uses clang vector extensions can mark that it
             // wants unaligned accesses to be treated as fast by
             // underspecifying alignment to be 1 or 2.
-            Align <= 2 ||
+            Alignment <= 2 ||
 
             // Disregard v2i64. Memcpy lowering produces those and splitting
             // them regresses performance on micro-benchmarks and olden/bh.

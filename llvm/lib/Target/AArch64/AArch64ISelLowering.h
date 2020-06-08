@@ -413,9 +413,10 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *Fast = nullptr) const override;
   /// LLT variant.
-  bool allowsMisalignedMemoryAccesses(
-    LLT Ty, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
-    bool *Fast = nullptr) const override;
+  bool allowsMisalignedMemoryAccesses(LLT Ty, unsigned AddrSpace,
+                                      Align Alignment,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast = nullptr) const override;
 
   /// Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
