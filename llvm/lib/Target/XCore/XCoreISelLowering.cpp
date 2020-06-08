@@ -1119,7 +1119,7 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
 
   // The ABI dictates there should be one stack slot available to the callee
   // on function entry (for saving lr).
-  CCInfo.AllocateStack(4, 4);
+  CCInfo.AllocateStack(4, Align(4));
 
   CCInfo.AnalyzeCallOperands(Outs, CC_XCore);
 
@@ -1127,7 +1127,7 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
   // Analyze return values to determine the number of bytes of stack required.
   CCState RetCCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext());
-  RetCCInfo.AllocateStack(CCInfo.getNextStackOffset(), 4);
+  RetCCInfo.AllocateStack(CCInfo.getNextStackOffset(), Align(4));
   RetCCInfo.AnalyzeCallResult(Ins, RetCC_XCore);
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -1455,7 +1455,7 @@ XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Analyze return values.
   if (!isVarArg)
-    CCInfo.AllocateStack(XFI->getReturnStackOffset(), 4);
+    CCInfo.AllocateStack(XFI->getReturnStackOffset(), Align(4));
 
   CCInfo.AnalyzeReturn(Outs, RetCC_XCore);
 
