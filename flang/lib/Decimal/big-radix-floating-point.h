@@ -179,7 +179,10 @@ private:
       if (remove >= digits_) {
         digits_ = 0;
       } else if (remove > 0) {
-        for (int j{0}; j + remove < digits_; ++j) {
+        // (&& j + remove < maxDigits) was added to avoid GCC < 8 build failure
+        // on -Werror=array-bounds
+        for (int j{ 0 }; j + remove < digits_ && (j + remove < maxDigits);
+             ++j) {
           digit_[j] = digit_[j + remove];
         }
         digits_ -= remove;
