@@ -784,7 +784,21 @@ Instruction *InstCombiner::visitTrunc(TruncInst &Trunc) {
     return CastInst::CreateIntegerCast(Shift, DestTy, false);
   }
 
-  // FIXME: We should canonicalize to zext/trunc and remove this transform.
+  const APInt *C;
+  if (match(Src, m_LShr(m_SExt(m_Value(A)), m_APInt(C))) &&
+      A->getType() == DestTy) {
+    // If the shift is small enough, all zero bits created by the shift are
+    // removed by the trunc:
+    // trunc (lshr (sext A), C) --> ashr A, C
+    if (C->getZExtValue() <= SrcWidth - DestWidth) {
+      unsigned ShAmt = std::min((unsigned)C->getZExtValue(), DestWidth - 1);
+      return BinaryOperator::CreateAShr(A, ConstantInt::get(DestTy, ShAmt));
+    }
+    // TODO: Mask high bits with 'and'.
+  }
+
+  // More complicated: deal with mismatched sizes.
+  // FIXME: This is too restrictive for uses and doesn't work with vectors.
   // Transform trunc(lshr (sext A), Cst) to ashr A, Cst to eliminate type
   // conversion.
   // It works because bits coming from sign extension have the same value as
@@ -803,9 +817,6 @@ Instruction *InstCombiner::visitTrunc(TruncInst &Trunc) {
     // FIXME: Instead of bailing when the shift is too large, use and to clear
     // the extra bits.
     if (ShiftAmt <= MaxAmt) {
-      if (DestWidth == ASize)
-        return BinaryOperator::CreateAShr(
-            A, ConstantInt::get(DestTy, std::min(ShiftAmt, ASize - 1)));
       if (SExt->hasOneUse()) {
         Value *Shift = Builder.CreateAShr(A, std::min(ShiftAmt, ASize - 1));
         Shift->takeName(Src);
