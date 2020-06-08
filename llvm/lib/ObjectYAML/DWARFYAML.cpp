@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 namespace llvm {
 
@@ -74,6 +75,7 @@ void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
 
 void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
                                                DWARFYAML::ARange &ARange) {
+  IO.mapOptional("Format", ARange.Format, dwarf::DWARF32);
   IO.mapRequired("Length", ARange.Length);
   IO.mapRequired("Version", ARange.Version);
   IO.mapRequired("CuOffset", ARange.CuOffset);
