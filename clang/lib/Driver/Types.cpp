@@ -24,10 +24,19 @@ struct TypeInfo {
   const char *Name;
   const char *TempSuffix;
   ID PreprocessedType;
-  const llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> Phases;
+  class PhasesBitSet {
+    unsigned Bits = 0;
+
+  public:
+    constexpr PhasesBitSet(const std::initializer_list<phases::ID> &Phases) {
+      for (auto Id : Phases)
+        Bits |= 1 << Id;
+    }
+    bool contains(phases::ID Id) const { return Bits & (1 << Id); }
+  } Phases;
 };
 
-static const TypeInfo TypeInfos[] = {
+static constexpr TypeInfo TypeInfos[] = {
 #define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, ...) \
   { NAME, TEMP_SUFFIX, TY_##PP_TYPE, { __VA_ARGS__ }, },
 #include "clang/Driver/Types.def"
@@ -46,18 +55,18 @@ const char *types::getTypeName(ID Id) {
 
 types::ID types::getPreprocessedType(ID Id) {
   ID PPT = getInfo(Id).PreprocessedType;
-  assert((llvm::is_contained(getInfo(Id).Phases, phases::Preprocess) !=
+  assert((getInfo(Id).Phases.contains(phases::Preprocess) !=
           (PPT == TY_INVALID)) &&
          "Unexpected Preprocess Type.");
   return PPT;
 }
 
-static bool isPrepeocessedModuleType(ID Id) {
+static bool isPreprocessedModuleType(ID Id) {
   return Id == TY_CXXModule || Id == TY_PP_CXXModule;
 }
 
 types::ID types::getPrecompiledType(ID Id) {
-  if (isPrepeocessedModuleType(Id))
+  if (isPreprocessedModuleType(Id))
     return TY_ModuleFile;
   if (onlyPrecompileType(Id))
     return TY_PCH;
@@ -82,14 +91,14 @@ const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
 }
 
 bool types::onlyAssembleType(ID Id) {
-  return llvm::is_contained(getInfo(Id).Phases, phases::Assemble) &&
-         !llvm::is_contained(getInfo(Id).Phases, phases::Compile) &&
-         !llvm::is_contained(getInfo(Id).Phases, phases::Backend);
+  return getInfo(Id).Phases.contains(phases::Assemble) &&
+         !getInfo(Id).Phases.contains(phases::Compile) &&
+         !getInfo(Id).Phases.contains(phases::Backend);
 }
 
 bool types::onlyPrecompileType(ID Id) {
-  return llvm::is_contained(getInfo(Id).Phases, phases::Precompile) &&
-         !isPrepeocessedModuleType(Id);
+  return getInfo(Id).Phases.contains(phases::Precompile) &&
+         !isPreprocessedModuleType(Id);
 }
 
 bool types::canTypeBeUserSpecified(ID Id) {
@@ -306,7 +315,10 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 // FIXME: The list is now in Types.def but for now this function will verify
 //        the old behavior and a subsequent change will delete most of the body.
 void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
-  P = getInfo(Id).Phases;
+  const auto &Info = getInfo(Id);
+  for (int I = 0; I != phases::MaxNumberOfPhases; ++I)
+    if (Info.Phases.contains(static_cast<phases::ID>(I)))
+      P.push_back(static_cast<phases::ID>(I));
   assert(0 < P.size() && "Not enough phases in list");
   assert(P.size() <= phases::MaxNumberOfPhases && "Too many phases in list");
 }
