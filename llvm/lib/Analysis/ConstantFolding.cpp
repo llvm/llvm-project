@@ -1977,7 +1977,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           const double SinVals[4] = { 0.0, 1.0, 0.0, -1.0 };
           V = SinVals[((int)V4 + (IsCos ? 1 : 0)) & 3];
         } else {
-          V = (IsCos ? cos : sin)(V * 2.0 * numbers::pi);
+          if (IsCos)
+            V = cos(V * 2.0 * numbers::pi);
+          else
+            V = sin(V * 2.0 * numbers::pi);
         }
         return GetConstantFoldFPValue(V, Ty);
     }
