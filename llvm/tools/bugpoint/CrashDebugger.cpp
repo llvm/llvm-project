@@ -864,7 +864,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
   // selected in Instructions.
   for (Function &F : *M)
     for (Instruction &Inst : instructions(F)) {
-      if (Instructions.find(&Inst) == Instructions.end()) {
+      if (!Instructions.count(&Inst)) {
         Inst.dropUnknownNonDebugMetadata();
         Inst.setDebugLoc({});
       }

@@ -973,9 +973,8 @@ static std::string getMacroNameAndPrintExpansion(
   // in this case we don't get the full expansion text in the Plist file. See
   // the test file where "value" is expanded to "garbage_" instead of
   // "garbage_value".
-  if (AlreadyProcessedTokens.find(IDInfo) != AlreadyProcessedTokens.end())
+  if (!AlreadyProcessedTokens.insert(IDInfo).second)
     return Info.Name;
-  AlreadyProcessedTokens.insert(IDInfo);
 
   if (!Info.MI)
     return Info.Name;
