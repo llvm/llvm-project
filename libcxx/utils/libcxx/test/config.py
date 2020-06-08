@@ -636,6 +636,7 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
         self.cxx.addWarningFlagIfSupported('-Wno-noexcept-type')
         self.cxx.addWarningFlagIfSupported('-Wno-aligned-allocation-unavailable')
+        self.cxx.addWarningFlagIfSupported('-Wno-atomic-alignment')
         # These warnings should be enabled in order to support the MSVC
         # team using the test suite; They enable the warnings below and
         # expect the test suite to be clean.
