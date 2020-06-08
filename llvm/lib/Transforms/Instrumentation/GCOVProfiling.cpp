@@ -62,6 +62,12 @@ static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
                                                cl::init("408*"), cl::Hidden,
                                                cl::ValueRequired);
 
+// Returns the number of words which will be used to represent this string.
+static unsigned wordsOfString(StringRef s) {
+  // Length + NUL-terminated string + 0~3 padding NULs.
+  return (s.size() / 4) + 2;
+}
+
 GCOVOptions GCOVOptions::getDefault() {
   GCOVOptions Options;
   Options.EmitNotes = true;
@@ -86,6 +92,18 @@ public:
   bool
   runOnModule(Module &M,
               std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
+
+  void write(uint32_t i) {
+    char Bytes[4];
+    endian::write32(Bytes, i, Endian);
+    os->write(Bytes, 4);
+  }
+  void writeString(StringRef s) {
+    write(wordsOfString(s) - 1);
+    os->write(s.data(), s.size());
+    os->write_zeros(4 - s.size() % 4);
+  }
+  void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
@@ -120,6 +138,8 @@ private:
   std::string mangleName(const DICompileUnit *CU, GCovFileType FileType);
 
   GCOVOptions Options;
+  support::endianness Endian;
+  raw_ostream *os;
 
   // Checksum, produced by hash of EdgeDestinations
   SmallVector<uint32_t, 4> FileChecksums;
@@ -196,37 +216,13 @@ static SmallString<128> getFilename(const DISubprogram *SP) {
 namespace {
   class GCOVRecord {
   protected:
-    support::endianness Endian;
+    GCOVProfiler *P;
 
-    GCOVRecord(support::endianness Endian) : Endian(Endian) {}
+    GCOVRecord(GCOVProfiler *P) : P(P) {}
 
-    void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
-
-    void write(uint32_t i) {
-      char Bytes[4];
-      endian::write32(Bytes, i, Endian);
-      os->write(Bytes, 4);
-    }
-
-    // Returns the length measured in 4-byte blocks that will be used to
-    // represent this string in a GCOV file
-    static unsigned lengthOfGCOVString(StringRef s) {
-      // A GCOV string is a length, followed by a NUL, then between 0 and 3 NULs
-      // padding out to the next 4-byte word. The length is measured in 4-byte
-      // words including padding, not bytes of actual string.
-      return (s.size() / 4) + 1;
-    }
-
-    void writeGCOVString(StringRef s) {
-      uint32_t Len = lengthOfGCOVString(s);
-      write(Len);
-      writeBytes(s.data(), s.size());
-
-      // Write 1 to 4 bytes of NUL padding.
-      writeBytes("\0\0\0\0", 4 - (s.size() % 4));
-    }
-
-    raw_ostream *os;
+    void write(uint32_t i) { P->write(i); }
+    void writeString(StringRef s) { P->writeString(s); }
+    void writeBytes(const char *Bytes, int Size) { P->writeBytes(Bytes, Size); }
   };
 
   class GCOVFunction;
@@ -243,23 +239,20 @@ namespace {
     }
 
     uint32_t length() const {
-      // Here 2 = 1 for string length + 1 for '0' id#.
-      return lengthOfGCOVString(Filename) + 2 + Lines.size();
+      return 1 + wordsOfString(Filename) + Lines.size();
     }
 
     void writeOut() {
       write(0);
-      writeGCOVString(Filename);
+      writeString(Filename);
       for (int i = 0, e = Lines.size(); i != e; ++i)
         write(Lines[i]);
     }
 
-    GCOVLines(StringRef F, raw_ostream *os, support::endianness Endian)
-        : GCOVRecord(Endian), Filename(std::string(F)) {
-      this->os = os;
-    }
+    GCOVLines(GCOVProfiler *P, StringRef F)
+        : GCOVRecord(P), Filename(std::string(F)) {}
 
-   private:
+  private:
     std::string Filename;
     SmallVector<uint32_t, 32> Lines;
   };
@@ -271,8 +264,7 @@ namespace {
   class GCOVBlock : public GCOVRecord {
    public:
     GCOVLines &getFile(StringRef Filename) {
-      return LinesByFile.try_emplace(Filename, Filename, os, Endian)
-          .first->second;
+      return LinesByFile.try_emplace(Filename, P, Filename).first->second;
     }
 
     void addEdge(GCOVBlock &Successor) {
@@ -312,10 +304,8 @@ namespace {
    private:
     friend class GCOVFunction;
 
-    GCOVBlock(uint32_t Number, raw_ostream *os, support::endianness Endian)
-        : GCOVRecord(Endian), Number(Number) {
-      this->os = os;
-    }
+    GCOVBlock(GCOVProfiler *P, uint32_t Number)
+        : GCOVRecord(P), Number(Number) {}
 
     uint32_t Number;
     StringMap<GCOVLines> LinesByFile;
@@ -327,21 +317,18 @@ namespace {
   // object users can construct, the blocks and lines will be rooted here.
   class GCOVFunction : public GCOVRecord {
   public:
-    GCOVFunction(const DISubprogram *SP, Function *F, raw_ostream *os,
-                 support::endianness Endian, uint32_t Ident,
-                 bool UseCfgChecksum, bool ExitBlockBeforeBody)
-        : GCOVRecord(Endian), SP(SP), Ident(Ident),
-          UseCfgChecksum(UseCfgChecksum), ReturnBlock(1, os, Endian) {
-      this->os = os;
-
+    GCOVFunction(GCOVProfiler *P, Function *F, const DISubprogram *SP,
+                 unsigned EndLine, uint32_t Ident, int Version)
+        : GCOVRecord(P), SP(SP), EndLine(EndLine), Ident(Ident),
+          Version(Version), ReturnBlock(P, 1) {
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
-
+      bool ExitBlockBeforeBody = Version >= 48;
       uint32_t i = 0;
       for (auto &BB : *F) {
         // Skip index 1 if it's assigned to the ReturnBlock.
         if (i == 1 && ExitBlockBeforeBody)
           ++i;
-        Blocks.insert(std::make_pair(&BB, GCOVBlock(i++, os, Endian)));
+        Blocks.insert(std::make_pair(&BB, GCOVBlock(P, i++)));
       }
       if (!ExitBlockBeforeBody)
         ReturnBlock.Number = i;
@@ -380,26 +367,45 @@ namespace {
     void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
       SmallString<128> Filename = getFilename(SP);
-      uint32_t BlockLen = 1 + 1 + 1 + lengthOfGCOVString(getFunctionName(SP)) +
-                          1 + lengthOfGCOVString(Filename) + 1;
-      if (UseCfgChecksum)
-        ++BlockLen;
+      uint32_t BlockLen =
+          2 + (Version >= 47) + wordsOfString(getFunctionName(SP));
+      if (Version < 80)
+        BlockLen += wordsOfString(Filename) + 1;
+      else
+        BlockLen += 1 + wordsOfString(Filename) + 3 + (Version >= 90);
+
       write(BlockLen);
       write(Ident);
       write(FuncChecksum);
-      if (UseCfgChecksum)
+      if (Version >= 47)
         write(CfgChecksum);
-      writeGCOVString(getFunctionName(SP));
-      writeGCOVString(Filename);
-      write(SP->getLine());
+      writeString(getFunctionName(SP));
+      if (Version < 80) {
+        writeString(Filename);
+        write(SP->getLine());
+      } else {
+        write(SP->isArtificial()); // artificial
+        writeString(Filename);
+        write(SP->getLine()); // start_line
+        write(0);             // start_column
+        // EndLine is the last line with !dbg. It is not the } line as in GCC,
+        // but good enough.
+        write(EndLine);
+        if (Version >= 90)
+          write(0); // end_column
+      }
 
       // Emit count of blocks.
       write(GCOV_TAG_BLOCKS);
-      write(Blocks.size() + 1);
-      for (int i = 0, e = Blocks.size() + 1; i != e; ++i) {
-        write(0);  // No flags on our blocks.
+      if (Version < 80) {
+        write(Blocks.size() + 1);
+        for (int i = Blocks.size() + 1; i; --i)
+          write(0);
+      } else {
+        write(1);
+        write(Blocks.size() + 1);
       }
-      LLVM_DEBUG(dbgs() << Blocks.size() << " blocks.\n");
+      LLVM_DEBUG(dbgs() << (Blocks.size() + 1) << " blocks\n");
 
       // Emit edges between blocks.
       Function *F = Blocks.begin()->first->getParent();
@@ -425,9 +431,10 @@ namespace {
 
   private:
     const DISubprogram *SP;
+    unsigned EndLine;
     uint32_t Ident;
     uint32_t FuncChecksum;
-    bool UseCfgChecksum;
+    int Version;
     DenseMap<BasicBlock *, GCOVBlock> Blocks;
     GCOVBlock ReturnBlock;
   };
@@ -572,9 +579,10 @@ PreservedAnalyses GCOVProfilerPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-static bool functionHasLines(Function &F) {
+static bool functionHasLines(const Function &F, unsigned &EndLine) {
   // Check whether this function actually has any source lines. Not only
   // do these waste space, they also can crash gcov.
+  EndLine = 0;
   for (auto &BB : F) {
     for (auto &I : BB) {
       // Debug intrinsic locations correspond to the location of the
@@ -587,6 +595,7 @@ static bool functionHasLines(Function &F) {
 
       // Artificial lines such as calls to the global constructors.
       if (Loc.getLine() == 0) continue;
+      EndLine = std::max(EndLine, Loc.getLine());
 
       return true;
     }
@@ -689,6 +698,15 @@ void GCOVProfiler::emitProfileNotes() {
   NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu");
   if (!CU_Nodes) return;
 
+  int Version;
+  {
+    uint8_t c3 = Options.Version[0];
+    uint8_t c2 = Options.Version[1];
+    uint8_t c1 = Options.Version[2];
+    Version = c3 >= 'A' ? (c3 - 'A') * 100 + (c2 - '0') * 10 + c1 - '0'
+                        : (c3 - '0') * 10 + c1 - '0';
+  }
+
   for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
     // Each compile unit gets its own .gcno file. This means that whether we run
     // this pass over the original .o's as they're produced, or run it after
@@ -711,14 +729,14 @@ void GCOVProfiler::emitProfileNotes() {
 
     std::string EdgeDestinations;
 
-    auto Endian = M->getDataLayout().isLittleEndian()
-                      ? support::endianness::little
-                      : support::endianness::big;
+    Endian = M->getDataLayout().isLittleEndian() ? support::endianness::little
+                                                 : support::endianness::big;
     unsigned FunctionIdent = 0;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
+      unsigned EndLine;
       if (!SP) continue;
-      if (!functionHasLines(F) || !isFunctionInstrumented(F))
+      if (!functionHasLines(F, EndLine) || !isFunctionInstrumented(F))
         continue;
       // TODO: Functions using scope-based EH are currently not supported.
       if (isUsingScopeBasedEH(F)) continue;
@@ -731,11 +749,8 @@ void GCOVProfiler::emitProfileNotes() {
         ++It;
       EntryBlock.splitBasicBlock(It);
 
-      bool UseCfgChecksum = strncmp(Options.Version, "407", 3) >= 0;
-      bool ExitBlockBeforeBody = strncmp(Options.Version, "408", 3) >= 0;
-      Funcs.push_back(
-          std::make_unique<GCOVFunction>(SP, &F, &out, Endian, FunctionIdent++,
-                                         UseCfgChecksum, ExitBlockBeforeBody));
+      Funcs.push_back(std::make_unique<GCOVFunction>(this, &F, SP, EndLine,
+                                                     FunctionIdent++, Version));
       GCOVFunction &Func = *Funcs.back();
 
       // Add the function line number to the lines of the entry block
@@ -785,7 +800,9 @@ void GCOVProfiler::emitProfileNotes() {
     }
 
     char Tmp[4];
-    FileChecksums.push_back(hash_value(EdgeDestinations));
+    os = &out;
+    auto Stamp = static_cast<uint32_t>(hash_value(EdgeDestinations));
+    FileChecksums.push_back(Stamp);
     if (Endian == support::endianness::big) {
       out.write("gcno", 4);
       out.write(Options.Version, 4);
@@ -794,13 +811,17 @@ void GCOVProfiler::emitProfileNotes() {
       std::reverse_copy(Options.Version, Options.Version + 4, Tmp);
       out.write(Tmp, 4);
     }
-    endian::write32(Tmp, FileChecksums.back(), Endian);
-    out.write(Tmp, 4);
+    write(Stamp);
+    if (Version >= 90)
+      writeString(""); // unuseful current_working_directory
+    if (Version >= 80)
+      write(0); // unuseful has_unexecuted_blocks
 
     for (auto &Func : Funcs)
-      Func->writeOut(FileChecksums.back());
+      Func->writeOut(Stamp);
 
-    out.write("\0\0\0\0\0\0\0\0", 8);  // EOF
+    write(0);
+    write(0);
     out.close();
   }
 }
@@ -814,8 +835,9 @@ bool GCOVProfiler::emitProfileArcs() {
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
+      unsigned EndLine;
       if (!SP) continue;
-      if (!functionHasLines(F) || !isFunctionInstrumented(F))
+      if (!functionHasLines(F, EndLine) || !isFunctionInstrumented(F))
         continue;
       // TODO: Functions using scope-based EH are currently not supported.
       if (isUsingScopeBasedEH(F)) continue;
