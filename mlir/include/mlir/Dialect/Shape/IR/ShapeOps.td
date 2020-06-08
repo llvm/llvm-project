@@ -290,7 +290,8 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def Shape_ReduceOp : Shape_Op<"reduce", []> {
+def Shape_ReduceOp : Shape_Op<"reduce",
+    [SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Returns an expression reduced over a shape";
   let description = [{
     An operation that takes as input a shape, number of initial values and has a
@@ -310,25 +311,32 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
     number of elements
 
     ```mlir
-    func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
-      %0 = "shape.constant_dim"() {value = 1 : i32} : () -> !shape.size
-      %1 = "shape.reduce"(%shape, %0) ( {
-        ^bb0(%index: i32, %dim: !shape.size, %lci: !shape.size):
-          %acc = "shape.mul"(%lci, %dim) :
+    func @reduce(%shape : !shape.shape, %init : !shape.size) -> !shape.size {
+      %num_elements = shape.reduce(%shape, %init) -> !shape.size  {
+        ^bb0(%index: index, %dim: !shape.size, %acc: !shape.size):
+          %updated_acc = "shape.mul"(%acc, %dim) :
             (!shape.size, !shape.size) -> !shape.size
-          shape.yield %acc : !shape.size
-        }) : (!shape.shape, !shape.size) -> (!shape.size)
-      return %1 : !shape.size
+          shape.yield %updated_acc : !shape.size
+      }
+      return %num_elements : !shape.size
     }
     ```
 
     If the shape is unranked, then the results of the op is also unranked.
   }];
 
-  let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$args);
+  let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$result);
-
   let regions = (region SizedRegion<1>:$body);
+
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "Value shape, ValueRange initVals">,
+  ];
+
+  let verifier = [{ return ::verify(*this); }];
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {

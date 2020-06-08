@@ -6,13 +6,13 @@
 
 // CHECK-LABEL: shape_num_elements
 func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
-  %0 = shape.const_size 0
-  %1 = "shape.reduce"(%shape, %0) ( {
-    ^bb0(%index: i32, %dim: !shape.size, %lci: !shape.size):
+  %init = shape.const_size 0
+  %num_elements = shape.reduce(%shape, %init) -> !shape.size {
+    ^bb0(%index: index, %dim: !shape.size, %lci: !shape.size):
       %acc = "shape.add"(%lci, %dim) : (!shape.size, !shape.size) -> !shape.size
       "shape.yield"(%acc) : (!shape.size) -> ()
-    }) : (!shape.shape, !shape.size) -> (!shape.size)
-  return %1 : !shape.size
+  }
+  return %num_elements : !shape.size
 }
 
 func @test_shape_num_elements_unknown() {

@@ -481,6 +481,89 @@ OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
   return DenseIntElementsAttr::get(type, shape);
 }
 
+//===----------------------------------------------------------------------===//
+// ReduceOp
+//===----------------------------------------------------------------------===//
+
+void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
+                     ValueRange initVals) {
+  result.addOperands(shape);
+  result.addOperands(initVals);
+
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArgument(builder.getIndexType());
+  bodyBlock.addArgument(SizeType::get(builder.getContext()));
+
+  for (Type initValType : initVals.getTypes()) {
+    bodyBlock.addArgument(initValType);
+    result.addTypes(initValType);
+  }
+}
+
+static LogicalResult verify(ReduceOp op) {
+  // Verify block arg types.
+  Block &block = op.body().front();
+
+  auto blockArgsCount = op.initVals().size() + 2;
+  if (block.getNumArguments() != blockArgsCount)
+    return op.emitOpError() << "ReduceOp body is expected to have "
+                            << blockArgsCount << " arguments";
+
+  if (block.getArgument(0).getType() != IndexType::get(op.getContext()))
+    return op.emitOpError(
+        "argument 0 of ReduceOp body is expected to be of IndexType");
+
+  if (block.getArgument(1).getType() != SizeType::get(op.getContext()))
+    return op.emitOpError(
+        "argument 1 of ReduceOp body is expected to be of SizeType");
+
+  for (auto type : llvm::enumerate(op.initVals()))
+    if (block.getArgument(type.index() + 2).getType() != type.value().getType())
+      return op.emitOpError()
+             << "type mismatch between argument " << type.index() + 2
+             << " of ReduceOp body and initial value " << type.index();
+  return success();
+}
+
+static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
+  auto *ctx = parser.getBuilder().getContext();
+  // Parse operands.
+  SmallVector<OpAsmParser::OperandType, 3> operands;
+  if (parser.parseOperandList(operands, /*requiredOperandCount=*/-1,
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Resolve operands.
+  auto initVals = llvm::makeArrayRef(operands).drop_front();
+  if (parser.resolveOperand(operands.front(), ShapeType::get(ctx),
+                            result.operands) ||
+      parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+
+  // Parse the body.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, /*args=*/{}, /*argTypes=*/{}))
+    return failure();
+
+  // Parse attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ReduceOp op) {
+  p << op.getOperationName() << '(' << op.shape() << ", " << op.initVals()
+    << ") ";
+  p.printOptionalArrowTypeList(op.getResultTypes());
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
+}
+
 namespace mlir {
 namespace shape {
 
