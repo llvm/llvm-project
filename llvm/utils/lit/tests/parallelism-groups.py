@@ -15,4 +15,4 @@
 # CHECK:     -- Testing: 2 tests, 2 workers --
 # CHECK-DAG: PASS: parallelism-groups :: test1.txt
 # CHECK-DAG: PASS: parallelism-groups :: test2.txt
-# CHECK:     Expected Passes: 2
+# CHECK:     Passed: 2

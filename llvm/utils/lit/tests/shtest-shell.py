@@ -583,4 +583,4 @@
 # CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (35)
+# CHECK: Failed Tests (35)
