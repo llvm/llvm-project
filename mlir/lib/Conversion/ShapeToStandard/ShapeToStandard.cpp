@@ -56,6 +56,10 @@ public:
     // Add default pass-through conversion.
     addConversion([&](Type type) { return type; });
     addConversion([ctx](shape::SizeType type) { return IndexType::get(ctx); });
+    addConversion([ctx](shape::ShapeType type) {
+      return RankedTensorType::get({ShapedType::kDynamicSize},
+                                   IndexType::get(ctx));
+    });
   }
 };
 
