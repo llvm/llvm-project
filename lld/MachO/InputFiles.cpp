@@ -378,6 +378,25 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
   }
 }
 
+DylibFile::DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
+                     DylibFile *umbrella)
+    : InputFile(DylibKind, MemoryBufferRef()) {
+  if (umbrella == nullptr)
+    umbrella = this;
+
+  dylibName = saver.save(interface->getInstallName());
+  // TODO(compnerd) filter out symbols based on the target platform
+  for (const auto symbol : interface->symbols())
+    if (symbol->getArchitectures().has(config->arch))
+      symbols.push_back(
+          symtab->addDylib(saver.save(symbol->getName()), umbrella));
+  // TODO(compnerd) properly represent the hierarchy of the documents as it is
+  // in theory possible to have re-exported dylibs from re-exported dylibs which
+  // should be parent'ed to the child.
+  for (auto document : interface->documents())
+    reexported.push_back(make<DylibFile>(document, umbrella));
+}
+
 DylibFile::DylibFile() : InputFile(DylibKind, MemoryBufferRef()) {}
 
 DylibFile *DylibFile::createLibSystemMock() {
