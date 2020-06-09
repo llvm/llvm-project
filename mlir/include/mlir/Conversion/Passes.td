@@ -207,6 +207,15 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SPIRVToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertSPIRVToLLVM : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
+  let summary = "Convert SPIR-V dialect to LLVM dialect";
+  let constructor = "mlir::createConvertSPIRVToLLVMPass()";
+}
+
+//===----------------------------------------------------------------------===//
 // StandardToLLVM
 //===----------------------------------------------------------------------===//
 
