@@ -209,7 +209,7 @@ void CommandInterpreter::Initialize() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
-  CommandReturnObject result;
+  CommandReturnObject result(m_debugger.GetUseColor());
 
   LoadCommandDictionary();
 
@@ -2264,7 +2264,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
                                      m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
-    CommandReturnObject tmp_result;
+    CommandReturnObject tmp_result(m_debugger.GetUseColor());
     // If override_context is not NULL, pass no_context_switching = true for
     // HandleCommand() since we updated our context already.
 
@@ -2792,7 +2792,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
-  lldb_private::CommandReturnObject result;
+  lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
   // Now emit the command output text from the command we just executed

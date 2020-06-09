@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 
 #include <memory>
 
@@ -23,7 +24,7 @@ namespace lldb_private {
 
 class CommandReturnObject {
 public:
-  CommandReturnObject();
+  CommandReturnObject(bool colors);
 
   ~CommandReturnObject();
 

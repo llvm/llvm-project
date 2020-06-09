@@ -2556,7 +2556,7 @@ void Target::RunStopHooks() {
   if (!any_active_hooks)
     return;
 
-  CommandReturnObject result;
+  CommandReturnObject result(m_debugger.GetUseColor());
 
   std::vector<ExecutionContext> exc_ctx_with_reasons;
   std::vector<SymbolContext> sym_ctx_with_reasons;
