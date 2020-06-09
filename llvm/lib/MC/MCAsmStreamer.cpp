@@ -171,6 +171,10 @@ public:
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym,
                                   unsigned ByteAlign) override;
+  void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
+                                            MCSymbolAttr Linakge,
+                                            MCSymbolAttr Visibility) override;
+
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
@@ -788,6 +792,41 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
   CsectSym->print(OS, MAI);
   OS << ',' << Log2_32(ByteAlignment);
 
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
+    MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
+
+  switch (Linkage) {
+  case MCSA_Global:
+    OS << MAI->getGlobalDirective();
+    break;
+  case MCSA_Weak:
+    OS << MAI->getWeakDirective();
+    break;
+  case MCSA_Extern:
+    OS << "\t.extern\t";
+    break;
+  default:
+    report_fatal_error("unhandled linkage type");
+  }
+
+  Symbol->print(OS, MAI);
+
+  switch (Visibility) {
+  case MCSA_Invalid:
+    // Nothing to do.
+    break;
+  case MCSA_Hidden:
+    OS << ",hidden";
+    break;
+  case MCSA_Protected:
+    OS << ",protected";
+    break;
+  default:
+    report_fatal_error("unexpected value for Visibility type");
+  }
   EmitEOL();
 }
 
