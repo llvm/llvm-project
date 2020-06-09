@@ -12,7 +12,6 @@ add_flang_library(FortranLower
   ConvertExpr.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
-  Image.cpp
   IntrinsicCall.cpp
   IO.cpp
   Mangler.cpp
