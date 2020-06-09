@@ -1008,17 +1008,20 @@ let Predicates = [HasPA] in {
   def PACGA : SignAuthTwoOperand<0b1100, "pacga", int_ptrauth_sign_generic>;
 
   // Combined Instructions
-  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1  in {
     def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
     def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
-    def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
-    def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
   }
-
   let isCall = 1, Defs = [LR], Uses = [SP] in {
     def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
     def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+  }
 
+  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1  in {
+    def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
+    def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
+  }
+  let isCall = 1, Defs = [LR], Uses = [SP] in {
     def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
     def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
   }
