@@ -12069,6 +12069,10 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   SDValue StVal = St.getValue();
   EVT VT = StVal.getValueType();
 
+  // Avoid scalarizing zero splat stores for scalable vectors.
+  if (VT.isScalableVector())
+    return SDValue();
+
   // It is beneficial to scalarize a zero splat store for 2 or 3 i64 elements or
   // 2, 3 or 4 i32 elements.
   int NumVecElts = VT.getVectorNumElements();
