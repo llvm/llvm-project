@@ -2209,7 +2209,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       break;
 
     const LLT S32 = LLT::scalar(32);
-    MachineFunction *MF = MI.getParent()->getParent();
+    MachineBasicBlock *MBB = MI.getParent();
+    MachineFunction *MF = MBB->getParent();
     MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
     GISelObserverWrapper Observer(&ApplySALU);
@@ -2234,9 +2235,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
         llvm_unreachable("widen scalar should have succeeded");
 
-      // FIXME: s16 shift amounts should be lgeal.
+      // FIXME: s16 shift amounts should be legal.
       if (Opc == AMDGPU::G_SHL || Opc == AMDGPU::G_LSHR ||
           Opc == AMDGPU::G_ASHR) {
+        B.setInsertPt(*MBB, MI.getIterator());
         if (Helper.widenScalar(MI, 1, S32) != LegalizerHelper::Legalized)
           llvm_unreachable("widen scalar should have succeeded");
       }

@@ -176,6 +176,8 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  B.setInsertPt(*EntryMBB, MIBCTTZ->getIterator());
   EXPECT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
@@ -2583,6 +2585,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
+  B.setInsertPt(*EntryMBB, Load->getIterator());
   LegalizerHelper Helper(*MF, Info, Observer, B);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*Load, 0, S32));
@@ -2618,6 +2621,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, Store->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*Store, 0, S32));
 
@@ -2651,6 +2655,7 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, Select->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*Select, 0, S32));
 
@@ -2669,6 +2674,8 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
   // Doesn't make sense
   auto VCond = B.buildUndef(LLT::vector(4, 1));
   auto VSelect = B.buildSelect(V4S8, VCond, Val0, Val1);
+
+  B.setInsertPt(*EntryMBB, VSelect->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
             Helper.bitcast(*VSelect, 0, S32));
   EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
@@ -2694,10 +2701,15 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, And->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*And, 0, S32));
+
+  B.setInsertPt(*EntryMBB, Or->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*Or, 0, S32));
+
+  B.setInsertPt(*EntryMBB, Xor->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.bitcast(*Xor, 0, S32));
 
@@ -2773,12 +2785,20 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
 
   // Perform Legalization
+
+  B.setInsertPt(*EntryMBB, Implicit1->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*Implicit1, 0, S48));
+
+  B.setInsertPt(*EntryMBB, Implicit2->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*Implicit2, 0, S32));
+
+  B.setInsertPt(*EntryMBB, Implicit3->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*Implicit3, 0, S48));
+
+  B.setInsertPt(*EntryMBB, Implicit4->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*Implicit4, 0, S32));
 
@@ -2828,8 +2848,12 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
 
   // Perform Legalization
+
+  B.setInsertPt(*EntryMBB, FreezeScalar->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*FreezeScalar, 0, S128));
+
+  B.setInsertPt(*EntryMBB, FreezeVector->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*FreezeVector, 0, V2S64));
 
@@ -2879,12 +2903,20 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
 
   // Perform Legalization
+
+  B.setInsertPt(*EntryMBB, FreezeScalar->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*FreezeScalar, 0, S32));
+
+  B.setInsertPt(*EntryMBB, FreezeOdd->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*FreezeOdd, 0, S32));
+
+  B.setInsertPt(*EntryMBB, FreezeVector->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*FreezeVector, 0, V2S16));
+
+  B.setInsertPt(*EntryMBB, FreezeVector1->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.narrowScalar(*FreezeVector1, 0, S16));
 
@@ -2954,8 +2986,12 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
 
   // Perform Legalization
+
+  B.setInsertPt(*EntryMBB, FreezeVector1->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.fewerElementsVector(*FreezeVector1, 0, S32));
+
+  B.setInsertPt(*EntryMBB, FreezeVector2->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.fewerElementsVector(*FreezeVector2, 0, V2S16));
 
@@ -2998,6 +3034,7 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
   LegalizerHelper Helper(*MF, Info, Observer, B);
 
   // Perform Legalization
+  B.setInsertPt(*EntryMBB, FreezeVector1->getIterator());
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.moreElementsVector(*FreezeVector1, 0, V4S32));
 

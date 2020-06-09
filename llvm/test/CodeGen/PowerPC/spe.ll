@@ -1297,6 +1297,8 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; CHECK-NEXT:    evlddx 31, 1, 5 # 8-byte Folded Reload
 ; CHECK-NEXT:    li 5, 256
 ; CHECK-NEXT:    evlddx 30, 1, 5 # 8-byte Folded Reload
+; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
+; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; CHECK-NEXT:    evldd 29, 248(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 28, 240(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 27, 232(1) # 8-byte Folded Reload
@@ -1313,8 +1315,6 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; CHECK-NEXT:    evldd 16, 144(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 15, 136(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    evldd 14, 128(1) # 8-byte Folded Reload
-; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; CHECK-NEXT:    lwz 31, 348(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 30, 344(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 340(1) # 4-byte Folded Reload
@@ -1392,8 +1392,8 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    # implicit-def: $r5
 ; CHECK-NEXT:  .LBB57_4: # %for.cond.cleanup
 ; CHECK-NEXT:    evldd 30, 16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 0, 52(1)

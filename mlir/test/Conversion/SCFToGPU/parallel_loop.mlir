@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-parallel-loops-to-gpu -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -convert-parallel-loops-to-gpu -split-input-file -verify-diagnostics %s | FileCheck %s
 
 // 2-d parallel loop mapped to block.y and block.x
 

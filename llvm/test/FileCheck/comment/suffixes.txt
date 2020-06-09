@@ -6,7 +6,7 @@ RUN: echo bar                    >> %t.in
 RUN: echo 'COM-NEXT: CHECK: foo' >  %t.chk
 RUN: echo 'RUN-NOT: CHECK: bar'  >> %t.chk
 
-RUN: %ProtectFileCheckOutput FileCheck -vv %t.chk < %t.in 2>&1 | \
+RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 | \
 RUN:   FileCheck -check-prefix=CHECK1 %s
 
 CHECK1: .chk:1:18: remark: CHECK: expected string found in input
@@ -15,7 +15,7 @@ CHECK1: .chk:2:17: remark: CHECK: expected string found in input
 # But we can define them as comment prefixes.
 
 RUN: %ProtectFileCheckOutput \
-RUN: FileCheck -vv -comment-prefixes=COM,RUN,RUN-NOT %t.chk < %t.in 2>&1 | \
+RUN: FileCheck -dump-input=never -vv -comment-prefixes=COM,RUN,RUN-NOT %t.chk < %t.in 2>&1 | \
 RUN:   FileCheck -check-prefix=CHECK2 %s
 
 CHECK2: .chk:1:18: remark: CHECK: expected string found in input

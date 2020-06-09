@@ -26,9 +26,8 @@ class TestingConfig(object):
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
                      'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
                      'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT',
-                     'FILECHECK_DUMP_INPUT_ON_FAILURE', 'FILECHECK_OPTS',
-                     'VCINSTALLDIR', 'VCToolsinstallDir', 'VSINSTALLDIR',
-                     'WindowsSdkDir', 'WindowsSDKLibVersion']
+                     'FILECHECK_OPTS', 'VCINSTALLDIR', 'VCToolsinstallDir',
+                     'VSINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKLibVersion']
 
         if sys.platform == 'win32':
             pass_vars.append('INCLUDE')
