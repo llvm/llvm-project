@@ -201,14 +201,15 @@ const Stmt *ExprMutationAnalyzer::findDeclPointeeMutation(
 
 const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
   // LHS of any assignment operators.
-  const auto AsAssignmentLhs =
-      binaryOperator(isAssignmentOperator(),
-                     hasLHS(maybeEvalCommaExpr(equalsNode(Exp))));
+  const auto AsAssignmentLhs = binaryOperator(
+      isAssignmentOperator(),
+      hasLHS(maybeEvalCommaExpr(ignoringParenImpCasts(equalsNode(Exp)))));
 
   // Operand of increment/decrement operators.
   const auto AsIncDecOperand =
       unaryOperator(anyOf(hasOperatorName("++"), hasOperatorName("--")),
-                    hasUnaryOperand(maybeEvalCommaExpr(equalsNode(Exp))));
+                    hasUnaryOperand(maybeEvalCommaExpr(
+                        ignoringParenImpCasts(equalsNode(Exp)))));
 
   // Invoking non-const member function.
   // A member function is assumed to be non-const when it is unresolved.
