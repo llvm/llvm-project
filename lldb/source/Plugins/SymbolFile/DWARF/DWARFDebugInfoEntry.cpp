@@ -436,7 +436,8 @@ size_t DWARFDebugInfoEntry::GetAttributes(
         if (form_value.ExtractValue(data, &offset)) {
           DWARFDIE spec_die = form_value.Reference();
           if (spec_die)
-            spec_die.GetAttributes(attributes, curr_depth + 1);
+            spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
+                                             curr_depth + 1);
         }
       } else {
         llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
