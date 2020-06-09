@@ -19,6 +19,7 @@
 
 #include "Compiler.h"
 #include "ParsedAST.h"
+#include "TestFS.h"
 #include "index/Index.h"
 #include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
@@ -69,7 +70,7 @@ struct TestTU {
   // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
   std::shared_ptr<const PreambleData> preamble() const;
-  ParseInputs inputs() const;
+  ParseInputs inputs(MockFSProvider &FSProvider) const;
   SymbolSlab headerSymbols() const;
   RefSlab headerRefs() const;
   std::unique_ptr<SymbolIndex> index() const;

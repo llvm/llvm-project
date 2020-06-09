@@ -17,6 +17,7 @@ include "mlir/Dialect/Shape/IR/ShapeBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 def Shape_WitnessType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
@@ -110,7 +111,11 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def Shape_ConstSizeOp : Shape_Op<"const_size", [ConstantLike, NoSideEffect]> {
+def Shape_ConstSizeOp : Shape_Op<"const_size", [
+    ConstantLike,
+    NoSideEffect,
+    DeclareOpInterfaceMethods<OpAsmOpInterface>
+  ]> {
   let summary = "Creates a constant of type `shape.size`";
   let description = [{
     Creates a `shape.size` type representing the constant size given by `value`.
@@ -327,7 +332,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 
   let arguments = (ins Shape_ShapeType:$shape, Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$result);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$region);
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
@@ -546,7 +551,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
+def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
   let summary = "Determines if 2 shapes can be successfully broadcasted";
   let description = [{
     Given 2 input shapes, return a witness specifying if they are broadcastable.
@@ -565,9 +570,12 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
-def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
+def Shape_CstrEqOp : Shape_Op<"cstr_eq", [Commutative]> {
   let summary = "Determines if all input shapes are equal";
   let description = [{
     Given 1 or more input shapes, determine if all shapes are the exact same.
@@ -584,6 +592,9 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
   let results = (outs Shape_WitnessType:$result);
 
   let assemblyFormat = "$inputs attr-dict";
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect]> {

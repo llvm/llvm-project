@@ -685,12 +685,14 @@ static Instruction *shrinkInsertElt(CastInst &Trunc,
   return nullptr;
 }
 
-Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
-  if (Instruction *Result = commonCastTransforms(CI))
+Instruction *InstCombiner::visitTrunc(TruncInst &Trunc) {
+  if (Instruction *Result = commonCastTransforms(Trunc))
     return Result;
 
-  Value *Src = CI.getOperand(0);
-  Type *DestTy = CI.getType(), *SrcTy = Src->getType();
+  Value *Src = Trunc.getOperand(0);
+  Type *DestTy = Trunc.getType(), *SrcTy = Src->getType();
+  unsigned DestWidth = DestTy->getScalarSizeInBits();
+  unsigned SrcWidth = SrcTy->getScalarSizeInBits();
   ConstantInt *Cst;
 
   // Attempt to truncate the entire input expression tree to the destination
@@ -698,17 +700,17 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   // expression tree to something weird like i93 unless the source is also
   // strange.
   if ((DestTy->isVectorTy() || shouldChangeType(SrcTy, DestTy)) &&
-      canEvaluateTruncated(Src, DestTy, *this, &CI)) {
+      canEvaluateTruncated(Src, DestTy, *this, &Trunc)) {
 
     // If this cast is a truncate, evaluting in a different type always
     // eliminates the cast, so it is always a win.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
                   " to avoid cast: "
-               << CI << '\n');
+               << Trunc << '\n');
     Value *Res = EvaluateInDifferentType(Src, DestTy, false);
     assert(Res->getType() == DestTy);
-    return replaceInstUsesWith(CI, Res);
+    return replaceInstUsesWith(Trunc, Res);
   }
 
   // Test if the trunc is the user of a select which is part of a
@@ -716,17 +718,17 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   // Even simplifying demanded bits can break the canonical form of a
   // min/max.
   Value *LHS, *RHS;
-  if (SelectInst *SI = dyn_cast<SelectInst>(CI.getOperand(0)))
-    if (matchSelectPattern(SI, LHS, RHS).Flavor != SPF_UNKNOWN)
+  if (SelectInst *Sel = dyn_cast<SelectInst>(Src))
+    if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
       return nullptr;
 
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
-  if (SimplifyDemandedInstructionBits(CI))
-    return &CI;
+  if (SimplifyDemandedInstructionBits(Trunc))
+    return &Trunc;
 
-  if (DestTy->getScalarSizeInBits() == 1) {
-    Value *Zero = Constant::getNullValue(Src->getType());
+  if (DestWidth == 1) {
+    Value *Zero = Constant::getNullValue(SrcTy);
     if (DestTy->isIntegerTy()) {
       // Canonicalize trunc x to i1 -> icmp ne (and x, 1), 0 (scalar only).
       // TODO: We canonicalize to more instructions here because we are probably
@@ -743,14 +745,14 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     const APInt *C;
     if (match(Src, m_OneUse(m_LShr(m_Value(X), m_APInt(C))))) {
       // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
-      APInt MaskC = APInt(SrcTy->getScalarSizeInBits(), 1).shl(*C);
+      APInt MaskC = APInt(SrcWidth, 1).shl(*C);
       Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
     if (match(Src, m_OneUse(m_c_Or(m_LShr(m_Value(X), m_APInt(C)),
                                    m_Deferred(X))))) {
       // trunc (or (lshr X, C), X) to i1 --> icmp ne (and X, C'), 0
-      APInt MaskC = APInt(SrcTy->getScalarSizeInBits(), 1).shl(*C) | 1;
+      APInt MaskC = APInt(SrcWidth, 1).shl(*C) | 1;
       Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
       return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
     }
@@ -772,7 +774,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     // If the shift amount is larger than the size of A, then the result is
     // known to be zero because all the input bits got shifted out.
     if (Cst->getZExtValue() >= ASize)
-      return replaceInstUsesWith(CI, Constant::getNullValue(DestTy));
+      return replaceInstUsesWith(Trunc, Constant::getNullValue(DestTy));
 
     // Since we're doing an lshr and a zero extend, and know that the shift
     // amount is smaller than ASize, it is always safe to do the shift in A's
@@ -782,45 +784,37 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     return CastInst::CreateIntegerCast(Shift, DestTy, false);
   }
 
-  // FIXME: We should canonicalize to zext/trunc and remove this transform.
-  // Transform trunc(lshr (sext A), Cst) to ashr A, Cst to eliminate type
-  // conversion.
-  // It works because bits coming from sign extension have the same value as
-  // the sign bit of the original value; performing ashr instead of lshr
-  // generates bits of the same value as the sign bit.
-  if (Src->hasOneUse() &&
-      match(Src, m_LShr(m_SExt(m_Value(A)), m_ConstantInt(Cst)))) {
-    Value *SExt = cast<Instruction>(Src)->getOperand(0);
-    const unsigned SExtSize = SExt->getType()->getPrimitiveSizeInBits();
-    const unsigned ASize = A->getType()->getPrimitiveSizeInBits();
-    const unsigned CISize = CI.getType()->getPrimitiveSizeInBits();
-    const unsigned MaxAmt = SExtSize - std::max(CISize, ASize);
-    unsigned ShiftAmt = Cst->getZExtValue();
+  const APInt *C;
+  if (match(Src, m_LShr(m_SExt(m_Value(A)), m_APInt(C)))) {
+    unsigned AWidth = A->getType()->getScalarSizeInBits();
+    unsigned MaxShiftAmt = SrcWidth - std::max(DestWidth, AWidth);
 
-    // This optimization can be only performed when zero bits generated by
-    // the original lshr aren't pulled into the value after truncation, so we
-    // can only shift by values no larger than the number of extension bits.
-    // FIXME: Instead of bailing when the shift is too large, use and to clear
-    // the extra bits.
-    if (ShiftAmt <= MaxAmt) {
-      if (CISize == ASize)
-        return BinaryOperator::CreateAShr(A, ConstantInt::get(CI.getType(),
-                                          std::min(ShiftAmt, ASize - 1)));
-      if (SExt->hasOneUse()) {
-        Value *Shift = Builder.CreateAShr(A, std::min(ShiftAmt, ASize - 1));
-        Shift->takeName(Src);
-        return CastInst::CreateIntegerCast(Shift, CI.getType(), true);
+    // If the shift is small enough, all zero bits created by the shift are
+    // removed by the trunc.
+    if (C->getZExtValue() <= MaxShiftAmt) {
+      // trunc (lshr (sext A), C) --> ashr A, C
+      if (A->getType() == DestTy) {
+        unsigned ShAmt = std::min((unsigned)C->getZExtValue(), DestWidth - 1);
+        return BinaryOperator::CreateAShr(A, ConstantInt::get(DestTy, ShAmt));
+      }
+      // The types are mismatched, so create a cast after shifting:
+      // trunc (lshr (sext A), C) --> sext/trunc (ashr A, C)
+      if (Src->hasOneUse()) {
+        unsigned ShAmt = std::min((unsigned)C->getZExtValue(), AWidth - 1);
+        Value *Shift = Builder.CreateAShr(A, ShAmt);
+        return CastInst::CreateIntegerCast(Shift, DestTy, true);
       }
     }
+    // TODO: Mask high bits with 'and'.
   }
 
-  if (Instruction *I = narrowBinOp(CI))
+  if (Instruction *I = narrowBinOp(Trunc))
     return I;
 
-  if (Instruction *I = shrinkSplatShuffle(CI, Builder))
+  if (Instruction *I = shrinkSplatShuffle(Trunc, Builder))
     return I;
 
-  if (Instruction *I = shrinkInsertElt(CI, Builder))
+  if (Instruction *I = shrinkInsertElt(Trunc, Builder))
     return I;
 
   if (Src->hasOneUse() && isa<IntegerType>(SrcTy) &&
@@ -831,18 +825,17 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
         !match(A, m_Shr(m_Value(), m_Constant()))) {
       // Skip shifts of shift by constants. It undoes a combine in
       // FoldShiftByConstant and is the extend in reg pattern.
-      const unsigned DestSize = DestTy->getScalarSizeInBits();
-      if (Cst->getValue().ult(DestSize)) {
+      if (Cst->getValue().ult(DestWidth)) {
         Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr");
 
         return BinaryOperator::Create(
           Instruction::Shl, NewTrunc,
-          ConstantInt::get(DestTy, Cst->getValue().trunc(DestSize)));
+          ConstantInt::get(DestTy, Cst->getValue().trunc(DestWidth)));
       }
     }
   }
 
-  if (Instruction *I = foldVecTruncToExtElt(CI, *this))
+  if (Instruction *I = foldVecTruncToExtElt(Trunc, *this))
     return I;
 
   // Whenever an element is extracted from a vector, and then truncated,
@@ -856,13 +849,11 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   Value *VecOp;
   if (match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst))))) {
     auto *VecOpTy = cast<VectorType>(VecOp->getType());
-    unsigned DestScalarSize = DestTy->getScalarSizeInBits();
-    unsigned VecOpScalarSize = VecOpTy->getScalarSizeInBits();
     unsigned VecNumElts = VecOpTy->getNumElements();
 
     // A badly fit destination size would result in an invalid cast.
-    if (VecOpScalarSize % DestScalarSize == 0) {
-      uint64_t TruncRatio = VecOpScalarSize / DestScalarSize;
+    if (SrcWidth % DestWidth == 0) {
+      uint64_t TruncRatio = SrcWidth / DestWidth;
       uint64_t BitCastNumElts = VecNumElts * TruncRatio;
       uint64_t VecOpIdx = Cst->getZExtValue();
       uint64_t NewIdx = DL.isBigEndian() ? (VecOpIdx + 1) * TruncRatio - 1

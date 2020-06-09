@@ -15,12 +15,12 @@
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <tuple>
 
 namespace llvm {
+class raw_ostream;
+class StringRef;
 
 /// Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {

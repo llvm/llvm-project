@@ -20,7 +20,7 @@
 namespace clang {
 namespace clangd {
 
-ParseInputs TestTU::inputs() const {
+ParseInputs TestTU::inputs(MockFSProvider &FSProvider) const {
   std::string FullFilename = testPath(Filename),
               FullHeaderName = testPath(HeaderFilename),
               ImportThunk = testPath("import_thunk.h");
@@ -29,10 +29,10 @@ ParseInputs TestTU::inputs() const {
   // guard without messing up offsets). In this case, use an intermediate file.
   std::string ThunkContents = "#import \"" + FullHeaderName + "\"\n";
 
-  llvm::StringMap<std::string> Files(AdditionalFiles);
-  Files[FullFilename] = Code;
-  Files[FullHeaderName] = HeaderCode;
-  Files[ImportThunk] = ThunkContents;
+  FSProvider.Files = AdditionalFiles;
+  FSProvider.Files[FullFilename] = Code;
+  FSProvider.Files[FullHeaderName] = HeaderCode;
+  FSProvider.Files[ImportThunk] = ThunkContents;
 
   ParseInputs Inputs;
   auto &Argv = Inputs.CompileCommand.CommandLine;
@@ -54,7 +54,7 @@ ParseInputs TestTU::inputs() const {
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
-  Inputs.FS = buildTestFS(Files);
+  Inputs.FSProvider = &FSProvider;
   Inputs.Opts = ParseOptions();
   Inputs.Opts.BuildRecoveryAST = true;
   Inputs.Opts.PreserveRecoveryASTType = true;
@@ -67,7 +67,8 @@ ParseInputs TestTU::inputs() const {
 }
 
 std::shared_ptr<const PreambleData> TestTU::preamble() const {
-  auto Inputs = inputs();
+  MockFSProvider FSProvider;
+  auto Inputs = inputs(FSProvider);
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
@@ -77,7 +78,8 @@ std::shared_ptr<const PreambleData> TestTU::preamble() const {
 }
 
 ParsedAST TestTU::build() const {
-  auto Inputs = inputs();
+  MockFSProvider FSProvider;
+  auto Inputs = inputs(FSProvider);
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");

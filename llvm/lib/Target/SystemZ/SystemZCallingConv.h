@@ -108,7 +108,7 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   // the location (register or stack slot) for the indirect pointer.
   // (This duplicates the usual i64 calling convention rules.)
   unsigned Reg = State.AllocateReg(SystemZ::ArgGPRs);
-  unsigned Offset = Reg ? 0 : State.AllocateStack(8, 8);
+  unsigned Offset = Reg ? 0 : State.AllocateStack(8, Align(8));
 
   // Use that same location for all the pending parts.
   for (auto &It : PendingMembers) {

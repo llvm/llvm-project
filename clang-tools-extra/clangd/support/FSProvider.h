@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 
 namespace clang {
 namespace clangd {

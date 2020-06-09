@@ -187,177 +187,258 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::f128:    return Type::getFP128Ty(Context);
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
-  case MVT::v1i1:    return VectorType::get(Type::getInt1Ty(Context), 1);
-  case MVT::v2i1:    return VectorType::get(Type::getInt1Ty(Context), 2);
-  case MVT::v4i1:    return VectorType::get(Type::getInt1Ty(Context), 4);
-  case MVT::v8i1:    return VectorType::get(Type::getInt1Ty(Context), 8);
-  case MVT::v16i1:   return VectorType::get(Type::getInt1Ty(Context), 16);
-  case MVT::v32i1:   return VectorType::get(Type::getInt1Ty(Context), 32);
-  case MVT::v64i1:   return VectorType::get(Type::getInt1Ty(Context), 64);
-  case MVT::v128i1:  return VectorType::get(Type::getInt1Ty(Context), 128);
-  case MVT::v256i1:  return VectorType::get(Type::getInt1Ty(Context), 256);
-  case MVT::v512i1:  return VectorType::get(Type::getInt1Ty(Context), 512);
-  case MVT::v1024i1: return VectorType::get(Type::getInt1Ty(Context), 1024);
-  case MVT::v1i8:    return VectorType::get(Type::getInt8Ty(Context), 1);
-  case MVT::v2i8:    return VectorType::get(Type::getInt8Ty(Context), 2);
-  case MVT::v4i8:    return VectorType::get(Type::getInt8Ty(Context), 4);
-  case MVT::v8i8:    return VectorType::get(Type::getInt8Ty(Context), 8);
-  case MVT::v16i8:   return VectorType::get(Type::getInt8Ty(Context), 16);
-  case MVT::v32i8:   return VectorType::get(Type::getInt8Ty(Context), 32);
-  case MVT::v64i8:   return VectorType::get(Type::getInt8Ty(Context), 64);
-  case MVT::v128i8:  return VectorType::get(Type::getInt8Ty(Context), 128);
-  case MVT::v256i8:  return VectorType::get(Type::getInt8Ty(Context), 256);
-  case MVT::v1i16:   return VectorType::get(Type::getInt16Ty(Context), 1);
-  case MVT::v2i16:   return VectorType::get(Type::getInt16Ty(Context), 2);
-  case MVT::v3i16:   return VectorType::get(Type::getInt16Ty(Context), 3);
-  case MVT::v4i16:   return VectorType::get(Type::getInt16Ty(Context), 4);
-  case MVT::v8i16:   return VectorType::get(Type::getInt16Ty(Context), 8);
-  case MVT::v16i16:  return VectorType::get(Type::getInt16Ty(Context), 16);
-  case MVT::v32i16:  return VectorType::get(Type::getInt16Ty(Context), 32);
-  case MVT::v64i16:  return VectorType::get(Type::getInt16Ty(Context), 64);
-  case MVT::v128i16: return VectorType::get(Type::getInt16Ty(Context), 128);
-  case MVT::v1i32:   return VectorType::get(Type::getInt32Ty(Context), 1);
-  case MVT::v2i32:   return VectorType::get(Type::getInt32Ty(Context), 2);
-  case MVT::v3i32:   return VectorType::get(Type::getInt32Ty(Context), 3);
-  case MVT::v4i32:   return VectorType::get(Type::getInt32Ty(Context), 4);
-  case MVT::v5i32:   return VectorType::get(Type::getInt32Ty(Context), 5);
-  case MVT::v8i32:   return VectorType::get(Type::getInt32Ty(Context), 8);
-  case MVT::v16i32:  return VectorType::get(Type::getInt32Ty(Context), 16);
-  case MVT::v32i32:  return VectorType::get(Type::getInt32Ty(Context), 32);
-  case MVT::v64i32:  return VectorType::get(Type::getInt32Ty(Context), 64);
-  case MVT::v128i32: return VectorType::get(Type::getInt32Ty(Context), 128);
-  case MVT::v256i32: return VectorType::get(Type::getInt32Ty(Context), 256);
-  case MVT::v512i32: return VectorType::get(Type::getInt32Ty(Context), 512);
-  case MVT::v1024i32:return VectorType::get(Type::getInt32Ty(Context), 1024);
-  case MVT::v2048i32:return VectorType::get(Type::getInt32Ty(Context), 2048);
-  case MVT::v1i64:   return VectorType::get(Type::getInt64Ty(Context), 1);
-  case MVT::v2i64:   return VectorType::get(Type::getInt64Ty(Context), 2);
-  case MVT::v4i64:   return VectorType::get(Type::getInt64Ty(Context), 4);
-  case MVT::v8i64:   return VectorType::get(Type::getInt64Ty(Context), 8);
-  case MVT::v16i64:  return VectorType::get(Type::getInt64Ty(Context), 16);
-  case MVT::v32i64:  return VectorType::get(Type::getInt64Ty(Context), 32);
-  case MVT::v1i128:  return VectorType::get(Type::getInt128Ty(Context), 1);
-  case MVT::v2f16:   return VectorType::get(Type::getHalfTy(Context), 2);
-  case MVT::v3f16:   return VectorType::get(Type::getHalfTy(Context), 3);
-  case MVT::v4f16:   return VectorType::get(Type::getHalfTy(Context), 4);
-  case MVT::v8f16:   return VectorType::get(Type::getHalfTy(Context), 8);
-  case MVT::v16f16:  return VectorType::get(Type::getHalfTy(Context), 16);
-  case MVT::v32f16:  return VectorType::get(Type::getHalfTy(Context), 32);
-  case MVT::v2bf16:  return VectorType::get(Type::getBFloatTy(Context), 2);
-  case MVT::v3bf16:  return VectorType::get(Type::getBFloatTy(Context), 3);
-  case MVT::v4bf16:  return VectorType::get(Type::getBFloatTy(Context), 4);
-  case MVT::v8bf16:  return VectorType::get(Type::getBFloatTy(Context), 8);
-  case MVT::v16bf16: return VectorType::get(Type::getBFloatTy(Context), 16);
-  case MVT::v32bf16: return VectorType::get(Type::getBFloatTy(Context), 32);
-  case MVT::v1f32:   return VectorType::get(Type::getFloatTy(Context), 1);
-  case MVT::v2f32:   return VectorType::get(Type::getFloatTy(Context), 2);
-  case MVT::v3f32:   return VectorType::get(Type::getFloatTy(Context), 3);
-  case MVT::v4f32:   return VectorType::get(Type::getFloatTy(Context), 4);
-  case MVT::v5f32:   return VectorType::get(Type::getFloatTy(Context), 5);
-  case MVT::v8f32:   return VectorType::get(Type::getFloatTy(Context), 8);
-  case MVT::v16f32:  return VectorType::get(Type::getFloatTy(Context), 16);
-  case MVT::v32f32:  return VectorType::get(Type::getFloatTy(Context), 32);
-  case MVT::v64f32:  return VectorType::get(Type::getFloatTy(Context), 64);
-  case MVT::v128f32: return VectorType::get(Type::getFloatTy(Context), 128);
-  case MVT::v256f32: return VectorType::get(Type::getFloatTy(Context), 256);
-  case MVT::v512f32: return VectorType::get(Type::getFloatTy(Context), 512);
-  case MVT::v1024f32:return VectorType::get(Type::getFloatTy(Context), 1024);
-  case MVT::v2048f32:return VectorType::get(Type::getFloatTy(Context), 2048);
-  case MVT::v1f64:   return VectorType::get(Type::getDoubleTy(Context), 1);
-  case MVT::v2f64:   return VectorType::get(Type::getDoubleTy(Context), 2);
-  case MVT::v4f64:   return VectorType::get(Type::getDoubleTy(Context), 4);
-  case MVT::v8f64:   return VectorType::get(Type::getDoubleTy(Context), 8);
-  case MVT::v16f64:  return VectorType::get(Type::getDoubleTy(Context), 16);
+  case MVT::v1i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 1);
+  case MVT::v2i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 2);
+  case MVT::v4i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 4);
+  case MVT::v8i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 8);
+  case MVT::v16i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 16);
+  case MVT::v32i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 32);
+  case MVT::v64i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 64);
+  case MVT::v128i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 128);
+  case MVT::v256i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 256);
+  case MVT::v512i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 512);
+  case MVT::v1024i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 1024);
+  case MVT::v1i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 1);
+  case MVT::v2i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 2);
+  case MVT::v4i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 4);
+  case MVT::v8i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 8);
+  case MVT::v16i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 16);
+  case MVT::v32i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 32);
+  case MVT::v64i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 64);
+  case MVT::v128i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 128);
+  case MVT::v256i8:
+    return FixedVectorType::get(Type::getInt8Ty(Context), 256);
+  case MVT::v1i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 1);
+  case MVT::v2i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 2);
+  case MVT::v3i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 3);
+  case MVT::v4i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 4);
+  case MVT::v8i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 8);
+  case MVT::v16i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 16);
+  case MVT::v32i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 32);
+  case MVT::v64i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 64);
+  case MVT::v128i16:
+    return FixedVectorType::get(Type::getInt16Ty(Context), 128);
+  case MVT::v1i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 1);
+  case MVT::v2i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 2);
+  case MVT::v3i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 3);
+  case MVT::v4i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 4);
+  case MVT::v5i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 5);
+  case MVT::v8i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 8);
+  case MVT::v16i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 16);
+  case MVT::v32i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 32);
+  case MVT::v64i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 64);
+  case MVT::v128i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 128);
+  case MVT::v256i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 256);
+  case MVT::v512i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 512);
+  case MVT::v1024i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 1024);
+  case MVT::v2048i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 2048);
+  case MVT::v1i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 1);
+  case MVT::v2i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 2);
+  case MVT::v4i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 4);
+  case MVT::v8i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 8);
+  case MVT::v16i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 16);
+  case MVT::v32i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 32);
+  case MVT::v1i128:
+    return FixedVectorType::get(Type::getInt128Ty(Context), 1);
+  case MVT::v2f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 2);
+  case MVT::v3f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 3);
+  case MVT::v4f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 4);
+  case MVT::v8f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 8);
+  case MVT::v16f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 16);
+  case MVT::v32f16:
+    return FixedVectorType::get(Type::getHalfTy(Context), 32);
+  case MVT::v2bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 2);
+  case MVT::v3bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 3);
+  case MVT::v4bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 4);
+  case MVT::v8bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 8);
+  case MVT::v16bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 16);
+  case MVT::v32bf16:
+    return FixedVectorType::get(Type::getBFloatTy(Context), 32);
+  case MVT::v1f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 1);
+  case MVT::v2f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 2);
+  case MVT::v3f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 3);
+  case MVT::v4f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 4);
+  case MVT::v5f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 5);
+  case MVT::v8f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 8);
+  case MVT::v16f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 16);
+  case MVT::v32f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 32);
+  case MVT::v64f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 64);
+  case MVT::v128f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 128);
+  case MVT::v256f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 256);
+  case MVT::v512f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 512);
+  case MVT::v1024f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 1024);
+  case MVT::v2048f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 2048);
+  case MVT::v1f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 1);
+  case MVT::v2f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 2);
+  case MVT::v4f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 4);
+  case MVT::v8f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 8);
+  case MVT::v16f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 16);
   case MVT::nxv1i1:
-    return VectorType::get(Type::getInt1Ty(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::nxv2i1:
-    return VectorType::get(Type::getInt1Ty(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 2);
   case MVT::nxv4i1:
-    return VectorType::get(Type::getInt1Ty(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 4);
   case MVT::nxv8i1:
-    return VectorType::get(Type::getInt1Ty(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 8);
   case MVT::nxv16i1:
-    return VectorType::get(Type::getInt1Ty(Context), 16, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 16);
   case MVT::nxv32i1:
-    return VectorType::get(Type::getInt1Ty(Context), 32, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt1Ty(Context), 32);
   case MVT::nxv1i8:
-    return VectorType::get(Type::getInt8Ty(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 1);
   case MVT::nxv2i8:
-    return VectorType::get(Type::getInt8Ty(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 2);
   case MVT::nxv4i8:
-    return VectorType::get(Type::getInt8Ty(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 4);
   case MVT::nxv8i8:
-    return VectorType::get(Type::getInt8Ty(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 8);
   case MVT::nxv16i8:
-    return VectorType::get(Type::getInt8Ty(Context), 16, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 16);
   case MVT::nxv32i8:
-    return VectorType::get(Type::getInt8Ty(Context), 32, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt8Ty(Context), 32);
   case MVT::nxv1i16:
-    return VectorType::get(Type::getInt16Ty(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 1);
   case MVT::nxv2i16:
-    return VectorType::get(Type::getInt16Ty(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 2);
   case MVT::nxv4i16:
-    return VectorType::get(Type::getInt16Ty(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 4);
   case MVT::nxv8i16:
-    return VectorType::get(Type::getInt16Ty(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 8);
   case MVT::nxv16i16:
-    return VectorType::get(Type::getInt16Ty(Context), 16, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 16);
   case MVT::nxv32i16:
-    return VectorType::get(Type::getInt16Ty(Context), 32, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt16Ty(Context), 32);
   case MVT::nxv1i32:
-    return VectorType::get(Type::getInt32Ty(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 1);
   case MVT::nxv2i32:
-    return VectorType::get(Type::getInt32Ty(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 2);
   case MVT::nxv4i32:
-    return VectorType::get(Type::getInt32Ty(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 4);
   case MVT::nxv8i32:
-    return VectorType::get(Type::getInt32Ty(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 8);
   case MVT::nxv16i32:
-    return VectorType::get(Type::getInt32Ty(Context), 16,/*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 16);
   case MVT::nxv32i32:
-    return VectorType::get(Type::getInt32Ty(Context), 32,/*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt32Ty(Context), 32);
   case MVT::nxv1i64:
-    return VectorType::get(Type::getInt64Ty(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 1);
   case MVT::nxv2i64:
-    return VectorType::get(Type::getInt64Ty(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 2);
   case MVT::nxv4i64:
-    return VectorType::get(Type::getInt64Ty(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 4);
   case MVT::nxv8i64:
-    return VectorType::get(Type::getInt64Ty(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 8);
   case MVT::nxv16i64:
-    return VectorType::get(Type::getInt64Ty(Context), 16, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 16);
   case MVT::nxv32i64:
-    return VectorType::get(Type::getInt64Ty(Context), 32, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getInt64Ty(Context), 32);
   case MVT::nxv2f16:
-    return VectorType::get(Type::getHalfTy(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getHalfTy(Context), 2);
   case MVT::nxv4f16:
-    return VectorType::get(Type::getHalfTy(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getHalfTy(Context), 4);
   case MVT::nxv8f16:
-    return VectorType::get(Type::getHalfTy(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getHalfTy(Context), 8);
   case MVT::nxv2bf16:
-    return VectorType::get(Type::getBFloatTy(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 2);
   case MVT::nxv4bf16:
-    return VectorType::get(Type::getBFloatTy(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 4);
   case MVT::nxv8bf16:
-    return VectorType::get(Type::getBFloatTy(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 8);
   case MVT::nxv1f32:
-    return VectorType::get(Type::getFloatTy(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getFloatTy(Context), 1);
   case MVT::nxv2f32:
-    return VectorType::get(Type::getFloatTy(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getFloatTy(Context), 2);
   case MVT::nxv4f32:
-    return VectorType::get(Type::getFloatTy(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getFloatTy(Context), 4);
   case MVT::nxv8f32:
-    return VectorType::get(Type::getFloatTy(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getFloatTy(Context), 8);
   case MVT::nxv16f32:
-    return VectorType::get(Type::getFloatTy(Context), 16, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getFloatTy(Context), 16);
   case MVT::nxv1f64:
-    return VectorType::get(Type::getDoubleTy(Context), 1, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getDoubleTy(Context), 1);
   case MVT::nxv2f64:
-    return VectorType::get(Type::getDoubleTy(Context), 2, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getDoubleTy(Context), 2);
   case MVT::nxv4f64:
-    return VectorType::get(Type::getDoubleTy(Context), 4, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getDoubleTy(Context), 4);
   case MVT::nxv8f64:
-    return VectorType::get(Type::getDoubleTy(Context), 8, /*Scalable=*/ true);
+    return ScalableVectorType::get(Type::getDoubleTy(Context), 8);
   case MVT::Metadata: return Type::getMetadataTy(Context);
   }
 }

@@ -1101,16 +1101,17 @@ static QualType getTupleLikeElementType(Sema &S, SourceLocation Loc,
 }
 
 namespace {
-struct BindingDiagnosticTrap {
+struct InitializingBinding {
   Sema &S;
-  DiagnosticErrorTrap Trap;
-  BindingDecl *BD;
-
-  BindingDiagnosticTrap(Sema &S, BindingDecl *BD)
-      : S(S), Trap(S.Diags), BD(BD) {}
-  ~BindingDiagnosticTrap() {
-    if (Trap.hasErrorOccurred())
-      S.Diag(BD->getLocation(), diag::note_in_binding_decl_init) << BD;
+  InitializingBinding(Sema &S, BindingDecl *BD) : S(S) {
+    Sema::CodeSynthesisContext Ctx;
+    Ctx.Kind = Sema::CodeSynthesisContext::InitializingStructuredBinding;
+    Ctx.PointOfInstantiation = BD->getLocation();
+    Ctx.Entity = BD;
+    S.pushCodeSynthesisContext(Ctx);
+  }
+  ~InitializingBinding() {
+    S.popCodeSynthesisContext();
   }
 };
 }
@@ -1159,7 +1160,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
 
   unsigned I = 0;
   for (auto *B : Bindings) {
-    BindingDiagnosticTrap Trap(S, B);
+    InitializingBinding InitContext(S, B);
     SourceLocation Loc = B->getLocation();
 
     ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);
@@ -5797,6 +5798,23 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     // declaration.
     return;
 
+  // Add a context note to explain how we got to any diagnostics produced below.
+  struct MarkingClassDllexported {
+    Sema &S;
+    MarkingClassDllexported(Sema &S, CXXRecordDecl *Class,
+                            SourceLocation AttrLoc)
+        : S(S) {
+      Sema::CodeSynthesisContext Ctx;
+      Ctx.Kind = Sema::CodeSynthesisContext::MarkingClassDllexported;
+      Ctx.PointOfInstantiation = AttrLoc;
+      Ctx.Entity = Class;
+      S.pushCodeSynthesisContext(Ctx);
+    }
+    ~MarkingClassDllexported() {
+      S.popCodeSynthesisContext();
+    }
+  } MarkingDllexportedContext(S, Class, ClassAttr->getLocation());
+
   if (S.Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
     S.MarkVTableUsed(Class->getLocation(), Class, true);
 
@@ -5832,13 +5850,7 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
         // defaulted methods, and the copy and move assignment operators. The
         // latter are exported even if they are trivial, because the address of
         // an operator can be taken and should compare equal across libraries.
-        DiagnosticErrorTrap Trap(S.Diags);
         S.MarkFunctionReferenced(Class->getLocation(), MD);
-        if (Trap.hasErrorOccurred()) {
-          S.Diag(ClassAttr->getLocation(), diag::note_due_to_dllexported_class)
-              << Class << !S.getLangOpts().CPlusPlus11;
-          break;
-        }
 
         // There is no later point when we will see the definition of this
         // function, so pass it to the consumer now.

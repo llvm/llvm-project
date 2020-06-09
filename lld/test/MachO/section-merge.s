@@ -8,7 +8,7 @@
 # RUN:   -o %t/libfunction.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s \
 # RUN:   -o %t/main.o
-# RUN: lld -flavor darwinnew -o %t/output %t/libfunction.o %t/libgoodbye.o %t/libhello.o %t/main.o
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/output %t/libfunction.o %t/libgoodbye.o %t/libhello.o %t/main.o
 
 # RUN: llvm-objdump --syms %t/output | FileCheck %s
 # CHECK:      SYMBOL TABLE:

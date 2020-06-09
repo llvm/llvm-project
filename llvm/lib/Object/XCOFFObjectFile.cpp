@@ -20,7 +20,6 @@ namespace object {
 
 static const uint8_t FunctionSym = 0x20;
 static const uint8_t SymTypeMask = 0x07;
-static const uint16_t RelocOverflow = 65535;
 static const uint16_t NoRelMask = 0x0001;
 
 // Checks that [Ptr, Ptr + Size) bytes fall inside the memory buffer
@@ -632,7 +631,7 @@ Expected<uint32_t> XCOFFObjectFile::getLogicalNumberOfRelocationEntries(
 
   uint16_t SectionIndex = &Sec - sectionHeaderTable32() + 1;
 
-  if (Sec.NumberOfRelocations < RelocOverflow)
+  if (Sec.NumberOfRelocations < XCOFF::RelocOverflow)
     return Sec.NumberOfRelocations;
   for (const auto &Sec : sections32()) {
     if (Sec.Flags == XCOFF::STYP_OVRFLO &&

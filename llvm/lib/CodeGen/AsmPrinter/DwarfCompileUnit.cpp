@@ -156,7 +156,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     DeclContext = GV->getScope();
     // Add name and type.
     addString(*VariableDIE, dwarf::DW_AT_name, GV->getDisplayName());
-    addType(*VariableDIE, GTy);
+    if (GTy)
+      addType(*VariableDIE, GTy);
 
     // Add scoping info.
     if (!GV->isLocalToUnit())

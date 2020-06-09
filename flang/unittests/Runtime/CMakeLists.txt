@@ -1,11 +1,12 @@
-if(CMAKE_COMPILER_IS_GNUCXX OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
-endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# RuntimeTesting needs exceptions enabled
+set(LLVM_REQUIRES_EH ON)
+set(LLVM_REQUIRES_RTTI ON)
 add_library(RuntimeTesting
   testing.cpp
 )
+llvm_update_compile_flags(RuntimeTesting)
 
 add_executable(format-test
   format.cpp

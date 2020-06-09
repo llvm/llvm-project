@@ -342,13 +342,13 @@ GISelInstProfileBuilder::addNodeIDImmediate(int64_t Imm) const {
 }
 
 const GISelInstProfileBuilder &
-GISelInstProfileBuilder::addNodeIDRegNum(unsigned Reg) const {
+GISelInstProfileBuilder::addNodeIDRegNum(Register Reg) const {
   ID.AddInteger(Reg);
   return *this;
 }
 
 const GISelInstProfileBuilder &
-GISelInstProfileBuilder::addNodeIDRegType(const unsigned Reg) const {
+GISelInstProfileBuilder::addNodeIDRegType(const Register Reg) const {
   addNodeIDMachineOperand(MachineOperand::CreateReg(Reg, false));
   return *this;
 }
@@ -375,12 +375,14 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
     LLT Ty = MRI.getType(Reg);
     if (Ty.isValid())
       addNodeIDRegType(Ty);
-    auto *RB = MRI.getRegBankOrNull(Reg);
-    if (RB)
-      addNodeIDRegType(RB);
-    auto *RC = MRI.getRegClassOrNull(Reg);
-    if (RC)
-      addNodeIDRegType(RC);
+
+    if (const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg)) {
+      if (const auto *RB = RCOrRB.dyn_cast<const RegisterBank *>())
+        addNodeIDRegType(RB);
+      else if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
+        addNodeIDRegType(RC);
+    }
+
     assert(!MO.isImplicit() && "Unhandled case");
   } else if (MO.isImm())
     ID.AddInteger(MO.getImm());

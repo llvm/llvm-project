@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: echo ".globl _main; .text; _main: ret" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t.o
-# RUN: not lld -flavor darwinnew -o %t %t.o -order_file %s 2>&1 | FileCheck %s
+# RUN: not lld -flavor darwinnew -arch x86_64 -o %t %t.o -order_file %s 2>&1 | FileCheck %s
 # CHECK: error: invalid arch "sparc" in order file:  expected one of arm, arm64, i386, x86_64, ppc, ppc64
 # CHECK-EMPTY:
 

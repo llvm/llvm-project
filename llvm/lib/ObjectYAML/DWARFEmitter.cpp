@@ -69,14 +69,16 @@ static void writeInitialLength(const DWARFYAML::InitialLength &Length,
     writeInteger((uint64_t)Length.TotalLength64, OS, IsLittleEndian);
 }
 
-void DWARFYAML::EmitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Str : DI.DebugStrings) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }
+
+  return Error::success();
 }
 
-void DWARFYAML::EmitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto AbbrevDecl : DI.AbbrevDecls) {
     encodeULEB128(AbbrevDecl.Code, OS);
     encodeULEB128(AbbrevDecl.Tag, OS);
@@ -90,9 +92,11 @@ void DWARFYAML::EmitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
     encodeULEB128(0, OS);
     encodeULEB128(0, OS);
   }
+
+  return Error::success();
 }
 
-void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Range : DI.ARanges) {
     auto HeaderStart = OS.tell();
     if (Range.Format == dwarf::DWARF64) {
@@ -117,9 +121,11 @@ void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     }
     ZeroFillBytes(OS, Range.AddrSize * 2);
   }
+
+  return Error::success();
 }
 
-void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
   for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
@@ -136,11 +142,13 @@ void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     }
     ZeroFillBytes(OS, DebugRanges.AddrSize * 2);
   }
+
+  return Error::success();
 }
 
-void DWARFYAML::EmitPubSection(raw_ostream &OS,
-                               const DWARFYAML::PubSection &Sect,
-                               bool IsLittleEndian) {
+Error DWARFYAML::emitPubSection(raw_ostream &OS,
+                                const DWARFYAML::PubSection &Sect,
+                                bool IsLittleEndian) {
   writeInitialLength(Sect.Length, OS, IsLittleEndian);
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
@@ -152,6 +160,8 @@ void DWARFYAML::EmitPubSection(raw_ostream &OS,
     OS.write(Entry.Name.data(), Entry.Name.size());
     OS.write('\0');
   }
+
+  return Error::success();
 }
 
 namespace {
@@ -220,12 +230,14 @@ public:
 };
 } // namespace
 
-void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
   DumpVisitor Visitor(DI, OS);
   Visitor.traverseDebugInfo();
+
+  return Error::success();
 }
 
-static void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
+static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   OS.write(File.Name.data(), File.Name.size());
   OS.write('\0');
   encodeULEB128(File.DirIdx, OS);
@@ -233,7 +245,7 @@ static void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   encodeULEB128(File.Length, OS);
 }
 
-void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
+Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const auto &LineTable : DI.DebugLines) {
     writeInitialLength(LineTable.Length, OS, DI.IsLittleEndian);
     uint64_t SizeOfPrologueLength = LineTable.Length.isDWARF64() ? 8 : 4;
@@ -258,7 +270,7 @@ void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     OS.write('\0');
 
     for (auto File : LineTable.Files)
-      EmitFileEntry(OS, File);
+      emitFileEntry(OS, File);
     OS.write('\0');
 
     for (auto Op : LineTable.Opcodes) {
@@ -273,7 +285,7 @@ void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
                                     DI.IsLittleEndian);
           break;
         case dwarf::DW_LNE_define_file:
-          EmitFileEntry(OS, Op.FileEntry);
+          emitFileEntry(OS, Op.FileEntry);
           break;
         case dwarf::DW_LNE_end_sequence:
           break;
@@ -314,20 +326,25 @@ void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
       }
     }
   }
+
+  return Error::success();
 }
 
-using EmitFuncType = void (*)(raw_ostream &, const DWARFYAML::Data &);
+using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
 
-static void
-EmitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
+static Error
+emitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
                      StringRef Sec,
                      StringMap<std::unique_ptr<MemoryBuffer>> &OutputBuffers) {
   std::string Data;
   raw_string_ostream DebugInfoStream(Data);
-  EmitFunc(DebugInfoStream, DI);
+  if (Error Err = EmitFunc(DebugInfoStream, DI))
+    return Err;
   DebugInfoStream.flush();
   if (!Data.empty())
     OutputBuffers[Sec] = MemoryBuffer::getMemBufferCopy(Data);
+
+  return Error::success();
 }
 
 namespace {
@@ -375,7 +392,7 @@ private:
 } // namespace
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-DWARFYAML::EmitDebugSections(StringRef YAMLString, bool ApplyFixups,
+DWARFYAML::emitDebugSections(StringRef YAMLString, bool ApplyFixups,
                              bool IsLittleEndian) {
   yaml::Input YIn(YAMLString);
 
@@ -391,17 +408,25 @@ DWARFYAML::EmitDebugSections(StringRef YAMLString, bool ApplyFixups,
   }
 
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugInfo, "debug_info",
-                       DebugSections);
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugLine, "debug_line",
-                       DebugSections);
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugStr, "debug_str",
-                       DebugSections);
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAbbrev, "debug_abbrev",
-                       DebugSections);
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAranges, "debug_aranges",
-                       DebugSections);
-  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugRanges, "debug_ranges",
-                       DebugSections);
+  Error Err = emitDebugSectionImpl(DI, &DWARFYAML::emitDebugInfo, "debug_info",
+                                   DebugSections);
+  Err = joinErrors(std::move(Err),
+                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugLine,
+                                        "debug_line", DebugSections));
+  Err = joinErrors(std::move(Err),
+                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugStr,
+                                        "debug_str", DebugSections));
+  Err = joinErrors(std::move(Err),
+                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugAbbrev,
+                                        "debug_abbrev", DebugSections));
+  Err = joinErrors(std::move(Err),
+                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugAranges,
+                                        "debug_aranges", DebugSections));
+  Err = joinErrors(std::move(Err),
+                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugRanges,
+                                        "debug_ranges", DebugSections));
+
+  if (Err)
+    return std::move(Err);
   return std::move(DebugSections);
 }

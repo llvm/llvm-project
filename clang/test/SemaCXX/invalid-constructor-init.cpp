@@ -14,6 +14,12 @@ struct X2 {
   constexpr X2() {} // expected-error {{constexpr constructor never produces a constant expression}}
 };
 
+struct X3 {
+  int Y;
+  constexpr X3() // expected-error {{constexpr constructor never produces}}
+      : Y(({foo();})) {} // expected-error {{use of undeclared identifier 'foo'}}
+};
+
 struct CycleDelegate {
   int Y;
   CycleDelegate(int)

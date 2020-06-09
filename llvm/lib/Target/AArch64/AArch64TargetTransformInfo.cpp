@@ -675,6 +675,11 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
 
+  // Type legalization can't handle structs
+  if (TLI->getValueType(DL, Ty,  true) == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
+                                  CostKind);
+
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&

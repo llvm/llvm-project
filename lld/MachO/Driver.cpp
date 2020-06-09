@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -74,26 +75,33 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 }
 
 static Optional<std::string> findLibrary(StringRef name) {
+  std::string stub = (llvm::Twine("lib") + name + ".tbd").str();
   std::string shared = (llvm::Twine("lib") + name + ".dylib").str();
   std::string archive = (llvm::Twine("lib") + name + ".a").str();
   llvm::SmallString<260> location;
 
   for (StringRef dir : config->searchPaths) {
-    for (StringRef library : {shared, archive}) {
+    for (StringRef library : {stub, shared, archive}) {
       location = dir;
       llvm::sys::path::append(location, library);
       if (fs::exists(location))
         return location.str().str();
     }
   }
-  return None;
+  return {};
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_arch, "x86_64");
-  if (s != "x86_64")
-    error("missing or unsupported -arch " + s);
-  return createX86_64TargetInfo();
+  StringRef arch = llvm::Triple(LLVM_DEFAULT_TARGET_TRIPLE).getArchName();
+  config->arch = llvm::MachO::getArchitectureFromName(
+      args.getLastArgValue(OPT_arch, arch));
+  switch (config->arch) {
+  case llvm::MachO::AK_x86_64:
+  case llvm::MachO::AK_x86_64h:
+    return createX86_64TargetInfo();
+  default:
+    fatal("missing or unsupported -arch " + args.getLastArgValue(OPT_arch));
+  }
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList &args) {
@@ -128,6 +136,16 @@ static void addFile(StringRef path) {
   case file_magic::macho_dynamically_linked_shared_lib:
     inputFiles.push_back(make<DylibFile>(mbref));
     break;
+  case file_magic::tapi_file: {
+    llvm::Expected<std::unique_ptr<llvm::MachO::InterfaceFile>> result =
+        TextAPIReader::get(mbref);
+    if (!result)
+      return;
+
+    std::unique_ptr<llvm::MachO::InterfaceFile> interface{std::move(*result)};
+    inputFiles.push_back(make<DylibFile>(std::move(interface)));
+    break;
+  }
   default:
     error(path + ": unhandled file type");
   }

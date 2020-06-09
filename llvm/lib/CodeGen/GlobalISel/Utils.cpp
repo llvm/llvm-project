@@ -396,8 +396,8 @@ APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
   return APF;
 }
 
-Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
-                                        const unsigned Op2,
+Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
+                                        const Register Op2,
                                         const MachineRegisterInfo &MRI) {
   auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
   auto MaybeOp2Cst = getConstantVRegVal(Op2, MRI);
@@ -484,7 +484,7 @@ Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
   return Align(1);
 }
 
-Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,
+Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                         uint64_t Imm,
                                         const MachineRegisterInfo &MRI) {
   auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);

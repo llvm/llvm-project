@@ -3401,6 +3401,7 @@ def warn_expecting_lock_held_on_loop : Warning<
   "expecting %0 '%1' to be held at start of each loop">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def note_locked_here : Note<"%0 acquired here">;
+def note_unlocked_here : Note<"%0 released here">;
 def warn_lock_exclusive_and_shared : Warning<
   "%0 '%1' is acquired exclusively and shared in the same scope">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;

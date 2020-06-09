@@ -349,20 +349,20 @@ inline float scalbnf(float __x, int __n) { return __ocml_scalbn_f32(__x, __n); }
 __DEVICE__
 inline __RETURN_TYPE signbit(float __x) { return __ocml_signbit_f32(__x); }
 __DEVICE__
-inline void sincosf(float __x, float *__sptr, float *__cptr) {
+inline void sincosf(float __x, float *__sinptr, float *__cosptr) {
   float __tmp;
 
-  *__sptr =
+  *__sinptr =
       __ocml_sincos_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
-  *__cptr = __tmp;
+  *__cosptr = __tmp;
 }
 __DEVICE__
-inline void sincospif(float __x, float *__sptr, float *__cptr) {
+inline void sincospif(float __x, float *__sinptr, float *__cosptr) {
   float __tmp;
 
-  *__sptr = __ocml_sincospi_f32(
+  *__sinptr = __ocml_sincospi_f32(
       __x, (__attribute__((address_space(5))) float *)&__tmp);
-  *__cptr = __tmp;
+  *__cosptr = __tmp;
 }
 __DEVICE__
 inline float sinf(float __x) { return __ocml_sin_f32(__x); }
@@ -539,9 +539,9 @@ inline float __saturatef(float __x) {
   return (__x < 0) ? 0 : ((__x > 1) ? 1 : __x);
 }
 __DEVICE__
-inline void __sincosf(float __x, float *__sptr, float *__cptr) {
-  *__sptr = __ocml_native_sin_f32(__x);
-  *__cptr = __ocml_native_cos_f32(__x);
+inline void __sincosf(float __x, float *__sinptr, float *__cosptr) {
+  *__sinptr = __ocml_native_sin_f32(__x);
+  *__cosptr = __ocml_native_cos_f32(__x);
 }
 __DEVICE__
 inline float __sinf(float __x) { return __ocml_native_sin_f32(__x); }
@@ -817,18 +817,18 @@ inline __RETURN_TYPE signbit(double __x) { return __ocml_signbit_f64(__x); }
 __DEVICE__
 inline double sin(double __x) { return __ocml_sin_f64(__x); }
 __DEVICE__
-inline void sincos(double __x, double *__sptr, double *__cptr) {
+inline void sincos(double __x, double *__sinptr, double *__cosptr) {
   double __tmp;
-  *__sptr = __ocml_sincos_f64(
+  *__sinptr = __ocml_sincos_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
-  *__cptr = __tmp;
+  *__cosptr = __tmp;
 }
 __DEVICE__
-inline void sincospi(double __x, double *__sptr, double *__cptr) {
+inline void sincospi(double __x, double *__sinptr, double *__cosptr) {
   double __tmp;
-  *__sptr = __ocml_sincospi_f64(
+  *__sinptr = __ocml_sincospi_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
-  *__cptr = __tmp;
+  *__cosptr = __tmp;
 }
 __DEVICE__
 inline double sinh(double __x) { return __ocml_sinh_f64(__x); }

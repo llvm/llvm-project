@@ -91,3 +91,13 @@ func @test_mul(%lhs: !shape.size, %rhs: !shape.size) -> !shape.size {
   %product = shape.mul %lhs, %rhs
   return %product: !shape.size
 }
+
+func @const_size() {
+  // CHECK: %c1 = shape.const_size 1
+  // CHECK: %c2 = shape.const_size 2
+  // CHECK: %c2_0 = shape.const_size 2
+  %0 = shape.const_size 1
+  %1 = shape.const_size 2
+  %2 = shape.const_size 2
+  return
+}

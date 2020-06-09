@@ -5,7 +5,7 @@
 # RUN: echo "_bar_str" > %t/order-file
 # RUN: echo "_foo_str" >> %t/order-file
 
-# RUN: lld -flavor darwinnew -o %t/test %t/test.o -order_file %t/order-file
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/test %t/test.o -order_file %t/order-file
 # RUN: llvm-objdump --section-headers -d --no-show-raw-insn %t/test | FileCheck %s
 # CHECK-LABEL: Sections:
 # CHECK:       __cstring {{[^ ]*}} {{0*}}[[#%x, CSTRING_ADDR:]]

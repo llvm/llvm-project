@@ -14,20 +14,37 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace mlir::shape;
+
 namespace {
 
 /// Conversion patterns.
-class SizeToIndexOpConversion
-    : public OpConversionPattern<shape::SizeToIndexOp> {
+template <typename SrcOpTy, typename DstOpTy>
+class BinaryOpConversion : public OpConversionPattern<SrcOpTy> {
 public:
-  using OpConversionPattern<shape::SizeToIndexOp>::OpConversionPattern;
+  using OpConversionPattern<SrcOpTy>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(shape::SizeToIndexOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SrcOpTy op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    shape::SizeToIndexOpOperandAdaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.arg());
+    typename SrcOpTy::OperandAdaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
+                                         adaptor.rhs());
+    return success();
+  }
+};
+
+class FromExtentTensorOpConversion
+    : public OpConversionPattern<shape::FromExtentTensorOp> {
+public:
+  using OpConversionPattern<shape::FromExtentTensorOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(shape::FromExtentTensorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    shape::FromExtentTensorOpOperandAdaptor transformed(operands);
+    rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
 };
@@ -46,6 +63,34 @@ public:
   }
 };
 
+class SizeToIndexOpConversion
+    : public OpConversionPattern<shape::SizeToIndexOp> {
+public:
+  using OpConversionPattern<shape::SizeToIndexOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(shape::SizeToIndexOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    shape::SizeToIndexOpOperandAdaptor transformed(operands);
+    rewriter.replaceOp(op.getOperation(), transformed.arg());
+    return success();
+  }
+};
+
+class ToExtentTensorOpConversion
+    : public OpConversionPattern<shape::ToExtentTensorOp> {
+public:
+  using OpConversionPattern<shape::ToExtentTensorOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(shape::ToExtentTensorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    shape::ToExtentTensorOpOperandAdaptor transformed(operands);
+    rewriter.replaceOp(op.getOperation(), transformed.input());
+    return success();
+  }
+};
+
 /// Type conversions.
 class ShapeTypeConverter : public TypeConverter {
 public:
@@ -54,7 +99,12 @@ public:
   ShapeTypeConverter(MLIRContext *ctx) {
     // Add default pass-through conversion.
     addConversion([&](Type type) { return type; });
+
     addConversion([ctx](shape::SizeType type) { return IndexType::get(ctx); });
+    addConversion([ctx](shape::ShapeType type) {
+      return RankedTensorType::get({ShapedType::kDynamicSize},
+                                   IndexType::get(ctx));
+    });
   }
 };
 
@@ -90,17 +140,20 @@ class ConvertShapeToStandardPass
 
 } // namespace
 
-void populateShapeToStandardConversionPatterns(
+void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   // clang-format off
   patterns.insert<
+      BinaryOpConversion<AddOp, AddIOp>,
+      BinaryOpConversion<MulOp, MulIOp>,
+      FromExtentTensorOpConversion,
       IndexToSizeOpConversion,
-      SizeToIndexOpConversion>(ctx);
+      SizeToIndexOpConversion,
+      ToExtentTensorOpConversion>(ctx);
   // clang-format on
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> createConvertShapeToStandardPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertShapeToStandardPass() {
   return std::make_unique<ConvertShapeToStandardPass>();
 }
-
-} // namespace mlir

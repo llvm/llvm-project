@@ -75,6 +75,8 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
     break;
   }
   }
+  if (CGF.CGM.stopAutoInit())
+    return;
   CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
 }
 

@@ -3304,7 +3304,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Allocate shadow area for Win64
   if (IsWin64)
-    CCInfo.AllocateStack(32, 8);
+    CCInfo.AllocateStack(32, Align(8));
 
   CCInfo.AnalyzeCallOperands(OutVTs, OutFlags, CC_X86);
 

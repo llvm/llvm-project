@@ -805,9 +805,13 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-            // && to < (2 * parts) was added to avoid GCC < 8 build failure
-            // on -Werror=array-bounds
-            for (int to{ j + k }; xy != 0 && to < (2 * parts); ++to) {
+#if defined __GNUC__ && __GNUC__ < 8
+            // && to < (2 * parts) was added to avoid GCC < 8 build failure on
+            // -Werror=array-bounds. This can be removed if -Werror is disable.
+            for (int to{j + k}; xy != 0 && to < (2 * parts); ++to) {
+#else
+            for (int to{j + k}; xy != 0; ++to) {
+#endif
               xy += product[to];
               product[to] = xy & partMask;
               xy >>= partBits;

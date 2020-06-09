@@ -166,7 +166,7 @@ static bool CC_X86_64_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
           State.getMachineFunction().getSubtarget().getRegisterInfo();
       if (TRI->regsOverlap(Reg, X86::XMM4) ||
           TRI->regsOverlap(Reg, X86::XMM5))
-        State.AllocateStack(8, 8);
+        State.AllocateStack(8, Align(8));
 
       if (!ArgFlags.isHva()) {
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -281,7 +281,7 @@ static bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     if (UseRegs)
       It.convertToReg(State.AllocateReg(RegList[FirstFree++]));
     else
-      It.convertToMem(State.AllocateStack(4, 4));
+      It.convertToMem(State.AllocateStack(4, Align(4)));
     State.addLoc(It);
   }
 
@@ -305,7 +305,7 @@ static bool CC_X86_Intr(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   if (ArgCount == 1 && ValNo == 0) {
     // If we have one argument, the argument is five stack slots big, at fixed
     // offset zero.
-    Offset = State.AllocateStack(5 * SlotSize, 4);
+    Offset = State.AllocateStack(5 * SlotSize, Align(4));
   } else if (ArgCount == 2 && ValNo == 0) {
     // If we have two arguments, the stack slot is *after* the error code
     // argument. Pretend it doesn't consume stack space, and account for it when
@@ -316,7 +316,7 @@ static bool CC_X86_Intr(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     // appears first on the stack, and is then followed by the five slot
     // interrupt struct.
     Offset = 0;
-    (void)State.AllocateStack(6 * SlotSize, 4);
+    (void)State.AllocateStack(6 * SlotSize, Align(4));
   } else {
     report_fatal_error("unsupported x86 interrupt prototype");
   }

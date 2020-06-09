@@ -245,6 +245,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   auto AbsolutePath = getAbsolutePath(Cmd);
 
   auto FS = FSProvider.getFileSystem();
+  FS->setCurrentWorkingDirectory(Cmd.Directory);
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
     return llvm::errorCodeToError(Buf.getError());
@@ -259,16 +260,17 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 
   vlog("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
   ParseInputs Inputs;
-  Inputs.FS = std::move(FS);
-  Inputs.FS->setCurrentWorkingDirectory(Cmd.Directory);
+  Inputs.FSProvider = &FSProvider;
   Inputs.CompileCommand = std::move(Cmd);
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
   if (!CI)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Couldn't build compiler invocation");
-  auto Clang = prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
-                                       std::move(*Buf), Inputs.FS, IgnoreDiags);
+
+  auto Clang =
+      prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
+                              std::move(*Buf), std::move(FS), IgnoreDiags);
   if (!Clang)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Couldn't build compiler instance");

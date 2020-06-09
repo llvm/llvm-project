@@ -13,7 +13,8 @@
 namespace mlir {
 class LLVMTypeConverter;
 class ModuleOp;
-template <typename T> class OperationPass;
+template <typename T>
+class OperationPass;
 
 /// Collect a set of patterns to convert from Vector contractions to LLVM Matrix
 /// Intrinsics. To lower to assembly, the LLVM flag -lower-matrix-intrinsics

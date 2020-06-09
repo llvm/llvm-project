@@ -2,6 +2,7 @@ include "config/public_api.td"
 
 include "spec/gnu_ext.td"
 include "spec/linux.td"
+include "spec/llvm_libc_ext.td"
 include "spec/posix.td"
 include "spec/stdc.td"
 
@@ -168,6 +169,7 @@ def MathAPI : PublicAPI<"math.h"> {
 
 def StringAPI : PublicAPI<"string.h"> {
   let Functions = [
+    "bzero",
     "memcpy",
     "memmove",
     "memcmp",

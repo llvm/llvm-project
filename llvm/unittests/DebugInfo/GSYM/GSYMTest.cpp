@@ -1457,7 +1457,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1537,7 +1537,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1649,7 +1649,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
         - AbbrCode:        0x00000000
           Values:
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1753,7 +1753,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
           Values:
 
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -1932,7 +1932,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
           SubOpcode:       DW_LNE_end_sequence
           Data:            3584
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -2196,7 +2196,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
           SubOpcode:       DW_LNE_end_sequence
           Data:            0
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
@@ -2379,7 +2379,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
         - AbbrCode:        0x00000000
           Values:          []
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 4);
@@ -2522,7 +2522,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
         - AbbrCode:        0x00000000
           Values:          []
   )";
-  auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);

@@ -499,6 +499,53 @@ raw_ostream &raw_ostream::write_zeros(unsigned NumZeros) {
   return write_padding<'\0'>(*this, NumZeros);
 }
 
+bool raw_ostream::prepare_colors() {
+  // Colors were explicitly disabled.
+  if (!ColorEnabled)
+    return false;
+
+  // Colors require changing the terminal but this stream is not going to a
+  // terminal.
+  if (sys::Process::ColorNeedsFlush() && !is_displayed())
+    return false;
+
+  if (sys::Process::ColorNeedsFlush())
+    flush();
+
+  return true;
+}
+
+raw_ostream &raw_ostream::changeColor(enum Colors colors, bool bold, bool bg) {
+  if (!prepare_colors())
+    return *this;
+
+  const char *colorcode =
+      (colors == SAVEDCOLOR)
+          ? sys::Process::OutputBold(bg)
+          : sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
+  if (colorcode)
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
+raw_ostream &raw_ostream::resetColor() {
+  if (!prepare_colors())
+    return *this;
+
+  if (const char *colorcode = sys::Process::ResetColor())
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
+raw_ostream &raw_ostream::reverseColor() {
+  if (!prepare_colors())
+    return *this;
+
+  if (const char *colorcode = sys::Process::OutputReverse())
+    write(colorcode, strlen(colorcode));
+  return *this;
+}
+
 void raw_ostream::anchor() {}
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +620,8 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
     ShouldClose = false;
     return;
   }
+
+  enable_colors(true);
 
   // Do not attempt to close stdout or stderr. We used to try to maintain the
   // property that tools that support writing file to stdout should not also
@@ -796,58 +845,6 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
 #else
   return raw_ostream::preferred_buffer_size();
 #endif
-}
-
-raw_ostream &raw_fd_ostream::changeColor(enum Colors colors, bool bold,
-                                         bool bg) {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode =
-      (colors == SAVEDCOLOR)
-          ? sys::Process::OutputBold(bg)
-          : sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
-}
-
-raw_ostream &raw_fd_ostream::resetColor() {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode = sys::Process::ResetColor();
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
-}
-
-raw_ostream &raw_fd_ostream::reverseColor() {
-  if (!ColorEnabled)
-    return *this;
-
-  if (sys::Process::ColorNeedsFlush())
-    flush();
-  const char *colorcode = sys::Process::OutputReverse();
-  if (colorcode) {
-    size_t len = strlen(colorcode);
-    write(colorcode, len);
-    // don't account colors towards output characters
-    pos -= len;
-  }
-  return *this;
 }
 
 bool raw_fd_ostream::is_displayed() const {

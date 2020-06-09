@@ -2995,6 +2995,6 @@ TEST_P(SyntaxTreeTest, SynthesizedNodes) {
 }
 
 INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, SyntaxTreeTest,
-                        testing::ValuesIn(TestClangConfig::allConfigs()));
+                        testing::ValuesIn(TestClangConfig::allConfigs()), );
 
 } // namespace

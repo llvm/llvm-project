@@ -16,6 +16,7 @@
 #include "TestFS.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
+#include "support/FSProvider.h"
 #include "support/Path.h"
 #include "support/TestTracer.h"
 #include "support/Threading.h"
@@ -73,7 +74,7 @@ protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
     ParseInputs Inputs;
     Inputs.CompileCommand = *CDB.getCompileCommand(File);
-    Inputs.FS = buildTestFS(Files, Timestamps);
+    Inputs.FSProvider = &FSProvider;
     Inputs.Contents = std::move(Contents);
     Inputs.Opts = ParseOptions();
     return Inputs;
@@ -149,8 +150,7 @@ protected:
                            std::move(CB));
   }
 
-  llvm::StringMap<std::string> Files;
-  llvm::StringMap<time_t> Timestamps;
+  MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
 };
 
@@ -161,10 +161,10 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(CDB, optsForTest());
 
   auto Added = testPath("added.cpp");
-  Files[Added] = "x";
+  FSProvider.Files[Added] = "x";
 
   auto Missing = testPath("missing.cpp");
-  Files[Missing] = "";
+  FSProvider.Files[Missing] = "";
 
   S.update(Added, getInputs(Added, "x"), WantDiagnostics::No);
 
@@ -425,7 +425,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
     for (int I = 0; I < FilesCount; ++I) {
       std::string Name = "foo" + std::to_string(I) + ".cpp";
       Files.push_back(testPath(Name));
-      this->Files[Files.back()] = "";
+      this->FSProvider.Files[Files.back()] = "";
     }
 
     StringRef Contents1 = R"cpp(int a;)cpp";
@@ -476,7 +476,6 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
                 ASSERT_TRUE((bool)AST);
-                EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
                 EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
                 EXPECT_EQ(AST->Inputs.Version, Inputs.Version);
                 EXPECT_EQ(AST->AST.version(), Inputs.Version);
@@ -617,8 +616,8 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   auto Foo = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  Files[Header] = "void foo()";
-  Timestamps[Header] = time_t(0);
+  FSProvider.Files[Header] = "void foo()";
+  FSProvider.Timestamps[Header] = time_t(0);
   auto WithPreamble = R"cpp(
     #include "foo.h"
     int main() {}
@@ -686,8 +685,8 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   auto Source = testPath("foo.cpp");
   auto Header = testPath("foo.h");
 
-  Files[Header] = "int a;";
-  Timestamps[Header] = time_t(0);
+  FSProvider.Files[Header] = "int a;";
+  FSProvider.Timestamps[Header] = time_t(0);
 
   std::string SourceContents = R"cpp(
       #include "foo.h"
@@ -715,7 +714,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 1u);
 
   // Update to a header should cause a rebuild, though.
-  Timestamps[Header] = time_t(1);
+  FSProvider.Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
   ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 2u);
@@ -736,15 +735,24 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 3u);
 }
 
-TEST_F(TUSchedulerTests, ForceRebuild) {
+// We rebuild if a completely missing header exists, but not if one is added
+// on a higher-priority include path entry (for performance).
+// (Previously we wouldn't automatically rebuild when files were added).
+TEST_F(TUSchedulerTests, MissingHeader) {
+  CDB.ExtraClangFlags.push_back("-I" + testPath("a"));
+  CDB.ExtraClangFlags.push_back("-I" + testPath("b"));
+  // Force both directories to exist so they don't get pruned.
+  FSProvider.Files.try_emplace("a/__unused__");
+  FSProvider.Files.try_emplace("b/__unused__");
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto Source = testPath("foo.cpp");
-  auto Header = testPath("foo.h");
+  auto HeaderA = testPath("a/foo.h");
+  auto HeaderB = testPath("b/foo.h");
 
   auto SourceContents = R"cpp(
       #include "foo.h"
-      int b = a;
+      int c = b;
     )cpp";
 
   ParseInputs Inputs = getInputs(Source, SourceContents);
@@ -759,36 +767,48 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
         EXPECT_THAT(Diags,
                     ElementsAre(Field(&Diag::Message, "'foo.h' file not found"),
                                 Field(&Diag::Message,
-                                      "use of undeclared identifier 'a'")));
+                                      "use of undeclared identifier 'b'")));
       });
+  S.blockUntilIdle(timeoutSeconds(10));
 
-  // Add the header file. We need to recreate the inputs since we changed a
-  // file from underneath the test FS.
-  Files[Header] = "int a;";
-  Timestamps[Header] = time_t(1);
-  Inputs = getInputs(Source, SourceContents);
+  FSProvider.Files[HeaderB] = "int b;";
+  FSProvider.Timestamps[HeaderB] = time_t(1);
 
-  // The addition of the missing header file shouldn't trigger a rebuild since
-  // we don't track missing files.
+  // The addition of the missing header file triggers a rebuild, no errors.
   updateWithDiags(
       S, Source, Inputs, WantDiagnostics::Yes,
       [&DiagCount](std::vector<Diag> Diags) {
         ++DiagCount;
-        ADD_FAILURE() << "Did not expect diagnostics for missing header update";
+        EXPECT_THAT(Diags, IsEmpty());
       });
 
-  // Forcing the reload should should cause a rebuild which no longer has any
-  // errors.
+  // Ensure previous assertions are done before we touch the FS again.
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  // Add the high-priority header file, which should reintroduce the error.
+  FSProvider.Files[HeaderA] = "int a;";
+  FSProvider.Timestamps[HeaderA] = time_t(1);
+
+  // This isn't detected: we don't stat a/foo.h to validate the preamble.
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [&DiagCount](std::vector<Diag> Diags) {
+                    ++DiagCount;
+                    ADD_FAILURE()
+                        << "Didn't expect new diagnostics when adding a/foo.h";
+                  });
+
+  // Forcing the reload should should cause a rebuild.
   Inputs.ForceRebuild = true;
   updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
                   [&DiagCount](std::vector<Diag> Diags) {
                     ++DiagCount;
-                    EXPECT_THAT(Diags, IsEmpty());
+                    ElementsAre(Field(&Diag::Message,
+                                      "use of undeclared identifier 'b'"));
                   });
 
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  EXPECT_EQ(DiagCount, 2U);
+  EXPECT_EQ(DiagCount, 3U);
 }
+
 TEST_F(TUSchedulerTests, NoChangeDiags) {
   trace::TestTracer Tracer;
   TUScheduler S(CDB, optsForTest(), captureDiags());
