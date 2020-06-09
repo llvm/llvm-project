@@ -307,6 +307,8 @@ public:
   template <class ELFT> void parse();
   void fetch();
 
+  bool fetched = false;
+
 private:
   uint64_t offsetInArchive;
 };
@@ -326,6 +328,8 @@ public:
 
   size_t getMemberCount() const;
   size_t getFetchedMemberCount() const { return seen.size(); }
+
+  bool parsed = false;
 
 private:
   std::unique_ptr<Archive> file;
