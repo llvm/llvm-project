@@ -68,8 +68,8 @@ TEST(SinfTest, SpecialNumbers) {
   EXPECT_EQ(llvmlibc_errno, EDOM);
 
   llvmlibc_errno = 0;
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::sinf(valueFromBits(BitPatterns::negInf))));
+  EXPECT_TRUE(
+      isQuietNaN(__llvm_libc::sinf(valueFromBits(BitPatterns::negInf))));
   EXPECT_EQ(llvmlibc_errno, EDOM);
 }
 

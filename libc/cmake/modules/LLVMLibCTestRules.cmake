@@ -3,12 +3,18 @@
 # recursively produced by "add_entrypoint_object" and "add_object_library"
 # targets.
 # Usage:
-#   get_object_files_for_test(<result var> <target0> [<target1> ...])
+#   get_object_files_for_test(<result var>
+#                             <skipped_entrypoints_var>
+#                             <target0> [<target1> ...])
 #
+#   The list of object files is collected in <result_var>.
+#   If skipped entrypoints were found, then <skipped_entrypoints_var> is
+#   set to a true value.
 #   targetN is either an "add_entrypoint_target" target or an
 #   "add_object_library" target.
-function(get_object_files_for_test result)
+function(get_object_files_for_test result skipped_entrypoints_list)
   set(object_files "")
+  set(skipped_list "")
   foreach(dep IN LISTS ARGN)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT dep_type)
@@ -23,6 +29,11 @@ function(get_object_files_for_test result)
         list(APPEND object_files ${dep_object_files})
       endif()
     elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      get_target_property(is_skipped ${dep} "SKIPPED")
+      if(is_skipped)
+        list(APPEND skipped_list ${dep})
+        continue()
+      endif()
       get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
       if(object_file_raw)
         list(APPEND object_files ${object_file_raw})
@@ -30,11 +41,17 @@ function(get_object_files_for_test result)
     endif()
 
     get_target_property(indirect_deps ${dep} "DEPS")
-    get_object_files_for_test(indirect_objfiles ${indirect_deps})
+    get_object_files_for_test(
+        indirect_objfiles indirect_skipped_list ${indirect_deps})
     list(APPEND object_files ${indirect_objfiles})
+    if(indirect_skipped_list)
+      list(APPEND skipped_list ${indirect_skipped_list})
+    endif()
   endforeach(dep)
   list(REMOVE_DUPLICATES object_files)
   set(${result} ${object_files} PARENT_SCOPE)
+  list(REMOVE_DUPLICATES skipped_list)
+  set(${skipped_entrypoints_list} ${skipped_list} PARENT_SCOPE)
 endfunction(get_object_files_for_test)
 
 # Rule to add a libc unittest.
@@ -68,8 +85,43 @@ function(add_libc_unittest target_name)
                         "'add_entrypoint_object' targets.")
   endif()
 
-
   get_fq_target_name(${target_name} fq_target_name)
+  get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
+  get_object_files_for_test(
+      link_object_files skipped_entrypoints_list ${fq_deps_list})
+  if(skipped_entrypoints_list)
+    # If a test is OS/target machine independent, it has to be skipped if the
+    # OS/target machine combination does not provide any dependent entrypoints.
+    # If a test is OS/target machine specific, then such a test will live is a
+    # OS/target machine specific directory and will be skipped at the directory
+    # level if required.
+    #
+    # There can potentially be a setup like this: A unittest is setup for a
+    # OS/target machine independent object library, which in turn depends on a
+    # machine specific object library. Such a test would be testing internals of
+    # the libc and it is assumed that they will be rare in practice. So, they
+    # can be skipped in the corresponding CMake files using platform specific
+    # logic. This pattern is followed in the loader tests for example.
+    #
+    # Another pattern that is present currently is to detect machine
+    # capabilities and add entrypoints and tests accordingly. That approach is
+    # much lower level approach and is independent of the kind of skipping that
+    # is happening here at the entrypoint level.
+
+    set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+            "${skipped_entrypoints_list}.")
+    message(STATUS ${msg})
+    add_custom_target(${fq_target_name})
+
+    # A post build custom command is used to avoid running the command always.
+    add_custom_command(
+      TARGET ${fq_target_name}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo ${msg}
+    )
+    return()
+  endif()
+
   add_executable(
     ${fq_target_name}
     EXCLUDE_FROM_ALL
@@ -90,8 +142,6 @@ function(add_libc_unittest target_name)
     )
   endif()
 
-  get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  get_object_files_for_test(link_object_files ${fq_deps_list})
   target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
 
   set_target_properties(${fq_target_name}

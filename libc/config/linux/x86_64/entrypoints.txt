@@ -1,4 +1,4 @@
-set(LIBC_ENTRYPOINTS
+set(TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
@@ -43,7 +43,7 @@ set(LIBC_ENTRYPOINTS
     libc.src.unistd.write
 )
 
-set(LIBM_ENTRYPOINTS
+set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
     libc.src.math.ceil
     libc.src.math.ceilf
