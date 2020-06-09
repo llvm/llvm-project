@@ -14,6 +14,18 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static llvm::raw_ostream &error(Stream &strm) {
+  return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Error,
+                         llvm::ColorMode::Enable)
+         << "error: ";
+}
+
+static llvm::raw_ostream &warning(Stream &strm) {
+  return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Warning,
+                         llvm::ColorMode::Enable)
+         << "warning: ";
+}
+
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
   bool add_newline = false;
   if (!s.empty()) {
@@ -28,9 +40,10 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
     strm.EOL();
 }
 
-CommandReturnObject::CommandReturnObject()
-    : m_out_stream(), m_err_stream(), m_status(eReturnStatusStarted),
-      m_did_change_process_state(false), m_interactive(true) {}
+CommandReturnObject::CommandReturnObject(bool colors)
+    : m_out_stream(colors), m_err_stream(colors),
+      m_status(eReturnStatusStarted), m_did_change_process_state(false),
+      m_interactive(true) {}
 
 CommandReturnObject::~CommandReturnObject() {}
 
@@ -45,9 +58,8 @@ void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
 
   const std::string &s = std::string(sstrm.GetString());
   if (!s.empty()) {
-    Stream &error_strm = GetErrorStream();
-    error_strm.PutCString("error: ");
-    DumpStringToStreamWithNewline(error_strm, s);
+    error(GetErrorStream());
+    DumpStringToStreamWithNewline(GetErrorStream(), s);
   }
 }
 
@@ -72,7 +84,7 @@ void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
   sstrm.PrintfVarArg(format, args);
   va_end(args);
 
-  GetErrorStream() << "warning: " << sstrm.GetString();
+  warning(GetErrorStream()) << sstrm.GetString();
 }
 
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
@@ -84,7 +96,7 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  GetErrorStream() << "warning: " << in_string << "\n";
+  warning(GetErrorStream()) << in_string << '\n';
 }
 
 // Similar to AppendWarning, but do not prepend 'warning: ' to message, and
@@ -99,7 +111,7 @@ void CommandReturnObject::AppendRawWarning(llvm::StringRef in_string) {
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  GetErrorStream() << "error: " << in_string << "\n";
+  error(GetErrorStream()) << in_string << '\n';
 }
 
 void CommandReturnObject::SetError(const Status &error,
