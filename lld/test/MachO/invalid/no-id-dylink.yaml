@@ -2,7 +2,7 @@
 # RUN: mkdir -p %t
 # RUN: yaml2obj %s -o %t/libnoid.dylib
 # RUN: echo ".globl _main; .text; _main: ret" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/no-id-dylink.o
-# RUN: not lld -flavor darwinnew -o %t/no-id-dylink -Z -L%t -lnoid %t/no-id-dylink.o 2>&1 | FileCheck %s
+# RUN: not lld -flavor darwinnew -arch x86_64 -o %t/no-id-dylink -Z -L%t -lnoid %t/no-id-dylink.o 2>&1 | FileCheck %s
 # CHECK: error: dylib {{.*}}libnoid.dylib missing LC_ID_DYLIB load command
 
 ## This YAML file was originally generated from linking the following source

@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/TextAPI/MachO/Architecture.h"
 
 #include <vector>
 
@@ -26,6 +27,7 @@ struct Configuration {
   bool hasReexports = false;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
+  llvm::MachO::Architecture arch;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> searchPaths;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
