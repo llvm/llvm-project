@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "DWARFAbbreviationDeclaration.h"
+#include "DWARFBaseDIE.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugRanges.h"
 #include <map>
@@ -47,8 +48,10 @@ public:
   bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
-  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs) const {
-    return GetAttributes(cu, attrs, 0 /* curr_depth */);
+  using Recurse = DWARFBaseDIE::Recurse;
+  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
+                       Recurse recurse = Recurse::yes) const {
+    return GetAttributes(cu, attrs, recurse, 0 /* curr_depth */);
   }
 
   dw_offset_t
@@ -178,7 +181,7 @@ protected:
 
 private:
   size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
-                       uint32_t curr_depth) const;
+                       Recurse recurse, uint32_t curr_depth) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
