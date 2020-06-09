@@ -139,8 +139,17 @@ void llvm::computeLTOCacheKey(
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+
+  std::vector<uint64_t> ExportsGUID;
+  ExportsGUID.reserve(ExportList.size());
   for (const auto &VI : ExportList) {
     auto GUID = VI.getGUID();
+    ExportsGUID.push_back(GUID);
+  }
+
+  // Sort the export list elements GUIDs.
+  llvm::sort(ExportsGUID);
+  for (uint64_t GUID : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
   }
@@ -148,12 +157,23 @@ void llvm::computeLTOCacheKey(
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
   // sensitive to link order, so include that as well.
-  for (auto &Entry : ImportList) {
-    auto ModHash = Index.getModuleHash(Entry.first());
+  using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
+  std::vector<ImportMapIteratorTy> ImportModulesVector;
+  ImportModulesVector.reserve(ImportList.size());
+
+  for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
+       ++It) {
+    ImportModulesVector.push_back(It);
+  }
+  llvm::sort(ImportModulesVector,
+             [](const ImportMapIteratorTy &Lhs, const ImportMapIteratorTy &Rhs)
+                 -> bool { return Lhs->getKey() < Rhs->getKey(); });
+  for (const ImportMapIteratorTy &EntryIt : ImportModulesVector) {
+    auto ModHash = Index.getModuleHash(EntryIt->first());
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-    AddUint64(Entry.second.size());
-    for (auto &Fn : Entry.second)
+    AddUint64(EntryIt->second.size());
+    for (auto &Fn : EntryIt->second)
       AddUint64(Fn);
   }
 
