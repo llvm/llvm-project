@@ -85,25 +85,46 @@ reasons, but some of the major ones are:
 Platform and Compiler Support
 -----------------------------
 
-libc++ is known to work on the following platforms, using gcc and
-clang.
-Note that functionality provided by ``<atomic>`` is only functional with clang
-and GCC.
+For using the libc++ headers
+############################
+The libc++ headers are known to work on the following platforms, using GCC and
+Clang. Note that functionality provided by ``<atomic>`` is only functional with
+Clang and GCC.
 
-============ ==================== ============ ========================
-OS           Arch                 Compilers    ABI Library
-============ ==================== ============ ========================
-macOS        i386, x86_64         Clang, GCC   libc++abi
-FreeBSD 10+  i386, x86_64, ARM    Clang, GCC   libcxxrt, libc++abi
-Linux        i386, x86_64         Clang, GCC   libc++abi
-============ ==================== ============ ========================
+============ ==================== ============
+OS           Arch                 Compilers
+============ ==================== ============
+macOS 10.9+  i386, x86_64         Clang, GCC
+FreeBSD 10+  i386, x86_64, ARM    Clang, GCC
+Linux        i386, x86_64         Clang, GCC
+============ ==================== ============
 
-The following minimum compiler versions are strongly recommended.
+The following minimum compiler versions are required:
 
 * Clang 4.0 and above
 * GCC 5.0 and above.
 
-The C++03 dialect is only supported for Clang compilers.
+The C++03 dialect is only supported with Clang.
+
+For building the libc++ library
+###############################
+Building the libc++ library (static or shared) requires some features from
+the operating system. As such, it has its own set of (slightly different)
+system requirements.
+
+============ ==================== ============ ========================
+OS           Arch                 Compilers    ABI Library
+============ ==================== ============ ========================
+macOS 10.12+ i386, x86_64         Clang, GCC   libc++abi
+FreeBSD 10+  i386, x86_64, ARM    Clang, GCC   libcxxrt, libc++abi
+Linux        i386, x86_64         Clang, GCC   libc++abi
+============ ==================== ============ ========================
+
+The following minimum compiler versions are required:
+
+* Clang 4.0 and above
+* GCC 5.0 and above.
+
 
 C++ Dialect Support
 ---------------------
