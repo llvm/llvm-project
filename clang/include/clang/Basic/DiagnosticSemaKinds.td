@@ -5713,9 +5713,8 @@ def ext_flexible_array_union_gnu : Extension<
 def err_flexible_array_not_at_end : Error<
   "flexible array member %0 with type %1 is not at the end of"
   " %select{struct|interface|union|class|enum}2">;
-def err_objc_variable_sized_type_not_at_end
-    : Error<"%select{field %1|unnamed field}0 with variable sized type %2 is "
-            "not at the end of class">;
+def err_objc_variable_sized_type_not_at_end : Error<
+  "field %0 with variable sized type %1 is not at the end of class">;
 def note_next_field_declaration : Note<
   "next field declaration is here">;
 def note_next_ivar_declaration : Note<
