@@ -709,7 +709,7 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
     // <M x t1> -> <N*M x t2>.  Convert each t1 to <N x t2> and copy the
     // individual elements to the destination.
     unsigned FanOut = DstNumElems / SrcNumElems;
-    Type *MidTy = VectorType::get(DstVT->getElementType(), FanOut);
+    auto *MidTy = FixedVectorType::get(DstVT->getElementType(), FanOut);
     unsigned ResI = 0;
     for (unsigned Op0I = 0; Op0I < SrcNumElems; ++Op0I) {
       Value *V = Op0[Op0I];
@@ -727,7 +727,7 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   } else {
     // <N*M x t1> -> <M x t2>.  Convert each group of <N x t1> into a t2.
     unsigned FanIn = SrcNumElems / DstNumElems;
-    Type *MidTy = VectorType::get(SrcVT->getElementType(), FanIn);
+    auto *MidTy = FixedVectorType::get(SrcVT->getElementType(), FanIn);
     unsigned Op0I = 0;
     for (unsigned ResI = 0; ResI < DstNumElems; ++ResI) {
       Value *V = UndefValue::get(MidTy);

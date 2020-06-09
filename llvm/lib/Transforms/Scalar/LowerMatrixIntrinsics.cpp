@@ -148,7 +148,7 @@ Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
 
   // Cast elementwise vector start pointer to a pointer to a vector
   // (EltType x NumElements)*.
-  Type *VecType = VectorType::get(EltType, NumElements);
+  auto *VecType = FixedVectorType::get(EltType, NumElements);
   Type *VecPtrType = PointerType::get(VecType, AS);
   return Builder.CreatePointerCast(VecStart, VecPtrType, "vec.cast");
 }
@@ -223,8 +223,8 @@ class LowerMatrixIntrinsics {
 
       unsigned D = isColumnMajor() ? NumColumns : NumRows;
       for (unsigned J = 0; J < D; ++J)
-        addVector(UndefValue::get(
-            VectorType::get(EltTy, isColumnMajor() ? NumRows : NumColumns)));
+        addVector(UndefValue::get(FixedVectorType::get(
+            EltTy, isColumnMajor() ? NumRows : NumColumns)));
     }
 
     Value *getVector(unsigned i) const { return Vectors[i]; }
@@ -806,8 +806,8 @@ public:
     Value *EltPtr =
         Builder.CreatePointerCast(MatrixPtr, PointerType::get(EltTy, AS));
     Value *TileStart = Builder.CreateGEP(EltTy, EltPtr, Offset);
-    Type *TileTy =
-        VectorType::get(EltTy, ResultShape.NumRows * ResultShape.NumColumns);
+    auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
+                                                   ResultShape.NumColumns);
     Type *TilePtrTy = PointerType::get(TileTy, AS);
     Value *TilePtr =
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
@@ -850,8 +850,8 @@ public:
     Value *EltPtr =
         Builder.CreatePointerCast(MatrixPtr, PointerType::get(EltTy, AS));
     Value *TileStart = Builder.CreateGEP(EltTy, EltPtr, Offset);
-    Type *TileTy = VectorType::get(EltTy, StoreVal.getNumRows() *
-                                              StoreVal.getNumColumns());
+    auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
+                                                   StoreVal.getNumColumns());
     Type *TilePtrTy = PointerType::get(TileTy, AS);
     Value *TilePtr =
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
@@ -1170,7 +1170,7 @@ public:
 
   MatrixTy getZeroMatrix(Type *EltType, unsigned R, unsigned C) {
     MatrixTy Res;
-    Type *ColumType = VectorType::get(EltType, R);
+    auto *ColumType = FixedVectorType::get(EltType, R);
     for (unsigned I = 0; I < C; ++I)
       Res.addVector(ConstantAggregateZero::get(ColumType));
     return Res;
@@ -1303,7 +1303,7 @@ public:
     for (unsigned I = 0; I < NewNumVecs; ++I) {
       // Build a single result vector. First initialize it.
       Value *ResultVector = UndefValue::get(
-          VectorType::get(VectorTy->getElementType(), NewNumElts));
+          FixedVectorType::get(VectorTy->getElementType(), NewNumElts));
       // Go through the old elements and insert it into the resulting vector.
       for (auto J : enumerate(InputMatrix.vectors())) {
         Value *Elt = Builder.CreateExtractElement(J.value(), I);

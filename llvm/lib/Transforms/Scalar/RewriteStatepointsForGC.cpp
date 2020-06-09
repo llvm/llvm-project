@@ -1352,7 +1352,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     auto AS = Ty->getScalarType()->getPointerAddressSpace();
     Type *NewTy = Type::getInt8PtrTy(M->getContext(), AS);
     if (auto *VT = dyn_cast<VectorType>(Ty))
-      NewTy = VectorType::get(NewTy, VT->getNumElements());
+      NewTy = FixedVectorType::get(NewTy, VT->getNumElements());
     return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
                                      {NewTy});
   };
