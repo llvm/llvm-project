@@ -1,14 +1,21 @@
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:     -verify-machineinstrs -ppc-asm-full-reg-names \
-; RUN:     -ppc-vsr-nums-as-vr | FileCheck %s
+; RUN:     -ppc-vsr-nums-as-vr | FileCheck %s --check-prefix=CHECK-S
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s \
+; RUN:     -verify-machineinstrs -ppc-asm-full-reg-names \
+; RUN:     -ppc-vsr-nums-as-vr --filetype=obj | \
+; RUN:     llvm-objdump --mcpu=future -dr - | FileCheck %s --check-prefix=CHECK-O
 
 ; Function Attrs: nounwind
 define void @dcbf_test(i8* %a) {
 entry:
   tail call void @llvm.ppc.dcbf(i8* %a)
-; CHECK-LABEL: @dcbf_test
-; CHECK: dcbf 0, r3
-; CHECK-NEXT: blr
+; CHECK-S-LABEL: @dcbf_test
+; CHECK-S: dcbf 0, r3
+; CHECK-S-NEXT: blr
+; CHECK-O-LABEL: <dcbf_test>:
+; CHECK-O:        0: ac 18 00 7c        dcbf 0, 3
+; CHECK-O-NEXT:   4: 20 00 80 4e        blr
 ret void
 }
 
@@ -18,9 +25,12 @@ declare void @llvm.ppc.dcbf(i8*)
 define void @dcbfl_test(i8* %a) {
 entry:
   tail call void @llvm.ppc.dcbfl(i8* %a)
-; CHECK-LABEL: @dcbfl_test
-; CHECK: dcbfl 0, r3
-; CHECK-NEXT: blr
+; CHECK-S-LABEL: @dcbfl_test
+; CHECK-S: dcbfl 0, r3
+; CHECK-S-NEXT: blr
+; CHECK-O-LABEL: <dcbfl_test>:
+; CHECK-O:        20: ac 18 20 7c       dcbfl 0, 3
+; CHECK-O-NEXT:   24: 20 00 80 4e       blr
 ret void
 }
 
@@ -31,10 +41,14 @@ define void @dcbflp_test(i8* %a) {
 entry:
   %add.a = getelementptr inbounds i8, i8* %a, i64 3
   tail call void @llvm.ppc.dcbflp(i8* %add.a)
-; CHECK-LABEL: @dcbflp_test
-; CHECK: addi r3, r3, 3
-; CHECK-NEXT: dcbflp 0, r3
-; CHECK-NEXT: blr
+; CHECK-S-LABEL: @dcbflp_test
+; CHECK-S: addi r3, r3, 3
+; CHECK-S-NEXT: dcbflp 0, r3
+; CHECK-S-NEXT: blr
+; CHECK-O-LABEL: <dcbflp_test>:
+; CHECK-O:        40: 03 00 63 38       addi 3, 3, 3
+; CHECK-O-NEXT:   44: ac 18 60 7c       dcbflp 0, 3
+; CHECK-O-NEXT:   48: 20 00 80 4e       blr
 ret void
 }
 
