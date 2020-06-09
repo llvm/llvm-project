@@ -230,24 +230,24 @@ LexicalScopes::getOrCreateAbstractScope(const DILocalScope *Scope) {
   return &I->second;
 }
 
-/// constructScopeNest
+/// constructScopeNest - Traverse the Scope tree depth-first, storing
+/// traversal state in WorkStack and recording the depth-first
+/// numbering (setDFSIn, setDFSOut) for edge classification.
 void LexicalScopes::constructScopeNest(LexicalScope *Scope) {
   assert(Scope && "Unable to calculate scope dominance graph!");
-  SmallVector<LexicalScope *, 4> WorkStack;
-  WorkStack.push_back(Scope);
+  SmallVector<std::pair<LexicalScope *, size_t>, 4> WorkStack;
+  WorkStack.push_back(std::make_pair(Scope, 0));
   unsigned Counter = 0;
   while (!WorkStack.empty()) {
-    LexicalScope *WS = WorkStack.back();
+    auto &ScopePosition = WorkStack.back();
+    LexicalScope *WS = ScopePosition.first;
+    size_t ChildNum = ScopePosition.second++;
     const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
-    bool visitedChildren = false;
-    for (auto &ChildScope : Children)
-      if (!ChildScope->getDFSOut()) {
-        WorkStack.push_back(ChildScope);
-        visitedChildren = true;
-        ChildScope->setDFSIn(++Counter);
-        break;
-      }
-    if (!visitedChildren) {
+    if (ChildNum < Children.size()) {
+      auto &ChildScope = Children[ChildNum];
+      WorkStack.push_back(std::make_pair(ChildScope, 0));
+      ChildScope->setDFSIn(++Counter);
+    } else {
       WorkStack.pop_back();
       WS->setDFSOut(++Counter);
     }
