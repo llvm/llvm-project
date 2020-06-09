@@ -1025,7 +1025,9 @@ let isCodeGenOnly = 1 in defm XOR32 : RRm<"xor", 0x46, I32, i32, xor>;
 defm EQV : RRm<"eqv", 0x47, I64, i64>;
 
 // Section 8.5.5 - NND (Negate AND)
-defm NND : RRNCm<"nnd", 0x54, I64, i64>;
+def and_not : PatFrags<(ops node:$x, node:$y),
+                       [(and (not node:$x), node:$y)]>;
+defm NND : RRNCm<"nnd", 0x54, I64, i64, and_not>;
 
 // Section 8.5.6 - MRG (Merge)
 defm MRG : RRMRGm<"mrg", 0x56, I64, i64>;
