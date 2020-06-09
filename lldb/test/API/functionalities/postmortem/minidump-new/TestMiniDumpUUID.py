@@ -252,6 +252,7 @@ class MiniDumpUUIDTestCase(TestBase):
                 "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10").IsValid())
         self.assertFalse(self.target.AddModule("a", "", "01020305").IsValid())
 
+    @skipIfReproducer # Modules are not orphaned and it finds the module with the same UUID from test_partial_uuid_match.
     def test_remove_placeholder_add_real_module(self):
         """
             Test that removing a placeholder module and adding back the real
