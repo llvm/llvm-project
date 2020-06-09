@@ -1,3 +1,8 @@
+if(NOT (EXISTS ${LIBC_SOURCE_DIR}/loader/linux/${LIBC_TARGET_MACHINE}))
+  message("Skipping loader tests for target machine ${LIBC_TARGET_MACHINE}.")
+  return()
+endif()
+
 add_loader_test(
   loader_args_test
   SRC
