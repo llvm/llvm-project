@@ -12,16 +12,16 @@
 @i = common global i32 0, align 4
 
 ; Test -Os to make sure immediates with multiple users don't get pulled in to
-; instructions.
+; instructions (8-bit immediates are exceptions).
+
 define i32 @foo() optsize {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl %eax, b
-; X86-NEXT:    movl $12, %eax
-; X86-NEXT:    movl %eax, c
-; X86-NEXT:    cmpl %eax, e
+; X86-NEXT:    movl $12, c
+; X86-NEXT:    cmpl $12, e
 ; X86-NEXT:    jne .LBB0_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    movl $1, x
@@ -38,9 +38,8 @@ define i32 @foo() optsize {
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, %eax
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    cmpl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl $12, {{.*}}(%rip)
+; X64-NEXT:    cmpl $12, {{.*}}(%rip)
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    movl $1, {{.*}}(%rip)
@@ -74,16 +73,16 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test PGSO to make sure immediates with multiple users don't get pulled in to
-; instructions.
+; instructions (8-bit immediates are exceptions).
+
 define i32 @foo_pgso() !prof !14 {
 ; X86-LABEL: foo_pgso:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl %eax, b
-; X86-NEXT:    movl $12, %eax
-; X86-NEXT:    movl %eax, c
-; X86-NEXT:    cmpl %eax, e
+; X86-NEXT:    movl $12, c
+; X86-NEXT:    cmpl $12, e
 ; X86-NEXT:    jne .LBB1_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    movl $1, x
@@ -100,9 +99,8 @@ define i32 @foo_pgso() !prof !14 {
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
 ; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, %eax
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    cmpl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl $12, {{.*}}(%rip)
+; X64-NEXT:    cmpl $12, {{.*}}(%rip)
 ; X64-NEXT:    jne .LBB1_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    movl $1, {{.*}}(%rip)
