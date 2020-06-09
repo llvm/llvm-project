@@ -756,17 +756,21 @@ Error DWARFDebugLine::LineTable::parse(
     if (Opcode == 0) {
       // Extended Opcodes always start with a zero opcode followed by
       // a uleb128 length so you can skip ones you don't know about
-      uint64_t Len = TableData.getULEB128(OffsetPtr);
-      uint64_t ExtOffset = *OffsetPtr;
+      DataExtractor::Cursor Cursor(*OffsetPtr);
+      uint64_t Len = TableData.getULEB128(Cursor);
+      uint64_t ExtOffset = Cursor.tell();
 
       // Tolerate zero-length; assume length is correct and soldier on.
       if (Len == 0) {
         if (OS)
           *OS << "Badly formed extended line op (length 0)\n";
+        if (!Cursor)
+          RecoverableErrorHandler(Cursor.takeError());
+        *OffsetPtr = Cursor.tell();
         continue;
       }
 
-      uint8_t SubOpcode = TableData.getU8(OffsetPtr);
+      uint8_t SubOpcode = TableData.getU8(Cursor);
       if (OS)
         *OS << LNExtendedString(SubOpcode);
       switch (SubOpcode) {
@@ -820,11 +824,11 @@ Error DWARFDebugLine::LineTable::parse(
                 " of DW_LNE_set_address opcode at offset 0x%8.8" PRIx64
                 " is unsupported",
                 OpcodeAddressSize, ExtOffset));
-            *OffsetPtr += OpcodeAddressSize;
+            TableData.skip(Cursor, OpcodeAddressSize);
           } else {
             TableData.setAddressSize(OpcodeAddressSize);
             State.Row.Address.Address = TableData.getRelocatedAddress(
-                OffsetPtr, &State.Row.Address.SectionIndex);
+                Cursor, &State.Row.Address.SectionIndex);
 
             // Restore the address size if the extractor already had it.
             if (ExtractorAddressSize != 0)
@@ -859,12 +863,12 @@ Error DWARFDebugLine::LineTable::parse(
         // the file register of the state machine.
         {
           FileNameEntry FileEntry;
-          const char *Name = TableData.getCStr(OffsetPtr);
+          const char *Name = TableData.getCStr(Cursor);
           FileEntry.Name =
               DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name);
-          FileEntry.DirIdx = TableData.getULEB128(OffsetPtr);
-          FileEntry.ModTime = TableData.getULEB128(OffsetPtr);
-          FileEntry.Length = TableData.getULEB128(OffsetPtr);
+          FileEntry.DirIdx = TableData.getULEB128(Cursor);
+          FileEntry.ModTime = TableData.getULEB128(Cursor);
+          FileEntry.Length = TableData.getULEB128(Cursor);
           Prologue.FileNames.push_back(FileEntry);
           if (OS)
             *OS << " (" << Name << ", dir=" << FileEntry.DirIdx << ", mod_time="
@@ -874,7 +878,7 @@ Error DWARFDebugLine::LineTable::parse(
         break;
 
       case DW_LNE_set_discriminator:
-        State.Row.Discriminator = TableData.getULEB128(OffsetPtr);
+        State.Row.Discriminator = TableData.getULEB128(Cursor);
         if (OS)
           *OS << " (" << State.Row.Discriminator << ")";
         break;
@@ -885,21 +889,23 @@ Error DWARFDebugLine::LineTable::parse(
               << format(" length %" PRIx64, Len);
         // Len doesn't include the zero opcode byte or the length itself, but
         // it does include the sub_opcode, so we have to adjust for that.
-        (*OffsetPtr) += Len - 1;
+        TableData.skip(Cursor, Len - 1);
         break;
       }
       // Make sure the length as recorded in the table and the standard length
       // for the opcode match. If they don't, continue from the end as claimed
-      // by the table.
+      // by the table. Similarly, continue from the claimed end in the event of
+      // a parsing error.
       uint64_t End = ExtOffset + Len;
-      if (*OffsetPtr != End) {
+      if (!Cursor)
+        RecoverableErrorHandler(Cursor.takeError());
+      else if (Cursor.tell() != End)
         RecoverableErrorHandler(createStringError(
             errc::illegal_byte_sequence,
             "unexpected line op length at offset 0x%8.8" PRIx64
             " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx64,
-            ExtOffset, Len, *OffsetPtr - ExtOffset));
-        *OffsetPtr = End;
-      }
+            ExtOffset, Len, Cursor.tell() - ExtOffset));
+      *OffsetPtr = End;
     } else if (Opcode < Prologue.OpcodeBase) {
       if (OS)
         *OS << LNStandardString(Opcode);

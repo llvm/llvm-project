@@ -1299,6 +1299,117 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
 }
 
+using ValueAndLengths = std::vector<LineTable::ValueAndLength>;
+
+struct TruncatedExtendedOpcodeFixture
+    : public TestWithParam<std::tuple<uint64_t, uint64_t, uint8_t,
+                                      ValueAndLengths, StringRef, StringRef>>,
+      public CommonFixture {
+  void SetUp() {
+    std::tie(BodyLength, OpcodeLength, Opcode, Operands, ExpectedOutput,
+             ExpectedErr) = GetParam();
+  }
+
+  void runTest() {
+    LineTable &LT = Gen->addLineTable();
+    // Creating the prologue before adding the opcode ensures that the unit
+    // length does not include the table body.
+    DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+    Prologue.TotalLength += BodyLength;
+    LT.setPrologue(Prologue);
+    LT.addExtendedOpcode(OpcodeLength, Opcode, Operands);
+    generate();
+
+    DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
+    std::string Output;
+    raw_string_ostream OS(Output);
+    Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS);
+    OS.flush();
+
+    StringRef LinePrefix = "0x0000002e: 00 ";
+    StringRef OutputRef(Output);
+    StringRef OutputToCheck = OutputRef.split(LinePrefix).second;
+    EXPECT_EQ((ExpectedOutput + "\n").str(), OutputToCheck);
+    EXPECT_THAT_ERROR(std::move(Recoverable),
+                      FailedWithMessage(ExpectedErr.str()));
+  }
+
+  uint64_t BodyLength;
+  uint64_t OpcodeLength;
+  uint8_t Opcode;
+  ValueAndLengths Operands;
+  StringRef ExpectedOutput;
+  StringRef ExpectedErr;
+};
+
+TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
+  if (!setupGenerator())
+    return;
+  runTest();
+}
+
+INSTANTIATE_TEST_CASE_P(
+    TruncatedExtendedOpcodeParams, TruncatedExtendedOpcodeFixture,
+    Values(
+        std::make_tuple(1, 1, DW_LNE_end_sequence, ValueAndLengths(),
+                        "Badly formed extended line op (length 0)",
+                        "unable to decode LEB128 at offset 0x0000002f: "
+                        "malformed uleb128, extends past end"),
+        std::make_tuple(
+            2, 9, DW_LNE_set_address,
+            ValueAndLengths{{0x12345678, LineTable::Quad}},
+            "Unrecognized extended op 0x00 length 9",
+            "unexpected end of data at offset 0x30 while reading [0x30, 0x31)"),
+        std::make_tuple(
+            3, 9, DW_LNE_set_address,
+            ValueAndLengths{{0x12345678, LineTable::Quad}},
+            "DW_LNE_set_address (0x0000000000000000)",
+            "unexpected end of data at offset 0x31 while reading [0x31, 0x39)"),
+        std::make_tuple(3, 5, DW_LNE_define_file,
+                        ValueAndLengths{{'a', LineTable::Byte},
+                                        {'\0', LineTable::Byte},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB}},
+                        "DW_LNE_define_file (, dir=0, "
+                        "mod_time=(0x0000000000000000), length=0)",
+                        "no null terminated string at offset 0x31"),
+        std::make_tuple(5, 5, DW_LNE_define_file,
+                        ValueAndLengths{{'a', LineTable::Byte},
+                                        {'\0', LineTable::Byte},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB}},
+                        "DW_LNE_define_file (a, dir=0, "
+                        "mod_time=(0x0000000000000000), length=0)",
+                        "unable to decode LEB128 at offset 0x00000033: "
+                        "malformed uleb128, extends past end"),
+        std::make_tuple(6, 5, DW_LNE_define_file,
+                        ValueAndLengths{{'a', LineTable::Byte},
+                                        {'\0', LineTable::Byte},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB}},
+                        "DW_LNE_define_file (a, dir=1, "
+                        "mod_time=(0x0000000000000000), length=0)",
+                        "unable to decode LEB128 at offset 0x00000034: "
+                        "malformed uleb128, extends past end"),
+        std::make_tuple(7, 5, DW_LNE_define_file,
+                        ValueAndLengths{{'a', LineTable::Byte},
+                                        {'\0', LineTable::Byte},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB},
+                                        {1, LineTable::ULEB}},
+                        "DW_LNE_define_file (a, dir=1, "
+                        "mod_time=(0x0000000000000001), length=0)",
+                        "unable to decode LEB128 at offset 0x00000035: "
+                        "malformed uleb128, extends past end"),
+        std::make_tuple(3, 2, DW_LNE_set_discriminator,
+                        ValueAndLengths{{1, LineTable::ULEB}},
+                        "DW_LNE_set_discriminator (0)",
+                        "unable to decode LEB128 at offset 0x00000031: "
+                        "malformed uleb128, extends past end")), );
+
 TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   if (!setupGenerator(5))
     return;
