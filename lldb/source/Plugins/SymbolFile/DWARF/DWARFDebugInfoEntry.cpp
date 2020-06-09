@@ -399,9 +399,10 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 // specification or abstract origin attributes and including those in the
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
-size_t DWARFDebugInfoEntry::GetAttributes(
-    const DWARFUnit *cu, DWARFAttributes &attributes,
-    uint32_t curr_depth) const {
+size_t DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
+                                          DWARFAttributes &attributes,
+                                          Recurse recurse,
+                                          uint32_t curr_depth) const {
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl) {
     const DWARFDataExtractor &data = cu->GetData();
@@ -432,12 +433,13 @@ size_t DWARFDebugInfoEntry::GetAttributes(
         break;
       }
 
-      if ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin)) {
+      if (recurse == Recurse::yes &&
+          ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
         if (form_value.ExtractValue(data, &offset)) {
           DWARFDIE spec_die = form_value.Reference();
           if (spec_die)
             spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
-                                             curr_depth + 1);
+                                             recurse, curr_depth + 1);
         }
       } else {
         llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
@@ -730,7 +732,7 @@ DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, attributes);
+  GetAttributes(cu, attributes, Recurse::yes);
   return GetParentDeclContextDIE(cu, attributes);
 }
 
@@ -780,7 +782,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
 const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
                                                   std::string &storage) const {
   DWARFAttributes attributes;
-  GetAttributes(cu, attributes);
+  GetAttributes(cu, attributes, Recurse::yes);
   return GetQualifiedName(cu, attributes, storage);
 }
 
