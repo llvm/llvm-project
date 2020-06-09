@@ -20,6 +20,7 @@ set(LIBC_ENTRYPOINTS
     libc.src.stdlib.abort
 
     # string.h entrypoints
+    libc.src.string.bzero
     libc.src.string.memcpy
     libc.src.string.strcpy
     libc.src.string.strcat
