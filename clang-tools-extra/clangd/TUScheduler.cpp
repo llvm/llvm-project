@@ -76,6 +76,7 @@
 #include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -458,9 +459,6 @@ private:
   const GlobalCompilationDatabase &CDB;
   /// Callback invoked when preamble or main file AST is built.
   ParsingCallbacks &Callbacks;
-  /// Latest build preamble for current TU.
-  std::shared_ptr<const PreambleData> LatestPreamble;
-  Notification BuiltFirstPreamble;
 
   Semaphore &Barrier;
   /// Whether the 'onMainAST' callback ran for the current FileInputs.
@@ -477,10 +475,18 @@ private:
   /// Set to true to signal run() to finish processing.
   bool Done;                              /* GUARDED_BY(Mutex) */
   std::deque<Request> Requests;           /* GUARDED_BY(Mutex) */
-  std::queue<Request> PreambleRequests;   /* GUARDED_BY(Mutex) */
   llvm::Optional<Request> CurrentRequest; /* GUARDED_BY(Mutex) */
+  /// Signalled whenever a new request has been scheduled or processing of a
+  /// request has completed.
   mutable std::condition_variable RequestsCV;
-  Notification ReceivedPreamble;
+  /// Latest build preamble for current TU.
+  /// None means no builds yet, null means there was an error while building.
+  /// Only written by ASTWorker's thread.
+  llvm::Optional<std::shared_ptr<const PreambleData>> LatestPreamble;
+  std::queue<Request> PreambleRequests; /* GUARDED_BY(Mutex) */
+  /// Signaled whenever LatestPreamble changes state or there's a new
+  /// PreambleRequest.
+  mutable std::condition_variable PreambleCV;
   /// Guards the callback that publishes results of AST-related computations
   /// (diagnostics, highlightings) and file statuses.
   std::mutex PublishMu;
@@ -643,20 +649,26 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
                               if (CanPublishResults)
                                 Publish();
                             });
+      // Note that this might throw away a stale preamble that might still be
+      // useful, but this is how we communicate a build error.
+      LatestPreamble.emplace();
       // Make sure anyone waiting for the preamble gets notified it could not be
       // built.
-      BuiltFirstPreamble.notify();
+      PreambleCV.notify_all();
       return;
     }
 
     PreamblePeer.update(std::move(Invocation), std::move(Inputs),
                         std::move(CompilerInvocationDiags), WantDiags);
-    // Block until first preamble is ready, as patching an empty preamble would
-    // imply rebuilding it from scratch.
-    // This isn't the natural place to block, rather where the preamble would be
-    // consumed. But that's too late, we'd be running on the worker thread with
-    // the PreambleTask scheduled and so we'd deadlock.
-    ReceivedPreamble.wait();
+    std::unique_lock<std::mutex> Lock(Mutex);
+    PreambleCV.wait(Lock, [this] {
+      // Block until we reiceve a preamble request, unless a preamble already
+      // exists, as patching an empty preamble would imply rebuilding it from
+      // scratch.
+      // We block here instead of the consumer to prevent any deadlocks. Since
+      // LatestPreamble is only populated by ASTWorker thread.
+      return LatestPreamble || !PreambleRequests.empty() || Done;
+    });
     return;
   };
   startTask(TaskName, std::move(Task), WantDiags, TUScheduler::NoInvalidation);
@@ -756,7 +768,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
     // Update the preamble inside ASTWorker queue to ensure atomicity. As a task
     // running inside ASTWorker assumes internals won't change until it
     // finishes.
-    if (Preamble != LatestPreamble) {
+    if (!LatestPreamble || Preamble != *LatestPreamble) {
       ++PreambleBuildCount;
       // Cached AST is no longer valid.
       IdleASTs.take(this);
@@ -764,12 +776,16 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
       std::lock_guard<std::mutex> Lock(Mutex);
       // LatestPreamble might be the last reference to old preamble, do not
       // trigger destructor while holding the lock.
-      std::swap(LatestPreamble, Preamble);
+      if (LatestPreamble)
+        std::swap(*LatestPreamble, Preamble);
+      else
+        LatestPreamble = std::move(Preamble);
     }
+    // Notify anyone waiting for a preamble.
+    PreambleCV.notify_all();
     // Give up our ownership to old preamble before starting expensive AST
     // build.
     Preamble.reset();
-    BuiltFirstPreamble.notify();
     // We only need to build the AST if diagnostics were requested.
     if (WantDiags == WantDiagnostics::No)
       return;
@@ -780,7 +796,6 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
   };
   if (RunSync) {
     Task();
-    ReceivedPreamble.notify();
     return;
   }
   {
@@ -789,7 +804,7 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
                            steady_clock::now(), Context::current().clone(),
                            llvm::None, TUScheduler::NoInvalidation, nullptr});
   }
-  ReceivedPreamble.notify();
+  PreambleCV.notify_all();
   RequestsCV.notify_all();
 }
 
@@ -800,6 +815,7 @@ void ASTWorker::generateDiagnostics(
   static constexpr trace::Metric ASTAccessForDiag(
       "ast_access_diag", trace::Metric::Counter, "result");
   assert(Invocation);
+  assert(LatestPreamble);
   // No need to rebuild the AST if we won't send the diagnostics.
   {
     std::lock_guard<std::mutex> Lock(PublishMu);
@@ -832,7 +848,7 @@ void ASTWorker::generateDiagnostics(
   if (!AST || !InputsAreLatest) {
     auto RebuildStartTime = DebouncePolicy::clock::now();
     llvm::Optional<ParsedAST> NewAST = ParsedAST::build(
-        FileName, Inputs, std::move(Invocation), CIDiags, LatestPreamble);
+        FileName, Inputs, std::move(Invocation), CIDiags, *LatestPreamble);
     auto RebuildDuration = DebouncePolicy::clock::now() - RebuildStartTime;
     ++ASTBuildCount;
     // Try to record the AST-build time, to inform future update debouncing.
@@ -890,10 +906,13 @@ void ASTWorker::generateDiagnostics(
 std::shared_ptr<const PreambleData>
 ASTWorker::getPossiblyStalePreamble() const {
   std::lock_guard<std::mutex> Lock(Mutex);
-  return LatestPreamble;
+  return LatestPreamble ? *LatestPreamble : nullptr;
 }
 
-void ASTWorker::waitForFirstPreamble() const { BuiltFirstPreamble.wait(); }
+void ASTWorker::waitForFirstPreamble() const {
+  std::unique_lock<std::mutex> Lock(Mutex);
+  PreambleCV.wait(Lock, [this] { return LatestPreamble.hasValue() || Done; });
+}
 
 tooling::CompileCommand ASTWorker::getCurrentCompileCommand() const {
   std::unique_lock<std::mutex> Lock(Mutex);
@@ -925,10 +944,9 @@ void ASTWorker::stop() {
     assert(!Done && "stop() called twice");
     Done = true;
   }
-  // We are no longer going to build any preambles, let the waiters know that.
-  ReceivedPreamble.notify();
-  BuiltFirstPreamble.notify();
   PreamblePeer.stop();
+  // We are no longer going to build any preambles, let the waiters know that.
+  PreambleCV.notify_all();
   Status.stop();
   RequestsCV.notify_all();
 }

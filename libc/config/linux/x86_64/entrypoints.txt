@@ -22,6 +22,7 @@ set(LIBC_ENTRYPOINTS
     # string.h entrypoints
     libc.src.string.bzero
     libc.src.string.memcpy
+    libc.src.string.memset
     libc.src.string.strcpy
     libc.src.string.strcat
     libc.src.string.strlen
@@ -31,6 +32,7 @@ set(LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
 
     # threads.h entrypoints
+    libc.src.threads.call_once
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
@@ -48,6 +50,8 @@ set(LIBM_ENTRYPOINTS
     libc.src.math.cosf
     libc.src.math.expf
     libc.src.math.exp2f
+    libc.src.math.fabs
+    libc.src.math.fabsf
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.round

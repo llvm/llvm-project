@@ -715,6 +715,14 @@ void TextNodeDumper::VisitCallExpr(const CallExpr *Node) {
     OS << " adl";
 }
 
+void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {
+  const char *OperatorSpelling = clang::getOperatorSpelling(Node->getOperator());
+  if (OperatorSpelling)
+    OS << " '" << OperatorSpelling << "'";
+
+  VisitCallExpr(Node);
+}
+
 void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {
   OS << " <";
   {

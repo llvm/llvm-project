@@ -9,8 +9,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pushl %ebp
 ; X32-SSE-NEXT:    movl %esp, %ebp
-; X32-SSE-NEXT:    andl $-128, %esp
-; X32-SSE-NEXT:    subl $384, %esp # imm = 0x180
+; X32-SSE-NEXT:    andl $-16, %esp
+; X32-SSE-NEXT:    subl $272, %esp # imm = 0x110
 ; X32-SSE-NEXT:    movl 88(%ebp), %ecx
 ; X32-SSE-NEXT:    movdqa 72(%ebp), %xmm0
 ; X32-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
@@ -43,33 +43,29 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ;
 ; X64-SSE-LABEL: extract_any_extend_vector_inreg_v16i64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pushq %rbp
-; X64-SSE-NEXT:    movq %rsp, %rbp
-; X64-SSE-NEXT:    andq $-128, %rsp
-; X64-SSE-NEXT:    subq $256, %rsp # imm = 0x100
+; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SSE-NEXT:    psrldq {{.*#+}} xmm7 = xmm7[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-SSE-NEXT:    xorps %xmm0, %xmm0
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-NEXT:    movaps %xmm0, (%rsp)
-; X64-SSE-NEXT:    movdqa %xmm7, {{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp)
 ; X64-SSE-NEXT:    andl $15, %edi
-; X64-SSE-NEXT:    movq (%rsp,%rdi,8), %rax
-; X64-SSE-NEXT:    movq %rbp, %rsp
-; X64-SSE-NEXT:    popq %rbp
+; X64-SSE-NEXT:    movq -128(%rsp,%rdi,8), %rax
+; X64-SSE-NEXT:    popq %rcx
 ; X64-SSE-NEXT:    retq
 ;
 ; X32-AVX-LABEL: extract_any_extend_vector_inreg_v16i64:
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    pushl %ebp
 ; X32-AVX-NEXT:    movl %esp, %ebp
-; X32-AVX-NEXT:    andl $-128, %esp
-; X32-AVX-NEXT:    subl $384, %esp # imm = 0x180
+; X32-AVX-NEXT:    andl $-32, %esp
+; X32-AVX-NEXT:    subl $288, %esp # imm = 0x120
 ; X32-AVX-NEXT:    movl 40(%ebp), %ecx
 ; X32-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -96,8 +92,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    pushq %rbp
 ; X64-AVX-NEXT:    movq %rsp, %rbp
-; X64-AVX-NEXT:    andq $-128, %rsp
-; X64-AVX-NEXT:    subq $256, %rsp # imm = 0x100
+; X64-AVX-NEXT:    andq $-32, %rsp
+; X64-AVX-NEXT:    subq $160, %rsp
 ; X64-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm3[3,1,2,3]
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero

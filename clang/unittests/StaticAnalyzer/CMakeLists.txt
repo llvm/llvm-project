@@ -7,10 +7,12 @@ add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
   CallDescriptionTest.cpp
   CallEventTest.cpp
-  StoreTest.cpp
-  RegisterCustomCheckersTest.cpp
-  SymbolReaperTest.cpp
+  ParamRegionTest.cpp
   RangeSetTest.cpp
+  RegisterCustomCheckersTest.cpp
+  StoreTest.cpp 
+  SymbolReaperTest.cpp
+  TestReturnValueUnderConstruction.cpp
   )
 
 clang_target_link_libraries(StaticAnalysisTests

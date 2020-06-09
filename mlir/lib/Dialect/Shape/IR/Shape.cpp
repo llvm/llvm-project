@@ -219,6 +219,14 @@ OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
   return BoolAttr::get(true, getContext());
 }
 
+static LogicalResult verify(AssumingAllOp op) {
+  // Ensure that AssumingAllOp contains at least one operand
+  if (op.getNumOperands() == 0)
+    return op.emitOpError("no operands specified");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//

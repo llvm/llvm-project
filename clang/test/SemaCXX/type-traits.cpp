@@ -2829,3 +2829,35 @@ namespace ConstClass {
   };
   static_assert(!__is_trivially_assignable(B&, const B&), "");
 }
+
+namespace type_trait_expr_numargs_overflow {
+  // Make sure that TypeTraitExpr can store 16 bits worth of arguments.
+  struct S {
+  template <typename... Ts> S(Ts... ts) {
+    static_assert(sizeof...(ts) == 32768+1, "");
+  }
+};
+
+#define T4(X) X,X,X,X
+#define T16(X) T4(X),T4(X),T4(X),T4(X)
+#define T64(X) T16(X),T16(X),T16(X),T16(X)
+#define T256(X) T64(X),T64(X),T64(X),T64(X)
+#define T1024(X) T256(X),T256(X),T256(X),T256(X)
+#define T4096(X) T1024(X),T1024(X),T1024(X),T1024(X)
+#define T16384(X) T4096(X),T4096(X),T4096(X),T4096(X)
+#define T32768(X) T16384(X),T16384(X)
+
+void test() {
+  static_assert(__is_constructible(S, T32768(int), float), "");
+}
+
+#undef T4
+#undef T16
+#undef T64
+#undef T256
+#undef T1024
+#undef T4096
+#undef T16384
+#undef T32768
+
+} // namespace type_trait_expr_numargs_overflow

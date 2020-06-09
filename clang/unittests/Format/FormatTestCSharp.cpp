@@ -245,13 +245,11 @@ TEST_F(FormatTestCSharp, Attributes) {
                "}");
 
   verifyFormat("[TestMethod]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
@@ -525,6 +523,33 @@ var x = foo(className, $@"some code:
   EXPECT_EQ(Code, format(Code, Style));
 }
 
+TEST_F(FormatTestCSharp, CSharpLambdas) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+class MyClass {
+  Action<string> greet = name => {
+    string greeting = $"Hello {name}!";
+    Console.WriteLine(greeting);
+  };
+})",
+               GoogleStyle);
+
+  // Microsoft Style:
+  // https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/lambda-expressions#statement-lambdas
+  verifyFormat(R"(//
+class MyClass
+{
+    Action<string> greet = name =>
+    {
+        string greeting = $"Hello {name}!";
+        Console.WriteLine(greeting);
+    };
+})",
+               MicrosoftStyle);
+}
+
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
@@ -684,13 +709,6 @@ class MyClass {
   Style.BraceWrapping.AfterFunction = true;
 
   verifyFormat(R"(//
-public class SaleItem {
-  public decimal Price
-  { get; set; }
-})",
-               Style);
-
-  verifyFormat(R"(//
 class TimePeriod {
   public double Hours
   {
@@ -703,6 +721,17 @@ class TimePeriod {
   }
 })",
                Style);
+ 
+  // Microsoft style trivial property accessors have no line break before the
+  // opening brace.
+  auto MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  verifyFormat(R"(//
+public class SaleItem
+{
+    public decimal Price { get; set; }
+})",
+               MicrosoftStyle);
+
 }
 
 TEST_F(FormatTestCSharp, CSharpSpaces) {

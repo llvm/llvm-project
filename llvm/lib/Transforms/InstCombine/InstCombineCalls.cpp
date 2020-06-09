@@ -4529,7 +4529,7 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
                       Attribute::getWithDereferenceableOrNullBytes(
                           Call.getContext(), Op1C->getZExtValue()));
     // Add alignment attribute if alignment is a power of two constant.
-    if (Op0C) {
+    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
       uint64_t AlignmentVal = Op0C->getZExtValue();
       if (llvm::isPowerOf2_64(AlignmentVal))
         Call.addAttribute(AttributeList::ReturnIndex,

@@ -838,6 +838,10 @@ public:
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
 
+    // TODO: Handle other cost kinds.
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
+
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
       assert(CondTy && "CondTy must exist");

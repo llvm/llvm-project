@@ -26,3 +26,28 @@ define zeroext i1 @g(i32 %x) optsize {
   %t1 = icmp eq i32 %t0, 1
   ret i1 %t1
 }
+
+; 8-bit immediates probably have small encodings.
+; We do not want to hoist the constant into a register here.
+
+define i64 @PR46237(i64 %x, i64 %y, i64 %z) optsize {
+; CHECK-LABEL: PR46237:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shll $6, %eax
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movl $7, %eax
+; CHECK-NEXT:    andq %rax, %rsi
+; CHECK-NEXT:    andq %rax, %rdx
+; CHECK-NEXT:    leaq (%rdx,%rsi,8), %rax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    retq
+  %and = shl i64 %z, 6
+  %shl = and i64 %and, 192
+  %and1 = shl i64 %y, 3
+  %shl2 = and i64 %and1, 56
+  %and3 = and i64 %z, 7
+  %or = or i64 %and3, %shl2
+  %or4 = or i64 %or, %shl
+  ret i64 %or4
+}

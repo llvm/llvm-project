@@ -1,4 +1,4 @@
-//=== lib/CodeGen/GlobalISel/AArch64PostLegalizerCombiner.cpp -------------===//
+ //=== lib/CodeGen/GlobalISel/AArch64PostLegalizerCombiner.cpp -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -162,7 +162,7 @@ static bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// a G_UZP1 or G_UZP2 instruction.
 ///
 /// \param [in] MI - The shuffle vector instruction.
-/// \param [out] Opc - Either G_UZP1 or G_UZP2 on success.
+/// \param [out] MatchInfo - Either G_UZP1 or G_UZP2 on success.
 static bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
                      ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
