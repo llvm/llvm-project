@@ -2099,6 +2099,14 @@ TEST(APIntTest, getBitsSetWithWrap) {
   EXPECT_EQ(0u, i127hi1lo1wrap.countTrailingZeros());
   EXPECT_EQ(1u, i127hi1lo1wrap.countTrailingOnes());
   EXPECT_EQ(2u, i127hi1lo1wrap.countPopulation());
+
+  APInt i32hiequallowrap = APInt::getBitsSetWithWrap(32, 10, 10);
+  EXPECT_EQ(32u, i32hiequallowrap.countLeadingOnes());
+  EXPECT_EQ(0u, i32hiequallowrap.countLeadingZeros());
+  EXPECT_EQ(32u, i32hiequallowrap.getActiveBits());
+  EXPECT_EQ(0u, i32hiequallowrap.countTrailingZeros());
+  EXPECT_EQ(32u, i32hiequallowrap.countTrailingOnes());
+  EXPECT_EQ(32u, i32hiequallowrap.countPopulation());
 }
 
 TEST(APIntTest, getHighBitsSet) {
