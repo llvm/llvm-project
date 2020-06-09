@@ -3,7 +3,7 @@
 # RUN: mkdir -p %t
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -o %t/test -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem %t/test.o
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/test -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem %t/test.o
 #
 # RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/test | FileCheck %s
 
