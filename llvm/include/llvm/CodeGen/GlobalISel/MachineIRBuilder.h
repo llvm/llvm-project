@@ -35,23 +35,23 @@ class GISelChangeObserver;
 /// to transfer BuilderState between different kinds of MachineIRBuilders.
 struct MachineIRBuilderState {
   /// MachineFunction under construction.
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
   /// Information used to access the description of the opcodes.
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
   /// Information used to verify types are consistent and to create virtual registers.
-  MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI = nullptr;
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
 
   /// \name Fields describing the insertion point.
   /// @{
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator II;
   /// @}
 
-  GISelChangeObserver *Observer;
+  GISelChangeObserver *Observer = nullptr;
 
-  GISelCSEInfo *CSEInfo;
+  GISelCSEInfo *CSEInfo = nullptr;
 };
 
 class DstOp {
@@ -238,8 +238,16 @@ public:
   /// Some constructors for easy use.
   MachineIRBuilder() = default;
   MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
-  MachineIRBuilder(MachineInstr &MI) : MachineIRBuilder(*MI.getMF()) {
+
+  MachineIRBuilder(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt) {
+    setMF(*MBB.getParent());
+    setInsertPt(MBB, InsPt);
+  }
+
+  MachineIRBuilder(MachineInstr &MI) :
+    MachineIRBuilder(*MI.getParent(), MI.getIterator()) {
     setInstr(MI);
+    setDebugLoc(MI.getDebugLoc());
   }
 
   virtual ~MachineIRBuilder() = default;
