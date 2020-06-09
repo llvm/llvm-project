@@ -3650,7 +3650,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (isInstructionTriviallyDead(Inst, TLI)) {
       ++NumDeadInst;
       LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
-      salvageDebugInfoOrMarkUndef(*Inst);
+      salvageDebugInfo(*Inst);
       Inst->eraseFromParent();
       MadeIRChange = true;
       continue;
