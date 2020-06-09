@@ -101,6 +101,8 @@ public:
 
   // Block s/udiv lowering for now
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
+
+  bool hasAndNot(SDValue Y) const override;
 };
 } // namespace llvm
 
