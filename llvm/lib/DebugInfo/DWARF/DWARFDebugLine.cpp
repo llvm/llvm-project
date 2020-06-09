@@ -706,8 +706,13 @@ Error DWARFDebugLine::LineTable::parse(
     Prologue.dump(*OS, DumpOptions);
   }
 
-  if (PrologueErr)
+  if (PrologueErr) {
+    // Ensure there is a blank line after the prologue to clearly delineate it
+    // from later dumps.
+    if (OS)
+      *OS << "\n";
     return PrologueErr;
+  }
 
   uint64_t ProgramLength = Prologue.TotalLength + Prologue.sizeofTotalLength();
   if (!DebugLineData.isValidOffsetForDataOfSize(DebugLineOffset,
@@ -750,6 +755,7 @@ Error DWARFDebugLine::LineTable::parse(
 
     uint64_t OpcodeOffset = *OffsetPtr;
     uint8_t Opcode = TableData.getU8(OffsetPtr);
+    size_t RowCount = Rows.size();
 
     if (Verbose)
       *OS << format("%02.02" PRIx8 " ", Opcode);
@@ -922,8 +928,6 @@ Error DWARFDebugLine::LineTable::parse(
         }
         if (OS)
           State.Row.dump(*OS);
-        if (Verbose) // FIXME: Don't print this newline.
-          *OS << "\n";
         State.appendRowToMatrix();
         break;
 
@@ -1064,7 +1068,10 @@ Error DWARFDebugLine::LineTable::parse(
 
       State.appendRowToMatrix();
     }
-    if(Verbose)
+
+    // When a row is added to the matrix, it is also dumped, which includes a
+    // new line already, so don't add an extra one.
+    if (Verbose && Rows.size() == RowCount)
       *OS << "\n";
   }
 

@@ -67,8 +67,8 @@
 # NONFATAL-NEXT:    total_length: 0x00000002
 # NONFATAL-NEXT:          format: DWARF32
 # NONFATAL-NEXT:         version: 0
+# NONFATAL-EMPTY:
 # SOME-ERR-NEXT: warning: parsing line table prologue at offset 0x00000048: unsupported version 0
-# NONFATAL-NOT: prologue_length
 
 ## Version 1 table.
 # NONFATAL:      debug_line[0x0000004e]
@@ -76,8 +76,8 @@
 # NONFATAL-NEXT:    total_length: 0x00000002
 # NONFATAL-NEXT:          format: DWARF32
 # NONFATAL-NEXT:         version: 1
+# NONFATAL-EMPTY:
 # SOME-ERR-NEXT: warning: parsing line table prologue at offset 0x0000004e: unsupported version 1
-# NONFATAL-NOT: prologue_length
 
 ## Malformed directory format with no path component.
 # NONFATAL:      debug_line[0x00000054]
