@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
@@ -127,11 +128,16 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
+  uint64_t EntryIndex = 0;
   for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
-    assert(DebugRanges.Offset >= CurrOffset &&
-           "Offset should be greater than or equal to the bytes that we have "
-           "written");
+    if ((uint64_t)DebugRanges.Offset < CurrOffset)
+      return createStringError(errc::invalid_argument,
+                               "'Offset' for 'debug_ranges' with index " +
+                                   Twine(EntryIndex) +
+                                   " must be greater than or equal to the "
+                                   "number of bytes written already (0x" +
+                                   Twine::utohexstr(CurrOffset) + ")");
     if (DebugRanges.Offset > CurrOffset)
       ZeroFillBytes(OS, DebugRanges.Offset - CurrOffset);
     for (auto Entry : DebugRanges.Entries) {
@@ -141,6 +147,7 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
                                 DI.IsLittleEndian);
     }
     ZeroFillBytes(OS, DebugRanges.AddrSize * 2);
+    ++EntryIndex;
   }
 
   return Error::success();
