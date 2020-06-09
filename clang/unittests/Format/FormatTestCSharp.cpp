@@ -245,13 +245,11 @@ TEST_F(FormatTestCSharp, Attributes) {
                "}");
 
   verifyFormat("[TestMethod]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
@@ -711,13 +709,6 @@ class MyClass {
   Style.BraceWrapping.AfterFunction = true;
 
   verifyFormat(R"(//
-public class SaleItem {
-  public decimal Price
-  { get; set; }
-})",
-               Style);
-
-  verifyFormat(R"(//
 class TimePeriod {
   public double Hours
   {
@@ -730,6 +721,17 @@ class TimePeriod {
   }
 })",
                Style);
+ 
+  // Microsoft style trivial property accessors have no line break before the
+  // opening brace.
+  auto MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  verifyFormat(R"(//
+public class SaleItem
+{
+    public decimal Price { get; set; }
+})",
+               MicrosoftStyle);
+
 }
 
 TEST_F(FormatTestCSharp, CSharpSpaces) {
