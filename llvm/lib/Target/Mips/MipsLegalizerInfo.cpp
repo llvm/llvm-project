@@ -333,7 +333,6 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
   using namespace TargetOpcode;
 
-  MIRBuilder.setInstr(MI);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
@@ -507,7 +506,6 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   const MipsInstrInfo &TII = *ST.getInstrInfo();
   const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
-  MIRBuilder.setInstr(MI);
 
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
