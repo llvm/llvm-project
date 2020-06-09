@@ -857,8 +857,8 @@ class Configuration(object):
                 self.config.available_features.add('dylib-has-no-shared_mutex')
                 self.lit_config.note("shared_mutex is not supported by the deployment target")
             # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
-            # supported starting in macosx10.14.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 14)):
+            # supported starting in macosx10.13.
+            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 13)):
                 self.config.available_features.add('dylib-has-no-bad_optional_access')
                 self.lit_config.note("throwing bad_optional_access is not supported by the deployment target")
 
