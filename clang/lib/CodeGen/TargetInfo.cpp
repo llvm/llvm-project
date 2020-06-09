@@ -6265,17 +6265,6 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty);
 
-  // _Float16 and __fp16 get passed as if it were an int or float, but
-  // with the top 16 bits unspecified. This is not done for OpenCL as it handles
-  // the half type natively, and does not need to interwork with AAPCS code.
-  if ((Ty->isFloat16Type() || Ty->isHalfType()) &&
-      !getContext().getLangOpts().NativeHalfArgsAndReturns) {
-    llvm::Type *ResType = IsAAPCS_VFP ?
-      llvm::Type::getFloatTy(getVMContext()) :
-      llvm::Type::getInt32Ty(getVMContext());
-    return ABIArgInfo::getDirect(ResType);
-  }
-
   // __bf16 gets passed using the bfloat IR type, or using i32 but
   // with the top 16 bits unspecified.
   if (Ty->isBFloat16Type() && IsFloatABISoftFP) {
@@ -6484,17 +6473,6 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
         (IsFloatABISoftFP &&
          VT->getElementType()->isBFloat16Type()))
       return coerceIllegalVector(RetTy);
-  }
-
-  // _Float16 and __fp16 get returned as if it were an int or float, but with
-  // the top 16 bits unspecified. This is not done for OpenCL as it handles the
-  // half type natively, and does not need to interwork with AAPCS code.
-  if ((RetTy->isFloat16Type() || RetTy->isHalfType()) &&
-      !getContext().getLangOpts().NativeHalfArgsAndReturns) {
-    llvm::Type *ResType = IsAAPCS_VFP ?
-      llvm::Type::getFloatTy(getVMContext()) :
-      llvm::Type::getInt32Ty(getVMContext());
-    return ABIArgInfo::getDirect(ResType);
   }
 
   // if we're using the softfp float abi, __bf16 get returned as if it were an

@@ -3124,20 +3124,6 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   return R;
 }
 
-// Emit code to clear the padding bits when returning or passing as an argument
-// a 16-bit floating-point value.
-llvm::Value *CodeGenFunction::EmitCMSEClearFP16(llvm::Value *Src) {
-  llvm::Type *RetTy = Src->getType();
-  assert(RetTy->isFloatTy() ||
-         (RetTy->isIntegerTy() && RetTy->getIntegerBitWidth() == 32));
-  if (RetTy->isFloatTy()) {
-    llvm::Value *T0 = Builder.CreateBitCast(Src, Builder.getIntNTy(32));
-    llvm::Value *T1 = Builder.CreateAnd(T0, 0xffff, "cmse.clear");
-    return Builder.CreateBitCast(T1, RetTy);
-  }
-  return Builder.CreateAnd(Src, 0xffff, "cmse.clear");
-}
-
 void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
                                          bool EmitRetDbgLoc,
                                          SourceLocation EndLoc) {
@@ -3307,17 +3293,10 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     if (CurFuncDecl && CurFuncDecl->hasAttr<CmseNSEntryAttr>()) {
       // For certain return types, clear padding bits, as they may reveal
       // sensitive information.
-      const Type *RTy = RetTy.getCanonicalType().getTypePtr();
-      if (RTy->isFloat16Type() || RTy->isHalfType()) {
-        // 16-bit floating-point types are passed in a 32-bit integer or float,
-        // with unspecified upper bits.
-        RV = EmitCMSEClearFP16(RV);
-      } else {
-        // Small struct/union types are passed as integers.
-        auto *ITy = dyn_cast<llvm::IntegerType>(RV->getType());
-        if (ITy != nullptr && isa<RecordType>(RetTy.getCanonicalType()))
-          RV = EmitCMSEClearRecord(RV, ITy, RetTy);
-      }
+      // Small struct/union types are passed as integers.
+      auto *ITy = dyn_cast<llvm::IntegerType>(RV->getType());
+      if (ITy != nullptr && isa<RecordType>(RetTy.getCanonicalType()))
+        RV = EmitCMSEClearRecord(RV, ITy, RetTy);
     }
     EmitReturnValueCheck(RV);
     Ret = Builder.CreateRet(RV);
@@ -4620,17 +4599,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (CallInfo.isCmseNSCall()) {
           // For certain parameter types, clear padding bits, as they may reveal
           // sensitive information.
-          const Type *PTy = I->Ty.getCanonicalType().getTypePtr();
-          // 16-bit floating-point types are passed in a 32-bit integer or
-          // float, with unspecified upper bits.
-          if (PTy->isFloat16Type() || PTy->isHalfType()) {
-            Load = EmitCMSEClearFP16(Load);
-          } else {
-            // Small struct/union types are passed as integer arrays.
-            auto *ATy = dyn_cast<llvm::ArrayType>(Load->getType());
-            if (ATy != nullptr && isa<RecordType>(I->Ty.getCanonicalType()))
-              Load = EmitCMSEClearRecord(Load, ATy, I->Ty);
-          }
+          // Small struct/union types are passed as integer arrays.
+          auto *ATy = dyn_cast<llvm::ArrayType>(Load->getType());
+          if (ATy != nullptr && isa<RecordType>(I->Ty.getCanonicalType()))
+            Load = EmitCMSEClearRecord(Load, ATy, I->Ty);
         }
         IRCallArgs[FirstIRArg] = Load;
       }
