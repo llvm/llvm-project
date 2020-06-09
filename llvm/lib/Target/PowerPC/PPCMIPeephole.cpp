@@ -1564,6 +1564,12 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "To: ");
   LLVM_DEBUG(MI.dump());
   NumRotatesCollapsed++;
+  // If SrcReg has no non-debug use it's safe to delete its def SrcMI.
+  if (MRI->use_nodbg_empty(SrcReg)) {
+    assert(!SrcMI->hasImplicitDef() &&
+           "Not expecting an implicit def with this instr.");
+    SrcMI->eraseFromParent();
+  }
   return true;
 }
 
