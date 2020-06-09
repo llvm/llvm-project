@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// Implementation of the lowering of image related constructs and expressions.
+/// Fortran images can form teams, communicate via coarrays, etc.
+///
+//===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Image.h"
 #include "RTBuilder.h"
@@ -21,14 +26,6 @@
         << MSG;                                                                \
     exit(1);                                                                   \
   }
-
-// TODO: We don't have runtime library support for various features. When they
-// are encountered, we emit an error message and exit immediately.
-static void noRuntimeSupport(mlir::Location loc, llvm::StringRef stmt) {
-  mlir::emitError(loc, "There is no runtime support for ")
-      << stmt << " statement.\n";
-  std::exit(1);
-}
 
 //===----------------------------------------------------------------------===//
 // TEAM statements and constructs
@@ -58,8 +55,7 @@ void Fortran::lower::genEndChangeTeamStmt(
 void Fortran::lower::genFormTeamStatement(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &, const Fortran::parser::FormTeamStmt &) {
-  // FIXME: There is no runtime call to make for this yet.
-  noRuntimeSupport(converter.getCurrentLocation(), "FORM TEAM");
+  TODO("FORM TEAM");
 }
 
 //===----------------------------------------------------------------------===//
