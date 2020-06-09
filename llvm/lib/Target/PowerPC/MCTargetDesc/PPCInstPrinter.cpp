@@ -116,16 +116,6 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     }
   }
 
-  if ((MI->getOpcode() == PPC::OR || MI->getOpcode() == PPC::OR8) &&
-      MI->getOperand(1).getReg() == MI->getOperand(2).getReg()) {
-    O << "\tmr ";
-    printOperand(MI, 0, O);
-    O << ", ";
-    printOperand(MI, 1, O);
-    printAnnotation(O, Annot);
-    return;
-  }
-
   if (MI->getOpcode() == PPC::RLDICR ||
       MI->getOpcode() == PPC::RLDICR_32) {
     unsigned char SH = MI->getOperand(2).getImm();
