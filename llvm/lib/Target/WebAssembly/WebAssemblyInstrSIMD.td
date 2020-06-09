@@ -765,6 +765,16 @@ defm NEG : SIMDUnaryFP<fneg, "neg", 225>;
 // Square root: sqrt
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 227>;
 
+// Rounding: ceil, floor, trunc, nearest
+defm CEIL : SIMDUnary<v4f32, "f32x4", int_wasm_ceil, "ceil", 216>;
+defm FLOOR : SIMDUnary<v4f32, "f32x4", int_wasm_floor, "floor", 217>;
+defm TRUNC: SIMDUnary<v4f32, "f32x4", int_wasm_trunc, "trunc", 218>;
+defm NEAREST: SIMDUnary<v4f32, "f32x4", int_wasm_nearest, "nearest", 219>;
+defm CEIL : SIMDUnary<v2f64, "f64x2", int_wasm_ceil, "ceil", 220>;
+defm FLOOR : SIMDUnary<v2f64, "f64x2", int_wasm_floor, "floor", 221>;
+defm TRUNC: SIMDUnary<v2f64, "f64x2", int_wasm_trunc, "trunc", 222>;
+defm NEAREST: SIMDUnary<v2f64, "f64x2", int_wasm_nearest, "nearest", 223>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
 //===----------------------------------------------------------------------===//
