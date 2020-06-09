@@ -45,9 +45,9 @@ using ::testing::UnorderedElementsAre;
   return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
 }
 
-template <typename... NoteMatcherTypes>
-::testing::Matcher<const Diag &> WithNote(NoteMatcherTypes... NoteMatcher) {
-  return Field(&Diag::Notes, ElementsAre(NoteMatcher...));
+::testing::Matcher<const Diag &>
+WithNote(::testing::Matcher<Note> NoteMatcher) {
+  return Field(&Diag::Notes, ElementsAre(NoteMatcher));
 }
 
 MATCHER_P2(Diag, Range, Message,
@@ -270,51 +270,6 @@ TEST(DiagnosticsTest, ClangTidy) {
               // Verify that we don't have "[check-name]" suffix in the message.
               WithFix(FixMessage(
                   "use a trailing return type for this function")))));
-}
-
-TEST(DiagnosticTest, TemplatesInHeaders) {
-  // Diagnostics from templates defined in headers are placed at the expansion.
-  Annotations Main(R"cpp(
-    Derived<int> [[y]]; // error-ok
-  )cpp");
-  Annotations Header(R"cpp(
-    template <typename T>
-    struct Derived : [[T]] {};
-  )cpp");
-  TestTU TU = TestTU::withCode(Main.code());
-  TU.HeaderCode = Header.code().str();
-  EXPECT_THAT(
-      TU.build().getDiagnostics(),
-      ElementsAre(AllOf(
-          Diag(Main.range(), "in template: base specifier must name a class"),
-          WithNote(Diag(Header.range(), "error occurred here"),
-                   Diag(Main.range(), "in instantiation of template class "
-                                      "'Derived<int>' requested here")))));
-}
-
-TEST(DiagnosticTest, MakeUnique) {
-  // We usually miss diagnostics from header functions as we don't parse them.
-  // std::make_unique is an exception.
-  Annotations Main(R"cpp(
-    struct S { S(char*); };
-    auto x = std::[[make_unique]]<S>(42); // error-ok
-  )cpp");
-  TestTU TU = TestTU::withCode(Main.code());
-  TU.HeaderCode = R"cpp(
-    namespace std {
-    // These mocks aren't quite right - we omit unique_ptr for simplicity.
-    // forward is included to show its body is not needed to get the diagnostic.
-    template <typename T> T&& forward(T& t) { return static_cast<T&&>(t); }
-    template <typename T, typename... A> T* make_unique(A&&... args) {
-       return new T(std::forward<A>(args)...);
-    }
-    }
-  )cpp";
-  EXPECT_THAT(TU.build().getDiagnostics(),
-              UnorderedElementsAre(
-                  Diag(Main.range(),
-                       "in template: "
-                       "no matching constructor for initialization of 'S'")));
 }
 
 TEST(DiagnosticTest, NoMultipleDiagnosticInFlight) {

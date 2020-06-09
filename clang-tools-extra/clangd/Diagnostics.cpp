@@ -24,7 +24,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -121,96 +120,49 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
   return halfOpenToRange(M, R);
 }
 
-// Try to find a location in the main-file to report the diagnostic D.
-// Returns a description like "in included file", or nullptr on failure.
-const char *getMainFileRange(const Diag &D, const SourceManager &SM,
-                             SourceLocation DiagLoc, Range &R) {
-  // Look for a note in the main file indicating template instantiation.
-  for (const auto &N : D.Notes) {
-    if (N.InsideMainFile) {
-      switch (N.ID) {
-      case diag::note_template_class_instantiation_was_here:
-      case diag::note_template_class_explicit_specialization_was_here:
-      case diag::note_template_class_instantiation_here:
-      case diag::note_template_member_class_here:
-      case diag::note_template_member_function_here:
-      case diag::note_function_template_spec_here:
-      case diag::note_template_static_data_member_def_here:
-      case diag::note_template_variable_def_here:
-      case diag::note_template_enum_def_here:
-      case diag::note_template_nsdmi_here:
-      case diag::note_template_type_alias_instantiation_here:
-      case diag::note_template_exception_spec_instantiation_here:
-      case diag::note_template_requirement_instantiation_here:
-      case diag::note_evaluating_exception_spec_here:
-      case diag::note_default_arg_instantiation_here:
-      case diag::note_default_function_arg_instantiation_here:
-      case diag::note_explicit_template_arg_substitution_here:
-      case diag::note_function_template_deduction_instantiation_here:
-      case diag::note_deduced_template_arg_substitution_here:
-      case diag::note_prior_template_arg_substitution:
-      case diag::note_template_default_arg_checking:
-      case diag::note_concept_specialization_here:
-      case diag::note_nested_requirement_here:
-      case diag::note_checking_constraints_for_template_id_here:
-      case diag::note_checking_constraints_for_var_spec_id_here:
-      case diag::note_checking_constraints_for_class_spec_id_here:
-      case diag::note_checking_constraints_for_function_here:
-      case diag::note_constraint_substitution_here:
-      case diag::note_constraint_normalization_here:
-      case diag::note_parameter_mapping_substitution_here:
-        R = N.Range;
-        return "in template";
-      default:
-        break;
-      }
-    }
-  }
-  // Look for where the file with the error was #included.
+// Returns whether the \p D is modified.
+bool adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
+                          const LangOptions &LangOpts) {
+  // We only report diagnostics with at least error severity from headers.
+  // Use default severity to avoid noise with -Werror.
+  if (!Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+          Info.getID()))
+    return false;
+
+  const SourceManager &SM = Info.getSourceManager();
+  const SourceLocation &DiagLoc = SM.getExpansionLoc(Info.getLocation());
+  SourceLocation IncludeInMainFile;
   auto GetIncludeLoc = [&SM](SourceLocation SLoc) {
     return SM.getIncludeLoc(SM.getFileID(SLoc));
   };
-  for (auto IncludeLocation = GetIncludeLoc(SM.getExpansionLoc(DiagLoc));
-       IncludeLocation.isValid();
+  for (auto IncludeLocation = GetIncludeLoc(DiagLoc); IncludeLocation.isValid();
        IncludeLocation = GetIncludeLoc(IncludeLocation)) {
     if (clangd::isInsideMainFile(IncludeLocation, SM)) {
-      R.start = sourceLocToPosition(SM, IncludeLocation);
-      R.end = sourceLocToPosition(
-          SM,
-          Lexer::getLocForEndOfToken(IncludeLocation, 0, SM, LangOptions()));
-      return "in included file";
+      IncludeInMainFile = IncludeLocation;
+      break;
     }
   }
-  return nullptr;
-}
-
-// Place the diagnostic the main file, rather than the header, if possible:
-//   - for errors in included files, use the #include location
-//   - for errors in template instantiation, use the instantation location
-// In both cases, add the original header location as a note.
-bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
-  const SourceManager &SM = DiagLoc.getManager();
-  DiagLoc = DiagLoc.getExpansionLoc();
-  Range R;
-  const char *Prefix = getMainFileRange(D, SM, DiagLoc, R);
-  if (!Prefix)
+  if (IncludeInMainFile.isInvalid())
     return false;
-
-  // Add a note that will point to real diagnostic.
-  const auto *FE = SM.getFileEntryForID(SM.getFileID(DiagLoc));
-  D.Notes.emplace(D.Notes.begin());
-  Note &N = D.Notes.front();
-  N.AbsFile = std::string(FE->tryGetRealPathName());
-  N.File = std::string(FE->getName());
-  N.Message = "error occurred here";
-  N.Range = D.Range;
 
   // Update diag to point at include inside main file.
   D.File = SM.getFileEntryForID(SM.getMainFileID())->getName().str();
-  D.Range = std::move(R);
+  D.Range.start = sourceLocToPosition(SM, IncludeInMainFile);
+  D.Range.end = sourceLocToPosition(
+      SM, Lexer::getLocForEndOfToken(IncludeInMainFile, 0, SM, LangOpts));
   D.InsideMainFile = true;
+
+  // Add a note that will point to real diagnostic.
+  const auto *FE = SM.getFileEntryForID(SM.getFileID(DiagLoc));
+  D.Notes.emplace_back();
+  Note &N = D.Notes.back();
+  N.AbsFile = std::string(FE->tryGetRealPathName());
+  N.File = std::string(FE->getName());
+  N.Message = "error occurred here";
+  N.Range = diagnosticRange(Info, LangOpts);
+
   // Update message to mention original file.
-  D.Message = llvm::formatv("{0}: {1}", Prefix, D.Message);
+  D.Message = llvm::Twine("in included file: ", D.Message).str();
   return true;
 }
 
@@ -523,7 +475,6 @@ void StoreDiags::BeginSourceFile(const LangOptions &Opts,
 }
 
 void StoreDiags::EndSourceFile() {
-  flushLastDiag();
   LangOpts = None;
 }
 
@@ -561,14 +512,12 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
 void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
   DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
-  bool OriginallyError =
-      Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
-          Info.getID());
 
   if (Info.getLocation().isInvalid()) {
     // Handle diagnostics coming from command-line arguments. The source manager
     // is *not* available at this point, so we cannot use it.
-    if (!OriginallyError) {
+    if (!Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
+            Info.getID())) {
       IgnoreDiagnostics::log(DiagLevel, Info);
       return; // non-errors add too much noise, do not show them.
     }
@@ -576,8 +525,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     flushLastDiag();
 
     LastDiag = Diag();
-    LastDiagLoc.reset();
-    LastDiagOriginallyError = OriginallyError;
     LastDiag->ID = Info.getID();
     fillNonLocationData(DiagLevel, Info, *LastDiag);
     LastDiag->InsideMainFile = true;
@@ -603,7 +550,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     D.File = std::string(SM.getFilename(Info.getLocation()));
     D.AbsFile = getCanonicalPath(
         SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
-    D.ID = Info.getID();
     return D;
   };
 
@@ -688,9 +634,10 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     LastPrimaryDiagnosticWasSuppressed = false;
 
     LastDiag = Diag();
+    LastDiag->ID = Info.getID();
     FillDiagBase(*LastDiag);
-    LastDiagLoc.emplace(Info.getLocation(), Info.getSourceManager());
-    LastDiagOriginallyError = OriginallyError;
+    if (!InsideMainFile)
+      LastDiagWasAdjusted = adjustDiagFromHeader(*LastDiag, Info, *LangOpts);
 
     if (!Info.getFixItHints().empty())
       AddFix(true /* try to invent a message instead of repeating the diag */);
@@ -732,28 +679,16 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 void StoreDiags::flushLastDiag() {
   if (!LastDiag)
     return;
-  auto Finish = llvm::make_scope_exit([&, NDiags(Output.size())] {
-    if (Output.size() == NDiags) // No new diag emitted.
-      vlog("Dropped diagnostic: {0}: {1}", LastDiag->File, LastDiag->Message);
-    LastDiag.reset();
-  });
-
-  if (isBlacklisted(*LastDiag))
-    return;
-  // Move errors that occur from headers into main file.
-  if (!LastDiag->InsideMainFile && LastDiagLoc && LastDiagOriginallyError) {
-    if (tryMoveToMainFile(*LastDiag, *LastDiagLoc)) {
-      // Suppress multiple errors from the same inclusion.
-      if (!IncludedErrorLocations
-               .insert({LastDiag->Range.start.line,
-                        LastDiag->Range.start.character})
-               .second)
-        return;
-    }
+  if (!isBlacklisted(*LastDiag) && mentionsMainFile(*LastDiag) &&
+      (!LastDiagWasAdjusted ||
+       // Only report the first diagnostic coming from each particular header.
+       IncludeLinesWithErrors.insert(LastDiag->Range.start.line).second)) {
+    Output.push_back(std::move(*LastDiag));
+  } else {
+    vlog("Dropped diagnostic: {0}: {1}", LastDiag->File, LastDiag->Message);
   }
-  if (!mentionsMainFile(*LastDiag))
-    return;
-  Output.push_back(std::move(*LastDiag));
+  LastDiag.reset();
+  LastDiagWasAdjusted = false;
 }
 
 } // namespace clangd
