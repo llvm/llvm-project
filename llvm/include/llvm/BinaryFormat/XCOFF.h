@@ -27,6 +27,7 @@ constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
+constexpr uint16_t RelocOverflow = 65535;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
