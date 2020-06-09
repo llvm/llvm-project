@@ -1608,6 +1608,12 @@ public:
 
   void dump() const;
 
+  /// In most cases this function returns the ABI alignment for a given type,
+  /// except for illegal vector types where the alignment exceeds that of the
+  /// stack. In such cases we attempt to break the vector down to a legal type
+  /// and return the ABI alignment for that instead.
+  Align getReducedAlign(EVT VT, bool UseABI);
+
   /// Create a stack temporary based on the size in bytes and the alignment
   SDValue CreateStackTemporary(TypeSize Bytes, Align Alignment);
 
