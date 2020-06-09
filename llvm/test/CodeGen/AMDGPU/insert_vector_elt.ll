@@ -690,8 +690,8 @@ define amdgpu_kernel void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s11
-; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_cmp_eq_u32_e64 vcc, s6, 3
+; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v0, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
 ; VI-NEXT:    v_cmp_eq_u32_e64 vcc, s6, 2
