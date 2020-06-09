@@ -5321,7 +5321,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
   // and a vector GEP with all zeroes final index.
   if (!Ops[FinalIndex]->getType()->isVectorTy()) {
     NewAddr = Builder.CreateGEP(Ops[0], makeArrayRef(Ops).drop_front());
-    Type *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
+    auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
     NewAddr = Builder.CreateGEP(NewAddr, Constant::getNullValue(IndexTy));
   } else {
     Value *Base = Ops[0];
@@ -6471,7 +6471,8 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   assert(!NewType->isVectorTy() && "Expected a scalar type!");
   assert(NewType->getScalarSizeInBits() == SVIVecType->getScalarSizeInBits() &&
          "Expected a type of the same size!");
-  Type *NewVecType = VectorType::get(NewType, SVIVecType->getNumElements());
+  auto *NewVecType =
+      FixedVectorType::get(NewType, SVIVecType->getNumElements());
 
   // Create a bitcast (shuffle (insert (bitcast(..))))
   IRBuilder<> Builder(SVI->getContext());

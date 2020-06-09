@@ -918,8 +918,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
 
 static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
   if (Ty.isVector())
-    return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
-                           Ty.getNumElements());
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
   return IntegerType::get(C, Ty.getSizeInBits());
 }
 
