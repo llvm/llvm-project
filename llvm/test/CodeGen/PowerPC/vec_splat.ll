@@ -10,17 +10,17 @@
 define void @splat(%f4* %P, %f4* %Q, float %X) nounwind {
 ; G3-LABEL: splat:
 ; G3:       # %bb.0:
-; G3-NEXT:    lfs 0, 0(4)
+; G3-NEXT:    lfs 0, 12(4)
 ; G3-NEXT:    lfs 2, 8(4)
 ; G3-NEXT:    lfs 3, 4(4)
-; G3-NEXT:    lfs 4, 12(4)
 ; G3-NEXT:    fadds 0, 0, 1
-; G3-NEXT:    fadds 2, 2, 1
-; G3-NEXT:    fadds 3, 3, 1
-; G3-NEXT:    fadds 1, 4, 1
-; G3-NEXT:    stfs 1, 12(3)
-; G3-NEXT:    stfs 2, 8(3)
-; G3-NEXT:    stfs 3, 4(3)
+; G3-NEXT:    lfs 4, 0(4)
+; G3-NEXT:    stfs 0, 12(3)
+; G3-NEXT:    fadds 0, 2, 1
+; G3-NEXT:    stfs 0, 8(3)
+; G3-NEXT:    fadds 0, 3, 1
+; G3-NEXT:    stfs 0, 4(3)
+; G3-NEXT:    fadds 0, 4, 1
 ; G3-NEXT:    stfs 0, 0(3)
 ; G3-NEXT:    blr
 ;
@@ -49,18 +49,18 @@ define void @splat(%f4* %P, %f4* %Q, float %X) nounwind {
 define void @splat_i4(%i4* %P, %i4* %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_i4:
 ; G3:       # %bb.0:
-; G3-NEXT:    lwz 6, 0(4)
+; G3-NEXT:    lwz 6, 12(4)
 ; G3-NEXT:    lwz 7, 8(4)
 ; G3-NEXT:    lwz 8, 4(4)
-; G3-NEXT:    lwz 4, 12(4)
 ; G3-NEXT:    add 6, 6, 5
-; G3-NEXT:    add 8, 8, 5
-; G3-NEXT:    add 7, 7, 5
+; G3-NEXT:    lwz 4, 0(4)
+; G3-NEXT:    stw 6, 12(3)
+; G3-NEXT:    add 6, 7, 5
+; G3-NEXT:    stw 6, 8(3)
+; G3-NEXT:    add 6, 8, 5
 ; G3-NEXT:    add 4, 4, 5
-; G3-NEXT:    stw 4, 12(3)
-; G3-NEXT:    stw 7, 8(3)
-; G3-NEXT:    stw 8, 4(3)
-; G3-NEXT:    stw 6, 0(3)
+; G3-NEXT:    stw 6, 4(3)
+; G3-NEXT:    stw 4, 0(3)
 ; G3-NEXT:    blr
 ;
 ; G5-LABEL: splat_i4:
@@ -88,18 +88,18 @@ define void @splat_i4(%i4* %P, %i4* %Q, i32 %X) nounwind {
 define void @splat_imm_i32(%i4* %P, %i4* %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_imm_i32:
 ; G3:       # %bb.0:
-; G3-NEXT:    lwz 5, 0(4)
+; G3-NEXT:    lwz 5, 12(4)
 ; G3-NEXT:    lwz 6, 8(4)
 ; G3-NEXT:    lwz 7, 4(4)
-; G3-NEXT:    lwz 4, 12(4)
 ; G3-NEXT:    addi 5, 5, -1
-; G3-NEXT:    addi 7, 7, -1
-; G3-NEXT:    addi 6, 6, -1
+; G3-NEXT:    lwz 4, 0(4)
+; G3-NEXT:    stw 5, 12(3)
+; G3-NEXT:    addi 5, 6, -1
+; G3-NEXT:    stw 5, 8(3)
+; G3-NEXT:    addi 5, 7, -1
 ; G3-NEXT:    addi 4, 4, -1
-; G3-NEXT:    stw 4, 12(3)
-; G3-NEXT:    stw 6, 8(3)
-; G3-NEXT:    stw 7, 4(3)
-; G3-NEXT:    stw 5, 0(3)
+; G3-NEXT:    stw 5, 4(3)
+; G3-NEXT:    stw 4, 0(3)
 ; G3-NEXT:    blr
 ;
 ; G5-LABEL: splat_imm_i32:
@@ -118,22 +118,22 @@ define void @splat_imm_i32(%i4* %P, %i4* %Q, i32 %X) nounwind {
 define void @splat_imm_i16(%i4* %P, %i4* %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_imm_i16:
 ; G3:       # %bb.0:
-; G3-NEXT:    lwz 5, 0(4)
-; G3-NEXT:    lwz 6, 8(4)
+; G3-NEXT:    lwz 5, 8(4)
+; G3-NEXT:    lwz 6, 0(4)
 ; G3-NEXT:    lwz 7, 4(4)
-; G3-NEXT:    lwz 4, 12(4)
 ; G3-NEXT:    addi 5, 5, 1
-; G3-NEXT:    addi 7, 7, 1
+; G3-NEXT:    lwz 4, 12(4)
 ; G3-NEXT:    addi 6, 6, 1
+; G3-NEXT:    addi 7, 7, 1
 ; G3-NEXT:    addi 4, 4, 1
-; G3-NEXT:    addis 5, 5, 1
-; G3-NEXT:    addis 7, 7, 1
-; G3-NEXT:    addis 6, 6, 1
 ; G3-NEXT:    addis 4, 4, 1
 ; G3-NEXT:    stw 4, 12(3)
-; G3-NEXT:    stw 6, 8(3)
-; G3-NEXT:    stw 7, 4(3)
-; G3-NEXT:    stw 5, 0(3)
+; G3-NEXT:    addis 4, 5, 1
+; G3-NEXT:    stw 4, 8(3)
+; G3-NEXT:    addis 4, 7, 1
+; G3-NEXT:    stw 4, 4(3)
+; G3-NEXT:    addis 4, 6, 1
+; G3-NEXT:    stw 4, 0(3)
 ; G3-NEXT:    blr
 ;
 ; G5-LABEL: splat_imm_i16:
@@ -189,58 +189,60 @@ define void @spltish(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; G3-LABEL: spltish:
 ; G3:       # %bb.0:
 ; G3-NEXT:    stwu 1, -48(1)
+; G3-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; G3-NEXT:    lbz 5, 0(4)
+; G3-NEXT:    lbz 30, 15(4)
+; G3-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
+; G3-NEXT:    lbz 29, 13(4)
+; G3-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
+; G3-NEXT:    lbz 28, 11(4)
+; G3-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
+; G3-NEXT:    lbz 27, 9(4)
+; G3-NEXT:    stw 24, 16(1) # 4-byte Folded Spill
 ; G3-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
 ; G3-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
-; G3-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
-; G3-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
-; G3-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
-; G3-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
-; G3-NEXT:    lbz 5, 5(4)
-; G3-NEXT:    lbz 6, 3(4)
-; G3-NEXT:    lbz 7, 1(4)
-; G3-NEXT:    lbz 8, 0(4)
-; G3-NEXT:    lbz 9, 2(4)
-; G3-NEXT:    lbz 10, 4(4)
-; G3-NEXT:    lbz 11, 6(4)
-; G3-NEXT:    lbz 12, 8(4)
-; G3-NEXT:    lbz 0, 10(4)
-; G3-NEXT:    addi 7, 7, -15
-; G3-NEXT:    lbz 30, 12(4)
-; G3-NEXT:    lbz 29, 14(4)
-; G3-NEXT:    lbz 28, 15(4)
-; G3-NEXT:    lbz 27, 13(4)
-; G3-NEXT:    lbz 26, 11(4)
-; G3-NEXT:    lbz 25, 9(4)
-; G3-NEXT:    addi 6, 6, -15
-; G3-NEXT:    lbz 4, 7(4)
-; G3-NEXT:    addi 5, 5, -15
-; G3-NEXT:    addi 25, 25, -15
-; G3-NEXT:    addi 26, 26, -15
-; G3-NEXT:    addi 4, 4, -15
-; G3-NEXT:    addi 27, 27, -15
-; G3-NEXT:    addi 28, 28, -15
-; G3-NEXT:    stb 29, 14(3)
-; G3-NEXT:    stb 30, 12(3)
-; G3-NEXT:    stb 0, 10(3)
-; G3-NEXT:    stb 12, 8(3)
-; G3-NEXT:    stb 11, 6(3)
-; G3-NEXT:    stb 10, 4(3)
-; G3-NEXT:    stb 9, 2(3)
-; G3-NEXT:    stb 8, 0(3)
-; G3-NEXT:    stb 28, 15(3)
-; G3-NEXT:    stb 27, 13(3)
-; G3-NEXT:    stb 26, 11(3)
-; G3-NEXT:    stb 25, 9(3)
-; G3-NEXT:    stb 4, 7(3)
+; G3-NEXT:    lbz 6, 2(4)
+; G3-NEXT:    lbz 7, 4(4)
+; G3-NEXT:    lbz 8, 6(4)
+; G3-NEXT:    lbz 9, 8(4)
+; G3-NEXT:    lbz 10, 10(4)
+; G3-NEXT:    lbz 11, 12(4)
+; G3-NEXT:    lbz 12, 14(4)
+; G3-NEXT:    lbz 26, 7(4)
+; G3-NEXT:    lbz 25, 5(4)
+; G3-NEXT:    lbz 24, 3(4)
+; G3-NEXT:    lbz 4, 1(4)
+; G3-NEXT:    stb 5, 0(3)
+; G3-NEXT:    addi 5, 30, -15
+; G3-NEXT:    stb 5, 15(3)
+; G3-NEXT:    addi 5, 29, -15
+; G3-NEXT:    stb 5, 13(3)
+; G3-NEXT:    addi 5, 28, -15
+; G3-NEXT:    stb 5, 11(3)
+; G3-NEXT:    addi 5, 27, -15
+; G3-NEXT:    stb 5, 9(3)
+; G3-NEXT:    addi 5, 26, -15
+; G3-NEXT:    stb 5, 7(3)
+; G3-NEXT:    addi 5, 25, -15
 ; G3-NEXT:    stb 5, 5(3)
-; G3-NEXT:    stb 6, 3(3)
-; G3-NEXT:    stb 7, 1(3)
+; G3-NEXT:    addi 5, 24, -15
+; G3-NEXT:    addi 4, 4, -15
+; G3-NEXT:    stb 12, 14(3)
+; G3-NEXT:    stb 11, 12(3)
+; G3-NEXT:    stb 10, 10(3)
+; G3-NEXT:    stb 9, 8(3)
+; G3-NEXT:    stb 8, 6(3)
+; G3-NEXT:    stb 7, 4(3)
+; G3-NEXT:    stb 6, 2(3)
+; G3-NEXT:    stb 5, 3(3)
+; G3-NEXT:    stb 4, 1(3)
 ; G3-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; G3-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
 ; G3-NEXT:    lwz 28, 32(1) # 4-byte Folded Reload
 ; G3-NEXT:    lwz 27, 28(1) # 4-byte Folded Reload
 ; G3-NEXT:    lwz 26, 24(1) # 4-byte Folded Reload
 ; G3-NEXT:    lwz 25, 20(1) # 4-byte Folded Reload
+; G3-NEXT:    lwz 24, 16(1) # 4-byte Folded Reload
 ; G3-NEXT:    addi 1, 1, 48
 ; G3-NEXT:    blr
 ;
