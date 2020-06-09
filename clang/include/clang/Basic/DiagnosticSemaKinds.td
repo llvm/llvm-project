@@ -3301,6 +3301,12 @@ def err_attribute_output_parameter : Error<
 
 def ext_cannot_use_trivial_abi : ExtWarn<
   "'trivial_abi' cannot be applied to %0">, InGroup<IgnoredAttributes>;
+def note_cannot_use_trivial_abi_reason : Note<
+  "'trivial_abi' is disallowed on %0 because %select{"
+  "its copy constructors and move constructors are all deleted|"
+  "it is polymorphic|"
+  "it has a base of a non-trivial class type|it has a virtual base|"
+  "it has a __weak field|it has a field of a non-trivial class type}1">;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<

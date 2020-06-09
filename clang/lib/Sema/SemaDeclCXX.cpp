@@ -9686,27 +9686,53 @@ void Sema::DiagnoseHiddenVirtualMethods(CXXMethodDecl *MD) {
 }
 
 void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
-  auto PrintDiagAndRemoveAttr = [&]() {
+  auto PrintDiagAndRemoveAttr = [&](unsigned N) {
     // No diagnostics if this is a template instantiation.
-    if (!isTemplateInstantiation(RD.getTemplateSpecializationKind()))
+    if (!isTemplateInstantiation(RD.getTemplateSpecializationKind())) {
       Diag(RD.getAttr<TrivialABIAttr>()->getLocation(),
            diag::ext_cannot_use_trivial_abi) << &RD;
+      Diag(RD.getAttr<TrivialABIAttr>()->getLocation(),
+           diag::note_cannot_use_trivial_abi_reason) << &RD << N;
+    }
     RD.dropAttr<TrivialABIAttr>();
   };
 
+  // Ill-formed if the copy and move constructors are deleted.
+  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    if (RD.needsImplicitCopyConstructor() &&
+        !RD.defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD.needsImplicitMoveConstructor() &&
+        !RD.defaultedMoveConstructorIsDeleted())
+      return true;
+    for (const CXXConstructorDecl *CD : RD.ctors())
+      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
+        return true;
+    return false;
+  };
+
+  if (!HasNonDeletedCopyOrMoveConstructor()) {
+    PrintDiagAndRemoveAttr(0);
+    return;
+  }
+
   // Ill-formed if the struct has virtual functions.
   if (RD.isPolymorphic()) {
-    PrintDiagAndRemoveAttr();
+    PrintDiagAndRemoveAttr(1);
     return;
   }
 
   for (const auto &B : RD.bases()) {
     // Ill-formed if the base class is non-trivial for the purpose of calls or a
     // virtual base.
-    if ((!B.getType()->isDependentType() &&
-         !B.getType()->getAsCXXRecordDecl()->canPassInRegisters()) ||
-        B.isVirtual()) {
-      PrintDiagAndRemoveAttr();
+    if (!B.getType()->isDependentType() &&
+        !B.getType()->getAsCXXRecordDecl()->canPassInRegisters()) {
+      PrintDiagAndRemoveAttr(2);
+      return;
+    }
+
+    if (B.isVirtual()) {
+      PrintDiagAndRemoveAttr(3);
       return;
     }
   }
@@ -9716,14 +9742,14 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     // non-trivial for the purpose of calls.
     QualType FT = FD->getType();
     if (FT.getObjCLifetime() == Qualifiers::OCL_Weak) {
-      PrintDiagAndRemoveAttr();
+      PrintDiagAndRemoveAttr(4);
       return;
     }
 
     if (const auto *RT = FT->getBaseElementTypeUnsafe()->getAs<RecordType>())
       if (!RT->isDependentType() &&
           !cast<CXXRecordDecl>(RT->getDecl())->canPassInRegisters()) {
-        PrintDiagAndRemoveAttr();
+        PrintDiagAndRemoveAttr(5);
         return;
       }
   }
