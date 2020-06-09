@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -o %t %t.o
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t %t.o
 
 ## Check for the presence of load commands that are essential for a working
 ## executable.

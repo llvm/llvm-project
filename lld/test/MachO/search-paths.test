@@ -1,12 +1,12 @@
 RUN: mkdir -p %t
 
-RUN: lld -flavor darwinnew -v -L%t 2>&1 | FileCheck -DDIR=%t %s
+RUN: lld -flavor darwinnew -arch x86_64 -v -L%t 2>&1 | FileCheck -DDIR=%t %s
 CHECK:      Library search paths:
 CHECK-NEXT: [[DIR]]
 CHECK-NEXT: /usr/lib
 CHECK-NEXT: /usr/local/lib
 
-RUN: lld -flavor darwinnew -v -L%t -Z 2>&1 | FileCheck -DDIR=%t --check-prefix=CHECK_Z %s
+RUN: lld -flavor darwinnew -arch x86_64 -v -L%t -Z 2>&1 | FileCheck -DDIR=%t --check-prefix=CHECK_Z %s
 CHECK_Z:      Library search paths:
 CHECK_Z-NEXT: [[DIR]]
 CHECK_Z-NOT:  /usr/
