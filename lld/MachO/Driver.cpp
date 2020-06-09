@@ -75,19 +75,20 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 }
 
 static Optional<std::string> findLibrary(StringRef name) {
+  std::string stub = (llvm::Twine("lib") + name + ".tbd").str();
   std::string shared = (llvm::Twine("lib") + name + ".dylib").str();
   std::string archive = (llvm::Twine("lib") + name + ".a").str();
   llvm::SmallString<260> location;
 
   for (StringRef dir : config->searchPaths) {
-    for (StringRef library : {shared, archive}) {
+    for (StringRef library : {stub, shared, archive}) {
       location = dir;
       llvm::sys::path::append(location, library);
       if (fs::exists(location))
         return location.str().str();
     }
   }
-  return None;
+  return {};
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
@@ -135,6 +136,16 @@ static void addFile(StringRef path) {
   case file_magic::macho_dynamically_linked_shared_lib:
     inputFiles.push_back(make<DylibFile>(mbref));
     break;
+  case file_magic::tapi_file: {
+    llvm::Expected<std::unique_ptr<llvm::MachO::InterfaceFile>> result =
+        TextAPIReader::get(mbref);
+    if (!result)
+      return;
+
+    std::unique_ptr<llvm::MachO::InterfaceFile> interface{std::move(*result)};
+    inputFiles.push_back(make<DylibFile>(std::move(interface)));
+    break;
+  }
   default:
     error(path + ": unhandled file type");
   }
