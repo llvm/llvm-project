@@ -3,6 +3,11 @@
 # RUN: llvm-mc -triple=powerpc64le-unknown-unknown -filetype=obj %s | \
 # RUN: llvm-readobj -r | FileCheck %s -check-prefix=READOBJ
 
+# RUN: llvm-mc -triple=powerpc64-unknown-unknown -filetype=obj %s 2>&1 | \
+# RUN: FileCheck %s -check-prefix=MC
+# RUN: llvm-mc -triple=powerpc64-unknown-unknown -filetype=obj %s | \
+# RUN: llvm-readobj -r | FileCheck %s -check-prefix=READOBJ
+
 # This test checks that on Power PC we can correctly convert @pcrel and
 # @got@pcrel into R_PPC64_PCREL34 and R_PPC64_GOT_PCREL34.
 
