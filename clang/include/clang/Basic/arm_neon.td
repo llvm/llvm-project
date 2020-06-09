@@ -1887,6 +1887,39 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def VSET_LANE_BF : IOpInst<"vset_lane", ".1.I", "b", OP_SCALAR_BF16_SET_LN>;
   def VGET_LANEQ_BF : IOpInst<"vget_lane", "1.I", "Qb", OP_SCALAR_BF16_GET_LNQ>;
   def VSET_LANEQ_BF : IOpInst<"vset_lane", ".1.I", "Qb", OP_SCALAR_BF16_SET_LNQ>;
+
+  def VLD1_BF : WInst<"vld1", ".(c*!)", "bQb">;
+  def VLD2_BF : WInst<"vld2", "2(c*!)", "bQb">;
+  def VLD3_BF : WInst<"vld3", "3(c*!)", "bQb">;
+  def VLD4_BF : WInst<"vld4", "4(c*!)", "bQb">;
+
+  def VST1_BF : WInst<"vst1", "v*(.!)", "bQb">;
+  def VST2_BF : WInst<"vst2", "v*(2!)", "bQb">;
+  def VST3_BF : WInst<"vst3", "v*(3!)", "bQb">;
+  def VST4_BF : WInst<"vst4", "v*(4!)", "bQb">;
+
+  def VLD1_X2_BF : WInst<"vld1_x2", "2(c*!)", "bQb">;
+  def VLD1_X3_BF : WInst<"vld1_x3", "3(c*!)", "bQb">;
+  def VLD1_X4_BF : WInst<"vld1_x4", "4(c*!)", "bQb">;
+
+  def VST1_X2_BF : WInst<"vst1_x2", "v*(2!)", "bQb">;
+  def VST1_X3_BF : WInst<"vst1_x3", "v*(3!)", "bQb">;
+  def VST1_X4_BF : WInst<"vst1_x4", "v*(4!)", "bQb">;
+
+  def VLD1_LANE_BF : WInst<"vld1_lane", ".(c*!).I", "bQb">;
+  def VLD2_LANE_BF : WInst<"vld2_lane", "2(c*!)2I", "bQb">;
+  def VLD3_LANE_BF : WInst<"vld3_lane", "3(c*!)3I", "bQb">;
+  def VLD4_LANE_BF : WInst<"vld4_lane", "4(c*!)4I", "bQb">;
+  def VST1_LANE_BF : WInst<"vst1_lane", "v*(.!)I", "bQb">;
+  def VST2_LANE_BF : WInst<"vst2_lane", "v*(2!)I", "bQb">;
+  def VST3_LANE_BF : WInst<"vst3_lane", "v*(3!)I", "bQb">;
+  def VST4_LANE_BF : WInst<"vst4_lane", "v*(4!)I", "bQb">;
+
+  def VLD1_DUP_BF : WInst<"vld1_dup", ".(c*!)", "bQb">;
+  def VLD2_DUP_BF : WInst<"vld2_dup", "2(c*!)", "bQb">;
+  def VLD3_DUP_BF : WInst<"vld3_dup", "3(c*!)", "bQb">;
+  def VLD4_DUP_BF : WInst<"vld4_dup", "4(c*!)", "bQb">;
+
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC) && !defined(__aarch64__)" in {
