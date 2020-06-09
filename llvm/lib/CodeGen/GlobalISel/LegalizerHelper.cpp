@@ -87,7 +87,6 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  MachineIRBuilder &Builder)
     : MIRBuilder(Builder), MRI(MF.getRegInfo()),
       LI(*MF.getSubtarget().getLegalizerInfo()), Observer(Observer) {
-  MIRBuilder.setMF(MF);
   MIRBuilder.setChangeObserver(Observer);
 }
 
@@ -95,7 +94,6 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &B)
     : MIRBuilder(B), MRI(MF.getRegInfo()), LI(LI), Observer(Observer) {
-  MIRBuilder.setMF(MF);
   MIRBuilder.setChangeObserver(Observer);
 }
 LegalizerHelper::LegalizeResult

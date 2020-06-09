@@ -169,6 +169,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                                    ArrayRef<GISelChangeObserver *> AuxObservers,
                                    LostDebugLocObserver &LocObserver,
                                    MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.setMF(MF);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Populate worklists.
