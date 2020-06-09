@@ -12,31 +12,24 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define <4 x i32> @square(<4 x i32> %num, i32 %y, i32 %x, i32 %h, i32 %k, i32 %w, i32 %p, i32 %j, i32 %u) {
 ; CHECK-LABEL: @square(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[K:%.*]], 2
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[DIV]], i32 0
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[P:%.*]], 6234
-; CHECK-NEXT:    [[SPLATINSERT2:%.*]] = insertelement <4 x i32> undef, i32 [[MUL]], i32 0
 ; CHECK-NEXT:    [[MUL5:%.*]] = mul nsw i32 [[H:%.*]], 75
-; CHECK-NEXT:    [[SPLATINSERT6:%.*]] = insertelement <4 x i32> undef, i32 [[MUL5]], i32 0
 ; CHECK-NEXT:    [[DIV9:%.*]] = sdiv i32 [[J:%.*]], 3452
-; CHECK-NEXT:    [[SPLATINSERT10:%.*]] = insertelement <4 x i32> undef, i32 [[DIV9]], i32 0
 ; CHECK-NEXT:    [[MUL13:%.*]] = mul nsw i32 [[W:%.*]], 53
-; CHECK-NEXT:    [[SPLATINSERT14:%.*]] = insertelement <4 x i32> undef, i32 [[MUL13]], i32 0
 ; CHECK-NEXT:    [[DIV17:%.*]] = sdiv i32 [[X:%.*]], 820
-; CHECK-NEXT:    [[SPLATINSERT18:%.*]] = insertelement <4 x i32> undef, i32 [[DIV17]], i32 0
 ; CHECK-NEXT:    [[MUL21:%.*]] = shl nsw i32 [[U:%.*]], 2
-; CHECK-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> undef, i32 [[MUL21]], i32 0
-; CHECK-NEXT:    [[SPLATINSERT25:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[SPLATINSERT25]], <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], [[SPLATINSERT18]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[SPLATINSERT6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], [[SPLATINSERT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[SPLATINSERT14]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[SPLATINSERT2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[SPLATINSERT10]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], [[SPLATINSERT22]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP8]], <i32 317425, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ADD29:%.*]] = add <4 x i32> [[TMP10]], [[NUM:%.*]]
+; CHECK-NEXT:    [[DOTSCALAR:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[DOTSCALAR1:%.*]] = add i32 [[DOTSCALAR]], [[DIV17]]
+; CHECK-NEXT:    [[DOTSCALAR2:%.*]] = add i32 [[DOTSCALAR1]], [[MUL5]]
+; CHECK-NEXT:    [[DOTSCALAR3:%.*]] = add i32 [[DOTSCALAR2]], [[DIV]]
+; CHECK-NEXT:    [[DOTSCALAR4:%.*]] = add i32 [[DOTSCALAR3]], [[MUL13]]
+; CHECK-NEXT:    [[DOTSCALAR5:%.*]] = add i32 [[DOTSCALAR4]], [[MUL]]
+; CHECK-NEXT:    [[DOTSCALAR6:%.*]] = add i32 [[DOTSCALAR5]], [[DIV9]]
+; CHECK-NEXT:    [[DOTSCALAR7:%.*]] = add i32 [[DOTSCALAR6]], [[MUL21]]
+; CHECK-NEXT:    [[DOTSCALAR8:%.*]] = add i32 [[DOTSCALAR7]], 317425
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> undef, i32 [[DOTSCALAR8]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD29:%.*]] = add <4 x i32> [[TMP2]], [[NUM:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD29]]
 ;
   %add = add <4 x i32> %num, <i32 1, i32 1, i32 1, i32 1>
