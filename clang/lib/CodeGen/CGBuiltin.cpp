@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
@@ -2373,6 +2374,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *V = EmitScalarExpr(E->getArg(0));
     V = Builder.CreateFCmpUNO(V, V, "cmp");
     return RValue::get(Builder.CreateZExt(V, ConvertType(E->getType())));
+  }
+
+  case Builtin::BI__builtin_matrix_transpose: {
+    const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
+    Value *MatValue = EmitScalarExpr(E->getArg(0));
+    MatrixBuilder<CGBuilderTy> MB(Builder);
+    Value *Result = MB.CreateMatrixTranspose(MatValue, MatrixTy->getNumRows(),
+                                             MatrixTy->getNumColumns());
+    return RValue::get(Result);
   }
 
   case Builtin::BIfinite:
