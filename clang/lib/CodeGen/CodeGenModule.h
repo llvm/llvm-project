@@ -303,6 +303,7 @@ private:
   const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
   const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
   const CodeGenOptions &CodeGenOpts;
+  unsigned NumAutoVarInit = 0;
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
@@ -1446,6 +1447,7 @@ public:
   CharUnits getNaturalPointeeTypeAlignment(QualType T,
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            TBAAAccessInfo *TBAAInfo = nullptr);
+  bool stopAutoInit();
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
