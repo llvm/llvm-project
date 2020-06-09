@@ -535,6 +535,37 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
   // FIXME: Variadic arguments are not handled at all right now.
 }
 
+const ConstructionContext *CallEvent::getConstructionContext() const {
+  const StackFrameContext *StackFrame = getCalleeStackFrame(0);
+  if (!StackFrame)
+    return nullptr;
+
+  const CFGElement Element = StackFrame->getCallSiteCFGElement();
+  if (const auto Ctor = Element.getAs<CFGConstructor>()) {
+    return Ctor->getConstructionContext();
+  }
+
+  if (const auto RecCall = Element.getAs<CFGCXXRecordTypedCall>()) {
+    return RecCall->getConstructionContext();
+  }
+
+  return nullptr;
+}
+
+Optional<SVal>
+CallEvent::getReturnValueUnderConstruction() const {
+  const auto *CC = getConstructionContext();
+  if (!CC)
+    return None;
+
+  ExprEngine::EvalCallOptions CallOpts;
+  ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  SVal RetVal =
+    Engine.computeObjectUnderConstruction(getOriginExpr(), getState(),
+                                          getLocationContext(), CC, CallOpts);
+  return RetVal;
+}
+
 ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   const FunctionDecl *D = getDecl();
   if (!D)
