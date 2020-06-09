@@ -593,6 +593,8 @@ def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
     static StringRef getUpperBoundsMapAttrName() { return "upperBoundsMap"; }
     static StringRef getStepsAttrName() { return "steps"; }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch"> {

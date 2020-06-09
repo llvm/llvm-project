@@ -604,3 +604,18 @@ func @drop_duplicate_bounds(%N : index) {
   }
   return
 }
+
+// -----
+
+// CHECK: func @remove_rank0_affine_parallel(%[[OUT:.*]]: memref<f32>)
+func @remove_rank0_affine_parallel(%out: memref<f32>) {
+  // CHECK-NEXT: %[[CST:.*]] = constant
+  %cst = constant 0.0 : f32
+  // CHECK-NEXT: affine.store %[[CST]], %[[OUT]][] : memref<f32>
+  affine.parallel () = () to () {
+    affine.parallel () = () to () {
+      affine.store %cst, %out[] : memref<f32>
+    }
+  }
+  return
+}
