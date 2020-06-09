@@ -1048,7 +1048,7 @@ Error DWARFDebugLine::LineTable::parse(
           uint8_t OpcodeLength = Prologue.StandardOpcodeLengths[Opcode - 1];
           if (OpcodeLength != 0) {
             if (Verbose)
-              *OS << format(" (operands: ");
+              *OS << " (operands: ";
             for (uint8_t I = 0; I < OpcodeLength; ++I) {
               uint64_t Value = TableData.getULEB128(OffsetPtr);
               if (Verbose) {
@@ -1058,7 +1058,7 @@ Error DWARFDebugLine::LineTable::parse(
               }
             }
             if (Verbose)
-              *OS << format(")");
+              *OS << ')';
           }
         }
         break;
