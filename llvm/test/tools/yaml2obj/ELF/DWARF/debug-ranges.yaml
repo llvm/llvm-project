@@ -313,3 +313,29 @@ FileHeader:
   Type:    ET_EXEC
   Machine: EM_X86_64
 DWARF:
+
+## i) Test that yaml2obj emits an error message if we try to assign an invalid offset to an
+## entry of the '.debug_ranges' section.
+
+# RUN: not yaml2obj --docnum=9 %s -o %t9.o 2>&1 | FileCheck %s --check-prefix=INVALID-OFFSET
+
+# INVALID-OFFSET: yaml2obj: error: 'Offset' for 'debug_ranges' with index 1 must be greater than or equal to the number of bytes written already (0x20)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_ranges:
+    - Offset:   0x00
+      AddrSize: 0x08
+      Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+    - Offset:   0x1F ## Must be greater than or equal to 0x20.
+      AddrSize: 0x08
+      Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
