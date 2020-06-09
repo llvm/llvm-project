@@ -38,8 +38,6 @@ class Configuration(LibcxxConfiguration):
 
     def configure_features(self):
         super(Configuration, self).configure_features()
-        if not self.get_lit_bool('enable_exceptions', True):
-            self.config.available_features.add('no-exceptions')
         if not self.has_cpp_feature('noexcept_function_type', 201510):
             self.config.available_features.add('libcxxabi-no-noexcept-function-type')
         if not self.get_lit_bool('llvm_unwinder', False):
