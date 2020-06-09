@@ -87,6 +87,7 @@ class PPCFastISel final : public FastISel {
 
   const TargetMachine &TM;
   const PPCSubtarget *PPCSubTarget;
+  const PPCSubtarget *Subtarget;
   PPCFunctionInfo *PPCFuncInfo;
   const TargetInstrInfo &TII;
   const TargetLowering &TLI;
@@ -97,12 +98,12 @@ class PPCFastISel final : public FastISel {
                          const TargetLibraryInfo *LibInfo)
         : FastISel(FuncInfo, LibInfo), TM(FuncInfo.MF->getTarget()),
           PPCSubTarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
+          Subtarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
           PPCFuncInfo(FuncInfo.MF->getInfo<PPCFunctionInfo>()),
-          TII(*PPCSubTarget->getInstrInfo()),
-          TLI(*PPCSubTarget->getTargetLowering()),
+          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
           Context(&FuncInfo.Fn->getContext()) {}
 
-  // Backend specific FastISel code.
+    // Backend specific FastISel code.
   private:
     bool fastSelectInstruction(const Instruction *I) override;
     unsigned fastMaterializeConstant(const Constant *C) override;
@@ -456,7 +457,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
                               bool IsZExt, unsigned FP64LoadOpc) {
   unsigned Opc;
   bool UseOffset = true;
-  bool HasSPE = PPCSubTarget->hasSPE();
+  bool HasSPE = Subtarget->hasSPE();
 
   // If ResultReg is given, it determines the register class of the load.
   // Otherwise, RC is the register class to use.  If the result of the
@@ -498,7 +499,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
       UseOffset = ((Addr.Offset & 3) == 0);
       break;
     case MVT::f32:
-      Opc = PPCSubTarget->hasSPE() ? PPC::SPELWZ : PPC::LFS;
+      Opc = Subtarget->hasSPE() ? PPC::SPELWZ : PPC::LFS;
       break;
     case MVT::f64:
       Opc = FP64LoadOpc;
@@ -614,7 +615,7 @@ bool PPCFastISel::SelectLoad(const Instruction *I) {
 
   Register ResultReg = 0;
   if (!PPCEmitLoad(VT, ResultReg, Addr, RC, true,
-      PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
+                   Subtarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
     return false;
   updateValueMap(I, ResultReg);
   return true;
@@ -647,10 +648,10 @@ bool PPCFastISel::PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr) {
       UseOffset = ((Addr.Offset & 3) == 0);
       break;
     case MVT::f32:
-      Opc = PPCSubTarget->hasSPE() ? PPC::SPESTW : PPC::STFS;
+      Opc = Subtarget->hasSPE() ? PPC::SPESTW : PPC::STFS;
       break;
     case MVT::f64:
-      Opc = PPCSubTarget->hasSPE() ? PPC::EVSTDD : PPC::STFD;
+      Opc = Subtarget->hasSPE() ? PPC::EVSTDD : PPC::STFD;
       break;
   }
 
@@ -794,8 +795,9 @@ bool PPCFastISel::SelectBranch(const Instruction *I) {
         return false;
 
       BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::BCC))
-        .addImm(PPCSubTarget->hasSPE() ? PPC::PRED_SPE : PPCPred)
-        .addReg(CondReg).addMBB(TBB);
+          .addImm(Subtarget->hasSPE() ? PPC::PRED_SPE : PPCPred)
+          .addReg(CondReg)
+          .addMBB(TBB);
       finishCondBranch(BI->getParent(), TBB, FBB);
       return true;
     }
@@ -827,7 +829,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     return false;
   MVT SrcVT = SrcEVT.getSimpleVT();
 
-  if (SrcVT == MVT::i1 && PPCSubTarget->useCRBits())
+  if (SrcVT == MVT::i1 && Subtarget->useCRBits())
     return false;
 
   // See if operand 2 is an immediate encodeable in the compare.
@@ -836,7 +838,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
   // similar to ARM in this regard.
   long Imm = 0;
   bool UseImm = false;
-  const bool HasSPE = PPCSubTarget->hasSPE();
+  const bool HasSPE = Subtarget->hasSPE();
 
   // Only 16-bit integer constants can be represented in compares for
   // PowerPC.  Others will be materialized into a register.
@@ -988,7 +990,7 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
   // Round the result to single precision.
   unsigned DestReg;
   auto RC = MRI.getRegClass(SrcReg);
-  if (PPCSubTarget->hasSPE()) {
+  if (Subtarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
       TII.get(PPC::EFSCFD), DestReg)
@@ -1043,10 +1045,10 @@ unsigned PPCFastISel::PPCMoveToFPReg(MVT SrcVT, unsigned SrcReg,
   if (SrcVT == MVT::i32) {
     if (!IsSigned) {
       LoadOpc = PPC::LFIWZX;
-      Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
-    } else if (PPCSubTarget->hasLFIWAX()) {
+      Addr.Offset = (Subtarget->isLittleEndian()) ? 0 : 4;
+    } else if (Subtarget->hasLFIWAX()) {
       LoadOpc = PPC::LFIWAX;
-      Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
+      Addr.Offset = (Subtarget->isLittleEndian()) ? 0 : 4;
     }
   }
 
@@ -1086,7 +1088,7 @@ bool PPCFastISel::SelectIToFP(const Instruction *I, bool IsSigned) {
     return false;
 
   // Shortcut for SPE.  Doesn't need to store/load, since it's all in the GPRs
-  if (PPCSubTarget->hasSPE()) {
+  if (Subtarget->hasSPE()) {
     unsigned Opc;
     if (DstVT == MVT::f32)
       Opc = IsSigned ? PPC::EFSCFSI : PPC::EFSCFUI;
@@ -1103,7 +1105,7 @@ bool PPCFastISel::SelectIToFP(const Instruction *I, bool IsSigned) {
 
   // We can only lower an unsigned convert if we have the newer
   // floating-point conversion operations.
-  if (!IsSigned && !PPCSubTarget->hasFPCVT())
+  if (!IsSigned && !Subtarget->hasFPCVT())
     return false;
 
   // FIXME: For now we require the newer floating-point conversion operations
@@ -1111,7 +1113,7 @@ bool PPCFastISel::SelectIToFP(const Instruction *I, bool IsSigned) {
   // to single-precision float.  Otherwise we have to generate a lot of
   // fiddly code to avoid double rounding.  If necessary, the fiddly code
   // can be found in PPCTargetLowering::LowerINT_TO_FP().
-  if (DstVT == MVT::f32 && !PPCSubTarget->hasFPCVT())
+  if (DstVT == MVT::f32 && !Subtarget->hasFPCVT())
     return false;
 
   // Extend the input if necessary.
@@ -1168,7 +1170,7 @@ unsigned PPCFastISel::PPCMoveToIntReg(const Instruction *I, MVT VT,
   // Reload it into a GPR.  If we want an i32 on big endian, modify the
   // address to have a 4-byte offset so we load from the right place.
   if (VT == MVT::i32)
-    Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
+    Addr.Offset = (Subtarget->isLittleEndian()) ? 0 : 4;
 
   // Look at the currently assigned register for this instruction
   // to determine the required register class.
@@ -1196,8 +1198,8 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
     return false;
 
   // If we don't have FCTIDUZ, or SPE, and we need it, punt to SelectionDAG.
-  if (DstVT == MVT::i64 && !IsSigned &&
-      !PPCSubTarget->hasFPCVT() && !PPCSubTarget->hasSPE())
+  if (DstVT == MVT::i64 && !IsSigned && !Subtarget->hasFPCVT() &&
+      !Subtarget->hasSPE())
     return false;
 
   Value *Src = I->getOperand(0);
@@ -1226,7 +1228,7 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
   unsigned Opc;
   auto RC = MRI.getRegClass(SrcReg);
 
-  if (PPCSubTarget->hasSPE()) {
+  if (Subtarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
     if (IsSigned)
       Opc = InRC == &PPC::GPRCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
@@ -1234,7 +1236,7 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
       Opc = InRC == &PPC::GPRCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
   } else if (isVSFRCRegClass(RC)) {
     DestReg = createResultReg(&PPC::VSFRCRegClass);
-    if (DstVT == MVT::i32) 
+    if (DstVT == MVT::i32)
       Opc = IsSigned ? PPC::XSCVDPSXWS : PPC::XSCVDPUXWS;
     else
       Opc = IsSigned ? PPC::XSCVDPSXDS : PPC::XSCVDPUXDS;
@@ -1244,7 +1246,7 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
       if (IsSigned)
         Opc = PPC::FCTIWZ;
       else
-        Opc = PPCSubTarget->hasFPCVT() ? PPC::FCTIWUZ : PPC::FCTIDZ;
+        Opc = Subtarget->hasFPCVT() ? PPC::FCTIWUZ : PPC::FCTIDZ;
     else
       Opc = IsSigned ? PPC::FCTIDZ : PPC::FCTIDUZ;
   }
@@ -1254,8 +1256,9 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
     .addReg(SrcReg);
 
   // Now move the integer value from a float register to an integer register.
-  unsigned IntReg = PPCSubTarget->hasSPE() ? DestReg :
-    PPCMoveToIntReg(I, DstVT, DestReg, IsSigned);
+  unsigned IntReg = Subtarget->hasSPE()
+                        ? DestReg
+                        : PPCMoveToIntReg(I, DstVT, DestReg, IsSigned);
 
   if (IntReg == 0)
     return false;
@@ -1383,7 +1386,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   CCState CCInfo(CC, IsVarArg, *FuncInfo.MF, ArgLocs, *Context);
 
   // Reserve space for the linkage area on the stack.
-  unsigned LinkageSize = PPCSubTarget->getFrameLowering()->getLinkageSize();
+  unsigned LinkageSize = Subtarget->getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, Align(8));
 
   CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
@@ -1573,7 +1576,7 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   else if (!isTypeLegal(RetTy, RetVT) && RetVT != MVT::i16 &&
            RetVT != MVT::i8)
     return false;
-  else if (RetVT == MVT::i1 && PPCSubTarget->useCRBits())
+  else if (RetVT == MVT::i1 && Subtarget->useCRBits())
     // We can't handle boolean returns when CR bits are in use.
     return false;
 
@@ -1995,7 +1998,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
   // All FP constants are loaded from the constant pool.
   Align Alignment = DL.getPrefTypeAlign(CFP->getType());
   unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
-  const bool HasSPE = PPCSubTarget->hasSPE();
+  const bool HasSPE = Subtarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)
     RC = ((VT == MVT::f32) ? &PPC::GPRCRegClass : &PPC::SPERCRegClass);
@@ -2089,7 +2092,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA8),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
-    if (PPCSubTarget->isGVIndirectSymbol(GV)) {
+    if (Subtarget->isGVIndirectSymbol(GV)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
     } else {
@@ -2196,7 +2199,7 @@ unsigned PPCFastISel::PPCMaterializeInt(const ConstantInt *CI, MVT VT,
                                         bool UseSExt) {
   // If we're using CR bit registers for i1 values, handle that as a special
   // case first.
-  if (VT == MVT::i1 && PPCSubTarget->useCRBits()) {
+  if (VT == MVT::i1 && Subtarget->useCRBits()) {
     unsigned ImmReg = createResultReg(&PPC::CRBITRCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(CI->isZero() ? PPC::CRUNSET : PPC::CRSET), ImmReg);
@@ -2351,7 +2354,7 @@ bool PPCFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   Register ResultReg = MI->getOperand(0).getReg();
 
   if (!PPCEmitLoad(VT, ResultReg, Addr, nullptr, IsZExt,
-        PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
+                   Subtarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
     return false;
 
   MachineBasicBlock::iterator I(MI);
@@ -2378,7 +2381,7 @@ unsigned PPCFastISel::fastEmit_i(MVT Ty, MVT VT, unsigned Opc, uint64_t Imm) {
 
   // If we're using CR bit registers for i1 values, handle that as a special
   // case first.
-  if (VT == MVT::i1 && PPCSubTarget->useCRBits()) {
+  if (VT == MVT::i1 && Subtarget->useCRBits()) {
     unsigned ImmReg = createResultReg(&PPC::CRBITRCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(Imm == 0 ? PPC::CRUNSET : PPC::CRSET), ImmReg);
