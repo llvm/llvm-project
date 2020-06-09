@@ -69,3 +69,44 @@ void test_hiding() {
 
 struct PreserveAttributes {};
 typedef struct __attribute__((noreturn)) PreserveAttributes PreserveAttributes_t; // expected-warning {{'noreturn' attribute only applies to functions and methods}}
+
+// PR46255
+struct FlexibleArrayMem {
+  int a;
+  int b[];
+};
+
+struct FollowedByNamed {
+  struct FlexibleArrayMem a; // expected-warning {{field 'a' with variable sized type 'struct FlexibleArrayMem' not at the end of a struct or class is a GNU extension}}
+  int i;
+};
+
+struct FollowedByUnNamed {
+  struct FlexibleArrayMem a; // expected-warning {{field 'a' with variable sized type 'struct FlexibleArrayMem' not at the end of a struct or class is a GNU extension}}
+  struct {
+    int i;
+  };
+};
+
+struct InAnonymous {
+  struct { // expected-warning-re {{field '' with variable sized type 'struct InAnonymous::(anonymous at {{.+}})' not at the end of a struct or class is a GNU extension}}
+
+    struct FlexibleArrayMem a;
+  };
+  int i;
+};
+struct InAnonymousFollowedByAnon {
+  struct { // expected-warning-re {{field '' with variable sized type 'struct InAnonymousFollowedByAnon::(anonymous at {{.+}})' not at the end of a struct or class is a GNU extension}}
+
+    struct FlexibleArrayMem a;
+  };
+  struct {
+    int i;
+  };
+};
+
+// This is the behavior in C++ as well, so making sure we reproduce it here.
+struct InAnonymousFollowedByEmpty {
+  struct FlexibleArrayMem a; // expected-warning {{field 'a' with variable sized type 'struct FlexibleArrayMem' not at the end of a struct or class is a GNU extension}}
+  struct {};
+};
