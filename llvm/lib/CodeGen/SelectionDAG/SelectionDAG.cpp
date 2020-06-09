@@ -2010,8 +2010,8 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
     EVT IntermediateVT;
     MVT RegisterVT;
     unsigned NumIntermediates;
-    unsigned NumRegs = TLI->getVectorTypeBreakdown(
-        *getContext(), VT, IntermediateVT, NumIntermediates, RegisterVT);
+    TLI->getVectorTypeBreakdown(*getContext(), VT, IntermediateVT,
+                                NumIntermediates, RegisterVT);
     Ty = IntermediateVT.getTypeForEVT(*getContext());
     Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
     if (RedAlign2 < RedAlign)
