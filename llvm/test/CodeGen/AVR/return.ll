@@ -123,12 +123,6 @@ define i32 @return64_trunc(i32 %a, i32 %b, i32 %c, i64 %d) {
   ret i32 %result
 }
 
-define i32 @naked(i32 %x) naked {
-; CHECK-LABEL: naked:
-; CHECK-NOT: ret
-  ret i32 %x
-}
-
 define avr_intrcc void @interrupt_handler() {
 ; CHECK-LABEL: interrupt_handler:
 ; CHECK: reti

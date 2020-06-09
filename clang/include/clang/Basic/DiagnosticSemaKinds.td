@@ -10779,6 +10779,9 @@ def warn_import_on_definition : Warning<
   "import %select{module|name}0 cannot be applied to a function with a definition">,
   InGroup<IgnoredAttributes>;
 
+def err_builtin_matrix_arg: Error<
+  "%select{first|second}0 argument must be a matrix">;
+
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;
 def err_preserve_field_info_not_const: Error<

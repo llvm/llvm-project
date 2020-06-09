@@ -3677,8 +3677,12 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
     addr_t low_pc = LLDB_INVALID_ADDRESS;
     bool tail_call = false;
 
+    // Second DW_AT_low_pc may come from DW_TAG_subprogram referenced by
+    // DW_TAG_GNU_call_site's DW_AT_abstract_origin overwriting our 'low_pc'.
+    // So do not inherit attributes from DW_AT_abstract_origin.
     DWARFAttributes attributes;
-    const size_t num_attributes = child.GetAttributes(attributes);
+    const size_t num_attributes =
+        child.GetAttributes(attributes, DWARFDIE::Recurse::no);
     for (size_t i = 0; i < num_attributes; ++i) {
       DWARFFormValue form_value;
       if (!attributes.ExtractFormValueAtIndex(i, form_value)) {

@@ -105,11 +105,10 @@ bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
 }
 
 size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
-                               uint32_t depth) const {
+                                   Recurse recurse) const {
   if (IsValid())
-    return m_die->GetAttributes(m_cu, attributes, depth);
-  if (depth == 0)
-    attributes.Clear();
+    return m_die->GetAttributes(m_cu, attributes, recurse);
+  attributes.Clear();
   return 0;
 }
 

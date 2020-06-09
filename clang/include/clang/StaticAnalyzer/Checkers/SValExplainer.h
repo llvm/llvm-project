@@ -18,6 +18,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace clang {
 
@@ -179,7 +180,7 @@ public:
     return OS.str();
   }
 
-  std::string VisitVarRegion(const VarRegion *R) {
+  std::string VisitNonParamVarRegion(const NonParamVarRegion *R) {
     const VarDecl *VD = R->getDecl();
     std::string Name = VD->getQualifiedNameAsString();
     if (isa<ParmVarDecl>(VD))
@@ -214,6 +215,39 @@ public:
   std::string VisitCXXBaseObjectRegion(const CXXBaseObjectRegion *R) {
     return "base object '" + R->getDecl()->getQualifiedNameAsString() +
            "' inside " + Visit(R->getSuperRegion());
+  }
+
+  std::string VisitParamVarRegion(const ParamVarRegion *R) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+
+    const ParmVarDecl *PVD = R->getDecl();
+    std::string Name = PVD->getQualifiedNameAsString();
+    if (!Name.empty()) {
+      OS << "parameter '" << Name << "'";
+      return std::string(OS.str());
+    }
+
+    unsigned Index = R->getIndex() + 1;
+    OS << Index << llvm::getOrdinalSuffix(Index) << " parameter of ";
+    const Decl *Parent = R->getStackFrame()->getDecl();
+    if (const auto *FD = dyn_cast<FunctionDecl>(Parent))
+      OS << "function '" << FD->getQualifiedNameAsString() << "()'";
+    else if (const auto *CD = dyn_cast<CXXConstructorDecl>(Parent))
+      OS << "C++ constructor '" << CD->getQualifiedNameAsString() << "()'";
+    else if (const auto *MD = dyn_cast<ObjCMethodDecl>(Parent)) {
+      if (MD->isClassMethod())
+        OS << "Objective-C method '+" << MD->getQualifiedNameAsString() << "'";
+      else
+        OS << "Objective-C method '-" << MD->getQualifiedNameAsString() << "'";
+    } else if (isa<BlockDecl>(Parent)) {
+      if (cast<BlockDecl>(Parent)->isConversionFromLambda())
+        OS << "lambda";
+      else
+        OS << "block";
+    }
+
+    return std::string(OS.str());
   }
 
   std::string VisitSVal(SVal V) {

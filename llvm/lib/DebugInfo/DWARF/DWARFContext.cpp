@@ -513,15 +513,8 @@ void DWARFContext::dump(
       }
       OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())
          << "]\n";
-      OS.flush();
-      if (DumpOpts.Verbose) {
-        Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler, &OS);
-      } else {
-        DWARFDebugLine::LineTable LineTable =
-            Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler);
-        LineTable.dump(OS, DumpOpts);
-      }
-      OS.flush();
+      Parser.parseNext(DumpOpts.WarningHandler, DumpOpts.WarningHandler, &OS,
+                       DumpOpts.Verbose);
     }
   };
 

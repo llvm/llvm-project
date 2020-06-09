@@ -241,8 +241,8 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
 /// callee.
 struct CallDescriptor {
   Function *func;
-  CallEdge::AddrType address_type;
-  addr_t address;
+  CallEdge::AddrType address_type = CallEdge::AddrType::Call;
+  addr_t address = LLDB_INVALID_ADDRESS;
 };
 using CallSequence = std::vector<CallDescriptor>;
 

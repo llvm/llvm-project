@@ -1747,7 +1747,7 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
 }
 
 void CodeGenFunction::EmitOMPInnerLoop(
-    const Stmt &S, bool RequiresCleanup, const Expr *LoopCond,
+    const OMPExecutableDirective &S, bool RequiresCleanup, const Expr *LoopCond,
     const Expr *IncExpr,
     const llvm::function_ref<void(CodeGenFunction &)> BodyGen,
     const llvm::function_ref<void(CodeGenFunction &)> PostIncGen) {
@@ -2248,8 +2248,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
           CGF.EmitOMPInnerLoop(
               S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
               [&S](CodeGenFunction &CGF) {
-                CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
-                CGF.EmitStopPoint(&S);
+                emitOMPLoopBodyWithStopPoint(CGF, S,
+                                             CodeGenFunction::JumpDest());
               },
               [](CodeGenFunction &) {});
         });
@@ -2916,8 +2916,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
                                    : S.getCond(),
                   StaticChunkedOne ? S.getDistInc() : S.getInc(),
                   [&S, LoopExit](CodeGenFunction &CGF) {
-                    CGF.EmitOMPLoopBody(S, LoopExit);
-                    CGF.EmitStopPoint(&S);
+                    emitOMPLoopBodyWithStopPoint(CGF, S, LoopExit);
                   },
                   [](CodeGenFunction &) {});
             });
@@ -6135,8 +6134,8 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
             CGF.EmitOMPInnerLoop(
                 S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
                 [&S](CodeGenFunction &CGF) {
-                  CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
-                  CGF.EmitStopPoint(&S);
+                  emitOMPLoopBodyWithStopPoint(CGF, S,
+                                               CodeGenFunction::JumpDest());
                 },
                 [](CodeGenFunction &) {});
           });

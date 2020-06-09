@@ -216,7 +216,7 @@ void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
-  write_impl(OutBufStart, Length);
+  flush_tied_then_write(OutBufStart, Length);
 }
 
 raw_ostream &raw_ostream::write(unsigned char C) {
@@ -224,7 +224,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   if (LLVM_UNLIKELY(OutBufCur >= OutBufEnd)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        write_impl(reinterpret_cast<char*>(&C), 1);
+        flush_tied_then_write(reinterpret_cast<char *>(&C), 1);
         return *this;
       }
       // Set up a buffer and start over.
@@ -244,7 +244,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
       if (BufferMode == BufferKind::Unbuffered) {
-        write_impl(Ptr, Size);
+        flush_tied_then_write(Ptr, Size);
         return *this;
       }
       // Set up a buffer and start over.
@@ -260,7 +260,7 @@ raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
     if (LLVM_UNLIKELY(OutBufCur == OutBufStart)) {
       assert(NumBytes != 0 && "undefined behavior");
       size_t BytesToWrite = Size - (Size % NumBytes);
-      write_impl(Ptr, BytesToWrite);
+      flush_tied_then_write(Ptr, BytesToWrite);
       size_t BytesRemaining = Size - BytesToWrite;
       if (BytesRemaining > size_t(OutBufEnd - OutBufCur)) {
         // Too much left over to copy into our buffer.
@@ -299,6 +299,12 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   }
 
   OutBufCur += Size;
+}
+
+void raw_ostream::flush_tied_then_write(const char *Ptr, size_t Size) {
+  if (TiedStream)
+    TiedStream->flush();
+  write_impl(Ptr, Size);
 }
 
 // Formatted output.
@@ -870,8 +876,9 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  // Set standard error to be unbuffered by default.
+  // Set standard error to be unbuffered and tied to outs() by default.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
+  S.tie(&outs());
   return S;
 }
 

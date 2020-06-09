@@ -45,10 +45,12 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -255,10 +257,11 @@ struct CodeCompletionBuilder {
                         const IncludeInserter &Includes,
                         llvm::StringRef FileName,
                         CodeCompletionContext::Kind ContextKind,
-                        const CodeCompleteOptions &Opts, bool GenerateSnippets)
+                        const CodeCompleteOptions &Opts,
+                        bool IsUsingDeclaration, tok::TokenKind NextTokenKind)
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
-        GenerateSnippets(GenerateSnippets) {
+        IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     add(C, SemaCCS);
     if (C.SemaResult) {
       assert(ASTCtx);
@@ -429,7 +432,13 @@ private:
   }
 
   std::string summarizeSnippet() const {
-    if (!GenerateSnippets)
+    if (IsUsingDeclaration)
+      return "";
+    // Suppress function argument snippets if args are already present.
+    if ((Completion.Kind == CompletionItemKind::Function ||
+         Completion.Kind == CompletionItemKind::Method ||
+         Completion.Kind == CompletionItemKind::Constructor) &&
+        NextTokenKind == tok::l_paren)
       return "";
     auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
     if (!Snippet)
@@ -488,8 +497,10 @@ private:
   llvm::SmallVector<BundledEntry, 1> Bundled;
   bool ExtractDocumentation;
   bool EnableFunctionArgSnippets;
-  /// When false, no snippets are generated argument lists.
-  bool GenerateSnippets;
+  // No snippets will be generated for using declarations and when the function
+  // arguments are already present.
+  bool IsUsingDeclaration;
+  tok::TokenKind NextTokenKind;
 };
 
 // Determine the symbol ID for a Sema code completion result, if possible.
@@ -1223,6 +1234,10 @@ class CodeCompleteFlow {
   CompletionRecorder *Recorder = nullptr;
   CodeCompletionContext::Kind CCContextKind = CodeCompletionContext::CCC_Other;
   bool IsUsingDeclaration = false;
+  // The snippets will not be generated if the token following completion
+  // location is an opening parenthesis (tok::l_paren) because this would add
+  // extra parenthesis.
+  tok::TokenKind NextTokenKind = tok::eof;
   // Counters for logging.
   int NSema = 0, NIndex = 0, NSemaAndIndex = 0, NIdent = 0;
   bool Incomplete = false; // Would more be available with a higher limit?
@@ -1277,6 +1292,11 @@ public:
       auto Style = getFormatStyleForFile(
           SemaCCInput.FileName, SemaCCInput.ParseInput.Contents,
           SemaCCInput.ParseInput.FSProvider->getFileSystem().get());
+      const auto NextToken = Lexer::findNextToken(
+          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
+          Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
+      if (NextToken)
+        NextTokenKind = NextToken->getKind();
       // If preprocessor was run, inclusions from preprocessor callback should
       // already be added to Includes.
       Inserter.emplace(
@@ -1694,8 +1714,7 @@ private:
       if (!Builder)
         Builder.emplace(Recorder ? &Recorder->CCSema->getASTContext() : nullptr,
                         Item, SemaCCS, QueryScopes, *Inserter, FileName,
-                        CCContextKind, Opts,
-                        /*GenerateSnippets=*/!IsUsingDeclaration);
+                        CCContextKind, Opts, IsUsingDeclaration, NextTokenKind);
       else
         Builder->add(Item, SemaCCS);
     }

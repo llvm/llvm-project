@@ -402,9 +402,10 @@ public:
   const StackFrameContext *getCalleeStackFrame(unsigned BlockCount) const;
 
   /// Returns memory location for a parameter variable within the callee stack
-  /// frame. May fail; returns null on failure.
-  const VarRegion *getParameterLocation(unsigned Index,
-                                        unsigned BlockCount) const;
+  /// frame. The behavior is undefined if the block count is different from the
+  /// one that is there when call happens. May fail; returns null on failure.
+  const ParamVarRegion *getParameterLocation(unsigned Index,
+                                             unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by
   /// calling a C++ constructor over it. This is an internal detail of the
@@ -433,6 +434,15 @@ public:
   virtual unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const {
     return CallArgumentIndex;
   }
+
+  /// Returns the construction context of the call, if it is a C++ constructor
+  /// call or a call of a function returning a C++ class instance. Otherwise
+  /// return nullptr.
+  const ConstructionContext *getConstructionContext() const;
+
+  /// If the call returns a C++ record type then the region of its return value
+  /// can be retrieved from its construction context.
+  Optional<SVal> getReturnValueUnderConstruction() const;
 
   // Iterator access to formal parameters and their types.
 private:

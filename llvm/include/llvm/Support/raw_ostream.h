@@ -66,6 +66,10 @@ private:
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
 
+  /// Optional stream this stream is tied to. If this stream is written to, the
+  /// tied-to stream will be flushed first.
+  raw_ostream *TiedStream = nullptr;
+
   enum class BufferKind {
     Unbuffered = 0,
     InternalBuffer,
@@ -294,6 +298,10 @@ public:
   // changeColor() has no effect until enable_colors(true) is called.
   virtual void enable_colors(bool enable) { ColorEnabled = enable; }
 
+  /// Tie this stream to the specified stream. Replaces any existing tied-to
+  /// stream. Specifying a nullptr unties the stream.
+  void tie(raw_ostream *TieTo) { TiedStream = TieTo; }
+
   //===--------------------------------------------------------------------===//
   // Subclass Interface
   //===--------------------------------------------------------------------===//
@@ -351,6 +359,9 @@ private:
   /// Compute whether colors should be used and do the necessary work such as
   /// flushing. The result is affected by calls to enable_color().
   bool prepare_colors();
+
+  /// Flush the tied-to stream (if present) and then write the required data.
+  void flush_tied_then_write(const char *Ptr, size_t Size);
 
   virtual void anchor();
 };
@@ -491,8 +502,11 @@ public:
 /// like: outs() << "foo" << "bar";
 raw_fd_ostream &outs();
 
-/// This returns a reference to a raw_fd_ostream for standard error. Use it
-/// like: errs() << "foo" << "bar";
+/// This returns a reference to a raw_ostream for standard error.
+/// Use it like: errs() << "foo" << "bar";
+/// By default, the stream is tied to stdout to ensure stdout is flushed before
+/// stderr is written, to ensure the error messages are written in their
+/// expected place.
 raw_fd_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
