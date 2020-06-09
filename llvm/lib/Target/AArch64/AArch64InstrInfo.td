@@ -726,6 +726,12 @@ def : InstAlias<"sevl", (HINT 0b101)>;
 def : InstAlias<"dgh",  (HINT 0b110)>;
 def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
+// In order to be able to write readable assembly, LLVM should accept assembly
+// inputs that use Branch Target Indentification mnemonics, even with BTI disabled.
+// However, in order to be compatible with other assemblers (e.g. GAS), LLVM
+// should not emit these mnemonics unless BTI is enabled.
+def : InstAlias<"bti",  (HINT 32), 0>;
+def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
 def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
