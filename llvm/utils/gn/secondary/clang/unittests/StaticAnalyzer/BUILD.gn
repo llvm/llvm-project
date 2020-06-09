@@ -18,5 +18,6 @@ unittest("StaticAnalysisTests") {
     "RegisterCustomCheckersTest.cpp",
     "StoreTest.cpp",
     "SymbolReaperTest.cpp",
+    "TestReturnValueUnderConstruction.cpp",
   ]
 }
