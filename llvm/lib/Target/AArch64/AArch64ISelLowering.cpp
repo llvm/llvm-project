@@ -14642,3 +14642,14 @@ bool AArch64TargetLowering::shouldLocalize(
   }
   return TargetLoweringBase::shouldLocalize(MI, TTI);
 }
+
+bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  if (isa<ScalableVectorType>(Inst.getType()))
+    return true;
+
+  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
+    if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()))
+      return true;
+
+  return false;
+}

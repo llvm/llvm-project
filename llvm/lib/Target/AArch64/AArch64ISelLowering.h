@@ -702,6 +702,9 @@ public:
                                                  bool isVarArg) const override;
   /// Used for exception handling on Win64.
   bool needsFixedCatchObjects() const override;
+
+  bool fallBackToDAGISel(const Instruction &Inst) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.

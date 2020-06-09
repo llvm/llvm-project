@@ -2195,6 +2195,10 @@ bool IRTranslator::translate(const Instruction &Inst) {
   else
     EntryBuilder->setDebugLoc(DebugLoc());
 
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  if (TLI.fallBackToDAGISel(Inst))
+    return false;
+
   switch (Inst.getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
   case Instruction::OPCODE:                                                    \
