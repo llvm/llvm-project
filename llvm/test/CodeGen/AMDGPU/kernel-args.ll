@@ -855,10 +855,10 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 ; multiple.
 ; FUNC-LABEL: {{^}}packed_struct_argument_alignment:
 ; HSA-GFX9: kernarg_segment_byte_size = 28
-; HSA-GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:17
-; HSA-GFX9: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 ; HSA-GFX9: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
 ; HSA-GFX9: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
+; HSA-GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:17
+; HSA-GFX9: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
   %val0 = extractvalue <{i32, i64}> %arg0, 0
   %val1 = extractvalue <{i32, i64}> %arg0, 1
