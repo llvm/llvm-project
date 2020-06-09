@@ -19,4 +19,3 @@ void h() { f(e); }
 // CHECK: Running pass: {{.*}}SanitizerPass on {{.*}}sanitizer-module-constructor.c
 // CHECK-NOT: Running pass: LoopSimplifyPass on {{.*}}san.module_ctor
 // CHECK: Running analysis: DominatorTreeAnalysis on {{.*}}san.module_ctor
-// CHECK: Running pass: LoopSimplifyPass on {{.*}}san.module_ctor
