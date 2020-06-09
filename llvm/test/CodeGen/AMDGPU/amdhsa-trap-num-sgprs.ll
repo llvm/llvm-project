@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}amdhsa_trap_num_sgprs
 ; TRAP-HANDLER-ENABLE:  NumSgprs: 61
-; TRAP-HANDLER-DISABLE: NumSgprs: 77
+; TRAP-HANDLER-DISABLE: NumSgprs: 79
 define amdgpu_kernel void @amdhsa_trap_num_sgprs(
     i32 addrspace(1)* %out0, i32 %in0,
     i32 addrspace(1)* %out1, i32 %in1,
