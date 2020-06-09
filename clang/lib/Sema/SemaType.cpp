@@ -2304,7 +2304,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
       return QualType();
   }
 
-  if (T->isSizelessType()) {
+  if (T->isSizelessType() && !T->isVLST()) {
     Diag(Loc, diag::err_array_incomplete_or_sizeless_type) << 1 << T;
     return QualType();
   }
@@ -7754,10 +7754,14 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// HandleArmSveVectorBitsTypeAttr - The "arm_sve_vector_bits" attribute is
 /// used to create fixed-length versions of sizeless SVE types defined by
 /// the ACLE, such as svint32_t and svbool_t.
-static void HandleArmSveVectorBitsTypeAttr(QualType &CurType,
-                                           const ParsedAttr &Attr, Sema &S) {
+static void HandleArmSveVectorBitsTypeAttr(TypeProcessingState &State,
+                                           QualType &CurType,
+                                           ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+  ASTContext &Ctx = S.Context;
+
   // Target must have SVE.
-  if (!S.Context.getTargetInfo().hasFeature("sve")) {
+  if (!Ctx.getTargetInfo().hasFeature("sve")) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr;
     Attr.setInvalid();
     return;
@@ -7801,6 +7805,9 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType,
     Attr.setInvalid();
     return;
   }
+
+  auto *A = ::new (Ctx) ArmSveVectorBitsAttr(Ctx, Attr, VecSize);
+  CurType = State.getAttributedType(A, CurType, CurType);
 }
 
 static void HandleArmMveStrictPolymorphismAttr(TypeProcessingState &State,
@@ -8067,7 +8074,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_ArmSveVectorBits:
-      HandleArmSveVectorBitsTypeAttr(type, attr, state.getSema());
+      HandleArmSveVectorBitsTypeAttr(state, type, attr);
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_ArmMveStrictPolymorphism: {
