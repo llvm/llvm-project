@@ -139,7 +139,7 @@ def CC_ARM_AAPCS_Common : CallingConv<[
 
   CCIfType<[i32], CCIfAlign<"8", CCAssignToStackWithShadow<4, 8, [R0, R1, R2, R3]>>>,
   CCIfType<[i32], CCAssignToStackWithShadow<4, 4, [R0, R1, R2, R3]>>,
-  CCIfType<[f32], CCAssignToStackWithShadow<4, 4, [Q0, Q1, Q2, Q3]>>,
+  CCIfType<[f16, f32], CCAssignToStackWithShadow<4, 4, [Q0, Q1, Q2, Q3]>>,
   CCIfType<[f64], CCAssignToStackWithShadow<8, 8, [Q0, Q1, Q2, Q3]>>,
   CCIfType<[v2f64], CCIfAlign<"16",
            CCAssignToStackWithShadow<16, 16, [Q0, Q1, Q2, Q3]>>>,
@@ -176,6 +176,7 @@ def CC_ARM_AAPCS : CallingConv<[
 
   CCIfType<[f64, v2f64], CCCustom<"CC_ARM_AAPCS_Custom_f64">>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
+  CCIfType<[f16], CCCustom<"CC_ARM_AAPCS_Custom_f16">>,
   CCDelegateTo<CC_ARM_AAPCS_Common>
 ]>;
 
@@ -193,6 +194,7 @@ def RetCC_ARM_AAPCS : CallingConv<[
 
   CCIfType<[f64, v2f64], CCCustom<"RetCC_ARM_AAPCS_Custom_f64">>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
+  CCIfType<[f16], CCCustom<"CC_ARM_AAPCS_Custom_f16">>,
 
   CCDelegateTo<RetCC_ARM_AAPCS_Common>
 ]>;
@@ -224,6 +226,7 @@ def CC_ARM_AAPCS_VFP : CallingConv<[
   CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7, S8,
                                  S9, S10, S11, S12, S13, S14, S15]>>,
+  CCIfType<[f16], CCCustom<"CC_ARM_AAPCS_VFP_Custom_f16">>,
   CCDelegateTo<CC_ARM_AAPCS_Common>
 ]>;
 
@@ -242,7 +245,8 @@ def RetCC_ARM_AAPCS_VFP : CallingConv<[
   CCIfType<[v2f64], CCAssignToReg<[Q0, Q1, Q2, Q3]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7, S8,
-                                      S9, S10, S11, S12, S13, S14, S15]>>,
+                                 S9, S10, S11, S12, S13, S14, S15]>>,
+  CCIfType<[f16], CCCustom<"CC_ARM_AAPCS_VFP_Custom_f16">>,
   CCDelegateTo<RetCC_ARM_AAPCS_Common>
 ]>;
 
