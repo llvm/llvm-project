@@ -1,0 +1,42 @@
+--- !tapi-tbd-v3
+archs:            [ x86_64 ]
+uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000000' ]
+platform:         macosx
+install-name:     '/usr/lib/libSystem.B.dylib'
+current-version:  0001.001.1
+exports:
+  - archs:        [ 'x86_64' ]
+    re-exports:   [ '/usr/lib/system/libdyld.dylib',
+                    '/usr/lib/system/libsystem_c.dylib',
+                    '/usr/lib/system/libsystem_m.dylib' ]
+--- !tapi-tbd-v3
+archs:            [ x86_64 ]
+uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000001' ]
+platform:         macosx
+install-name:     '/usr/lib/libdyld.dylib'
+current-version:  0001.001.1
+parent-umbrella:  System
+exports:
+  - archs:        [ 'x86_64' ]
+    symbols:      [ dyld_stub_binder ]
+--- !tapi-tbd-v3
+archs:            [ x86_64 ]
+uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000002' ]
+platform:         macosx
+install-name:     '/usr/lib/libsystem_c.dylib'
+current-version:  0001.001.1
+parent-umbrella:  System
+exports:
+  - archs:        [ 'x86_64' ]
+    symbols:      [ ]
+--- !tapi-tbd-v3
+archs:            [ x86_64 ]
+uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000003' ]
+platform:         macosx
+install-name:     '/usr/lib/libsystem_m.dylib'
+current-version:  0001.001.1
+parent-umbrella:  System
+exports:
+  - archs:        [ 'x86_64' ]
+    symbols:      [ ___nan ]
+...
