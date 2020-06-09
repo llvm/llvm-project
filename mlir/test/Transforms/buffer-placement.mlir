@@ -1,4 +1,4 @@
-// RUN: mlir-opt -buffer-placement -split-input-file %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -buffer-placement -split-input-file %s | FileCheck %s
 
 // This file checks the behaviour of BufferPlacement pass for moving Alloc and Dealloc
 // operations and inserting the missing the DeallocOps in their correct positions.

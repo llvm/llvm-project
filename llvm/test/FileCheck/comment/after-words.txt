@@ -8,7 +8,7 @@ RUN: echo 'FOO-COM: CHECK: foo' >  %t.chk
 RUN: echo 'RUN_COM: CHECK: bar' >> %t.chk
 RUN: echo 'RUN3COM: CHECK: foo' >> %t.chk
 RUN: echo ' COMRUN: CHECK: bar' >> %t.chk
-RUN: %ProtectFileCheckOutput FileCheck -vv %t.chk < %t.in 2>&1 | FileCheck %s
+RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 | FileCheck %s
 
 CHECK: .chk:1:17: remark: CHECK: expected string found in input
 CHECK: .chk:2:17: remark: CHECK: expected string found in input

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -convert-gpu-to-nvvm -split-input-file | FileCheck %s
 
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()

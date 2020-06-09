@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s
 
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>

@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck  %s
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
