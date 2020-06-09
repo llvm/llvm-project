@@ -146,7 +146,7 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
     ++NumFastOther;
 
     // Try to preserve debug information attached to the dead instruction.
-    salvageDebugInfoOrMarkUndef(*DeadInst);
+    salvageDebugInfo(*DeadInst);
     salvageKnowledge(DeadInst);
 
     // This instruction is dead, zap it, in stages.  Start by removing it from
