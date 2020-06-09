@@ -24,6 +24,9 @@ class Pass;
 /// Creates an instance of the ExpandAtomic pass.
 std::unique_ptr<Pass> createExpandAtomicPass();
 
+/// Creates an instance of the TanhLower pass.
+std::unique_ptr<Pass> createTanhLowerPass();
+
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
