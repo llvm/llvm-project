@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
+
 #include "hwasan_checks.h"
 #include "hwasan_dynamic_shadow.h"
+#include "hwasan_globals.h"
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
@@ -194,93 +196,20 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
          request_fast);
 }
 
-struct hwasan_global {
-  s32 gv_relptr;
-  u32 info;
-};
-
-static void InitGlobals(const hwasan_global *begin, const hwasan_global *end) {
-  for (auto *desc = begin; desc != end; ++desc) {
-    uptr gv = reinterpret_cast<uptr>(desc) + desc->gv_relptr;
-    uptr size = desc->info & 0xffffff;
-    uptr full_granule_size = RoundDownTo(size, 16);
-    u8 tag = desc->info >> 24;
-    TagMemoryAligned(gv, full_granule_size, tag);
-    if (size % 16)
-      TagMemoryAligned(gv + full_granule_size, 16, size % 16);
-  }
-}
-
-enum { NT_LLVM_HWASAN_GLOBALS = 3 };
-
-struct hwasan_global_note {
-  s32 begin_relptr;
-  s32 end_relptr;
-};
-
-// Check that the given library meets the code model requirements for tagged
-// globals. These properties are not checked at link time so they need to be
-// checked at runtime.
-static void CheckCodeModel(ElfW(Addr) base, const ElfW(Phdr) * phdr,
-                           ElfW(Half) phnum) {
-  ElfW(Addr) min_addr = -1ull, max_addr = 0;
-  for (unsigned i = 0; i != phnum; ++i) {
-    if (phdr[i].p_type != PT_LOAD)
-      continue;
-    ElfW(Addr) lo = base + phdr[i].p_vaddr, hi = lo + phdr[i].p_memsz;
-    if (min_addr > lo)
-      min_addr = lo;
-    if (max_addr < hi)
-      max_addr = hi;
-  }
-
-  if (max_addr - min_addr > 1ull << 32) {
-    Report("FATAL: HWAddressSanitizer: library size exceeds 2^32\n");
-    Die();
-  }
-  if (max_addr > 1ull << 48) {
-    Report("FATAL: HWAddressSanitizer: library loaded above address 2^48\n");
-    Die();
-  }
-}
-
-static void InitGlobalsFromPhdrs(ElfW(Addr) base, const ElfW(Phdr) * phdr,
-                                 ElfW(Half) phnum) {
-  for (unsigned i = 0; i != phnum; ++i) {
-    if (phdr[i].p_type != PT_NOTE)
-      continue;
-    const char *note = reinterpret_cast<const char *>(base + phdr[i].p_vaddr);
-    const char *nend = note + phdr[i].p_memsz;
-    while (note < nend) {
-      auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(note);
-      const char *name = note + sizeof(ElfW(Nhdr));
-      const char *desc = name + RoundUpTo(nhdr->n_namesz, 4);
-      if (nhdr->n_type != NT_LLVM_HWASAN_GLOBALS ||
-          internal_strcmp(name, "LLVM") != 0) {
-        note = desc + RoundUpTo(nhdr->n_descsz, 4);
-        continue;
-      }
-
-      // Only libraries with instrumented globals need to be checked against the
-      // code model since they use relocations that aren't checked at link time.
-      CheckCodeModel(base, phdr, phnum);
-
-      auto *global_note = reinterpret_cast<const hwasan_global_note *>(desc);
-      auto *global_begin = reinterpret_cast<const hwasan_global *>(
-          note + global_note->begin_relptr);
-      auto *global_end = reinterpret_cast<const hwasan_global *>(
-          note + global_note->end_relptr);
-      InitGlobals(global_begin, global_end);
-      return;
-    }
-  }
+static bool InitializeSingleGlobal(const hwasan_global &global) {
+  uptr full_granule_size = RoundDownTo(global.size(), 16);
+  TagMemoryAligned(global.addr(), full_granule_size, global.tag());
+  if (global.size() % 16)
+    TagMemoryAligned(global.addr() + full_granule_size, 16, global.size() % 16);
+  return false;
 }
 
 static void InitLoadedGlobals() {
   dl_iterate_phdr(
-      [](dl_phdr_info *info, size_t size, void *data) {
-        InitGlobalsFromPhdrs(info->dlpi_addr, info->dlpi_phdr,
-                             info->dlpi_phnum);
+      [](dl_phdr_info *info, size_t /* size */, void * /* data */) -> int {
+        for (const hwasan_global &global : HwasanGlobalsFor(
+                 info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum))
+          InitializeSingleGlobal(global);
         return 0;
       },
       nullptr);
@@ -321,11 +250,13 @@ void __hwasan_init_static() {
   // Fortunately, since this is a statically linked executable we can use the
   // linker-defined symbol __ehdr_start to find the only relevant set of phdrs.
   extern ElfW(Ehdr) __ehdr_start;
-  InitGlobalsFromPhdrs(
-      0,
-      reinterpret_cast<const ElfW(Phdr) *>(
-          reinterpret_cast<const char *>(&__ehdr_start) + __ehdr_start.e_phoff),
-      __ehdr_start.e_phnum);
+  for (const hwasan_global &global : HwasanGlobalsFor(
+           /* base */ 0,
+           reinterpret_cast<const ElfW(Phdr) *>(
+               reinterpret_cast<const char *>(&__ehdr_start) +
+               __ehdr_start.e_phoff),
+           __ehdr_start.e_phnum))
+    InitializeSingleGlobal(global);
 }
 
 void __hwasan_init() {
@@ -384,7 +315,8 @@ void __hwasan_init() {
 
 void __hwasan_library_loaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,
                              ElfW(Half) phnum) {
-  InitGlobalsFromPhdrs(base, phdr, phnum);
+  for (const hwasan_global &global : HwasanGlobalsFor(base, phdr, phnum))
+    InitializeSingleGlobal(global);
 }
 
 void __hwasan_library_unloaded(ElfW(Addr) base, const ElfW(Phdr) * phdr,

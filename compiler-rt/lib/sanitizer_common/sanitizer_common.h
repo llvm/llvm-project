@@ -978,6 +978,20 @@ INLINE u32 GetNumberOfCPUsCached() {
   return NumberOfCPUsCached;
 }
 
+template <typename T>
+class ArrayRef {
+ public:
+  ArrayRef() {}
+  ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
+
+  T *begin() { return begin_; }
+  T *end() { return end_; }
+
+ private:
+  T *begin_ = nullptr;
+  T *end_ = nullptr;
+};
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
