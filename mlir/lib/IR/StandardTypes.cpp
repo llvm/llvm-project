@@ -199,7 +199,9 @@ int64_t ShapedType::getNumElements() const {
 
 int64_t ShapedType::getRank() const { return getShape().size(); }
 
-bool ShapedType::hasRank() const { return !isa<UnrankedTensorType>(); }
+bool ShapedType::hasRank() const {
+  return !isa<UnrankedMemRefType>() && !isa<UnrankedTensorType>();
+}
 
 int64_t ShapedType::getDimSize(unsigned idx) const {
   assert(idx < getRank() && "invalid index for shaped type");
