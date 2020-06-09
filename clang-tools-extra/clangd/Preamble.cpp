@@ -13,6 +13,7 @@
 #include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -96,6 +97,19 @@ public:
   CommentHandler *getCommentHandler() override {
     IWYUHandler = collectIWYUHeaderMaps(&CanonIncludes);
     return IWYUHandler.get();
+  }
+
+  bool shouldSkipFunctionBody(Decl *D) override {
+    // Generally we skip function bodies in preambles for speed.
+    // We can make exceptions for functions that are cheap to parse and
+    // instantiate, widely used, and valuable (e.g. commonly produce errors).
+    if (const auto *FT = llvm::dyn_cast<clang::FunctionTemplateDecl>(D)) {
+      if (const auto *II = FT->getDeclName().getAsIdentifierInfo())
+        // std::make_unique is trivial, and we diagnose bad constructor calls.
+        if (II->isStr("make_unique") && FT->isInStdNamespace())
+          return false;
+    }
+    return true;
   }
 
 private:
