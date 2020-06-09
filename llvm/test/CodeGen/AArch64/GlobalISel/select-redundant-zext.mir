@@ -93,14 +93,15 @@ body:             |
     ; CHECK-LABEL: name: dont_fold_bitcast
     ; CHECK: liveins: $w0
     ; CHECK: %copy:gpr32all = COPY $w0
-    ; CHECK: %bitcast:gpr32 = COPY %copy
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %bitcast, %subreg.sub_32
+    ; CHECK: %bitcast1:gpr32 = COPY %copy
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %bitcast1, %subreg.sub_32
     ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
     ; CHECK: $x0 = COPY %zext
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(s32) = COPY $w0
-    %bitcast:gpr(s32) = G_BITCAST %copy(s32)
-    %zext:gpr(s64) = G_ZEXT %bitcast(s32)
+    %bitcast0:gpr(<4 x s8>) = G_BITCAST %copy(s32)
+    %bitcast1:gpr(s32) = G_BITCAST %bitcast0
+    %zext:gpr(s64) = G_ZEXT %bitcast1(s32)
     $x0 = COPY %zext(s64)
     RET_ReallyLR implicit $x0
 
