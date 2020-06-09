@@ -255,6 +255,10 @@ public:
     Action.setEmittedPreamblePCH(getWriter());
   }
 
+  bool shouldSkipFunctionBody(Decl *D) override {
+    return Action.Callbacks.shouldSkipFunctionBody(D);
+  }
+
 private:
   PrecompilePreambleAction &Action;
   std::unique_ptr<raw_ostream> Out;
