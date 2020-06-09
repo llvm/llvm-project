@@ -479,8 +479,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
   unsigned Idx = 0;
   ArrayRef<ParmVarDecl*>::iterator I = parameters.begin(), E = parameters.end();
   for (; I != E && Idx < NumArgs; ++I, ++Idx) {
-    const ParmVarDecl *ParamDecl = *I;
-    assert(ParamDecl && "Formal parameter has no decl?");
+    assert(*I && "Formal parameter has no decl?");
 
     // TODO: Support allocator calls.
     if (Call.getKind() != CE_CXXAllocator)
