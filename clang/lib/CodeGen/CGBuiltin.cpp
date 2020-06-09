@@ -15951,6 +15951,39 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_pmax, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_ceil_f32x4:
+  case WebAssembly::BI__builtin_wasm_floor_f32x4:
+  case WebAssembly::BI__builtin_wasm_trunc_f32x4:
+  case WebAssembly::BI__builtin_wasm_nearest_f32x4:
+  case WebAssembly::BI__builtin_wasm_ceil_f64x2:
+  case WebAssembly::BI__builtin_wasm_floor_f64x2:
+  case WebAssembly::BI__builtin_wasm_trunc_f64x2:
+  case WebAssembly::BI__builtin_wasm_nearest_f64x2: {
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_ceil_f32x4:
+    case WebAssembly::BI__builtin_wasm_ceil_f64x2:
+      IntNo = Intrinsic::wasm_ceil;
+      break;
+    case WebAssembly::BI__builtin_wasm_floor_f32x4:
+    case WebAssembly::BI__builtin_wasm_floor_f64x2:
+      IntNo = Intrinsic::wasm_floor;
+      break;
+    case WebAssembly::BI__builtin_wasm_trunc_f32x4:
+    case WebAssembly::BI__builtin_wasm_trunc_f64x2:
+      IntNo = Intrinsic::wasm_trunc;
+      break;
+    case WebAssembly::BI__builtin_wasm_nearest_f32x4:
+    case WebAssembly::BI__builtin_wasm_nearest_f64x2:
+      IntNo = Intrinsic::wasm_nearest;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    Value *Value = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, Value);
+  }
   case WebAssembly::BI__builtin_wasm_swizzle_v8x16: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     Value *Indices = EmitScalarExpr(E->getArg(1));
