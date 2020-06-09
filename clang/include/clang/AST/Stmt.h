@@ -775,8 +775,10 @@ protected:
     /// the trait evaluated true or false.
     unsigned Value : 1;
 
-    /// The number of arguments to this type trait.
-    unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
+    /// The number of arguments to this type trait. According to [implimits]
+    /// 8 bits would be enough, but we require (and test for) at least 16 bits
+    /// to mirror FunctionType.
+    unsigned NumArgs;
   };
 
   class DependentScopeDeclRefExprBitfields {

@@ -231,6 +231,7 @@ public:
   void VisitCaseStmt(const CaseStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
   void VisitCastExpr(const CastExpr *Node);
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
