@@ -306,8 +306,8 @@ static SourcePred validShuffleVectorIndex() {
     auto *Int32Ty = Type::getInt32Ty(Cur[0]->getContext());
     // TODO: It's straighforward to make up reasonable values, but listing them
     // exhaustively would be insane. Come up with a couple of sensible ones.
-    return std::vector<Constant *>{
-        UndefValue::get(VectorType::get(Int32Ty, FirstTy->getNumElements()))};
+    return std::vector<Constant *>{UndefValue::get(
+        FixedVectorType::get(Int32Ty, FirstTy->getNumElements()))};
   };
   return {Pred, Make};
 }
