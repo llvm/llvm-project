@@ -29,6 +29,9 @@ public:
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym,
                                   unsigned ByteAlign) override;
+  void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
+                                            MCSymbolAttr Linkage,
+                                            MCSymbolAttr Visibility) override;
 };
 
 } // end namespace llvm
