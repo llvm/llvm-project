@@ -1392,10 +1392,10 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      __attribute__((availability(tvos,strict,introduced=10.0)))                \
      __attribute__((availability(watchos,strict,introduced=3.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
-     __attribute__((availability(macosx,strict,introduced=10.14)))             \
-     __attribute__((availability(ios,strict,introduced=12.0)))                 \
-     __attribute__((availability(tvos,strict,introduced=12.0)))                \
-     __attribute__((availability(watchos,strict,introduced=5.0)))
+     __attribute__((availability(macosx,strict,introduced=10.13)))             \
+     __attribute__((availability(ios,strict,introduced=11.0)))                 \
+     __attribute__((availability(tvos,strict,introduced=11.0)))                \
+     __attribute__((availability(watchos,strict,introduced=4.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
      _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \
