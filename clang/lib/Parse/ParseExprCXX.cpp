@@ -3369,7 +3369,6 @@ ExprResult Parser::ParseRequiresExpression() {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
       SourceLocation EllipsisLoc;
       llvm::SmallVector<DeclaratorChunk::ParamInfo, 2> LocalParameters;
-      DiagnosticErrorTrap Trap(Diags);
       ParseParameterDeclarationClause(DeclaratorContext::RequiresExprContext,
                                       FirstArgAttrs, LocalParameters,
                                       EllipsisLoc);
@@ -3377,8 +3376,6 @@ ExprResult Parser::ParseRequiresExpression() {
         Diag(EllipsisLoc, diag::err_requires_expr_parameter_list_ellipsis);
       for (auto &ParamInfo : LocalParameters)
         LocalParameterDecls.push_back(cast<ParmVarDecl>(ParamInfo.Param));
-      if (Trap.hasErrorOccurred())
-        SkipUntil(tok::r_paren, StopBeforeMatch);
     }
     Parens.consumeClose();
   }
