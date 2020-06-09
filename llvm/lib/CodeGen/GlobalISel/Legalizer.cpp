@@ -133,7 +133,6 @@ public:
   }
 
   void createdInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << ".. .. New MI: " << MI);
     LLVM_DEBUG(NewMIs.push_back(&MI));
     createdOrChangedInstr(MI);
   }
