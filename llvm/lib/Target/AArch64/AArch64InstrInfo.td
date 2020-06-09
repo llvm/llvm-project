@@ -976,15 +976,23 @@ let Predicates = [HasPA] in {
   def PACGA : SignAuthTwoOperand<0b1100, "pacga", null_frag>;
 
   // Combined Instructions
-  def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
-  def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
-  def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
-  def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1  in {
+    def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
+    def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
+  }
+  let isCall = 1, Defs = [LR], Uses = [SP] in {
+    def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
+    def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+  }
 
-  def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
-  def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
-  def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
-  def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
+  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1  in {
+    def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
+    def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
+  }
+  let isCall = 1, Defs = [LR], Uses = [SP] in {
+    def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
+    def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
+  }
 
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;

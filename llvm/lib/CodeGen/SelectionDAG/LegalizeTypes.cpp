@@ -889,12 +889,19 @@ SDValue DAGTypeLegalizer::CreateStackStoreLoad(SDValue Op,
   SDLoc dl(Op);
   // Create the stack frame object.  Make sure it is aligned for both
   // the source and destination types.
-  SDValue StackPtr = DAG.CreateStackTemporary(Op.getValueType(), DestVT);
+
+  // In cases where the vector is illegal it will be broken down into parts
+  // and stored in parts - we should use the alignment for the smallest part.
+  Align DestAlign = DAG.getReducedAlign(DestVT, /*UseABI=*/false);
+  Align OpAlign = DAG.getReducedAlign(Op.getValueType(), /*UseABI=*/false);
+  Align Align = std::max(DestAlign, OpAlign);
+  SDValue StackPtr =
+      DAG.CreateStackTemporary(Op.getValueType().getStoreSize(), Align);
   // Emit a store to the stack slot.
-  SDValue Store =
-      DAG.getStore(DAG.getEntryNode(), dl, Op, StackPtr, MachinePointerInfo());
+  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Op, StackPtr,
+                               MachinePointerInfo(), Align);
   // Result is a load from the stack slot.
-  return DAG.getLoad(DestVT, dl, Store, StackPtr, MachinePointerInfo());
+  return DAG.getLoad(DestVT, dl, Store, StackPtr, MachinePointerInfo(), Align);
 }
 
 /// Replace the node's results with custom code provided by the target and

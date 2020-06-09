@@ -865,6 +865,17 @@ public:
                                         LI->getPointerAddressSpace(),
                                         CostKind, I);
     }
+    case Instruction::Select: {
+      Type *CondTy = U->getOperand(0)->getType();
+      return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
+                                           CostKind, I);
+    }
+    case Instruction::ICmp:
+    case Instruction::FCmp: {
+      Type *ValTy = U->getOperand(0)->getType();
+      return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
+                                           CostKind, I);
+    }
     }
     // By default, just classify everything as 'basic'.
     return TTI::TCC_Basic;

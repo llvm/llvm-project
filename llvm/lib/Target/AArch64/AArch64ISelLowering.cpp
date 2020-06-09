@@ -12138,7 +12138,8 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SDValue StVal = S->getValue();
   EVT VT = StVal.getValueType();
-  if (!VT.isVector())
+
+  if (!VT.isFixedLengthVector())
     return SDValue();
 
   // If we get a splat of zeros, convert this vector store to a store of
