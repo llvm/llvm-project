@@ -112,11 +112,21 @@ TEST(ExprMutationAnalyzerTest, Trivial) {
 class AssignmentTest : public ::testing::TestWithParam<std::string> {};
 
 TEST_P(AssignmentTest, AssignmentModifies) {
-  const std::string ModExpr = "x " + GetParam() + " 10";
-  const auto AST = buildASTFromCode("void f() { int x; " + ModExpr + "; }");
-  const auto Results =
-      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
-  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre(ModExpr));
+  {
+    const std::string ModExpr = "x " + GetParam() + " 10";
+    const auto AST = buildASTFromCode("void f() { int x; " + ModExpr + "; }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre(ModExpr));
+  }
+
+  {
+    const std::string ModExpr = "(x) " + GetParam() + " 10";
+    const auto AST = buildASTFromCode("void f() { int x; " + ModExpr + "; }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre(ModExpr));
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(AllAssignmentOperators, AssignmentTest,
@@ -134,7 +144,8 @@ TEST_P(IncDecTest, IncDecModifies) {
 }
 
 INSTANTIATE_TEST_CASE_P(AllIncDecOperators, IncDecTest,
-                        Values("++x", "--x", "x++", "x--"), );
+                        Values("++x", "--x", "x++", "x--", "++(x)", "--(x)",
+                               "(x)++", "(x)--"), );
 
 TEST(ExprMutationAnalyzerTest, NonConstMemberFunc) {
   const auto AST = buildASTFromCode(
