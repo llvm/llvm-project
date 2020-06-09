@@ -28,9 +28,7 @@ class ARMLegalizerInfo : public LegalizerInfo {
 public:
   ARMLegalizerInfo(const ARMSubtarget &ST);
 
-  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &MIRBuilder,
-                      GISelChangeObserver &Observer) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
   void setFCmpLibcallsGNU();
