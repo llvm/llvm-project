@@ -4970,6 +4970,11 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vaeseq_v, aarch64_crypto_aese, 0),
   NEONMAP1(vaesimcq_v, aarch64_crypto_aesimc, 0),
   NEONMAP1(vaesmcq_v, aarch64_crypto_aesmc, 0),
+  NEONMAP1(vbfdot_v, aarch64_neon_bfdot, 0),
+  NEONMAP1(vbfdotq_v, aarch64_neon_bfdot, 0),
+  NEONMAP1(vbfmlalbq_v, aarch64_neon_bfmlalb, 0),
+  NEONMAP1(vbfmlaltq_v, aarch64_neon_bfmlalt, 0),
+  NEONMAP1(vbfmmlaq_v, aarch64_neon_bfmmla, 0),
   NEONMAP1(vcadd_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
   NEONMAP1(vcadd_rot90_v, aarch64_neon_vcadd_rot90, Add1ArgType),
   NEONMAP1(vcaddq_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
@@ -6141,6 +6146,32 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vusdot");
   }
+  case NEON::BI__builtin_neon_vbfdot_v:
+  case NEON::BI__builtin_neon_vbfdotq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfdot");
+  }
+  case NEON::BI__builtin_neon_vbfmmlaq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmmla");
+  }
+  case NEON::BI__builtin_neon_vbfmlalbq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalb");
+  }
+  case NEON::BI__builtin_neon_vbfmlaltq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalt");
+  }
+
   }
 
   assert(Int && "Expected valid intrinsic number");

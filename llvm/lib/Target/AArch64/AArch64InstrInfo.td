@@ -784,10 +784,10 @@ let Predicates = [HasBF16] in {
 defm BFDOT       : SIMDThreeSameVectorBFDot<1, "bfdot">;
 defm BF16DOTlane : SIMDThreeSameVectorBF16DotI<0, "bfdot">;
 def BFMMLA       : SIMDThreeSameVectorBF16MatrixMul<"bfmmla">;
-def BFMLALB      : SIMDBF16MLAL<0, "bfmlalb">;
-def BFMLALT      : SIMDBF16MLAL<1, "bfmlalt">;
-def BFMLALBIdx   : SIMDBF16MLALIndex<0, "bfmlalb">;
-def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt">;
+def BFMLALB      : SIMDBF16MLAL<0, "bfmlalb", int_aarch64_neon_bfmlalb>;
+def BFMLALT      : SIMDBF16MLAL<1, "bfmlalt", int_aarch64_neon_bfmlalt>;
+def BFMLALBIdx   : SIMDBF16MLALIndex<0, "bfmlalb", int_aarch64_neon_bfmlalb>;
+def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt", int_aarch64_neon_bfmlalt>;
 def BFCVTN       : SIMD_BFCVTN;
 def BFCVTN2      : SIMD_BFCVTN2;
 def BFCVT        : BF16ToSinglePrecision<"bfcvt">;
