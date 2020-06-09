@@ -1099,7 +1099,7 @@ class ObjCIvarRegion : public DeclRegion {
                             const MemRegion* superRegion);
 
 public:
-  const ObjCIvarDecl *getDecl() const;
+  const ObjCIvarDecl *getDecl() const override;
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;
 
