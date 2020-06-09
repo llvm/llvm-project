@@ -60,3 +60,11 @@ func @yield_op_type_mismatch(%shape : !shape.shape, %init : !shape.size) {
       shape.yield %c0 : index
   }
 }
+
+// -----
+
+func @assuming_all_op_too_few_operands() {
+  // expected-error@+1 {{no operands specified}}
+  %w0 = shape.assuming_all
+  return
+}

@@ -507,6 +507,8 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let assemblyFormat = "$inputs attr-dict";
 
   let hasFolder = 1;
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Shape_AssumingOp : Shape_Op<"assuming",
