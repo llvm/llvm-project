@@ -1599,21 +1599,19 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
                                         Fast);
 }
 
-bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
-                                            const DataLayout &DL, EVT VT,
-                                            unsigned AddrSpace, Align Alignment,
-                                            MachineMemOperand::Flags Flags,
-                                            bool *Fast) const {
-  return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace,
-                                        Alignment.value(), Flags, Fast);
+bool TargetLoweringBase::allowsMemoryAccess(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+  return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
+                                        Flags, Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             const MachineMemOperand &MMO,
                                             bool *Fast) const {
-  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
-                            MMO.getFlags(), Fast);
+  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
+                            MMO.getAlign().value(), MMO.getFlags(), Fast);
 }
 
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
