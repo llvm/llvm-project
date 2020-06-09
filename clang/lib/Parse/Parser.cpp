@@ -652,9 +652,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     }
 
     // Late template parsing can begin.
-    if (getLangOpts().DelayedTemplateParsing)
-      Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr,
-                                    this);
+    Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
     if (!PP.isIncrementalProcessingEnabled())
       Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
