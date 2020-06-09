@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-llvm -o - %s | tco | llc --relocation-model=pic | as -o %t
-! RUN: %CXX -std=c++17 %t %S/end-to-end-character-assignment-driver.cpp
+! RUN: %CXX -fPIC -std=c++17 %t %S/end-to-end-character-assignment-driver.cpp
 ! RUN: ./a.out
 
 ! This is an end-to-end test that is driven from a c++ program that builds
