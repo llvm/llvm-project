@@ -70,9 +70,27 @@ from typing import Dict, IO, List, NamedTuple, Optional, TYPE_CHECKING
 # Helper functions.
 ###############################################################################
 
+class StreamToLogger:
+    def __init__(self, logger: logging.Logger,
+                 log_level: int = logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+
+    def write(self, message: str):
+        # Rstrip in order not to write an extra newline.
+        self.logger.log(self.log_level, message.rstrip())
+
+    def flush(self):
+        pass
+
+    def fileno(self) -> int:
+        return 0
+
+
+Logger = logging.getLogger("main")
 LOCAL = threading.local()
-LOCAL.stdout = sys.stdout
-LOCAL.stderr = sys.stderr
+LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
+LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
 
 
 def stderr(message: str):
@@ -162,23 +180,6 @@ CHECKERS = ",".join([
 ])
 
 VERBOSE = 0
-
-
-class StreamToLogger:
-    def __init__(self, logger: logging.Logger,
-                 log_level: int = logging.INFO):
-        self.logger = logger
-        self.log_level = log_level
-
-    def write(self, message: str):
-        # Rstrip in order not to write an extra newline.
-        self.logger.log(self.log_level, message.rstrip())
-
-    def flush(self):
-        pass
-
-    def fileno(self) -> int:
-        return 0
 
 
 ###############################################################################
