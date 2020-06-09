@@ -1279,18 +1279,21 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
   LT.addStandardOpcode(DW_LNS_set_epilogue_begin, {});
   LT.addStandardOpcode(DW_LNS_set_isa, {{66, LineTable::ULEB}});
-  // Add unknown standard opcode.
+  // Add unknown standard opcode with operands.
   LT.addStandardOpcode(
       0xd, {{1, LineTable::ULEB}, {0x123456789abcdef, LineTable::ULEB}});
+  // Add unknown standard opcode without operands.
+  LT.addStandardOpcode(0xe, {});
   LT.addByte(0xff); // Special opcode.
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
 
   // Adjust the prologue to account for the extra standard opcode.
   DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
-  ++Prologue.TotalLength;
-  ++Prologue.PrologueLength;
-  ++Prologue.OpcodeBase;
+  Prologue.TotalLength += 2;
+  Prologue.PrologueLength += 2;
+  Prologue.OpcodeBase += 2;
   Prologue.StandardOpcodeLengths.push_back(2);
+  Prologue.StandardOpcodeLengths.push_back(0);
   LT.setPrologue(Prologue);
 
   generate();
@@ -1311,18 +1314,18 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
     return Line;
   };
   EXPECT_EQ(NextLine(), "Line table prologue:");
-  EXPECT_EQ(NextLine(), "    total_length: 0x00000076");
+  EXPECT_EQ(NextLine(), "    total_length: 0x00000078");
   EXPECT_EQ(NextLine(), "          format: DWARF32");
   EXPECT_EQ(NextLine(), "         version: 5");
   EXPECT_EQ(NextLine(), "    address_size: 8");
   EXPECT_EQ(NextLine(), " seg_select_size: 0");
-  EXPECT_EQ(NextLine(), " prologue_length: 0x0000002b");
+  EXPECT_EQ(NextLine(), " prologue_length: 0x0000002c");
   EXPECT_EQ(NextLine(), " min_inst_length: 1");
   EXPECT_EQ(NextLine(), "max_ops_per_inst: 1");
   EXPECT_EQ(NextLine(), " default_is_stmt: 1");
   EXPECT_EQ(NextLine(), "       line_base: -5");
   EXPECT_EQ(NextLine(), "      line_range: 14");
-  EXPECT_EQ(NextLine(), "     opcode_base: 14");
+  EXPECT_EQ(NextLine(), "     opcode_base: 15");
   EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_copy] = 0");
   EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_advance_pc] = 1");
   EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_advance_line] = 1");
@@ -1337,6 +1340,7 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
             "standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0");
   EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_set_isa] = 1");
   EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_unknown_d] = 2");
+  EXPECT_EQ(NextLine(), "standard_opcode_lengths[DW_LNS_unknown_e] = 0");
   EXPECT_EQ(NextLine(), "include_directories[  0] = \"a dir\"");
   EXPECT_EQ(NextLine(), "file_names[  0]:");
   EXPECT_EQ(NextLine(), "           name: \"a file\"");
@@ -1345,41 +1349,40 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "            Address            Line   Column File   ISA Discriminator Flags");
   EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ --- ------------- -------------");
   EXPECT_EQ(NextLine(),
-            "0x00000037: 00 Badly formed extended line op (length 0)");
+            "0x00000038: 00 Badly formed extended line op (length 0)");
   EXPECT_EQ(NextLine(),
-            "0x00000039: 00 Unrecognized extended op 0x00 length 2");
+            "0x0000003a: 00 Unrecognized extended op 0x00 length 2");
   EXPECT_EQ(NextLine(),
-            "0x0000003d: 00 Unrecognized extended op 0x42 length 2");
+            "0x0000003e: 00 Unrecognized extended op 0x42 length 2");
   EXPECT_EQ(NextLine(),
-            "0x00000041: 00 DW_LNE_set_address (0x0123456789abcdef)");
-  EXPECT_EQ(NextLine(), "0x0000004c: 00 DW_LNE_define_file (a, dir=2, "
+            "0x00000042: 00 DW_LNE_set_address (0x0123456789abcdef)");
+  EXPECT_EQ(NextLine(), "0x0000004d: 00 DW_LNE_define_file (a, dir=2, "
                         "mod_time=(0x0000000000000003), length=4)");
-  EXPECT_EQ(NextLine(), "0x00000054: 00 DW_LNE_set_discriminator (127)");
-  EXPECT_EQ(NextLine(), "0x00000058: 01 DW_LNS_copy");
+  EXPECT_EQ(NextLine(), "0x00000055: 00 DW_LNE_set_discriminator (127)");
+  EXPECT_EQ(NextLine(), "0x00000059: 01 DW_LNS_copy");
   EXPECT_EQ(NextLine(), "            0x0123456789abcdef      1      0      1   "
                         "0           127  is_stmt");
-  EXPECT_EQ(NextLine(), "0x00000059: 02 DW_LNS_advance_pc (11)");
-  EXPECT_EQ(NextLine(), "0x0000005b: 03 DW_LNS_advance_line (23)");
-  EXPECT_EQ(NextLine(), "0x0000005d: 04 DW_LNS_set_file (33)");
-  EXPECT_EQ(NextLine(), "0x0000005f: 05 DW_LNS_set_column (44)");
-  EXPECT_EQ(NextLine(), "0x00000061: 06 DW_LNS_negate_stmt");
-  EXPECT_EQ(NextLine(), "0x00000062: 07 DW_LNS_set_basic_block");
+  EXPECT_EQ(NextLine(), "0x0000005a: 02 DW_LNS_advance_pc (11)");
+  EXPECT_EQ(NextLine(), "0x0000005c: 03 DW_LNS_advance_line (23)");
+  EXPECT_EQ(NextLine(), "0x0000005e: 04 DW_LNS_set_file (33)");
+  EXPECT_EQ(NextLine(), "0x00000060: 05 DW_LNS_set_column (44)");
+  EXPECT_EQ(NextLine(), "0x00000062: 06 DW_LNS_negate_stmt");
+  EXPECT_EQ(NextLine(), "0x00000063: 07 DW_LNS_set_basic_block");
   EXPECT_EQ(NextLine(),
-            "0x00000063: 08 DW_LNS_const_add_pc (0x0000000000000011)");
-  EXPECT_EQ(NextLine(), "0x00000064: 09 DW_LNS_fixed_advance_pc (0x0037)");
-  EXPECT_EQ(NextLine(), "0x00000067: 0a DW_LNS_set_prologue_end");
-  EXPECT_EQ(NextLine(), "0x00000068: 0b DW_LNS_set_epilogue_begin");
-  EXPECT_EQ(NextLine(), "0x00000069: 0c DW_LNS_set_isa (66)");
+            "0x00000064: 08 DW_LNS_const_add_pc (0x0000000000000011)");
+  EXPECT_EQ(NextLine(), "0x00000065: 09 DW_LNS_fixed_advance_pc (0x0037)");
+  EXPECT_EQ(NextLine(), "0x00000068: 0a DW_LNS_set_prologue_end");
+  EXPECT_EQ(NextLine(), "0x00000069: 0b DW_LNS_set_epilogue_begin");
+  EXPECT_EQ(NextLine(), "0x0000006a: 0c DW_LNS_set_isa (66)");
+  EXPECT_EQ(NextLine(), "0x0000006c: 0d Unrecognized standard opcode "
+                        "(operands: 0x0000000000000001, 0x0123456789abcdef)");
+  EXPECT_EQ(NextLine(), "0x00000077: 0e Unrecognized standard opcode");
+  EXPECT_EQ(NextLine(), "0x00000078: ff address += 17,  line += -3");
   EXPECT_EQ(NextLine(),
-            "0x0000006b: 0d Skipping ULEB128 value: 0x0000000000000001)");
-  EXPECT_EQ(NextLine(), "Skipping ULEB128 value: 0x0123456789abcdef)");
-  EXPECT_EQ(NextLine(), "");
-  EXPECT_EQ(NextLine(), "0x00000076: ff address += 17,  line += -2");
-  EXPECT_EQ(NextLine(),
-            "            0x0123456789abce53     21     44     33  66           "
+            "            0x0123456789abce53     20     44     33  66           "
             "  0  basic_block prologue_end epilogue_begin");
-  EXPECT_EQ(NextLine(), "0x00000077: 00 DW_LNE_end_sequence");
-  EXPECT_EQ(NextLine(), "            0x0123456789abce53     21     44     33  "
+  EXPECT_EQ(NextLine(), "0x00000079: 00 DW_LNE_end_sequence");
+  EXPECT_EQ(NextLine(), "            0x0123456789abce53     20     44     33  "
                         "66             0  end_sequence");
   EXPECT_EQ(NextLine(), "");
   EXPECT_EQ(Output.size(), Pos);
