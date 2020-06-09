@@ -616,9 +616,11 @@ public:
   }
 
   /// Wrap version of getBitsSet.
-  /// If \p hiBit is no less than \p loBit, this is same with getBitsSet.
-  /// If \p hiBit is less than \p loBit, the set bits "wrap". For example, with
-  /// parameters (32, 28, 4), you would get 0xF000000F.
+  /// If \p hiBit is bigger than \p loBit, this is same with getBitsSet.
+  /// If \p hiBit is not bigger than \p loBit, the set bits "wrap". For example,
+  /// with parameters (32, 28, 4), you would get 0xF000000F.
+  /// If \p hiBit is equal to \p loBit, you would get a result with all bits
+  /// set.
   static APInt getBitsSetWithWrap(unsigned numBits, unsigned loBit,
                                   unsigned hiBit) {
     APInt Res(numBits, 0);
@@ -1448,12 +1450,13 @@ public:
   }
 
   /// Set the bits from loBit (inclusive) to hiBit (exclusive) to 1.
-  /// This function handles "wrap" case when \p loBit > \p hiBit, and calls
-  /// setBits when \p loBit <= \p hiBit.
+  /// This function handles "wrap" case when \p loBit >= \p hiBit, and calls
+  /// setBits when \p loBit < \p hiBit.
+  /// For \p loBit == \p hiBit wrap case, set every bit to 1.
   void setBitsWithWrap(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");
     assert(loBit <= BitWidth && "loBit out of range");
-    if (loBit <= hiBit) {
+    if (loBit < hiBit) {
       setBits(loBit, hiBit);
       return;
     }
