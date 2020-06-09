@@ -915,9 +915,6 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT: {
-    if (MI->getNumOperands() < MCID.getNumOperands())
-      break;
-
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     if (DstTy.isVector())
       report("Instruction cannot use a vector result type", MI);
