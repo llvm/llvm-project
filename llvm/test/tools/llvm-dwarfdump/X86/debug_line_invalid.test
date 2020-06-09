@@ -4,38 +4,40 @@
 ## Show that a bad length stops parsing of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_reserved_length.s -filetype=obj -o %t-reserved.o
 # RUN: llvm-dwarfdump -debug-line %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,FATAL,RESERVED
 # RUN: llvm-dwarfdump -debug-line %t-reserved.o -verbose 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,FATAL,RESERVED
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,FATAL,RESERVED
 
 ## We only produce warnings for malformed tables after the specified unit if
 ## parsing can continue.
 # RUN: llvm-dwarfdump -debug-line=0 %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER,RESERVED
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,NOLATER,RESERVED
 
 ## Stop looking for the specified unit, if a fatally-bad prologue is detected.
 # RUN: llvm-dwarfdump -debug-line=0x4b %t-reserved.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=NOFIRST,NOLATER,RESERVED
+# RUN:   | FileCheck %s --check-prefixes=HEADER,NOFIRST,NOLATER,RESERVED
 
 ## Show that non-fatal errors do not prevent parsing the rest of the section.
 # RUN: llvm-mc -triple x86_64-pc-linux %S/Inputs/debug_line_malformed.s -filetype=obj -o %t-malformed.o
 # RUN: llvm-dwarfdump -debug-line %t-malformed.o 2> %t-malformed.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed.err --check-prefixes=ALL,OTHER
 # RUN: llvm-dwarfdump -debug-line %t-malformed.o -verbose 2> %t-malformed-verbose.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,VERBOSE,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]' \
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,VERBOSE,NONFATAL,LAST --implicit-check-not='debug_line[{{.*}}]' \
 # RUN:       --implicit-check-not=' DW_LNS' --implicit-check-not=' DW_LNE' --implicit-check-not='address +='
 # RUN: FileCheck %s --input-file=%t-malformed-verbose.err --check-prefixes=ALL,OTHER
 
 ## We should still produce warnings for malformed tables after the specified unit.
 # RUN: llvm-dwarfdump -debug-line=0 %t-malformed.o 2> %t-malformed-off-first.err \
-# RUN:   | FileCheck %s --check-prefixes=FIRST,NOLATER
+# RUN:   | FileCheck %s --check-prefixes=HEADER,FIRST,NOLATER
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
 # RUN: llvm-dwarfdump -debug-line=0x419 %t-malformed.o 2> %t-malformed-off-last.err \
-# RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
+# RUN:   | FileCheck %s --check-prefixes=HEADER,LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
+
+# HEADER:       .debug_line contents:
 
 # FIRST:        debug_line[0x00000000]
 # VERBOSE:        Address            Line   Column File   ISA Discriminator Flags
