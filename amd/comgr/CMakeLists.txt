@@ -55,8 +55,8 @@ else()
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  find_package(AMDDeviceLibs REQUIRED)
-  find_package(Clang REQUIRED)
+  find_package(AMDDeviceLibs REQUIRED CONFIG)
+  find_package(Clang REQUIRED CONFIG)
   find_package(LLD REQUIRED CONFIG)
 
   target_include_directories(amd_comgr
