@@ -4862,7 +4862,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt &&
       !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
-                              LDST->getAddressSpace(), ShAmt / 8,
+                              LDST->getAddressSpace(), Align(ShAmt / 8),
                               LDST->getMemOperand()->getFlags()))
     return false;
 
@@ -8478,7 +8478,7 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
           SDLoc DL(RHS);
           uint64_t PtrOff =
               IsFSHL ? (((BitWidth - ShAmt) % BitWidth) / 8) : (ShAmt / 8);
-          unsigned NewAlign = MinAlign(RHS->getAlignment(), PtrOff);
+          const Align NewAlign = commonAlignment(RHS->getAlign(), PtrOff);
           bool Fast = false;
           if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
                                      RHS->getAddressSpace(), NewAlign,

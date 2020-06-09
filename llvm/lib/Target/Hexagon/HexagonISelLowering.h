@@ -306,8 +306,9 @@ namespace HexagonISD {
                             const AttributeList &FuncAttributes) const override;
 
     bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
-        unsigned AddrSpace, unsigned Alignment, MachineMemOperand::Flags Flags,
-        bool *Fast) const override;
+                            unsigned AddrSpace, Align Alignment,
+                            MachineMemOperand::Flags Flags,
+                            bool *Fast) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
         unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast)
