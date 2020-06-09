@@ -133,6 +133,28 @@ class RR<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
   let Inst{3-0} = cfw;
 }
 
+// RRFENCE type is special RR type for a FENCE instruction.
+class RRFENCE<bits<8>opVal, dag outs, dag ins, string asmstr,
+              list<dag> pattern = []>
+   : InstVE<outs, ins, asmstr, pattern> {
+  bits<1> avo = 0;
+  bits<1> lf = 0;
+  bits<1> sf = 0;
+  bits<1> c2 = 0;
+  bits<1> c1 = 0;
+  bits<1> c0 = 0;
+  let op = opVal;
+  let Inst{55} = avo;
+  let Inst{54-50} = 0;
+  let Inst{49} = lf;
+  let Inst{48} = sf;
+  let Inst{47-43} = 0;
+  let Inst{42} = c2;
+  let Inst{41} = c1;
+  let Inst{40} = c0;
+  let Inst{39-0} = 0;
+}
+
 //-----------------------------------------------------------------------------
 // Section 5.5 RW Type
 //-----------------------------------------------------------------------------
