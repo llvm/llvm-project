@@ -119,6 +119,48 @@ std::string detectStandardResourceDir() {
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
 }
 
+// The path passed to argv[0] is important:
+//  - its parent directory is Driver::Dir, used for library discovery
+//  - its basename affects CLI parsing (clang-cl) and other settings
+// Where possible it should be an absolute path with sensible directory, but
+// with the original basename.
+static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
+                                 llvm::Optional<std::string> ClangPath) {
+  auto SiblingOf = [&](llvm::StringRef AbsPath) {
+    llvm::SmallString<128> Result = llvm::sys::path::parent_path(AbsPath);
+    llvm::sys::path::append(Result, llvm::sys::path::filename(Driver));
+    return Result.str().str();
+  };
+
+  // First, eliminate relative paths.
+  std::string Storage;
+  if (!llvm::sys::path::is_absolute(Driver)) {
+    // If the driver is a generic like "g++" with no path, add clang dir.
+    if (ClangPath &&
+        (Driver == "clang" || Driver == "clang++" || Driver == "gcc" ||
+         Driver == "g++" || Driver == "cc" || Driver == "c++")) {
+      return SiblingOf(*ClangPath);
+    }
+    // Otherwise try to look it up on PATH. This won't change basename.
+    auto Absolute = llvm::sys::findProgramByName(Driver);
+    if (Absolute && llvm::sys::path::is_absolute(*Absolute))
+      Driver = Storage = std::move(*Absolute);
+    else if (ClangPath) // If we don't find it, use clang dir again.
+      return SiblingOf(*ClangPath);
+    else // Nothing to do: can't find the command and no detected dir.
+      return Driver.str();
+  }
+
+  // Now we have an absolute path, but it may be a symlink.
+  assert(llvm::sys::path::is_absolute(Driver));
+  if (FollowSymlink) {
+    llvm::SmallString<256> Resolved;
+    if (!llvm::sys::fs::real_path(Driver, Resolved))
+      return SiblingOf(Resolved);
+  }
+  return Driver.str();
+}
+
 } // namespace
 
 CommandMangler CommandMangler::detect() {
@@ -162,25 +204,22 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
     Cmd.push_back(*Sysroot);
   }
 
-  // If the driver is a generic name like "g++" with no path, add a clang path.
-  // This makes it easier for us to find the standard libraries on mac.
-  if (ClangPath && llvm::sys::path::is_absolute(*ClangPath) && !Cmd.empty()) {
-    std::string &Driver = Cmd.front();
-    if (Driver == "clang" || Driver == "clang++" || Driver == "gcc" ||
-        Driver == "g++" || Driver == "cc" || Driver == "c++") {
-      llvm::SmallString<128> QualifiedDriver =
-          llvm::sys::path::parent_path(*ClangPath);
-      llvm::sys::path::append(QualifiedDriver, Driver);
-      Driver = std::string(QualifiedDriver.str());
-    }
+  if (!Cmd.empty()) {
+    bool FollowSymlink = !Has("-no-canonical-prefixes");
+    Cmd.front() =
+        (FollowSymlink ? ResolvedDrivers : ResolvedDriversNoFollow)
+            .get(Cmd.front(), [&, this] {
+              return resolveDriver(Cmd.front(), FollowSymlink, ClangPath);
+            });
   }
 }
 
-CommandMangler::operator clang::tooling::ArgumentsAdjuster() {
-  return [Mangler{*this}](const std::vector<std::string> &Args,
-                          llvm::StringRef File) {
+CommandMangler::operator clang::tooling::ArgumentsAdjuster() && {
+  // ArgumentsAdjuster is a std::function and so must be copyable.
+  return [Mangler = std::make_shared<CommandMangler>(std::move(*this))](
+             const std::vector<std::string> &Args, llvm::StringRef File) {
     auto Result = Args;
-    Mangler.adjust(Result);
+    Mangler->adjust(Result);
     return Result;
   };
 }
