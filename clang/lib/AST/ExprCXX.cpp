@@ -1580,8 +1580,12 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
     : Expr(TypeTraitExprClass, T, VK_RValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   TypeTraitExprBits.Kind = Kind;
+  assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
+         "TypeTraitExprBits.Kind overflow!");
   TypeTraitExprBits.Value = Value;
   TypeTraitExprBits.NumArgs = Args.size();
+  assert(Args.size() == TypeTraitExprBits.NumArgs &&
+         "TypeTraitExprBits.NumArgs overflow!");
 
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
   for (unsigned I = 0, N = Args.size(); I != N; ++I)
