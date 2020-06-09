@@ -197,9 +197,8 @@ define <2 x double> @fmul2_negated_vec(<2 x double> %a, <2 x double> %b, <2 x do
 define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, double %n1) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul d2, d2, d3
+; CHECK-NEXT:    fmadd d2, d2, d3, d4
 ; CHECK-NEXT:    fmadd d0, d0, d1, d2
-; CHECK-NEXT:    fadd d0, d0, d4
 ; CHECK-NEXT:    ret
   %m1 = fmul fast double %a, %b
   %m2 = fmul fast double %c, %d
@@ -213,9 +212,8 @@ define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, doubl
 define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul s2, s2, s3
+; CHECK-NEXT:    fmadd s2, s2, s3, s4
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
-; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul float %a, %b
   %m2 = fmul float %c, %d
@@ -230,10 +228,10 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
 ; CHECK-LABEL: fadd_fma_fmul_3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmul v3.2d, v6.2d, v7.2d
 ; CHECK-NEXT:    fmla v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    fmla v3.2d, v5.2d, v4.2d
-; CHECK-NEXT:    fadd v0.2d, v2.2d, v3.2d
+; CHECK-NEXT:    fmla v2.2d, v7.2d, v6.2d
+; CHECK-NEXT:    fmla v2.2d, v5.2d, v4.2d
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %m1 = fmul fast <2 x double> %x1, %x2
   %m2 = fmul fast <2 x double> %x3, %x4
@@ -244,6 +242,8 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
   %a3 = fadd fast <2 x double> %a1, %a2
   ret <2 x double> %a3
 }
+
+; negative test
 
 define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_1:
@@ -261,6 +261,8 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
   ret float %a2
 }
 
+; negative test
+
 define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_2:
 ; CHECK:       // %bb.0:
@@ -276,6 +278,8 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
   %a2 = fadd fast float %n0, %a1
   ret float %a2
 }
+
+; negative test
 
 define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_3:
