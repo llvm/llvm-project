@@ -1993,6 +1993,34 @@ SDValue SelectionDAG::expandVACopy(SDNode *Node) {
                   MachinePointerInfo(VD));
 }
 
+Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
+  const DataLayout &DL = getDataLayout();
+  Type *Ty = VT.getTypeForEVT(*getContext());
+  Align RedAlign = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
+
+  if (TLI->isTypeLegal(VT) || !VT.isVector())
+    return RedAlign;
+
+  const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+  const Align StackAlign = TFI->getStackAlign();
+
+  // See if we can choose a smaller ABI alignment in cases where it's an
+  // illegal vector type that will get broken down.
+  if (RedAlign > StackAlign) {
+    EVT IntermediateVT;
+    MVT RegisterVT;
+    unsigned NumIntermediates;
+    unsigned NumRegs = TLI->getVectorTypeBreakdown(
+        *getContext(), VT, IntermediateVT, NumIntermediates, RegisterVT);
+    Ty = IntermediateVT.getTypeForEVT(*getContext());
+    Align RedAlign2 = UseABI ? DL.getABITypeAlign(Ty) : DL.getPrefTypeAlign(Ty);
+    if (RedAlign2 < RedAlign)
+      RedAlign = RedAlign2;
+  }
+
+  return RedAlign;
+}
+
 SDValue SelectionDAG::CreateStackTemporary(TypeSize Bytes, Align Alignment) {
   MachineFrameInfo &MFI = MF->getFrameInfo();
   int FrameIdx = MFI.CreateStackObject(Bytes, Alignment, false);
