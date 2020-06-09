@@ -61,8 +61,14 @@ def buildDefault(
         testname=None):
     """Build the binaries the default way."""
     commands = []
-    commands.append(getMake(testdir, testname) + ["all", getArchSpec(architecture),
-                     getCCSpec(compiler), getCmdLine(dictionary)])
+    commands.append(getMake(testdir, testname) +
+                    ["all",
+                     getArchSpec(architecture),
+                     getCCSpec(compiler),
+                     getDsymutilSpec(),
+                     getSDKRootSpec(),
+                     getModuleCacheSpec(),
+                     getCmdLine(dictionary)])
 
     triple = construct_triple(
         configuration.lldb_platform_name,
@@ -85,8 +91,13 @@ def buildDwarf(
     """Build the binaries with dwarf debug info."""
     commands = []
     commands.append(getMake(testdir, testname) +
-                    ["MAKE_DSYM=NO", getArchSpec(architecture),
-                     getCCSpec(compiler), getCmdLine(dictionary)])
+                    ["MAKE_DSYM=NO",
+                     getArchSpec(architecture),
+                     getCCSpec(compiler),
+                     getDsymutilSpec(),
+                     getSDKRootSpec(),
+                     getModuleCacheSpec(),
+                     getCmdLine(dictionary)])
 
     triple = construct_triple(
         configuration.lldb_platform_name,
@@ -113,7 +124,10 @@ def buildGModules(
                      "MAKE_GMODULES=YES",
                      getArchSpec(architecture),
                      getCCSpec(compiler),
-                     "all", getCmdLine(dictionary)])
+                     getDsymutilSpec(),
+                     getSDKRootSpec(),
+                     getModuleCacheSpec(),
+                     getCmdLine(dictionary)])
 
     triple = construct_triple(
         configuration.lldb_platform_name,
@@ -155,5 +169,3 @@ def buildDsym(
 
     # True signifies that we can handle building dsym.
     return True
-
-
