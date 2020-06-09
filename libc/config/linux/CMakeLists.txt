@@ -9,5 +9,3 @@ add_gen_header(
   DEPENDS
     libc.src.__support.common
 )
-
-add_subdirectory(x86_64)

@@ -132,4 +132,6 @@ add_bzero(bzero MARCH native)
 # Add all other relevant implementations for the native target.
 # ------------------------------------------------------------------------------
 
-include(${LIBC_STRING_TARGET_ARCH}/CMakeLists.txt)
+if(EXISTS ${LIBC_STRING_TARGET_ARCH})
+  include(${LIBC_STRING_TARGET_ARCH}/CMakeLists.txt)
+endif()
