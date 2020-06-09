@@ -60,6 +60,12 @@ BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 
+BUILTIN(__builtin_amdgcn_atomic_inc32, "ZiZiD*ZiUicC*", "n")
+BUILTIN(__builtin_amdgcn_atomic_inc64, "WiWiD*WiUicC*", "n")
+
+BUILTIN(__builtin_amdgcn_atomic_dec32, "ZiZiD*ZiUicC*", "n")
+BUILTIN(__builtin_amdgcn_atomic_dec64, "WiWiD*WiUicC*", "n")
+
 // FIXME: Need to disallow constant address space.
 BUILTIN(__builtin_amdgcn_div_scale, "dddbb*", "n")
 BUILTIN(__builtin_amdgcn_div_scalef, "fffbb*", "n")
