@@ -1639,8 +1639,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
     // Set !heapallocsite metadata on the call to operator new.
-    if (CGM.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo &&
-        getDebugInfo())
+    if (getDebugInfo())
       if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
         getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
                                                  E->getExprLoc());

@@ -2157,6 +2157,9 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
 void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
                                            QualType AllocatedTy,
                                            SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      codegenoptions::DebugLineTablesOnly)
+    return;
   llvm::MDNode *node;
   if (AllocatedTy->isVoidType())
     node = llvm::MDNode::get(CGM.getLLVMContext(), None);
