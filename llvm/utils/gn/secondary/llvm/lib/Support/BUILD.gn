@@ -136,6 +136,7 @@ static_library("Support") {
     "UnicodeCaseFold.cpp",
     "VersionTuple.cpp",
     "WithColor.cpp",
+    "X86TargetParser.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",
     "Z3Solver.cpp",
