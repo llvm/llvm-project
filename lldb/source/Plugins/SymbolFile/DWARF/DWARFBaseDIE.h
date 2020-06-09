@@ -110,7 +110,7 @@ public:
   uint64_t GetAttributeValueAsAddress(const dw_attr_t attr,
                                       uint64_t fail_value) const;
 
-  size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth = 0) const;
+  size_t GetAttributes(DWARFAttributes &attributes) const;
 
 protected:
   DWARFUnit *m_cu;
