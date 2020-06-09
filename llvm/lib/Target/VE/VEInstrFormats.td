@@ -67,7 +67,14 @@ class RM<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
 
 //-----------------------------------------------------------------------------
 // Section 5.2 RRM Type
+//
+// RRM type is identical to RM, but the effective address is generated
+// by sz + imm32.  The sy field is used by other purposes.
 //-----------------------------------------------------------------------------
+
+class RRM<bits<8>opVal, dag outs, dag ins, string asmstr,
+          list<dag> pattern = []>
+   : RM<opVal, outs, ins, asmstr, pattern>;
 
 //-----------------------------------------------------------------------------
 // Section 5.3 CF Type
