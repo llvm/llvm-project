@@ -380,7 +380,7 @@ int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
 
     std::string Command = substitute(Line);
     P.formatLine("Command: {0}", Command);
-    CommandReturnObject Result;
+    CommandReturnObject Result(/*colors*/ false);
     if (!Dbg.GetCommandInterpreter().HandleCommand(
             Command.c_str(), /*add_to_history*/ eLazyBoolNo, Result)) {
       P.formatLine("Failed: {0}", Result.GetErrorData());
@@ -530,7 +530,7 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   LanguageSet languages;
   if (!Language.empty())
     languages.Insert(Language::GetLanguageTypeFromString(Language));
-  
+
   DenseSet<SymbolFile *> SearchedFiles;
   TypeMap Map;
   if (!Name.empty())
@@ -1034,7 +1034,7 @@ int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
 
   // Set up a Process. In order to allocate memory within a target, this
   // process must be alive and must support JIT'ing.
-  CommandReturnObject Result;
+  CommandReturnObject Result(/*colors*/ false);
   Dbg.SetAsyncExecution(false);
   CommandInterpreter &CI = Dbg.GetCommandInterpreter();
   auto IssueCmd = [&](const char *Cmd) -> bool {
@@ -1098,7 +1098,7 @@ int main(int argc, const char *argv[]) {
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);
-  CommandReturnObject Result;
+  CommandReturnObject Result(/*colors*/ false);
   Dbg->GetCommandInterpreter().HandleCommand(
       "settings set plugin.process.gdb-remote.packet-timeout 60",
       /*add_to_history*/ eLazyBoolNo, Result);
