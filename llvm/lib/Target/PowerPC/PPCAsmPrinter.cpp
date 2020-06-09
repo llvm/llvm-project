@@ -168,6 +168,8 @@ public:
   void emitFunctionDescriptor() override;
 
   void emitEndOfAsmFile(Module &) override;
+
+  void emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const override;
 };
 
 } // end anonymous namespace
@@ -1575,6 +1577,61 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
     OutStreamer->emitIntValue(0, 4/*size*/);
     OutStreamer->emitIntValue(0, 8/*size*/);
   }
+}
+
+void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
+                                   MCSymbol *GVSym) const {
+
+  assert(MAI->hasVisibilityOnlyWithLinkage() &&
+         "AIX's linkage directives take a visibility setting.");
+
+  MCSymbolAttr LinkageAttr = MCSA_Invalid;
+  switch (GV->getLinkage()) {
+  case GlobalValue::ExternalLinkage:
+    LinkageAttr = GV->isDeclaration() ? MCSA_Extern : MCSA_Global;
+    break;
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::LinkOnceODRLinkage:
+  case GlobalValue::WeakAnyLinkage:
+  case GlobalValue::WeakODRLinkage:
+  case GlobalValue::ExternalWeakLinkage:
+    LinkageAttr = MCSA_Weak;
+    break;
+  case GlobalValue::AvailableExternallyLinkage:
+    LinkageAttr = MCSA_Extern;
+    break;
+  case GlobalValue::PrivateLinkage:
+    return;
+  case GlobalValue::InternalLinkage:
+    assert(MAI->hasDotLGloblDirective() &&
+           "Expecting .lglobl to be supported for AIX.");
+    OutStreamer->emitSymbolAttribute(GVSym, MCSA_LGlobal);
+    return;
+  case GlobalValue::AppendingLinkage:
+    llvm_unreachable("Should never emit this");
+  case GlobalValue::CommonLinkage:
+    llvm_unreachable("CommonLinkage of XCOFF should not come to this path");
+  }
+
+  assert(LinkageAttr != MCSA_Invalid && "LinkageAttr should not MCSA_Invalid.");
+
+  MCSymbolAttr VisibilityAttr = MCSA_Invalid;
+  switch (GV->getVisibility()) {
+
+    // TODO: "exported" and "internal" Visibility needs to go here.
+
+  case GlobalValue::DefaultVisibility:
+    break;
+  case GlobalValue::HiddenVisibility:
+    VisibilityAttr = MAI->getHiddenVisibilityAttr();
+    break;
+  case GlobalValue::ProtectedVisibility:
+    VisibilityAttr = MAI->getProtectedVisibilityAttr();
+    break;
+  }
+
+  OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,
+                                                    VisibilityAttr);
 }
 
 void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {

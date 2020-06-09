@@ -178,6 +178,17 @@ enum SymbolType : uint8_t {
   XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
 };
 
+/// Values for visibility as they would appear when encoded in the high 4 bits
+/// of the 16-bit unsigned n_type field of symbol table entries. Valid for
+/// 32-bit XCOFF only when the vstamp in the auxiliary header is greater than 1.
+enum VisibilityType : uint16_t {
+  SYM_V_UNSPECIFIED = 0x0000,
+  SYM_V_INTERNAL = 0x1000,
+  SYM_V_HIDDEN = 0x2000,
+  SYM_V_PROTECTED = 0x3000,
+  SYM_V_EXPORTED = 0x4000
+};
+
 // Relocation types, defined in `/usr/include/reloc.h`.
 enum RelocationType : uint8_t {
   R_POS = 0x00, ///< Positive relocation. Provides the address of the referenced
