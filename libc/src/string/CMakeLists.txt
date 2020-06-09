@@ -52,6 +52,7 @@ function(add_implementation name impl_name)
     REJECT ${ADD_IMPL_REJECT}
   )
   add_entrypoint_object(${impl_name}
+    NAME ${name}
     SRCS ${ADD_IMPL_SRCS}
     HDRS ${ADD_IMPL_HDRS}
     DEPENDS ${ADD_IMPL_DEPENDS}
