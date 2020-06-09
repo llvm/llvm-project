@@ -261,6 +261,11 @@ enum NodeType : unsigned {
   LD1RQ,
   LD1RO,
 
+  // Structured loads.
+  SVE_LD2,
+  SVE_LD3,
+  SVE_LD4,
+
   // Unsigned gather loads.
   GLD1,
   GLD1_SCALED,
@@ -851,6 +856,8 @@ private:
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SDValue Chain,
                                          SDValue &Size,
                                          SelectionDAG &DAG) const;
+  SDValue LowerSVEStructLoad(unsigned Intrinsic, ArrayRef<SDValue> LoadOps,
+                             EVT VT, SelectionDAG &DAG, const SDLoc &DL) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
