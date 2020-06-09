@@ -50,8 +50,6 @@ class Configuration(LibcxxConfiguration):
         ]
         if self.get_lit_bool('enable_exceptions', True):
             self.cxx.compile_flags += ['-funwind-tables']
-        else:
-            self.cxx.compile_flags += ['-fno-exceptions', '-DLIBCXXABI_HAS_NO_EXCEPTIONS']
         if not self.get_lit_bool('enable_threads', True):
             self.cxx.compile_flags += ['-D_LIBCXXABI_HAS_NO_THREADS']
             self.config.available_features.add('libcxxabi-no-threads')
