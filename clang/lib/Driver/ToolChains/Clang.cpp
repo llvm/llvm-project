@@ -3709,12 +3709,8 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
         if (T.getArch() == llvm::Triple::amdgcn) {
           CmdArgs.push_back("-mllvm");
           CmdArgs.push_back("-amdgpu-spill-cfi-saved-regs");
-          // -ggdb with AMDGCN does not currently compose with options that
-          // affect the debug info kind. The behavior of commands like `-ggdb
-          // -g` may be surprising (the -g is effectively ignored).
-          DebugInfoKind = codegenoptions::DebugLineTablesOnly;
-          if (SplitDWARFInlining)
-            DwarfFission = DwarfFissionKind::None;
+          CmdArgs.push_back("-mllvm");
+          CmdArgs.push_back("-disable-dwarf-locations");
         }
       }
     }

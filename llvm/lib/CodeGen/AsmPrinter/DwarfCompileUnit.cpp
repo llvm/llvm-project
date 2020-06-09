@@ -1276,6 +1276,9 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
 /// Add an address attribute to a die based on the location provided.
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
                                   const MachineLocation &Location) {
+  if (DisableDwarfLocations)
+    return;
+
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   if (Location.isIndirect())
@@ -1302,6 +1305,9 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
 void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
                                          dwarf::Attribute Attribute,
                                          const MachineLocation &Location) {
+  if (DisableDwarfLocations)
+    return;
+
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   const DIExpression *DIExpr = DV.getSingleExpression();
@@ -1329,6 +1335,9 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
 /// Add a Dwarf loclistptr attribute data and value.
 void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
                                        unsigned Index) {
+  if (DisableDwarfLocations)
+    return;
+
   dwarf::Form Form = dwarf::DW_FORM_data4;
   if (DD->getDwarfVersion() == 4)
     Form =dwarf::DW_FORM_sec_offset;

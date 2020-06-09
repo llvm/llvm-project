@@ -2712,6 +2712,9 @@ void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
 
 // Emit locations into the .debug_loc/.debug_loclists section.
 void DwarfDebug::emitDebugLoc() {
+  if (DisableDwarfLocations)
+    return;
+
   emitDebugLocImpl(
       getDwarfVersion() >= 5
           ? Asm->getObjFileLowering().getDwarfLoclistsSection()
@@ -2720,6 +2723,9 @@ void DwarfDebug::emitDebugLoc() {
 
 // Emit locations into the .debug_loc.dwo/.debug_loclists.dwo section.
 void DwarfDebug::emitDebugLocDWO() {
+  if (DisableDwarfLocations)
+    return;
+
   if (getDwarfVersion() >= 5) {
     emitDebugLocImpl(
         Asm->getObjFileLowering().getDwarfLoclistsDWOSection());
