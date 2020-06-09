@@ -1271,7 +1271,8 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   std::string Output;
   raw_string_ostream OS(Output);
-  Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
+                   /*Verbose=*/true);
   OS.flush();
 
   EXPECT_FALSE(Recoverable);
@@ -1323,13 +1324,16 @@ struct TruncatedExtendedOpcodeFixture
     DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
     std::string Output;
     raw_string_ostream OS(Output);
-    Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS);
+    Parser.parseNext(RecordRecoverable, RecordUnrecoverable, &OS,
+                     /*Verbose=*/true);
     OS.flush();
 
     StringRef LinePrefix = "0x0000002e: 00 ";
     StringRef OutputRef(Output);
     StringRef OutputToCheck = OutputRef.split(LinePrefix).second;
-    EXPECT_EQ((ExpectedOutput + "\n").str(), OutputToCheck);
+    // Each extended opcode ends with a new line and then the table ends with an
+    // additional blank line.
+    EXPECT_EQ((ExpectedOutput + "\n\n").str(), OutputToCheck);
     EXPECT_THAT_ERROR(std::move(Recoverable),
                       FailedWithMessage(ExpectedErr.str()));
   }
