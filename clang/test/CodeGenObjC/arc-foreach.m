@@ -73,7 +73,7 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: [[BLOCK1:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]]
 // CHECK-LP64-NEXT: call void @use_block(void ()* [[BLOCK1]])
 // CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(i8** [[D0]], i8* null)
-// CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(i8* [[CAPTURE]])
+// CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(
 
 // CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i64 0, i32 5
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load i8*, i8** [[D0]]
