@@ -436,19 +436,15 @@ define i32 @cttz_32_eq_select_ffs_m1(i32 %v) nounwind {
 ; NOBMI-LABEL: cttz_32_eq_select_ffs_m1:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    bsfl %edi, %ecx
-; NOBMI-NEXT:    xorl %eax, %eax
-; NOBMI-NEXT:    cmpl $1, %edi
-; NOBMI-NEXT:    sbbl %eax, %eax
-; NOBMI-NEXT:    orl %ecx, %eax
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: cttz_32_eq_select_ffs_m1:
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntl %edi, %ecx
-; BMI-NEXT:    xorl %eax, %eax
-; BMI-NEXT:    cmpl $1, %edi
-; BMI-NEXT:    sbbl %eax, %eax
-; BMI-NEXT:    orl %ecx, %eax
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
 ; BMI-NEXT:    retq
 
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
@@ -461,19 +457,15 @@ define i32 @cttz_32_ne_select_ffs_m1(i32 %v) nounwind {
 ; NOBMI-LABEL: cttz_32_ne_select_ffs_m1:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    bsfl %edi, %ecx
-; NOBMI-NEXT:    xorl %eax, %eax
-; NOBMI-NEXT:    cmpl $1, %edi
-; NOBMI-NEXT:    sbbl %eax, %eax
-; NOBMI-NEXT:    orl %ecx, %eax
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: cttz_32_ne_select_ffs_m1:
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntl %edi, %ecx
-; BMI-NEXT:    xorl %eax, %eax
-; BMI-NEXT:    cmpl $1, %edi
-; BMI-NEXT:    sbbl %eax, %eax
-; BMI-NEXT:    orl %ecx, %eax
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
 ; BMI-NEXT:    retq
 
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
