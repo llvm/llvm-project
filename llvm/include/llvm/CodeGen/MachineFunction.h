@@ -144,6 +144,8 @@ public:
   //  operands, this also means that all generic virtual registers have been
   //  constrained to virtual registers (assigned to register classes) and that
   //  all sizes attached to them have been eliminated.
+  // TiedOpsRewritten: The twoaddressinstruction pass will set this flag, it
+  //  means that tied-def have been rewritten to meet the RegConstraint.
   enum class Property : unsigned {
     IsSSA,
     NoPHIs,
@@ -153,7 +155,8 @@ public:
     Legalized,
     RegBankSelected,
     Selected,
-    LastProperty = Selected,
+    TiedOpsRewritten,
+    LastProperty = TiedOpsRewritten,
   };
 
   bool hasProperty(Property P) const {
