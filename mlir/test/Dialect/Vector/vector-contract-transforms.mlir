@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -test-vector-contraction-conversion | FileCheck %s --dump-input-on-failure
-// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-lower-matrix-intrinsics=1 | FileCheck %s --check-prefix=MATRIX --dump-input-on-failure
-// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-outerproduct=1 | FileCheck %s --check-prefix=OUTERPRODUCT --dump-input-on-failure
+// RUN: mlir-opt %s -test-vector-contraction-conversion | FileCheck %s
+// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-lower-matrix-intrinsics=1 | FileCheck %s --check-prefix=MATRIX
+// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-outerproduct=1 | FileCheck %s --check-prefix=OUTERPRODUCT
 
 #dotp_accesses = [
   affine_map<(i) -> (i)>,

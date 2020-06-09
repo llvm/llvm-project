@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-flat-transpose=1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-flat-transpose=1 | FileCheck %s
 
 // Tests for lowering 2-D vector.transpose into vector.flat_transpose.
 //

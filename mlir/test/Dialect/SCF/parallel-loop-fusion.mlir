@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(parallel-loop-fusion)' -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(parallel-loop-fusion)' -split-input-file | FileCheck %s
 
 func @fuse_empty_loops() {
   %c2 = constant 2 : index

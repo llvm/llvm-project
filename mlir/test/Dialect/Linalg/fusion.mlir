@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -linalg-fusion -split-input-file | FileCheck %s
 
 func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, 1]>,

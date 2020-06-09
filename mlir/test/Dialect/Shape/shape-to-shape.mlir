@@ -1,4 +1,4 @@
-// RUN: mlir-opt -shape-to-shape-lowering -split-input-file %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -shape-to-shape-lowering -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @num_elements_to_reduce(
 // CHECK-SAME:    [[ARG:%.*]]: !shape.shape) -> [[SIZE_TY:!.*]] {
