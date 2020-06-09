@@ -19,9 +19,14 @@ class MiniDumpUUIDTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def verify_module(self, module, verify_path, verify_uuid):
-        uuid = module.GetUUIDString()
-        self.assertEqual(verify_path, module.GetFileSpec().fullpath)
-        self.assertEqual(verify_uuid, uuid)
+        # Compare the filename and the directory separately. We are avoiding
+        # SBFileSpec.fullpath because it causes a slash/backslash confusion
+        # on Windows.
+        self.assertEqual(
+            os.path.basename(verify_path), module.GetFileSpec().basename)
+        self.assertEqual(
+            os.path.dirname(verify_path), module.GetFileSpec().dirname or "")
+        self.assertEqual(verify_uuid, module.GetUUIDString())
 
     def get_minidump_modules(self, yaml_file):
         minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
@@ -130,7 +135,6 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[1], "/file/does/not/exist/b",
                            '11223344-1122-3344-1122-334411223344-11223344')
 
-    @expectedFailureAll(oslist=["windows"])
     def test_partial_uuid_match(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
@@ -248,7 +252,6 @@ class MiniDumpUUIDTestCase(TestBase):
                 "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10").IsValid())
         self.assertFalse(self.target.AddModule("a", "", "01020305").IsValid())
 
-    @expectedFailureAll(oslist=["windows"])
     def test_remove_placeholder_add_real_module(self):
         """
             Test that removing a placeholder module and adding back the real
