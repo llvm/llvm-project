@@ -28,11 +28,11 @@ define void @transpose_store(<8 x double> %a, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP14]], i64 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x double>* [[PTR:%.*]] to double*
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast double* [[TMP16]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP7]], <4 x double>* [[TMP17]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr double, double* [[TMP16]], i32 4
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast double* [[TMP18]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP15]], <4 x double>* [[TMP19]], align 8
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP16]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP7]], <4 x double>* [[VEC_CAST]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP16]], i32 4
+; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP15]], <4 x double>* [[VEC_CAST4]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
