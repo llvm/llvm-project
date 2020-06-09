@@ -17,13 +17,9 @@ endmacro()
 
 macro(add_test_shared_binary name input1 input2 output)
   add_custom_command(
-    OUTPUT "${output}" "${input1}.o" "${input2}.o"
-    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -nogpulib
-      ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input1}" -o "${input1}.o"
-    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -nogpulib
-      ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input2}" -o "${input2}.o"
+    OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa
-      "${input1}.o" "${input2}.o" -o "${output}"
+      "${input1}" "${input2}" -o "${output}"
     VERBATIM
     DEPENDS clang "${input1}" "${input2}")
   add_custom_target("${name}"
@@ -38,19 +34,23 @@ add_test_input_binary(reloc-asm reloc-asm.s reloc-asm.o -c -mno-code-object-v3)
 add_test_input_binary(shared shared.cl shared.so -mno-code-object-v3)
 add_test_input_binary(shared-v3 shared.cl shared-v3.so -mcode-object-v3)
 
-add_test_shared_binary(shared12-v2 source1-v2.s source2-v2.s shared12-v2.so
-  -c -mcpu=gfx803 -mno-code-object-v3)
-add_test_shared_binary(shared14-v2 source1-v2.s source4-v2.s shared14-v2.so
-  -c -mcpu=gfx803 -mno-code-object-v3)
-add_test_shared_binary(shared23-v2 source2-v2.s source3-v2.s shared23-v2.so
-  -c -mcpu=gfx803 -mno-code-object-v3)
+add_test_input_binary(source1-v2 source1-v2.s source1-v2.o -c -mno-code-object-v3)
+add_test_input_binary(source2-v2 source2-v2.s source2-v2.o -c -mno-code-object-v3)
+add_test_input_binary(source3-v2 source3-v2.s source3-v2.o -c -mno-code-object-v3)
+add_test_input_binary(source4-v2 source4-v2.s source4-v2.o -c -mno-code-object-v3)
 
-add_test_shared_binary(shared12-v3 source1-v3.s source2-v3.s shared12-v3.so
-  -c -mcpu=gfx803)
-add_test_shared_binary(shared14-v3 source1-v3.s source4-v3.s shared14-v3.so
-  -c -mcpu=gfx803)
-add_test_shared_binary(shared23-v3 source2-v3.s source3-v3.s shared23-v3.so
-  -c -mcpu=gfx803)
+add_test_input_binary(source1-v3 source1-v3.s source1-v3.o -c)
+add_test_input_binary(source2-v3 source2-v3.s source2-v3.o -c)
+add_test_input_binary(source3-v3 source3-v3.s source3-v3.o -c)
+add_test_input_binary(source4-v3 source4-v3.s source4-v3.o -c)
+
+add_test_shared_binary(shared12-v2 source1-v2.o source2-v2.o shared12-v2.so)
+add_test_shared_binary(shared14-v2 source1-v2.o source4-v2.o shared14-v2.so)
+add_test_shared_binary(shared23-v2 source2-v2.o source3-v2.o shared23-v2.so)
+
+add_test_shared_binary(shared12-v3 source1-v3.o source2-v3.o shared12-v3.so)
+add_test_shared_binary(shared14-v3 source1-v3.o source4-v3.o shared14-v3.so)
+add_test_shared_binary(shared23-v3 source2-v3.o source3-v3.o shared23-v3.so)
 
 configure_file("source1.cl" "source1.cl" COPYONLY)
 configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)

@@ -141,10 +141,10 @@ int main(int argc, char *argv[]) {
   close_meta_data(&meta);                                                   \
 }while(0)
 
-  READ_METADATA(meta_data, "source1-v2.s.o", false, true);
-  READ_METADATA(meta_data, "source2-v2.s.o", false, true);
-  READ_METADATA(meta_data, "source1-v3.s.o", false, true);
-  READ_METADATA(meta_data, "source2-v3.s.o", false, true);
+  READ_METADATA(meta_data, "source1-v2.o", false, true);
+  READ_METADATA(meta_data, "source2-v2.o", false, true);
+  READ_METADATA(meta_data, "source1-v3.o", false, true);
+  READ_METADATA(meta_data, "source2-v3.o", false, true);
 
   READ_METADATA(meta_data, "shared12-v2.so", true, true);
 
