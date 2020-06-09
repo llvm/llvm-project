@@ -906,11 +906,6 @@ bool PPCMIPeephole::simplifyCode(void) {
         // while in PowerPC ISA, lowerest bit is at index 63.
         APInt MaskSrc =
             APInt::getBitsSetWithWrap(32, 32 - MESrc - 1, 32 - MBSrc);
-        // Current APInt::getBitsSetWithWrap sets all bits to 0 if loBit is
-        // equal to highBit.
-        // If MBSrc - MESrc == 1, we expect a full set mask instead of Null.
-        if (SrcMaskFull && (MBSrc - MESrc == 1))
-          MaskSrc.setAllBits();
 
         APInt RotatedSrcMask = MaskSrc.rotl(SHMI);
         APInt FinalMask = RotatedSrcMask & MaskMI;
