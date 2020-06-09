@@ -125,6 +125,15 @@ def zero : Operand<i32>, PatLeaf<(imm), [{
 def uimm1 : Operand<i32>, PatLeaf<(imm), [{
     return isUInt<1>(N->getZExtValue()); }]>;
 
+// uimm2 - Generic immediate value.
+def UImm2AsmOperand : AsmOperandClass {
+  let Name = "UImm2";
+}
+def uimm2 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<2>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm2AsmOperand;
+}
+
 // uimm3 - Generic immediate value.
 def UImm3AsmOperand : AsmOperandClass {
   let Name = "UImm3";
@@ -926,11 +935,30 @@ defm ST1B : STOREm<"st1b", 0x15, I32, i32, truncstorei8>;
 // Section 8.2.18 - TS3AM (Test and Set 3 AM)
 // Section 8.2.19 - ATMAM (Atomic AM)
 // Section 8.2.20 - CAS (Compare and Swap)
+
 //-----------------------------------------------------------------------------
 // Section 8.3 - Transfer Control Instructions
 //-----------------------------------------------------------------------------
+
 // Section 8.3.1 - FENCE (Fence)
+let hasSideEffects = 1 in {
+  let avo = 1 in def FENCEI : RRFENCE<0x20, (outs), (ins), "fencei">;
+  def FENCEM : RRFENCE<0x20, (outs), (ins uimm2:$kind), "fencem $kind"> {
+    bits<2> kind;
+    let lf = kind{1};
+    let sf = kind{0};
+  }
+  def FENCEC : RRFENCE<0x20, (outs), (ins uimm3:$kind), "fencec $kind"> {
+    bits<3> kind;
+    let c2 = kind{2};
+    let c1 = kind{1};
+    let c0 = kind{0};
+  }
+}
+
 // Section 8.3.2 - SVOB (Set Vector Out-of-order memory access Boundary)
+let sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 1 in
+def SVOB : RR<0x30, (outs), (ins), "svob">;
 
 //-----------------------------------------------------------------------------
 // Section 8.4 - Fixed-point Operation Instructions
