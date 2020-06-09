@@ -14,6 +14,8 @@
 #include <exception>
 #include <typeinfo>
 
+#include "test_macros.h"
+
 class Base {
   virtual void foo() {};
 };
@@ -34,13 +36,13 @@ int main ()
     void (*default_handler)() = std::get_terminate();
     std::set_terminate(my_terminate);
 
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try {
 #endif
         Derived &d = test_bad_cast(gB);
         assert(false);
         ((void)d);
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
     } catch (std::bad_cast) {
         // success
         return 0;
