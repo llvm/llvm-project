@@ -1,39 +1,142 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -l %t | FileCheck %s
+## In this test we check that we allocate file space for SHT_NOBITS sections when
+## there are non-nobits sections in the same segment after them. When an object has
+## multiple segments, we check each and allocate the space if at least one matches the
+## condition mentioned.
 
-!ELF
+## Case A. In this case there are no non-nobits sections after SHT_NOBITS sections in segments.
+##         Because of this the file space for SHT_NOBITS sections is not allocated.
+# RUN: yaml2obj %s -D SEC1=.data.before -D SEC2=.nobits.1 -o %t1
+# RUN: llvm-readelf --sections --segments %t1 | FileCheck %s --check-prefix=NO-ALLOC
+
+# NO-ALLOC:      [Nr] Name         Type     Address          Off    Size
+# NO-ALLOC:      [ 1] .data.before PROGBITS 0000000000000000 0000b0 000001
+# NO-ALLOC-NEXT: [ 2] .nobits.1    NOBITS   0000000000000001 0000b1 000002
+# NO-ALLOC-NEXT: [ 3] .data.after  PROGBITS 0000000000000003 0000b1 000003
+# NO-ALLOC-NEXT: [ 4] .nobits.2    NOBITS   0000000000000006 0000b4 000004
+## .fill of size 0x5 is placed here.
+# NO-ALLOC-NEXT: [ 5] .data.last   PROGBITS 000000000000000f 0000b9 000006
+
+# NO-ALLOC:       Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# NO-ALLOC-NEXT:  LOAD 0x0000b0 0x0000000000000000 0x0000000000000000 0x000001 0x000003
+# NO-ALLOC-NEXT:  LOAD 0x0000b0 0x0000000000000000 0x0000000000000000 0x000001 0x000003
+
+## Case B. We have a segment that has a non-nobits section after the SHT_NOBITS section ".nobits.1".
+##         The file space is allocated for it, but not for ".nobits.2",
+##         which does not belong to any segment.
+# RUN: yaml2obj %s -D SEC1=.nobits.1 -D SEC2=.data.after -o %t2
+# RUN: llvm-readelf --sections --segments %t2 | FileCheck %s --check-prefix=ALLOC-FIRST
+
+# ALLOC-FIRST:      [Nr] Name         Type     Address          Off    Size
+# ALLOC-FIRST:      [ 1] .data.before PROGBITS 0000000000000000 0000b0 000001
+# ALLOC-FIRST-NEXT: [ 2] .nobits.1    NOBITS   0000000000000001 0000b1 000002
+# ALLOC-FIRST-NEXT: [ 3] .data.after  PROGBITS 0000000000000003 0000b3 000003
+# ALLOC-FIRST-NEXT: [ 4] .nobits.2    NOBITS   0000000000000006 0000b6 000004
+## .fill of size 0x5 is placed here.
+# ALLOC-FIRST-NEXT: [ 5] .data.last   PROGBITS 000000000000000f 0000bb 000006
+
+# ALLOC-FIRST:       Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# ALLOC-FIRST-NEXT:  LOAD 0x0000b0 0x0000000000000000 0x0000000000000000 0x000001 0x000003
+# ALLOC-FIRST-NEXT:  LOAD 0x0000b1 0x0000000000000000 0x0000000000000000 0x000005 0x000005
+
+## Case C. We have a Fill after the ".nobits.2" section. In this case the file space is
+##         allocated for it, because fills are handled just like any other non-nobits sections.
+# RUN: yaml2obj %s -D SEC1=.nobits.2 -D SEC2=.fill -o %t3
+# RUN: llvm-readelf --sections --segments %t3 | FileCheck %s --check-prefix=FILL-AT-END
+
+# FILL-AT-END: [Nr] Name       Type     Address          Off    Size
+# FILL-AT-END: [ 4] .nobits.2  NOBITS   0000000000000006 0000b4 000004
+## .fill of size 0x5 is placed here.
+# FILL-AT-END: [ 5] .data.last PROGBITS 000000000000000f 0000bd 000006
+
+# FILL-AT-END:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# FILL-AT-END-NEXT: LOAD 0x0000b0 0x0000000000000000 0x0000000000000000 0x000001 0x000003
+# FILL-AT-END-NEXT: LOAD 0x0000b4 0x0000000000000000 0x0000000000000000 0x000009 0x000009
+
+--- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_EXEC
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
 Sections:
-  - Name:            .data
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC ]
-    Content:         "00000000"
-  - Name:            .after
-    Type:            SHT_NOBITS
-    Flags:           [ SHF_ALLOC ]
-    Size:            64
+  - Name:  .data.before
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x1
+  - Name:  .nobits.1
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x2
+  - Name:  .data.after
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x3
+  - Name:  .nobits.2
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x4
+  - Type:    Fill
+    Name:    .fill
+    Pattern: "00"
+    Size:    5
+  - Name:  .data.last
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x6
 ProgramHeaders:
-  - Type: PT_LOAD
+## We have 2 segments, the first is predefined and the second can be customized.
+## We want to have more than one segment to show we check all of them when
+## trying to find a non-nobits section after a nobits one.
+  - Type:  PT_LOAD
     Flags: [ PF_R ]
     Sections:
-      - Section: .data
-      - Section: .after
+      - Section: .data.before
+      - Section: .nobits.1
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: [[SEC1]]
+      - Section: [[SEC2]]
 
-#CHECK:     ProgramHeaders [
-#CHECK-NEXT:  ProgramHeader {
-#CHECK-NEXT:    Type: PT_LOAD
-#CHECK-NEXT:    Offset:
-#CHECK-NEXT:    VirtualAddress:
-#CHECK-NEXT:    PhysicalAddress:
-#CHECK-NEXT:    FileSize: 4
-#CHECK-NEXT:    MemSize: 68
-#CHECK-NEXT:    Flags [
-#CHECK-NEXT:      PF_R
-#CHECK-NEXT:    ]
-#CHECK-NEXT:    Alignment:
-#CHECK-NEXT:  }
-#CHECK-NEXT:]
+## Case D. We have a segment with SHT_NOBITS sections on its borders and one
+##         non-nobits in the middle. Check we allocate the file space only for
+##         the first nobits section.
+
+# RUN: yaml2obj --docnum=2 %s -o %t4
+# RUN: llvm-readelf --sections --segments %t4 | FileCheck %s --check-prefix=MIDDLE
+
+# MIDDLE:      [Nr] Name      Type     Address          Off    Size
+# MIDDLE:      [ 1] .nobits.1 NOBITS   0000000000000000 000078 000001
+# MIDDLE-NEXT: [ 2] .data     PROGBITS 0000000000000001 000079 000010
+# MIDDLE-NEXT: [ 3] .nobits.2 NOBITS   0000000000000011 000089 000100
+# MIDDLE-NEXT: [ 4] .strtab   STRTAB   0000000000000000 000089 000001
+
+# MIDDLE:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# MIDDLE-NEXT: LOAD 0x000078 0x0000000000000000 0x0000000000000000 0x000011 0x000111
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .nobits.1
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x1
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x10
+  - Name:  .nobits.2
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x100
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .nobits.1
+      - Section: .data
+      - Section: .nobits.2
