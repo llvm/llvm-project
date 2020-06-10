@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -877,26 +878,10 @@ uint64_t DataExtractor::GetULEB128(offset_t *offset_ptr) const {
   if (src == nullptr)
     return 0;
 
-  const uint8_t *end = m_end;
-
-  if (src < end) {
-    uint64_t result = *src++;
-    if (result >= 0x80) {
-      result &= 0x7f;
-      int shift = 7;
-      while (src < end) {
-        uint8_t byte = *src++;
-        result |= static_cast<uint64_t>(byte & 0x7f) << shift;
-        if ((byte & 0x80) == 0)
-          break;
-        shift += 7;
-      }
-    }
-    *offset_ptr = src - m_start;
-    return result;
-  }
-
-  return 0;
+  unsigned byte_count = 0;
+  uint64_t result = llvm::decodeULEB128(src, &byte_count, m_end);
+  *offset_ptr += byte_count;
+  return result;
 }
 
 // Extracts an signed LEB128 number from this object's data starting at the
@@ -910,35 +895,10 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
   if (src == nullptr)
     return 0;
 
-  const uint8_t *end = m_end;
-
-  if (src < end) {
-    int64_t result = 0;
-    int shift = 0;
-    int size = sizeof(int64_t) * 8;
-
-    uint8_t byte = 0;
-    int bytecount = 0;
-
-    while (src < end) {
-      bytecount++;
-      byte = *src++;
-      result |= static_cast<int64_t>(byte & 0x7f) << shift;
-      shift += 7;
-      if ((byte & 0x80) == 0)
-        break;
-    }
-
-    // Sign bit of byte is 2nd high order bit (0x40)
-    if (shift < size && (byte & 0x40)) {
-      // -(static_cast<int64_t>(1) << 63) errors on the negation with UBSan.
-      result |= -(static_cast<uint64_t>(1) << shift);
-    }
-
-    *offset_ptr += bytecount;
-    return result;
-  }
-  return 0;
+  unsigned byte_count = 0;
+  int64_t result = llvm::decodeSLEB128(src, &byte_count, m_end);
+  *offset_ptr += byte_count;
+  return result;
 }
 
 // Skips a ULEB128 number (signed or unsigned) from this object's data starting
