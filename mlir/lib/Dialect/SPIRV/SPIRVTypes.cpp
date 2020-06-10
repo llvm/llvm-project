@@ -874,17 +874,17 @@ void SPIRVType::getCapabilities(
 struct spirv::detail::StructTypeStorage : public TypeStorage {
   StructTypeStorage(
       unsigned numMembers, Type const *memberTypes,
-      StructType::LayoutInfo const *layoutInfo, unsigned numMemberDecorations,
+      StructType::OffsetInfo const *layoutInfo, unsigned numMemberDecorations,
       StructType::MemberDecorationInfo const *memberDecorationsInfo)
       : TypeStorage(numMembers), memberTypes(memberTypes),
-        layoutInfo(layoutInfo), numMemberDecorations(numMemberDecorations),
+        offsetInfo(layoutInfo), numMemberDecorations(numMemberDecorations),
         memberDecorationsInfo(memberDecorationsInfo) {}
 
-  using KeyTy = std::tuple<ArrayRef<Type>, ArrayRef<StructType::LayoutInfo>,
+  using KeyTy = std::tuple<ArrayRef<Type>, ArrayRef<StructType::OffsetInfo>,
                            ArrayRef<StructType::MemberDecorationInfo>>;
   bool operator==(const KeyTy &key) const {
     return key ==
-           KeyTy(getMemberTypes(), getLayoutInfo(), getMemberDecorationsInfo());
+           KeyTy(getMemberTypes(), getOffsetInfo(), getMemberDecorationsInfo());
   }
 
   static StructTypeStorage *construct(TypeStorageAllocator &allocator,
@@ -897,13 +897,13 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       typesList = allocator.copyInto(keyTypes).data();
     }
 
-    const StructType::LayoutInfo *layoutInfoList = nullptr;
+    const StructType::OffsetInfo *offsetInfoList = nullptr;
     if (!std::get<1>(key).empty()) {
-      ArrayRef<StructType::LayoutInfo> keyLayoutInfo = std::get<1>(key);
-      assert(keyLayoutInfo.size() == keyTypes.size() &&
-             "size of layout information must be same as the size of number of "
+      ArrayRef<StructType::OffsetInfo> keyOffsetInfo = std::get<1>(key);
+      assert(keyOffsetInfo.size() == keyTypes.size() &&
+             "size of offset information must be same as the size of number of "
              "elements");
-      layoutInfoList = allocator.copyInto(keyLayoutInfo).data();
+      offsetInfoList = allocator.copyInto(keyOffsetInfo).data();
     }
 
     const StructType::MemberDecorationInfo *memberDecorationList = nullptr;
@@ -914,7 +914,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       memberDecorationList = allocator.copyInto(keyMemberDecorations).data();
     }
     return new (allocator.allocate<StructTypeStorage>())
-        StructTypeStorage(keyTypes.size(), typesList, layoutInfoList,
+        StructTypeStorage(keyTypes.size(), typesList, offsetInfoList,
                           numMemberDecorations, memberDecorationList);
   }
 
@@ -922,9 +922,9 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
     return ArrayRef<Type>(memberTypes, getSubclassData());
   }
 
-  ArrayRef<StructType::LayoutInfo> getLayoutInfo() const {
-    if (layoutInfo) {
-      return ArrayRef<StructType::LayoutInfo>(layoutInfo, getSubclassData());
+  ArrayRef<StructType::OffsetInfo> getOffsetInfo() const {
+    if (offsetInfo) {
+      return ArrayRef<StructType::OffsetInfo>(offsetInfo, getSubclassData());
     }
     return {};
   }
@@ -938,14 +938,14 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   }
 
   Type const *memberTypes;
-  StructType::LayoutInfo const *layoutInfo;
+  StructType::OffsetInfo const *offsetInfo;
   unsigned numMemberDecorations;
   StructType::MemberDecorationInfo const *memberDecorationsInfo;
 };
 
 StructType
 StructType::get(ArrayRef<Type> memberTypes,
-                ArrayRef<StructType::LayoutInfo> layoutInfo,
+                ArrayRef<StructType::OffsetInfo> offsetInfo,
                 ArrayRef<StructType::MemberDecorationInfo> memberDecorations) {
   assert(!memberTypes.empty() && "Struct needs at least one member type");
   // Sort the decorations.
@@ -953,12 +953,12 @@ StructType::get(ArrayRef<Type> memberTypes,
       memberDecorations.begin(), memberDecorations.end());
   llvm::array_pod_sort(sortedDecorations.begin(), sortedDecorations.end());
   return Base::get(memberTypes.vec().front().getContext(), TypeKind::Struct,
-                   memberTypes, layoutInfo, sortedDecorations);
+                   memberTypes, offsetInfo, sortedDecorations);
 }
 
 StructType StructType::getEmpty(MLIRContext *context) {
   return Base::get(context, TypeKind::Struct, ArrayRef<Type>(),
-                   ArrayRef<StructType::LayoutInfo>(),
+                   ArrayRef<StructType::OffsetInfo>(),
                    ArrayRef<StructType::MemberDecorationInfo>());
 }
 
@@ -975,11 +975,11 @@ StructType::ElementTypeRange StructType::getElementTypes() const {
   return ElementTypeRange(getImpl()->memberTypes, getNumElements());
 }
 
-bool StructType::hasLayout() const { return getImpl()->layoutInfo; }
+bool StructType::hasOffset() const { return getImpl()->offsetInfo; }
 
-uint64_t StructType::getOffset(unsigned index) const {
+uint64_t StructType::getMemberOffset(unsigned index) const {
   assert(getNumElements() > index && "member index out of range");
-  return getImpl()->layoutInfo[index];
+  return getImpl()->offsetInfo[index];
 }
 
 void StructType::getMemberDecorations(
@@ -992,15 +992,16 @@ void StructType::getMemberDecorations(
 }
 
 void StructType::getMemberDecorations(
-    unsigned index, SmallVectorImpl<spirv::Decoration> &decorations) const {
+    unsigned index,
+    SmallVectorImpl<StructType::MemberDecorationInfo> &decorationsInfo) const {
   assert(getNumElements() > index && "member index out of range");
   auto memberDecorations = getImpl()->getMemberDecorationsInfo();
-  decorations.clear();
-  for (auto &memberDecoration : memberDecorations) {
-    if (memberDecoration.first == index) {
-      decorations.push_back(memberDecoration.second);
+  decorationsInfo.clear();
+  for (const auto &memberDecoration : memberDecorations) {
+    if (memberDecoration.memberIndex == index) {
+      decorationsInfo.push_back(memberDecoration);
     }
-    if (memberDecoration.first > index) {
+    if (memberDecoration.memberIndex > index) {
       // Early exit since the decorations are stored sorted.
       return;
     }
@@ -1018,6 +1019,12 @@ void StructType::getCapabilities(
     Optional<StorageClass> storage) {
   for (Type elementType : getElementTypes())
     elementType.cast<SPIRVType>().getCapabilities(capabilities, storage);
+}
+
+llvm::hash_code spirv::hash_value(
+    const StructType::MemberDecorationInfo &memberDecorationInfo) {
+  return llvm::hash_combine(memberDecorationInfo.memberIndex,
+                            memberDecorationInfo.decoration);
 }
 
 //===----------------------------------------------------------------------===//
