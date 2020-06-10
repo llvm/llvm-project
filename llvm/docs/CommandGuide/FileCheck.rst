@@ -670,7 +670,8 @@ For example:
 would match ``mov r5, 0xF0F0`` and set ``REG`` to the value ``5`` and ``IMM``
 to the value ``0xF0F0``.
 
-The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
+The syntax of a numeric substitution is
+``[[#%<fmtspec>: <constraint> <expr>]]`` where:
 
 * ``%<fmtspec>`` is the same matching format specifier as for defining numeric
   variables but acting as a printf-style format to indicate how a numeric
@@ -679,6 +680,12 @@ The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
   expression constraint if any, and defaults to ``%u`` if no numeric variable
   is used.  In case of conflict between matching formats of several numeric
   variables the format specifier is mandatory.
+
+* ``<constraint>`` is the constraint describing how the value to match must
+  relate to the value of the numeric expression. The only currently accepted
+  constraint is ``==`` for an exact match and is the default if
+  ``<constraint>`` is not provided. No matching constraint must be specified
+  when the ``<expr>`` is empty.
 
 * ``<expr>`` is an expression. An expression is in turn recursively defined
   as:
@@ -747,11 +754,12 @@ does not matter:
 to check that a value is synthesized rather than moved around.
 
 A numeric variable can also be defined to the result of a numeric expression,
-in which case the numeric expression is checked and if verified the variable is
-assigned to the value. The unified syntax for both defining numeric variables
-and checking a numeric expression is thus ``[[#%<fmtspec>,<NUMVAR>: <expr>]]``
-with each element as described previously. One can use this syntax to make a
-testcase more self-describing by using variables instead of values:
+in which case the numeric expression constraint is checked and if verified the
+variable is assigned to the value. The unified syntax for both defining numeric
+variables and checking a numeric expression is thus
+``[[#%<fmtspec>,<NUMVAR>: <constraint> <expr>]]`` with each element as
+described previously. One can use this syntax to make a testcase more
+self-describing by using variables instead of values:
 
 .. code-block:: gas
 
