@@ -161,13 +161,6 @@ public:
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
-private:
-  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
-                        bool IsRet) const;
-  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI) const;
   // Lower incoming arguments, copy physregs into vregs
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
@@ -184,11 +177,35 @@ private:
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {
     return true;
   }
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder, AtomicRMWInst *AI,
+                                      Value *AlignedAddr, Value *Incr,
+                                      Value *Mask, Value *ShiftAmt,
+                                      AtomicOrdering Ord) const override;
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder,
+                                          AtomicCmpXchgInst *CI,
+                                          Value *AlignedAddr, Value *CmpVal,
+                                          Value *NewVal, Value *Mask,
+                                          AtomicOrdering Ord) const override;
+
+private:
+  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
+                        const SmallVectorImpl<ISD::InputArg> &Ins,
+                        bool IsRet) const;
+  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
+                         const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         bool IsRet, CallLoweringInfo *CLI) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
@@ -197,7 +214,6 @@ private:
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
-  bool shouldConsiderGEPOffsetSplit() const override { return true; }
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -213,19 +229,6 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVector<CCValAssign, 16> &ArgLocs) const;
-
-  TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
-  virtual Value *emitMaskedAtomicRMWIntrinsic(
-      IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
-      Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const override;
-  TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
-  virtual Value *
-  emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder, AtomicCmpXchgInst *CI,
-                                   Value *AlignedAddr, Value *CmpVal,
-                                   Value *NewVal, Value *Mask,
-                                   AtomicOrdering Ord) const override;
 
   /// Generate error diagnostics if any register used by CC has been marked
   /// reserved.
