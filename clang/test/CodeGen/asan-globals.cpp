@@ -22,10 +22,10 @@ void func() {
   const char *literal = "Hello, world!";
 }
 
-// ASAN: sectioned_global{{.*}}{ i32, [60 x i8] }{{.*}}align 32
-// KASAN: sectioned_global{{.*}}i32
-// ASAN: @__special_global{{.*}}{ i32, [60 x i8] }{{.*}}align 32
-// KASAN: @__special_global{{.*}}i32
+// ASAN: sectioned_global{{.*}} global { i32, [60 x i8] }{{.*}}, align 32
+// KASAN: sectioned_global{{.*}} global i32
+// ASAN: @__special_global{{.*}} global { i32, [60 x i8] }{{.*}}, align 32
+// KASAN: @__special_global{{.*}} global i32
 
 // CHECK-LABEL: define internal void @asan.module_ctor
 // ASAN-NEXT: call void @__asan_init
