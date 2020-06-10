@@ -597,6 +597,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                 Flags, MemSize, MFI.getObjectAlign(FI));
     NewMI->addMemOperand(MF, MMO);
 
+    // The pass "x86 speculative load hardening" always attaches symbols to
+    // call instructions. We need copy it form old instruction.
+    NewMI->cloneInstrSymbols(MF, MI);
+
     return NewMI;
   }
 
