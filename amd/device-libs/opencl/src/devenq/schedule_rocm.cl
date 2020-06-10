@@ -11,7 +11,7 @@ typedef struct _SchedulerParam {
     __global hsa_queue_t* child_queue; //!< set to the device queue the child kernels will be queued to
     hsa_kernel_dispatch_packet_t scheduler_aql; //!< Dispatch packet used to relaunch the scheduler
     hsa_signal_t     complete_signal;  //!< Notify the host queue to continue processing
-    AmdVQueueHeader* vqueue_header;  //!< The vqueue
+    __global AmdVQueueHeader* vqueue_header;  //!< The vqueue
     uint   signal;                   //!< Signal to stop the child queue
     uint   eng_clk;                  //!< Engine clock in Mhz
     __global AmdAqlWrap* parentAQL; //!< Host parent AmdAqlWrap packet
