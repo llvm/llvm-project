@@ -239,11 +239,14 @@
 ## Table with extended opcode that overruns table end.
 # NONFATAL:      debug_line[0x0000039d]
 # NONFATAL-NEXT: Line table prologue
-# VERBOSE:       DW_LNE_set_address (0x00000000feedfeed)
+# NONFATAL:      Address
+# NONFATAL-NEXT: ------------------
+# VERBOSE-NEXT:  DW_LNE_set_address (0x00000000feedfeed)
 # VERBOSE-NEXT:  DW_LNS_copy
-# VERBOSE:       DW_LNE_set_address (0x0000000000000000)
-# MORE-ERR:      warning: unexpected end of data at offset 0x3ed while reading [0x3e6, 0x3ee)
-# MORE-ERR:      warning: last sequence in debug line table at offset 0x0000039d is not terminated
+# NONFATAL-NEXT: 0x00000000feedfeed
+# VERBOSE-NEXT:  DW_LNE_set_address (0x0000000000000000)
+# MORE-ERR-NEXT: warning: unexpected end of data at offset 0x3ed while reading [0x3e6, 0x3ee)
+# MORE-ERR-NEXT: warning: last sequence in debug line table at offset 0x0000039d is not terminated
 
 # LAST:          debug_line[0x000003ed]
 # VERBOSE:       DW_LNE_set_address (0x00000000cafebabe)
