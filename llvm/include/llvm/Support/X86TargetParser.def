@@ -266,10 +266,10 @@ PROC_ALIAS(Bonnell, "atom")
 PROC_WITH_FEAT(Silvermont, "silvermont", PROC_64_BIT, FEATURE_SSE4_2)
 PROC_ALIAS(Silvermont, "slm")
 
-PROC(Goldmont, "goldmont", PROC_64_BIT)
-PROC(GoldmontPlus, "goldmont-plus", PROC_64_BIT)
+PROC_WITH_FEAT(Goldmont, "goldmont", PROC_64_BIT, FEATURE_SSE4_2)
+PROC_WITH_FEAT(GoldmontPlus, "goldmont-plus", PROC_64_BIT, FEATURE_SSE4_2)
 
-PROC(Tremont, "tremont", PROC_64_BIT)
+PROC_WITH_FEAT(Tremont, "tremont", PROC_64_BIT, FEATURE_SSE4_2)
 //@}
 
 /// \name Nehalem
@@ -323,11 +323,11 @@ PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
 
 /// \name Icelake Client
 /// Icelake client microarchitecture based processors.
-PROC(IcelakeClient, "icelake-client", PROC_64_BIT)
+PROC_WITH_FEAT(IcelakeClient, "icelake-client", PROC_64_BIT, FEATURE_AVX512VBMI2)
 
 /// \name Icelake Server
 /// Icelake server microarchitecture based processors.
-PROC(IcelakeServer, "icelake-server", PROC_64_BIT)
+PROC_WITH_FEAT(IcelakeServer, "icelake-server", PROC_64_BIT, FEATURE_AVX512VBMI2)
 
 /// \name Tigerlake
 /// Tigerlake microarchitecture based processors.

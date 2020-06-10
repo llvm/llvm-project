@@ -4,6 +4,11 @@
 int __attribute__((target("sse4.2"))) foo(void) { return 0; }
 int __attribute__((target("arch=sandybridge"))) foo(void);
 int __attribute__((target("arch=ivybridge"))) foo(void) {return 1;}
+int __attribute__((target("arch=goldmont"))) foo(void) {return 3;}
+int __attribute__((target("arch=goldmont-plus"))) foo(void) {return 4;}
+int __attribute__((target("arch=tremont"))) foo(void) {return 5;}
+int __attribute__((target("arch=icelake-client"))) foo(void) {return 6;}
+int __attribute__((target("arch=icelake-server"))) foo(void) {return 7;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar() {
@@ -70,6 +75,16 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // LINUX: ret i32 0
 // LINUX: define i32 @foo.arch_ivybridge()
 // LINUX: ret i32 1
+// LINUX: define i32 @foo.arch_goldmont()
+// LINUX: ret i32 3
+// LINUX: define i32 @foo.arch_goldmont-plus()
+// LINUX: ret i32 4
+// LINUX: define i32 @foo.arch_tremont()
+// LINUX: ret i32 5
+// LINUX: define i32 @foo.arch_icelake-client()
+// LINUX: ret i32 6
+// LINUX: define i32 @foo.arch_icelake-server()
+// LINUX: ret i32 7
 // LINUX: define i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define i32 @bar()
@@ -79,6 +94,16 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: ret i32 0
 // WINDOWS: define dso_local i32 @foo.arch_ivybridge()
 // WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @foo.arch_goldmont()
+// WINDOWS: ret i32 3
+// WINDOWS: define dso_local i32 @foo.arch_goldmont-plus()
+// WINDOWS: ret i32 4
+// WINDOWS: define dso_local i32 @foo.arch_tremont()
+// WINDOWS: ret i32 5
+// WINDOWS: define dso_local i32 @foo.arch_icelake-client()
+// WINDOWS: ret i32 6
+// WINDOWS: define dso_local i32 @foo.arch_icelake-server()
+// WINDOWS: ret i32 7
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
