@@ -1275,16 +1275,8 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor: {
-    TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
-    TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
-    Op1VK = getOperandInfo(I->getOperand(0), Op1VP);
-    Op2VK = getOperandInfo(I->getOperand(1), Op2VP);
-    SmallVector<const Value *, 2> Operands(I->operand_values());
-    return getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
-                                  Op1VK, Op2VK,
-                                  Op1VP, Op2VP, Operands, I);
-  }
+  case Instruction::Xor:
+    return getUserCost(I, CostKind);
   case Instruction::FNeg: {
     TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
     TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
@@ -1365,49 +1357,10 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return getVectorInstrCost(I->getOpcode(), EEI->getOperand(0)->getType(),
                               Idx);
   }
-  case Instruction::InsertElement: {
-    const InsertElementInst *IE = cast<InsertElementInst>(I);
-    ConstantInt *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    unsigned Idx = -1;
-    if (CI)
-      Idx = CI->getZExtValue();
-    return getVectorInstrCost(I->getOpcode(), IE->getType(), Idx);
-  }
+  case Instruction::InsertElement:
   case Instruction::ExtractValue:
-    return 0; // Model all ExtractValue nodes as free.
-  case Instruction::ShuffleVector: {
-    const ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
-    auto *Ty = cast<VectorType>(Shuffle->getType());
-    auto *SrcTy = cast<VectorType>(Shuffle->getOperand(0)->getType());
-
-    // TODO: Identify and add costs for insert subvector, etc.
-    int SubIndex;
-    if (Shuffle->isExtractSubvectorMask(SubIndex))
-      return TTIImpl->getShuffleCost(SK_ExtractSubvector, SrcTy, SubIndex, Ty);
-
-    if (Shuffle->changesLength())
-      return -1;
-
-    if (Shuffle->isIdentity())
-      return 0;
-
-    if (Shuffle->isReverse())
-      return TTIImpl->getShuffleCost(SK_Reverse, Ty, 0, nullptr);
-
-    if (Shuffle->isSelect())
-      return TTIImpl->getShuffleCost(SK_Select, Ty, 0, nullptr);
-
-    if (Shuffle->isTranspose())
-      return TTIImpl->getShuffleCost(SK_Transpose, Ty, 0, nullptr);
-
-    if (Shuffle->isZeroEltSplat())
-      return TTIImpl->getShuffleCost(SK_Broadcast, Ty, 0, nullptr);
-
-    if (Shuffle->isSingleSource())
-      return TTIImpl->getShuffleCost(SK_PermuteSingleSrc, Ty, 0, nullptr);
-
-    return TTIImpl->getShuffleCost(SK_PermuteTwoSrc, Ty, 0, nullptr);
-  }
+  case Instruction::ShuffleVector:
+    return getUserCost(I, CostKind);
   case Instruction::Call:
     return getUserCost(I, CostKind);
   default:

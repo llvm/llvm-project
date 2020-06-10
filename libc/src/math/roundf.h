@@ -1,4 +1,4 @@
-//===-- Implementation of round redirector --------------------------------===//
+//===-- Implementation header for roundf ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Include okay for this redirector.
-// NOLINTNEXTLINE(llvmlibc-restrict-system-libc-headers)
-#include <math.h>
+#ifndef LLVM_LIBC_SRC_MATH_ROUNDF_H
+#define LLVM_LIBC_SRC_MATH_ROUNDF_H
 
 namespace __llvm_libc {
 
-double __round_redirector(double x) {
-  return ::round(x);
-}
+float roundf(float x);
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_MATH_ROUNDF_H

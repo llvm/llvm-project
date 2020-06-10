@@ -28,7 +28,8 @@ func @test_subi_zero_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 func @dim(%arg0: tensor<8x4xf32>) -> index {
 
   // CHECK: %c4 = constant 4 : index
-  %0 = dim %arg0, 1 : tensor<8x4xf32>
+  %c1 = constant 1 : index
+  %0 = dim %arg0, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return %c4
   return %0 : index
@@ -51,7 +52,8 @@ func @test_commutative(%arg0: i32) -> (i32, i32) {
 
 // CHECK-LABEL: func @trivial_dce
 func @trivial_dce(%arg0: tensor<8x4xf32>) {
-  %0 = dim %arg0, 1 : tensor<8x4xf32>
+  %c1 = constant 1 : index
+  %0 = dim %arg0, %c1 : tensor<8x4xf32>
   // CHECK-NEXT: return
   return
 }
@@ -314,7 +316,7 @@ func @memref_cast_folding(%arg0: memref<4 x f32>, %arg1: f32) -> (f32, f32) {
   %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
   // CHECK-NEXT: %c0 = constant 0 : index
   %c0 = constant 0 : index
-  %dim = dim %0, 0 : memref<? x f32>
+  %dim = dim %0, %c0 : memref<? x f32>
 
   // CHECK-NEXT: affine.load %arg0[3]
   %1 = affine.load %0[%dim - 1] : memref<?xf32>
@@ -442,24 +444,25 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
 // CHECK-SAME: [[K:arg[0-9]+]]: index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
+  %c2 = constant 2 : index
   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
   %1 = alloc(%arg1, %arg2) : memref<?x8x?xf32>
-  %2 = dim %1, 2 : memref<?x8x?xf32>
+  %2 = dim %1, %c2 : memref<?x8x?xf32>
   affine.for %arg3 = 0 to %2 {
     %3 = alloc(%arg0) : memref<?xi8>
-    %ub = dim %3, 0 : memref<?xi8>
+    %ub = dim %3, %c0 : memref<?xi8>
     affine.for %arg4 = 0 to %ub {
-      %s = dim %0, 0 : memref<?x?xf32>
+      %s = dim %0, %c0 : memref<?x?xf32>
       %v = std.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32>
       %sv = subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, #map1>
-      %l = dim %v, 1 : memref<?x?xf32>
-      %u = dim %sv, 0 : memref<?x?xf32, #map1>
+      %l = dim %v, %c1 : memref<?x?xf32>
+      %u = dim %sv, %c0 : memref<?x?xf32, #map1>
       affine.for %arg5 = %l to %u {
         "foo"() : () -> ()
       }
       %sv2 = subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, #map3>
-      %l2 = dim %v, 1 : memref<?x?xf32>
-      %u2 = dim %sv2, 1 : memref<17x?xf32, #map3>
+      %l2 = dim %v, %c1 : memref<?x?xf32>
+      %u2 = dim %sv2, %c1 : memref<17x?xf32, #map3>
       scf.for %arg5 = %l2 to %u2 step %c1 {
         "foo"() : () -> ()
       }
@@ -480,9 +483,9 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
   %B = view %BUF[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %C = view %BUF[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
 
-  %M_ = dim %A, 0 : memref<?x?xf32>
-  %K_ = dim %A, 1 : memref<?x?xf32>
-  %N_ = dim %C, 1 : memref<?x?xf32>
+  %M_ = dim %A, %c0 : memref<?x?xf32>
+  %K_ = dim %A, %c1 : memref<?x?xf32>
+  %N_ = dim %C, %c1 : memref<?x?xf32>
   scf.for %i = %c0 to %M_ step %c1 {
     scf.for %j = %c0 to %N_ step %c1 {
       scf.for %k = %c0 to %K_ step %c1 {
@@ -855,8 +858,8 @@ func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   store %v0, %20[%arg1, %arg1] : memref<12x4xf32, offset: ?, strides:[4, 1]>
 
   // Test: dim on subview is rewritten to size operand.
-  %7 = dim %4, 0 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  %8 = dim %4, 1 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+  %7 = dim %4, %c0 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+  %8 = dim %4, %c1 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
 
   // CHECK: return %[[C7]], %[[C11]]
   return %7, %8 : index, index

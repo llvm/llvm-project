@@ -69,6 +69,7 @@ class VEAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
   OperandMatchResultTy parseMEMAsOperand(OperandVector &Operands);
   OperandMatchResultTy parseCCOpOperand(OperandVector &Operands);
+  OperandMatchResultTy parseRDOpOperand(OperandVector &Operands);
   OperandMatchResultTy parseMImmOperand(OperandVector &Operands);
   OperandMatchResultTy parseOperand(OperandVector &Operands, StringRef Name);
   OperandMatchResultTy parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
@@ -147,6 +148,7 @@ private:
     k_MemoryZeroImm, // base=0, disp=imm
     // Other special cases for Aurora VE
     k_CCOp,   // condition code
+    k_RDOp,   // rounding mode
     k_MImmOp, // Special immediate value of sequential bit stream of 0 or 1.
   } Kind;
 
@@ -176,6 +178,10 @@ private:
     unsigned CCVal;
   };
 
+  struct RDOp {
+    unsigned RDVal;
+  };
+
   struct MImmOp {
     const MCExpr *Val;
     bool M0Flag;
@@ -187,6 +193,7 @@ private:
     struct ImmOp Imm;
     struct MemOp Mem;
     struct CCOp CC;
+    struct RDOp RD;
     struct MImmOp MImm;
   };
 
@@ -207,6 +214,7 @@ public:
   bool isMEMri() const { return Kind == k_MemoryRegImm; }
   bool isMEMzi() const { return Kind == k_MemoryZeroImm; }
   bool isCCOp() const { return Kind == k_CCOp; }
+  bool isRDOp() const { return Kind == k_RDOp; }
   bool isZero() {
     if (!isImm())
       return false;
@@ -362,6 +370,11 @@ public:
     return CC.CCVal;
   }
 
+  unsigned getRDVal() const {
+    assert((Kind == k_RDOp) && "Invalid access!");
+    return RD.RDVal;
+  }
+
   const MCExpr *getMImmVal() const {
     assert((Kind == k_MImmOp) && "Invalid access!");
     return MImm.Val;
@@ -416,6 +429,9 @@ public:
     case k_CCOp:
       OS << "CCOp: " << getCCVal() << "\n";
       break;
+    case k_RDOp:
+      OS << "RDOp: " << getRDVal() << "\n";
+      break;
     case k_MImmOp:
       OS << "MImm: (" << getMImmVal() << (getM0Flag() ? ")0" : ")1") << "\n";
       break;
@@ -460,6 +476,7 @@ public:
   void addUImm7Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
+
   void addSImm7Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
@@ -526,6 +543,12 @@ public:
     Inst.addOperand(MCOperand::createImm(getCCVal()));
   }
 
+  void addRDOpOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+
+    Inst.addOperand(MCOperand::createImm(getRDVal()));
+  }
+
   void addMImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const auto *ConstExpr = dyn_cast<MCConstantExpr>(getMImmVal());
@@ -567,6 +590,15 @@ public:
                                                SMLoc E) {
     auto Op = std::make_unique<VEOperand>(k_CCOp);
     Op->CC.CCVal = CCVal;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<VEOperand> CreateRDOp(unsigned RDVal, SMLoc S,
+                                               SMLoc E) {
+    auto Op = std::make_unique<VEOperand>(k_RDOp);
+    Op->RD.RDVal = RDVal;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -810,6 +842,30 @@ static StringRef parseCC(StringRef Name, unsigned Prefix, unsigned Suffix,
   return Name;
 }
 
+static StringRef parseRD(StringRef Name, unsigned Prefix, SMLoc NameLoc,
+                         OperandVector *Operands) {
+  // Parse instructions with a conditional code. For example, 'cvt.w.d.sx.rz'
+  // is converted into two operands 'cvt.w.d.sx' and '.rz'.
+  StringRef RD = Name.substr(Prefix);
+  VERD::RoundingMode RoundingMode = stringToVERD(RD);
+
+  if (RoundingMode != VERD::UNKNOWN) {
+    Name = Name.slice(0, Prefix);
+    // push 1st like `cvt.w.d.sx`
+    Operands->push_back(VEOperand::CreateToken(Name, NameLoc));
+    SMLoc SuffixLoc =
+        SMLoc::getFromPointer(NameLoc.getPointer() + (RD.data() - Name.data()));
+    SMLoc SuffixEnd =
+        SMLoc::getFromPointer(NameLoc.getPointer() + (RD.end() - Name.data()));
+    // push $round if it has rounding mode
+    Operands->push_back(
+        VEOperand::CreateRDOp(RoundingMode, SuffixLoc, SuffixEnd));
+  } else {
+    Operands->push_back(VEOperand::CreateToken(Name, NameLoc));
+  }
+  return Name;
+}
+
 // Split the mnemonic into ASM operand, conditional code and instruction
 // qualifier (half-word, byte).
 StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
@@ -834,6 +890,11 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
              Name.startswith("cmov.d.") || Name.startswith("cmov.s.")) {
     bool ICC = Name[5] == 'l' || Name[5] == 'w';
     Mnemonic = parseCC(Name, 7, Name.size(), ICC, false, NameLoc, Operands);
+  } else if (Name.startswith("cvt.w.d.sx") || Name.startswith("cvt.w.d.zx") ||
+             Name.startswith("cvt.w.s.sx") || Name.startswith("cvt.w.s.zx")) {
+    Mnemonic = parseRD(Name, 10, NameLoc, Operands);
+  } else if (Name.startswith("cvt.l.d")) {
+    Mnemonic = parseRD(Name, 7, NameLoc, Operands);
   } else {
     Operands->push_back(VEOperand::CreateToken(Mnemonic, NameLoc));
   }

@@ -844,8 +844,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setAlignment(Align(8));
   MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
-  CounterPtr->setMetadata(LLVMContext::MD_associated,
-                          MDNode::get(Ctx, ValueAsMetadata::get(CounterPtr)));
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -867,8 +865,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
           getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
       ValuesVar->setAlignment(Align(8));
       MaybeSetComdat(ValuesVar);
-      ValuesVar->setMetadata(LLVMContext::MD_associated,
-                             MDNode::get(Ctx, ValueAsMetadata::get(CounterPtr)));
       ValuesPtrExpr =
           ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
     }
@@ -903,8 +899,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   MaybeSetComdat(Data);
   Data->setLinkage(Linkage);
-  Data->setMetadata(LLVMContext::MD_associated,
-                    MDNode::get(Ctx, ValueAsMetadata::get(CounterPtr)));
 
   PD.RegionCounters = CounterPtr;
   PD.DataVar = Data;

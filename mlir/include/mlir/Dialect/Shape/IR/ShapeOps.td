@@ -190,23 +190,25 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
   let summary = "Gets the specified extent from a shape";
   let description = [{
     Gets the extent indexed by `dim` from `shape`.
-
     If the shape is an error, it returns an error size.
   }];
   let arguments = (ins
     Shape_ShapeType:$shape,
-    Confined<I64Attr, [IntNonNegative]>:$dim
+    Shape_SizeType:$dim
   );
   let results = (outs Shape_SizeType:$extent);
   let assemblyFormat = "$shape `,` $dim attr-dict";
 
   let builders = [
-    // Builder that allows passing a simple integer instead of an IntegerAttr.
-    OpBuilder<
-      [{OpBuilder &builder, OperationState &result, Value shape, int64_t dim}],
-      [{build(builder, result, shape, builder.getI64IntegerAttr(dim));}]
-    >
+    // Builder that allows passing a constant dimension as a simple integer.
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value shape, "
+              "int64_t dim">
   ];
+
+  let extraClassDeclaration = [{
+    /// Get the `dim` value as integer if it is constant.
+    Optional<int64_t> getConstantDim();
+  }];
 
   let hasFolder = 1;
 }

@@ -1210,14 +1210,19 @@ public:
   bool isLegalOrCustom(const MachineInstr &MI,
                        const MachineRegisterInfo &MRI) const;
 
+  /// Called for instructions with the Custom LegalizationAction.
   virtual bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &MIRBuilder,
-                              GISelChangeObserver &Observer) const;
+                              GISelChangeObserver &Observer) const {
+    llvm_unreachable("must implement this if custom action is used");
+  }
 
-  /// Return true if MI is either legal or has been legalized and false
-  /// if not legal.
+  /// \returns true if MI is either legal or has been legalized and false if not
+  /// legal.
   virtual bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                                 GISelChangeObserver &Observer) const;
+                                 GISelChangeObserver &Observer) const {
+    return true;
+  }
 
   /// Return the opcode (SEXT/ZEXT/ANYEXT) that should be performed while
   /// widening a constant of type SmallTy which targets can override.

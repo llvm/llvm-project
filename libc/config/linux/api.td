@@ -160,6 +160,7 @@ def MathAPI : PublicAPI<"math.h"> {
    "expf",
    "exp2f",
    "round",
+   "roundf",
    "sincosf",
    "sinf",
    "trunc",

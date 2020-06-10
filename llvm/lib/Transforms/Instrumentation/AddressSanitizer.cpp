@@ -589,11 +589,10 @@ struct AddressSanitizer {
   AddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false)
-      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(*GlobalsMD) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel =
-        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
-
+      : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+                                                            : CompileKernel),
+        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
+        UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(*GlobalsMD) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -742,7 +741,11 @@ public:
   ModuleAddressSanitizer(Module &M, const GlobalsMetadata *GlobalsMD,
                          bool CompileKernel = false, bool Recover = false,
                          bool UseGlobalsGC = true, bool UseOdrIndicator = false)
-      : GlobalsMD(*GlobalsMD), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+      : GlobalsMD(*GlobalsMD),
+        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+                                                            : CompileKernel),
+        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
+        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC && !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
         UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
         UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
@@ -753,11 +756,7 @@ public:
         // argument is designed as workaround. Therefore, disable both
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
-        UseCtorComdat(UseGlobalsGC && ClWithComdat) {
-    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel =
-        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
-
+        UseCtorComdat(UseGlobalsGC && ClWithComdat && !this->CompileKernel) {
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -792,7 +791,8 @@ private:
                                   StringRef InternalSuffix);
   Instruction *CreateAsanModuleDtor(Module &M);
 
-  bool ShouldInstrumentGlobal(GlobalVariable *G);
+  bool canInstrumentAliasedGlobal(const GlobalAlias &GA) const;
+  bool shouldInstrumentGlobal(GlobalVariable *G) const;
   bool ShouldUseMachOGlobalsSection() const;
   StringRef getGlobalMetadataSection() const;
   void poisonOneInitializer(Function &GlobalInit, GlobalValue *ModuleName);
@@ -1791,7 +1791,23 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
   }
 }
 
-bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
+bool ModuleAddressSanitizer::canInstrumentAliasedGlobal(
+    const GlobalAlias &GA) const {
+  // In case this function should be expanded to include rules that do not just
+  // apply when CompileKernel is true, either guard all existing rules with an
+  // 'if (CompileKernel) { ... }' or be absolutely sure that all these rules
+  // should also apply to user space.
+  assert(CompileKernel && "Only expecting to be called when compiling kernel");
+
+  // When compiling the kernel, globals that are aliased by symbols prefixed
+  // by "__" are special and cannot be padded with a redzone.
+  if (GA.getName().startswith("__"))
+    return false;
+
+  return true;
+}
+
+bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
   Type *Ty = G->getValueType();
   LLVM_DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
 
@@ -1838,6 +1854,12 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
   }
 
   if (G->hasSection()) {
+    // The kernel uses explicit sections for mostly special global variables
+    // that we should not instrument. E.g. the kernel may rely on their layout
+    // without redzones, or remove them at link time ("discard.*"), etc.
+    if (CompileKernel)
+      return false;
+
     StringRef Section = G->getSection();
 
     // Globals from llvm.metadata aren't emitted, do not instrument them.
@@ -1902,6 +1924,13 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
         return false;
       }
     }
+  }
+
+  if (CompileKernel) {
+    // Globals that prefixed by "__" are special and cannot be padded with a
+    // redzone.
+    if (G->getName().startswith("__"))
+      return false;
   }
 
   return true;
@@ -2233,10 +2262,22 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
                                                bool *CtorComdat) {
   *CtorComdat = false;
 
-  SmallVector<GlobalVariable *, 16> GlobalsToChange;
+  // Build set of globals that are aliased by some GA, where
+  // canInstrumentAliasedGlobal(GA) returns false.
+  SmallPtrSet<const GlobalVariable *, 16> AliasedGlobalBlacklist;
+  if (CompileKernel) {
+    for (auto &GA : M.aliases()) {
+      if (const auto *GV = dyn_cast<GlobalVariable>(GA.getAliasee())) {
+        if (!canInstrumentAliasedGlobal(GA))
+          AliasedGlobalBlacklist.insert(GV);
+      }
+    }
+  }
 
+  SmallVector<GlobalVariable *, 16> GlobalsToChange;
   for (auto &G : M.globals()) {
-    if (ShouldInstrumentGlobal(&G)) GlobalsToChange.push_back(&G);
+    if (!AliasedGlobalBlacklist.count(&G) && shouldInstrumentGlobal(&G))
+      GlobalsToChange.push_back(&G);
   }
 
   size_t n = GlobalsToChange.size();
@@ -2445,20 +2486,23 @@ int ModuleAddressSanitizer::GetAsanVersion(const Module &M) const {
 bool ModuleAddressSanitizer::instrumentModule(Module &M) {
   initializeCallbacks(M);
 
-  if (CompileKernel)
-    return false;
-
   // Create a module constructor. A destructor is created lazily because not all
   // platforms, and not all modules need it.
-  std::string AsanVersion = std::to_string(GetAsanVersion(M));
-  std::string VersionCheckName =
-      ClInsertVersionCheck ? (kAsanVersionCheckNamePrefix + AsanVersion) : "";
-  std::tie(AsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
-      /*InitArgs=*/{}, VersionCheckName);
+  if (CompileKernel) {
+    // The kernel always builds with its own runtime, and therefore does not
+    // need the init and version check calls.
+    AsanCtorFunction = createSanitizerCtor(M, kAsanModuleCtorName);
+  } else {
+    std::string AsanVersion = std::to_string(GetAsanVersion(M));
+    std::string VersionCheckName =
+        ClInsertVersionCheck ? (kAsanVersionCheckNamePrefix + AsanVersion) : "";
+    std::tie(AsanCtorFunction, std::ignore) =
+        createSanitizerCtorAndInitFunctions(M, kAsanModuleCtorName,
+                                            kAsanInitName, /*InitArgTypes=*/{},
+                                            /*InitArgs=*/{}, VersionCheckName);
+  }
 
   bool CtorComdat = true;
-  // TODO(glider): temporarily disabled globals instrumentation for KASan.
   if (ClGlobals) {
     IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
     InstrumentGlobals(IRB, M, &CtorComdat);

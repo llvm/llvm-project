@@ -382,7 +382,8 @@ func @muli_splat_vector() -> vector<4xi32> {
 func @dim(%x : tensor<8x4xf32>) -> index {
 
   // CHECK:[[C4:%.+]] = constant 4 : index
-  %0 = dim %x, 1 : tensor<8x4xf32>
+  %c1 = constant 1 : index
+  %0 = dim %x, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return [[C4]]
   return %0 : index

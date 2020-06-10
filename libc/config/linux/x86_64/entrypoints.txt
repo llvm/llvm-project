@@ -55,6 +55,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.round
+    libc.src.math.roundf
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.trunc

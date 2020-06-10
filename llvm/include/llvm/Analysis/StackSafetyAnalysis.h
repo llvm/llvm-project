@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_STACKSAFETYANALYSIS_H
 #define LLVM_ANALYSIS_STACKSAFETYANALYSIS_H
 
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -42,6 +43,9 @@ public:
 
   // TODO: Add useful for client methods.
   void print(raw_ostream &O) const;
+
+  /// Parameters use for a FunctionSummary.
+  std::vector<FunctionSummary::ParamAccess> getParamAccesses() const;
 };
 
 class StackSafetyGlobalInfo {
@@ -142,6 +146,8 @@ public:
 
   bool runOnModule(Module &M) override;
 };
+
+bool needsParamAccessSummary(const Module &M);
 
 } // end namespace llvm
 
