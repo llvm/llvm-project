@@ -728,13 +728,14 @@ private:
   /// Parses \p Expr for use of a numeric operand at line \p LineNumber, or
   /// before input is parsed if \p LineNumber is None. Accepts literal values,
   /// numeric variables and function calls, depending on the value of \p AO.
-  /// Parameter \p Context points to the class instance holding the live string
-  /// and numeric variables. \returns the class representing that operand in the
-  /// AST of the expression or an error holding a diagnostic against \p SM
-  /// otherwise. If \p Expr starts with a "(" this function will attempt to
-  /// parse a parenthesized expression.
+  /// \p MaybeInvalidConstraint indicates whether the text being parsed could
+  /// be an invalid constraint. \p Context points to the class instance holding
+  /// the live string and numeric variables. \returns the class representing
+  /// that operand in the AST of the expression or an error holding a
+  /// diagnostic against \p SM otherwise. If \p Expr starts with a "(" this
+  /// function will attempt to parse a parenthesized expression.
   static Expected<std::unique_ptr<ExpressionAST>>
-  parseNumericOperand(StringRef &Expr, AllowedOperand AO,
+  parseNumericOperand(StringRef &Expr, AllowedOperand AO, bool ConstraintParsed,
                       Optional<size_t> LineNumber,
                       FileCheckPatternContext *Context, const SourceMgr &SM);
   /// Parses and updates \p RemainingExpr for a binary operation at line

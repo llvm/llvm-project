@@ -50,15 +50,6 @@ static LLT getPow2ScalarType(LLT Ty) {
   return LLT::scalar(Pow2Bits);
 }
 
-static LegalityPredicate isMultiple32(unsigned TypeIdx,
-                                      unsigned MaxSize = 1024) {
-  return [=](const LegalityQuery &Query) {
-    const LLT Ty = Query.Types[TypeIdx];
-    const LLT EltTy = Ty.getScalarType();
-    return Ty.getSizeInBits() <= MaxSize && EltTy.getSizeInBits() % 32 == 0;
-  };
-}
-
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -469,11 +460,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S16, S64);
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalFor({S1, S32, S64, S16, V2S32, V4S32, V2S16, V4S16, GlobalPtr,
-                 ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
+      .legalIf(isRegisterType(0))
+      // s1 and s16 are special cases because they have legal operations on
+      // them, but don't really occupy registers in the normal way.
+      .legalFor({S1, S16})
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampScalarOrElt(0, S32, S1024)
-      .legalIf(isMultiple32(0))
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
