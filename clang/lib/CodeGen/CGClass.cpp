@@ -253,13 +253,8 @@ ApplyNonVirtualAndVirtualOffset(CodeGenFunction &CGF, Address addr,
   // Compute the offset from the static and dynamic components.
   llvm::Value *baseOffset;
   if (!nonVirtualOffset.isZero()) {
-    llvm::Type *OffsetType =
-        (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
-            ? CGF.Int32Ty
-            : CGF.PtrDiffTy;
-    baseOffset =
-        llvm::ConstantInt::get(OffsetType, nonVirtualOffset.getQuantity());
+    baseOffset = llvm::ConstantInt::get(CGF.PtrDiffTy,
+                                        nonVirtualOffset.getQuantity());
     if (virtualOffset) {
       baseOffset = CGF.Builder.CreateAdd(virtualOffset, baseOffset);
     }

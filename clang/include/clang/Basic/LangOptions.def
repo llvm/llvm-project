@@ -376,9 +376,6 @@ LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
 
 LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 
-LANGOPT(RelativeCXXABIVTables, 1, 0,
-        "Use an ABI-incompatible v-table layout that uses relative references")
-
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

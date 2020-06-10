@@ -128,14 +128,8 @@ void ConstantAggregateBuilderBase::addSize(CharUnits size) {
 llvm::Constant *
 ConstantAggregateBuilderBase::getRelativeOffset(llvm::IntegerType *offsetType,
                                                 llvm::Constant *target) {
-  return getRelativeOffsetToPosition(offsetType, target,
-                                     Builder.SelfReferences.size());
-}
-
-llvm::Constant *ConstantAggregateBuilderBase::getRelativeOffsetToPosition(
-    llvm::IntegerType *offsetType, llvm::Constant *target, size_t position) {
   // Compute the address of the relative-address slot.
-  auto base = getAddrOfPosition(offsetType, position);
+  auto base = getAddrOfCurrentPosition(offsetType);
 
   // Subtract.
   base = llvm::ConstantExpr::getPtrToInt(base, Builder.CGM.IntPtrTy);
@@ -148,20 +142,6 @@ llvm::Constant *ConstantAggregateBuilderBase::getRelativeOffsetToPosition(
   }
 
   return offset;
-}
-
-llvm::Constant *
-ConstantAggregateBuilderBase::getAddrOfPosition(llvm::Type *type,
-                                                size_t position) {
-  // Make a global variable.  We will replace this with a GEP to this
-  // position after installing the initializer.
-  auto dummy = new llvm::GlobalVariable(Builder.CGM.getModule(), type, true,
-                                        llvm::GlobalVariable::PrivateLinkage,
-                                        nullptr, "");
-  Builder.SelfReferences.emplace_back(dummy);
-  auto &entry = Builder.SelfReferences.back();
-  (void)getGEPIndicesTo(entry.Indices, position + Begin);
-  return dummy;
 }
 
 llvm::Constant *

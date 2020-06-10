@@ -238,11 +238,6 @@ public:
   typedef llvm::DenseMap<BaseSubobject, AddressPointLocation>
       AddressPointsMapTy;
 
-  // Mapping between the VTable index and address point index. This is useful
-  // when you don't care about the base subobjects and only want the address
-  // point for a given vtable index.
-  typedef llvm::SmallVector<unsigned, 4> AddressPointsIndexMapTy;
-
 private:
   // Stores the component indices of the first component of each virtual table in
   // the virtual table group. To save a little memory in the common case where
@@ -257,9 +252,6 @@ private:
 
   /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;
-
-  /// Address points for all vtable indices.
-  AddressPointsIndexMapTy AddressPointIndices;
 
 public:
   VTableLayout(ArrayRef<size_t> VTableIndices,
@@ -283,10 +275,6 @@ public:
 
   const AddressPointsMapTy &getAddressPoints() const {
     return AddressPoints;
-  }
-
-  const AddressPointsIndexMapTy &getAddressPointIndices() const {
-    return AddressPointIndices;
   }
 
   size_t getNumVTables() const {
@@ -383,17 +371,7 @@ private:
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
 public:
-  enum VTableComponentLayout {
-    /// Components in the vtable are pointers to other structs/functions.
-    Pointer,
-
-    /// Components in the vtable are relative offsets between the vtable and the
-    /// other structs/functions.
-    Relative,
-  };
-
-  ItaniumVTableContext(ASTContext &Context,
-                       VTableComponentLayout ComponentLayout = Pointer);
+  ItaniumVTableContext(ASTContext &Context);
   ~ItaniumVTableContext() override;
 
   const VTableLayout &getVTableLayout(const CXXRecordDecl *RD) {
@@ -424,16 +402,6 @@ public:
   static bool classof(const VTableContextBase *VT) {
     return !VT->isMicrosoft();
   }
-
-  VTableComponentLayout getVTableComponentLayout() const {
-    return ComponentLayout;
-  }
-
-  bool isPointerLayout() const { return ComponentLayout == Pointer; }
-  bool isRelativeLayout() const { return ComponentLayout == Relative; }
-
-private:
-  VTableComponentLayout ComponentLayout;
 };
 
 /// Holds information about the inheritance path to a virtual base or function
