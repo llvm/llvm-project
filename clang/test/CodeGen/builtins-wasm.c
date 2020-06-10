@@ -621,6 +621,54 @@ f64x2 pmax_f64x2(f64x2 x, f64x2 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+f32x4 ceil_f32x4(f32x4 x) {
+  return __builtin_wasm_ceil_f32x4(x);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.ceil.v4f32(<4 x float> %x)
+  // WEBASSEMBLY: ret
+}
+
+f32x4 floor_f32x4(f32x4 x) {
+  return __builtin_wasm_floor_f32x4(x);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.floor.v4f32(<4 x float> %x)
+  // WEBASSEMBLY: ret
+}
+
+f32x4 trunc_f32x4(f32x4 x) {
+  return __builtin_wasm_trunc_f32x4(x);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.trunc.v4f32(<4 x float> %x)
+  // WEBASSEMBLY: ret
+}
+
+f32x4 nearest_f32x4(f32x4 x) {
+  return __builtin_wasm_nearest_f32x4(x);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.nearest.v4f32(<4 x float> %x)
+  // WEBASSEMBLY: ret
+}
+
+f64x2 ceil_f64x2(f64x2 x) {
+  return __builtin_wasm_ceil_f64x2(x);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.ceil.v2f64(<2 x double> %x)
+  // WEBASSEMBLY: ret
+}
+
+f64x2 floor_f64x2(f64x2 x) {
+  return __builtin_wasm_floor_f64x2(x);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.floor.v2f64(<2 x double> %x)
+  // WEBASSEMBLY: ret
+}
+
+f64x2 trunc_f64x2(f64x2 x) {
+  return __builtin_wasm_trunc_f64x2(x);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.trunc.v2f64(<2 x double> %x)
+  // WEBASSEMBLY: ret
+}
+
+f64x2 nearest_f64x2(f64x2 x) {
+  return __builtin_wasm_nearest_f64x2(x);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.nearest.v2f64(<2 x double> %x)
+  // WEBASSEMBLY: ret
+}
+
 f32x4 sqrt_f32x4(f32x4 x) {
   return __builtin_wasm_sqrt_f32x4(x);
   // WEBASSEMBLY: call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)

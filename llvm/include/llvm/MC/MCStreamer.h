@@ -565,6 +565,15 @@ public:
                                           MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
+  /// Emit a symbol's linkage and visibilty with a linkage directive for XCOFF.
+  ///
+  /// \param Symbol - The symbol to emit.
+  /// \param Linkage - The linkage of the symbol to emit.
+  /// \param Visibility - The visibility of the symbol to emit or MCSA_Invalid
+  /// if the symbol does not have an explicit visibility.
+  virtual void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
+                                                    MCSymbolAttr Linkage,
+                                                    MCSymbolAttr Visibility);
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:

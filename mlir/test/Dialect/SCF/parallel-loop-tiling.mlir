@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(parallel-loop-tiling{parallel-loop-tile-sizes=1,4})' -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -pass-pipeline='func(parallel-loop-tiling{parallel-loop-tile-sizes=1,4})' -split-input-file | FileCheck %s
 
 func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                     %arg3 : index, %arg4 : index, %arg5 : index,

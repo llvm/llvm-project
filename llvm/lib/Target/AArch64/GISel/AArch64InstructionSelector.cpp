@@ -1919,9 +1919,28 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectBrJT(I, MRI);
 
   case AArch64::G_ADD_LOW: {
-    I.setDesc(TII.get(AArch64::ADDXri));
-    I.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    // This op may have been separated from it's ADRP companion by the localizer
+    // or some other code motion pass. Given that many CPUs will try to
+    // macro fuse these operations anyway, select this into a MOVaddr pseudo
+    // which will later be expanded into an ADRP+ADD pair after scheduling.
+    MachineInstr *BaseMI = MRI.getVRegDef(I.getOperand(1).getReg());
+    if (BaseMI->getOpcode() != AArch64::ADRP) {
+      I.setDesc(TII.get(AArch64::ADDXri));
+      I.addOperand(MachineOperand::CreateImm(0));
+      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    }
+    assert(TM.getCodeModel() == CodeModel::Small &&
+           "Expected small code model");
+    MachineIRBuilder MIB(I);
+    auto Op1 = BaseMI->getOperand(1);
+    auto Op2 = I.getOperand(2);
+    auto MovAddr = MIB.buildInstr(AArch64::MOVaddr, {I.getOperand(0)}, {})
+                       .addGlobalAddress(Op1.getGlobal(), Op1.getOffset(),
+                                         Op1.getTargetFlags())
+                       .addGlobalAddress(Op2.getGlobal(), Op2.getOffset(),
+                                         Op2.getTargetFlags());
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
   }
 
   case TargetOpcode::G_BSWAP: {

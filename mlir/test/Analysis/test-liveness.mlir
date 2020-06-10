@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-liveness -split-input-file 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-print-liveness -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : func_empty
 func @func_empty() {

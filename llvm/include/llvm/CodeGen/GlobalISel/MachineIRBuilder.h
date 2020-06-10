@@ -35,23 +35,23 @@ class GISelChangeObserver;
 /// to transfer BuilderState between different kinds of MachineIRBuilders.
 struct MachineIRBuilderState {
   /// MachineFunction under construction.
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
   /// Information used to access the description of the opcodes.
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
   /// Information used to verify types are consistent and to create virtual registers.
-  MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI = nullptr;
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
 
   /// \name Fields describing the insertion point.
   /// @{
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator II;
   /// @}
 
-  GISelChangeObserver *Observer;
+  GISelChangeObserver *Observer = nullptr;
 
-  GISelCSEInfo *CSEInfo;
+  GISelCSEInfo *CSEInfo = nullptr;
 };
 
 class DstOp {
@@ -228,14 +228,26 @@ protected:
 
   void validateSelectOp(const LLT ResTy, const LLT TstTy, const LLT Op0Ty,
                         const LLT Op1Ty);
-  void recordInsertion(MachineInstr *MI) const;
+
+  void recordInsertion(MachineInstr *InsertedInstr) const {
+    if (State.Observer)
+      State.Observer->createdInstr(*InsertedInstr);
+  }
 
 public:
   /// Some constructors for easy use.
   MachineIRBuilder() = default;
   MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
-  MachineIRBuilder(MachineInstr &MI) : MachineIRBuilder(*MI.getMF()) {
+
+  MachineIRBuilder(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt) {
+    setMF(*MBB.getParent());
+    setInsertPt(MBB, InsPt);
+  }
+
+  MachineIRBuilder(MachineInstr &MI) :
+    MachineIRBuilder(*MI.getParent(), MI.getIterator()) {
     setInstr(MI);
+    setDebugLoc(MI.getDebugLoc());
   }
 
   virtual ~MachineIRBuilder() = default;
@@ -292,10 +304,16 @@ public:
   /// Set the insertion point before the specified position.
   /// \pre MBB must be in getMF().
   /// \pre II must be a valid iterator in MBB.
-  void setInsertPt(MachineBasicBlock &MBB, MachineBasicBlock::iterator II);
+  void setInsertPt(MachineBasicBlock &MBB, MachineBasicBlock::iterator II) {
+    assert(MBB.getParent() == &getMF() &&
+           "Basic block is in a different function");
+    State.MBB = &MBB;
+    State.II = II;
+  }
+
   /// @}
 
-  void setCSEInfo(GISelCSEInfo *Info);
+  void setCSEInfo(GISelCSEInfo *Info) { State.CSEInfo = Info; }
 
   /// \name Setters for the insertion point.
   /// @{
@@ -304,11 +322,20 @@ public:
 
   /// Set the insertion point to the  end of \p MBB.
   /// \pre \p MBB must be contained by getMF().
-  void setMBB(MachineBasicBlock &MBB);
+  void setMBB(MachineBasicBlock &MBB) {
+    State.MBB = &MBB;
+    State.II = MBB.end();
+    assert(&getMF() == MBB.getParent() &&
+           "Basic block is in a different function");
+  }
 
   /// Set the insertion point to before MI.
   /// \pre MI must be in getMF().
-  void setInstr(MachineInstr &MI);
+  void setInstr(MachineInstr &MI) {
+    assert(MI.getParent() && "Instruction is not part of a basic block");
+    setMBB(*MI.getParent());
+    State.II = MI.getIterator();
+  }
   /// @}
 
   /// Set the insertion point to before MI, and set the debug loc to MI's loc.
@@ -318,8 +345,11 @@ public:
     setDebugLoc(MI.getDebugLoc());
   }
 
-  void setChangeObserver(GISelChangeObserver &Observer);
-  void stopObservingChanges();
+  void setChangeObserver(GISelChangeObserver &Observer) {
+    State.Observer = &Observer;
+  }
+
+  void stopObservingChanges() { State.Observer = nullptr; }
   /// @}
 
   /// Set the debug location to \p DL for all the next build instructions.
@@ -335,7 +365,9 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildInstr(unsigned Opcode);
+  MachineInstrBuilder buildInstr(unsigned Opcode) {
+    return insertInstr(buildInstrNoInsert(Opcode));
+  }
 
   /// Build but don't insert <empty> = \p Opcode <empty>.
   ///

@@ -8,8 +8,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILECOMMANDS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILECOMMANDS_H
 
+#include "support/Threading.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringMap.h"
 #include <string>
 #include <vector>
 
@@ -40,10 +42,12 @@ struct CommandMangler {
   static CommandMangler detect();
 
   void adjust(std::vector<std::string> &Cmd) const;
-  explicit operator clang::tooling::ArgumentsAdjuster();
+  explicit operator clang::tooling::ArgumentsAdjuster() &&;
 
 private:
   CommandMangler() = default;
+  Memoize<llvm::StringMap<std::string>> ResolvedDrivers;
+  Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
 };
 
 } // namespace clangd

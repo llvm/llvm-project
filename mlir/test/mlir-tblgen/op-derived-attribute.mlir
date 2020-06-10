@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-derived-attr -verify-diagnostics %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -test-derived-attr -verify-diagnostics %s | FileCheck %s
 
 // CHECK-LABEL: verifyDerivedAttributes
 func @verifyDerivedAttributes() {

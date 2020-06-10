@@ -74,20 +74,22 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,ERR,NODUMP
 
 ;--------------------------------------------------
-; Check no -dump-input, which defaults to never.
+; Check no -dump-input, which defaults to fail.
 ;--------------------------------------------------
 
-; FileCheck success, -v => no dump, trace.
+; FileCheck success, -v => no dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,NODUMP
+; RUN: | FileCheck %s -match-full-lines -allow-empty \
+; RUN:             -check-prefixes=NOTRACE,NODUMP
 
-; FileCheck fail, -v => no dump, trace.
+; FileCheck fail, -v => dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,ERR,NODUMP
+; RUN: | FileCheck %s -match-full-lines \
+; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;--------------------------------------------------
 ; Check -dump-input=fail.
@@ -119,42 +121,6 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=fail -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
-
-;--------------------------------------------------
-; Check -dump-input-on-failure.
-;--------------------------------------------------
-
-; Command-line option.
-
-; FileCheck success, -v => no dump, no trace.
-; RUN: %ProtectFileCheckOutput \
-; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
-; RUN:           -match-full-lines -dump-input-on-failure -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -allow-empty \
-; RUN:             -check-prefixes=NOTRACE,NODUMP
-
-; FileCheck fail, -v => dump, no trace.
-; RUN: %ProtectFileCheckOutput \
-; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -dump-input-on-failure -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
-
-; FILECHECK_DUMP_INPUT_ON_FAILURE=1.
-
-; FileCheck success, -v => no dump, no trace.
-; RUN: %ProtectFileCheckOutput FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
-; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
-; RUN:           -match-full-lines -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -allow-empty \
-; RUN:                -check-prefixes=NOTRACE,NODUMP
-
-; FileCheck fail, -v => dump, no trace.
-; RUN: %ProtectFileCheckOutput FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
-; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 

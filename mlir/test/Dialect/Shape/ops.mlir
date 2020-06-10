@@ -1,8 +1,8 @@
-// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
 // Verify the printed output can be parsed.
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: shape_num_elements
 func @shape_num_elements(%shape : !shape.shape) -> !shape.size {

@@ -17,9 +17,9 @@ entry:
 ; argument put on stack.
 ; CHECK-NOT: mr 8, 4
 ; CHECK: stw 6, 16(1)
+; CHECK: stw 7, 20(1)
 ; CHECK: stw 5, 12(1)
 ; CHECK: stw 4, 8(1)
-; CHECK: stw 7, 20(1)
 
 declare i32 @printf(i8* nocapture readonly, ...)
 

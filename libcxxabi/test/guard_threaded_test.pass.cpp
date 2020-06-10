@@ -20,6 +20,8 @@
 #include <memory>
 #include <vector>
 
+#include "test_macros.h"
+
 
 using namespace __cxxabiv1;
 
@@ -88,13 +90,13 @@ InitResult check_guard(GuardType *g, Init init) {
   if (std::__libcpp_atomic_load(first_byte, std::_AO_Acquire) == 0) {
     Impl impl(g);
     if (impl.cxa_guard_acquire() == INIT_IS_PENDING) {
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
       try {
 #endif
         init();
         impl.cxa_guard_release();
         return PERFORMED;
-#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
+#ifndef TEST_HAS_NO_EXCEPTIONS
       } catch (...) {
         impl.cxa_guard_abort();
         return ABORTED;

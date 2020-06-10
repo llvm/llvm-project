@@ -1,4 +1,4 @@
-set(PUBLIC_HEADERS
+set(TARGET_PUBLIC_HEADERS
     libc.include.assert_h
     libc.include.errno
     libc.include.math

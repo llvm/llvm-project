@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops -split-input-file | FileCheck %s
 
 // CHECK-DAG: [[MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
 #map0 = affine_map<(d0, d1) -> (d0, d1)>

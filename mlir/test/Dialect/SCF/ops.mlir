@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s | FileCheck %s
 // Verify the printed output can be parsed.
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s
 
 func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {

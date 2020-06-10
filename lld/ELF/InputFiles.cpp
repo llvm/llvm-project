@@ -1117,8 +1117,20 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     // COMDAT member sections, and if a comdat group is discarded, some
     // defined symbol in a .eh_frame becomes dangling symbols.
     if (sec == &InputSection::discarded) {
-      this->symbols[i]->resolve(
-          Undefined{this, name, binding, stOther, type, secIdx});
+      Undefined und{this, name, binding, stOther, type, secIdx};
+      Symbol *sym = this->symbols[i];
+      // !ArchiveFile::parsed or LazyObjFile::fetched means that the file
+      // containing this object has not finished processing, i.e. this symbol is
+      // a result of a lazy symbol fetch. We should demote the lazy symbol to an
+      // Undefined so that any relocations outside of the group to it will
+      // trigger a discarded section error.
+      if ((sym->symbolKind == Symbol::LazyArchiveKind &&
+           !cast<ArchiveFile>(sym->file)->parsed) ||
+          (sym->symbolKind == Symbol::LazyObjectKind &&
+           cast<LazyObjFile>(sym->file)->fetched))
+        sym->replace(und);
+      else
+        sym->resolve(und);
       continue;
     }
 
@@ -1141,6 +1153,10 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&file)
 void ArchiveFile::parse() {
   for (const Archive::Symbol &sym : file->symbols())
     symtab->addSymbol(LazyArchive{*this, sym});
+
+  // Inform a future invocation of ObjFile<ELFT>::initializeSymbols() that this
+  // archive has been processed.
+  parsed = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -1615,13 +1631,12 @@ InputFile *elf::createObjectFile(MemoryBufferRef mb, StringRef archiveName,
 }
 
 void LazyObjFile::fetch() {
-  if (mb.getBuffer().empty())
+  if (fetched)
     return;
+  fetched = true;
 
   InputFile *file = createObjectFile(mb, archiveName, offsetInArchive);
   file->groupId = groupId;
-
-  mb = {};
 
   // Copy symbol vector so that the new InputFile doesn't have to
   // insert the same defined symbols to the symbol table again.

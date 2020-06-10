@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-parallel-loops -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -convert-linalg-to-parallel-loops -split-input-file | FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func @linalg_generic_sum(%lhs: memref<2x2xf32>,

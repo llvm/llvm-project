@@ -22,7 +22,7 @@ using namespace lldb_private;
 class lldb_private::SBCommandReturnObjectImpl {
 public:
   SBCommandReturnObjectImpl()
-      : m_ptr(new CommandReturnObject()), m_owned(true) {}
+      : m_ptr(new CommandReturnObject(false)), m_owned(true) {}
   SBCommandReturnObjectImpl(CommandReturnObject &ref)
       : m_ptr(&ref), m_owned(false) {}
   SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)

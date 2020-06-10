@@ -86,6 +86,23 @@ function(add_entrypoint_object target_name)
     set(entrypoint_name ${ADD_ENTRYPOINT_OBJ_NAME})
   endif()
 
+  list(FIND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name} entrypoint_name_index)
+  if(${entrypoint_name_index} EQUAL -1)
+    add_custom_target(${fq_target_name})
+    set_target_properties(
+      ${fq_target_name}
+      PROPERTIES
+        "ENTRYPOINT_NAME" ${entrypoint_name}
+        "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "OBJECT_FILE" ""
+        "OBJECT_FILE_RAW" ""
+        "DEPS" ""
+        "SKIPPED" "YES"
+    )
+    message(STATUS "Skipping libc entrypoint ${fq_target_name}.")
+    return()
+  endif()
+
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
     # One can use alias targets setup OS/machine independent entrypoint targets.
