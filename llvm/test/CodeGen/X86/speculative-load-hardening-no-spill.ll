@@ -2,8 +2,8 @@
 
 define i32 @foo(void ()** %0) {
 ; CHECK-LABEL: foo:
-; CHECK-NOT:    .Lslh_ret_addr0:
 ; CHECK:         callq *(%{{.*}})
+; CHECK-NEXT:  .Lslh_ret_addr0:
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    sarq $63, %rcx
