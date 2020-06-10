@@ -169,14 +169,14 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
 // Parse v2-v4 directory and file tables.
 static Error
 parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
-                     uint64_t *OffsetPtr, uint64_t EndPrologueOffset,
+                     uint64_t *OffsetPtr,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   while (true) {
     Error Err = Error::success();
     StringRef S = DebugLineData.getCStrRef(OffsetPtr, &Err);
-    if (Err || *OffsetPtr > EndPrologueOffset) {
+    if (Err) {
       consumeError(std::move(Err));
       return createStringError(errc::invalid_argument,
                                "include directories table was not null "
@@ -195,7 +195,7 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
   while (true) {
     Error Err = Error::success();
     StringRef Name = DebugLineData.getCStrRef(OffsetPtr, &Err);
-    if (!Err && *OffsetPtr <= EndPrologueOffset && Name.empty())
+    if (!Err && Name.empty())
       break;
 
     DWARFDebugLine::FileNameEntry FileEntry;
@@ -205,7 +205,7 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
     FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr, &Err);
     FileEntry.Length = DebugLineData.getULEB128(OffsetPtr, &Err);
 
-    if (Err || *OffsetPtr > EndPrologueOffset) {
+    if (Err) {
       consumeError(std::move(Err));
       return createStringError(
           errc::invalid_argument,
@@ -345,7 +345,7 @@ uint64_t DWARFDebugLine::Prologue::getLength() const {
 }
 
 Error DWARFDebugLine::Prologue::parse(
-    const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+    DWARFDataExtractor DebugLineData, uint64_t *OffsetPtr,
     function_ref<void(Error)> RecoverableErrorHandler, const DWARFContext &Ctx,
     const DWARFUnit *U) {
   const uint64_t PrologueOffset = *OffsetPtr;
@@ -360,6 +360,7 @@ Error DWARFDebugLine::Prologue::parse(
         "parsing line table prologue at offset 0x%8.8" PRIx64 ": %s",
         PrologueOffset, toString(std::move(Err)).c_str());
 
+  DebugLineData = DWARFDataExtractor(DebugLineData, *OffsetPtr + TotalLength);
   FormParams.Version = DebugLineData.getU16(OffsetPtr);
   if (!versionIsSupported(getVersion()))
     // Treat this error as unrecoverable - we cannot be sure what any of
@@ -382,6 +383,7 @@ Error DWARFDebugLine::Prologue::parse(
   PrologueLength =
       DebugLineData.getRelocatedValue(sizeofPrologueLength(), OffsetPtr);
   const uint64_t EndPrologueOffset = PrologueLength + *OffsetPtr;
+  DebugLineData = DWARFDataExtractor(DebugLineData, EndPrologueOffset);
   MinInstLength = DebugLineData.getU8(OffsetPtr);
   if (getVersion() >= 4)
     MaxOpsPerInst = DebugLineData.getU8(OffsetPtr);
@@ -411,8 +413,8 @@ Error DWARFDebugLine::Prologue::parse(
       getVersion() >= 5
           ? parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
                                  ContentTypes, IncludeDirectories, FileNames)
-          : parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                                 ContentTypes, IncludeDirectories, FileNames);
+          : parseV2DirFileTables(DebugLineData, OffsetPtr, ContentTypes,
+                                 IncludeDirectories, FileNames);
   if (E) {
     RecoverableErrorHandler(joinErrors(
         createStringError(
@@ -425,13 +427,14 @@ Error DWARFDebugLine::Prologue::parse(
     return Error::success();
   }
 
+  assert(*OffsetPtr <= EndPrologueOffset);
   if (*OffsetPtr != EndPrologueOffset) {
     RecoverableErrorHandler(createStringError(
         errc::invalid_argument,
-        "parsing line table prologue at 0x%8.8" PRIx64
-        " should have ended at 0x%8.8" PRIx64 " but it ended at 0x%8.8" PRIx64,
-        PrologueOffset, EndPrologueOffset, *OffsetPtr));
-    *OffsetPtr = EndPrologueOffset;
+        "unknown data in line table prologue at offset 0x%8.8" PRIx64
+        ": parsing ended (at offset 0x%8.8" PRIx64
+        ") before reaching the prologue at offset 0x%8.8" PRIx64,
+        PrologueOffset, *OffsetPtr, EndPrologueOffset));
   }
   return Error::success();
 }

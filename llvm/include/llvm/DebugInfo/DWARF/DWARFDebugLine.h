@@ -129,7 +129,7 @@ public:
 
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
-    Error parse(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+    Error parse(DWARFDataExtractor Data, uint64_t *OffsetPtr,
                 function_ref<void(Error)> RecoverableErrorHandler,
                 const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
