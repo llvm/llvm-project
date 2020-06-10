@@ -679,6 +679,7 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
     if (Analyzable && ((Cond.empty() && TBB && TBB == Cont) ||
                        (!Cond.empty() && FBB && FBB == Cont))) {
       bool ErasedUncondBr = false;
+      (void)ErasedUncondBr;
       for (auto I = EHPadLayoutPred->end(), E = EHPadLayoutPred->begin();
            I != E; --I) {
         auto PrevI = std::prev(I);
