@@ -141,6 +141,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   X86RegisterBankInfo &);
 
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
+FunctionPass *createX86LoadValueInjectionLoadHardeningUnoptimizedPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
@@ -160,6 +161,7 @@ void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
+void initializeX86LoadValueInjectionLoadHardeningUnoptimizedPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86OptimizeLEAPassPass(PassRegistry &);
