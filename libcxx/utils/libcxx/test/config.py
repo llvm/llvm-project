@@ -328,9 +328,6 @@ class Configuration(object):
         if self.long_tests:
             self.config.available_features.add('long_tests')
 
-        if not self.get_lit_bool('enable_filesystem', default=True):
-            self.config.available_features.add('c++filesystem-disabled')
-
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
@@ -868,10 +865,6 @@ class Configuration(object):
 
                 self.config.available_features.add('dylib-has-no-bad_any_cast')
                 self.lit_config.note("throwing bad_any_cast is not supported by the deployment target")
-            # Filesystem is support on Apple platforms starting with macosx10.15.
-            if name == 'macosx' and version in ('10.%s' % v for v in range(9, 15)):
-                self.config.available_features.add('c++filesystem-disabled')
-                self.lit_config.note("the deployment target does not support <filesystem>")
         else:
             self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
