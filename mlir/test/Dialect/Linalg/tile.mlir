@@ -31,29 +31,29 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 // TILE-2-LABEL: func @matmul(
 //       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-2: %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-2: %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
-//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-2:   %[[szM:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localM]]]
-//       TILE-2:   %[[K:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-2:   %[[K:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-2:   %[[sAi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[szM]], %[[K]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-2:   %[[localK:.*]] = dim %{{.*}}, 0
+//       TILE-2:   %[[localK:.*]] = dim %{{.*}}, %c0
 //       TILE-2:   %[[szK:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localK]]]
-//       TILE-2:   %[[N:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-2:   %[[N:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-2:   %[[sCi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[szK]], %[[N]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
 //       TILE-2:   linalg.matmul(%[[sAi]], %{{.*}}, %[[sCi]]) : memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>
 
 // TILE-02-LABEL: func @matmul(
 //       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-02: %[[N:.*]] = dim %arg1, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-02: %[[N:.*]] = dim %arg1, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-02: scf.for %[[J:.*]] = %{{.*}} to %[[N]] step %{{.*}} {
-//       TILE-02:   %[[K:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, 1
+//       TILE-02:   %[[K:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, %c1
 //       TILE-02:   %[[szN:.*]] = affine.min #[[bound_map]](%[[J]])[%[[localN]]]
 //       TILE-02:   %[[sBj:.*]] = subview %{{.*}}[0, %[[J]]] [%[[K]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-02:   %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-02:   %[[localK:.*]] = dim %{{.*}}, 1
+//       TILE-02:   %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-02:   %[[localK:.*]] = dim %{{.*}}, %c1
 //       TILE-02:   %[[szK:.*]] = affine.min #[[bound_map]](%[[J]])[%[[localK]]]
 //       TILE-02:   %[[sCj:.*]] = subview %{{.*}}[0, %[[J]]] [%[[M]], %[[szK]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
 //       TILE-02:   linalg.matmul(%{{.*}}, %[[sBj]], %[[sCj]]) : memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>
@@ -61,15 +61,15 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 // TILE-002-LABEL: func @matmul(
 //       TILE-002-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-002-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-002: %[[ubK:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-002: %[[ubK:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-002: scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[ubK]] step %{{.*}} {
-//       TILE-002:   %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-002:   %[[localK:.*]] = dim %{{.*}}, 1
+//       TILE-002:   %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-002:   %[[localK:.*]] = dim %{{.*}}, %c1
 //       TILE-002:   %[[szK:.*]] = affine.min #[[bound_map]](%[[K]])[%[[localK]]]
 //       TILE-002:   %[[sAj:.*]] = subview %{{.*}}[0, %[[K]]] [%[[M]], %[[szK]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-002:   %[[localK:.*]] = dim %{{.*}}, 0
+//       TILE-002:   %[[localK:.*]] = dim %{{.*}}, %c0
 //       TILE-002:   %[[szK:.*]] = affine.min #[[bound_map]](%[[K]])[%[[localK]]]
-//       TILE-002:   %[[N:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-002:   %[[N:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-002:   %[[sBj:.*]] = subview %{{.*}}[%[[K]], 0] [%[[szK]], %[[N]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
 //       TILE-002:   linalg.matmul(%[[sAj]], %[[sBj]], %{{.*}}) : memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>, memref<?x?xf32, #[[strided2D]]>
 
@@ -78,25 +78,25 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
 //       TILE-234-DAG: %[[C3:.*]] = constant 3 : index
 //       TILE-234-DAG: %[[C4:.*]] = constant 4 : index
-//       TILE-234: %[[ubM:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-234: %[[ubK:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-234: %[[ubN:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-234: %[[ubM:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-234: %[[ubK:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-234: %[[ubN:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[ubM]] step %{{.*}} {
 //       TILE-234:    scf.for %[[J:.*]] = %{{.*}}{{.*}} to %[[ubN]] step %{{.*}} {
 //       TILE-234:      scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[ubK]] step %{{.*}} {
-//       TILE-234:        %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:        %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:        %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
-//       TILE-234:        %[[localK:.*]] = dim %{{.*}}, 1
+//       TILE-234:        %[[localK:.*]] = dim %{{.*}}, %c1
 //       TILE-234:        %[[szK:.*]] = affine.min #[[bound_map_4]](%[[K]])[%[[localK]]]
 //       TILE-234:        %[[sAik:.*]] = subview %{{.*}}[%[[I]], %[[K]]] [%[[szM]], %[[szK]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-234:        %[[localK:.*]] = dim %{{.*}}, 0
+//       TILE-234:        %[[localK:.*]] = dim %{{.*}}, %c0
 //       TILE-234:        %[[szK:.*]] = affine.min #[[bound_map_4]](%[[K]])[%[[localK]]]
-//       TILE-234:        %[[localN:.*]] = dim %{{.*}}, 1
+//       TILE-234:        %[[localN:.*]] = dim %{{.*}}, %c1
 //       TILE-234:        %[[szN:.*]] = affine.min #[[bound_map_3]](%[[J]])[%[[localN]]]
 //       TILE-234:        %[[sBkj:.*]] = subview %{{.*}}[%[[K]], %[[J]]] [%[[szK]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-234:        %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:        %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:        %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
-//       TILE-234:        %[[localN:.*]] = dim %{{.*}}, 1
+//       TILE-234:        %[[localN:.*]] = dim %{{.*}}, %c1
 //       TILE-234:        %[[szN:.*]] = affine.min #[[bound_map_3]](%[[J]])[%[[localN]]]
 //       TILE-234:        %[[sCij:.*]] = subview %{{.*}}[%[[I]], %[[J]]] [%[[szM]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
 //
@@ -173,13 +173,13 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //  TILE-2-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
 //       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-2: %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-2: %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
-//       TILE-2:   %[[localM:.*]] = dim %[[ARG0]], 0
+//       TILE-2:   %[[localM:.*]] = dim %[[ARG0]], %c0
 //       TILE-2:   %[[szM:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localM]]]
-//       TILE-2:   %[[N:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-2:   %[[N:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-2:   %[[sAi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[szM]], %[[N]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-2:   %[[localN:.*]] = dim %{{.*}}, 0
+//       TILE-2:   %[[localN:.*]] = dim %{{.*}}, %c0
 //       TILE-2:   %[[szN:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localN]]]
 //       TILE-2:   %[[sCi:.*]] = subview %{{.*}}[%[[I]]] [%[[szN]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
 //       TILE-2:   linalg.matvec(%[[sAi]], %{{.*}}, %[[sCi]]) : memref<?x?xf32, #[[strided2D]]>, memref<?xf32, #[[strided1D]]>, memref<?xf32, #[[strided1D]]>
@@ -190,13 +190,13 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 // TILE-02-SAME: %[[ARG2:[0-9a-zA-Z]*]]: memref
 //       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-02: %[[K:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-02: %[[K:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-02: scf.for %[[J]] = %{{.*}}{{.*}} to %[[K]] step %{{.*}} {
-//       TILE-02:   %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, 1
+//       TILE-02:   %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, %c1
 //       TILE-02:   %[[szN:.*]] = affine.min #[[bound_map]](%[[J]])[%[[localN]]]
 //       TILE-02:   %[[sAj:.*]] = subview %{{.*}}[0, %[[J]]] [%[[M]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, 0
+//       TILE-02:   %[[localN:.*]] = dim %{{.*}}, %c0
 //       TILE-02:   %[[szN:.*]] = affine.min #[[bound_map]](%[[J]])[%[[localN]]]
 //       TILE-02:   %[[sBj:.*]] = subview %{{.*}}[%[[J]]] [%[[szN]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
 //       TILE-02:   linalg.matvec(%[[sAj]], %[[sBj]], %{{.*}}) : memref<?x?xf32, #[[strided2D]]>, memref<?xf32, #[[strided1D]]>, memref<?xf32, #[[strided1D]]>
@@ -214,19 +214,19 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
 //       TILE-234-DAG: %[[C3:.*]] = constant 3 : index
-//       TILE-234: %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32, #[[strided2D]]>
-//       TILE-234: %[[K:.*]] = dim %{{.*}}, 1 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-234: %[[M:.*]] = dim %{{.*}}, %c0 : memref<?x?xf32, #[[strided2D]]>
+//       TILE-234: %[[K:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[strided2D]]>
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
 //       TILE-234:    scf.for %[[J:.*]] = %{{.*}}{{.*}} to %[[K]] step %{{.*}} {
-//       TILE-234:      %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:      %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:      %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
-//       TILE-234:      %[[localN:.*]] = dim %{{.*}}, 1
+//       TILE-234:      %[[localN:.*]] = dim %{{.*}}, %c1
 //       TILE-234:      %[[szN:.*]] = affine.min #[[bound_map_3]](%[[J]])[%[[localN]]]
 //       TILE-234:      %[[sAij:.*]] = subview %{{.*}}[%[[I]], %[[J]]] [%[[szM]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[strided2D]]> to memref<?x?xf32, #[[strided2D]]>
-//       TILE-234:      %[[localN:.*]] = dim %{{.*}}, 0
+//       TILE-234:      %[[localN:.*]] = dim %{{.*}}, %c0
 //       TILE-234:      %[[szN:.*]] = affine.min #[[bound_map_3]](%[[J]])[%[[localN]]]
 //       TILE-234:      %[[sBj:.*]] = subview %{{.*}}[%[[J]]] [%[[szN]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
-//       TILE-234:      %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:      %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:      %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
 //       TILE-234:      %[[sCi:.*]] = subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
 //
@@ -239,12 +239,12 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 // TILE-2-LABEL: func @dot(
 //       TILE-2-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-2: %[[M:.*]] = dim %{{.*}}, 0 : memref<?xf32, #[[strided1D]]>
+//       TILE-2: %[[M:.*]] = dim %{{.*}}, %c0 : memref<?xf32, #[[strided1D]]>
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}}{{.*}} to %[[M]] step %{{.*}} {
-//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-2:   %[[szM:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localM]]]
 //       TILE-2:   %[[sAi:.*]] = subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
-//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-2:   %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-2:   %[[szM:.*]] = affine.min #[[bound_map]](%[[I]])[%[[localM]]]
 //       TILE-2:   %[[sBi:.*]] = subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
 //       TILE-2:   linalg.dot(%[[sAi]], %[[sBi]], {{.*}}) : memref<?xf32, #[[strided1D]]>, memref<?xf32, #[[strided1D]]>, memref<f32>
@@ -258,12 +258,12 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 // TILE-234-LABEL: func @dot(
 //       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-234-DAG: %[[C2:.*]] = constant 2 : index
-//       TILE-234:  %[[ubK:.*]] = dim %{{.*}}, 0 : memref<?xf32, #[[strided1D]]>
+//       TILE-234:  %[[ubK:.*]] = dim %{{.*}}, %c0 : memref<?xf32, #[[strided1D]]>
 //       TILE-234:  scf.for %[[I:.*]] = %{{.*}} to %[[ubK]] step %{{.*}} {
-//       TILE-234:    %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:    %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:    %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
 //       TILE-234:    %[[sAi:.*]] = subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
-//       TILE-234:    %[[localM:.*]] = dim %{{.*}}, 0
+//       TILE-234:    %[[localM:.*]] = dim %{{.*}}, %c0
 //       TILE-234:    %[[szM:.*]] = affine.min #[[bound_map_2]](%[[I]])[%[[localM]]]
 //       TILE-234:    %[[sBi:.*]] = subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[strided1D]]> to memref<?xf32, #[[strided1D]]>
 //       TILE-234:    linalg.dot(%[[sAi]], %[[sBi]], %{{.*}}) : memref<?xf32, #[[strided1D]]>, memref<?xf32, #[[strided1D]]>, memref<f32>

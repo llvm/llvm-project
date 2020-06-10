@@ -23,15 +23,18 @@ func @main() {
   %pC = memref_cast %C : memref<16x16xf32> to memref<*xf32>
   call @print_memref_f32(%pC) : (memref<*xf32>) -> ()
 
-  %M = dim %C, 0 : memref<16x16xf32>
-  %N = dim %C, 1 : memref<16x16xf32>
-  %K = dim %A, 1 : memref<16x16xf32>
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+
+  %M = dim %C, %c0 : memref<16x16xf32>
+  %N = dim %C, %c1 : memref<16x16xf32>
+  %K = dim %A, %c1 : memref<16x16xf32>
 
   %f1 = muli %M, %N : index
   %f2 = muli %f1, %K : index
 
   // 2*M*N*K.
-  %c2 = constant 2 : index
   %f3 = muli %c2, %f2 : index
   %num_flops = muli %reps, %f3 : index
   %num_flops_i = index_cast %num_flops : index to i16

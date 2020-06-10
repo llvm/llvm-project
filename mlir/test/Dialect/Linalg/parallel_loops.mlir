@@ -51,10 +51,10 @@ func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
 // CHECK-LABEL: @lower_outer_parallel
 //   CHECK-DAG: %[[C0:.*]] = constant 0
 //   CHECK-DAG: %[[C1:.*]] = constant 1
-//   CHECK-DAG: %[[D0:.*]] = dim %{{.*}}, 0
-//   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, 1
-//   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, 2
-//   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, 3
+//   CHECK-DAG: %[[D0:.*]] = dim %{{.*}}, %c0
+//   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, %c1
+//   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, %c2
+//   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, %c3
 //       CHECK: scf.parallel (%[[IV0:.*]], %[[IV1:.*]]) = (%[[C0]], %[[C0]]) to (%[[D0]], %[[D1]]) step (%[[C1]], %[[C1]])
 //       CHECK:   scf.for %[[IV2:.*]] = %[[C0]] to %[[D2]] step %[[C1]]
 //       CHECK:     scf.parallel (%[[IV3:.*]]) = (%[[C0]]) to (%[[D3]]) step (%[[C1]])
@@ -84,12 +84,12 @@ func @lower_mixed_parallel(%A: memref<?x?x?x?x?x?xf32>, %B: memref<?x?x?x?xf32>)
 // CHECK-LABEL: @lower_mixed_parallel
 //   CHECK-DAG: %[[C0:.*]] = constant 0
 //   CHECK-DAG: %[[C1:.*]] = constant 1
-//   CHECK-DAG: %[[D0:.*]] = dim %{{.*}}, 0
-//   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, 1
-//   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, 2
-//   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, 3
-//   CHECK-DAG: %[[D4:.*]] = dim %{{.*}}, 4
-//   CHECK-DAG: %[[D5:.*]] = dim %{{.*}}, 5
+//   CHECK-DAG: %[[D0:.*]] = dim %{{.*}}, %c0
+//   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, %c1
+//   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, %c2
+//   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, %c3
+//   CHECK-DAG: %[[D4:.*]] = dim %{{.*}}, %c4
+//   CHECK-DAG: %[[D5:.*]] = dim %{{.*}}, %c5
 //       CHECK: scf.parallel (%[[IV0:.*]], %[[IV1:.*]]) = (%[[C0]], %[[C0]]) to (%[[D0]], %[[D1]]) step (%[[C1]], %[[C1]])
 //       CHECK:   scf.for %[[IV2:.*]] = %[[C0]] to %[[D2]] step %[[C1]]
 //       CHECK:     scf.parallel (%[[IV3:.*]], %[[IV4:.*]]) = (%[[C0]], %[[C0]]) to (%[[D3]], %[[D4]]) step (%[[C1]], %[[C1]])

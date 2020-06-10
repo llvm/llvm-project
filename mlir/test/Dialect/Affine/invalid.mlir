@@ -122,7 +122,8 @@ func @affine_if_invalid_sym() {
 func @affine_if_invalid_dimop_dim(%arg0: index, %arg1: index, %arg2: index, %arg3: index) {
   affine.for %n0 = 0 to 7 {
     %0 = alloc(%arg0, %arg1, %arg2, %arg3) : memref<?x?x?x?xf32>
-    %dim = dim %0, 0 : memref<?x?x?x?xf32>
+    %c0 = constant 0 : index
+    %dim = dim %0, %c0 : memref<?x?x?x?xf32>
 
     // expected-error@+1 {{operand cannot be used as a symbol}}
     affine.if #set0(%dim)[%n0] {}
