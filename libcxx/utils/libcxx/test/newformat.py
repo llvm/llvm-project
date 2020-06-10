@@ -27,6 +27,19 @@ def _supportsVerify(config):
     result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
     return result == 0
 
+def _getTempPaths(test):
+    """
+    Return the values to use for the %T and %t substitutions, respectively.
+
+    The difference between this and Lit's default behavior is that we guarantee
+    that %T is a path unique to the test being run.
+    """
+    tmpDir, _ = lit.TestRunner.getTempPaths(test)
+    _, testName = os.path.split(test.getExecPath())
+    tmpDir = os.path.join(tmpDir, testName + '.dir')
+    tmpBase = os.path.join(tmpDir, 't')
+    return tmpDir, tmpBase
+
 def parseScript(test, preamble, fileDependencies):
     """
     Extract the script from a test, with substitutions applied.
@@ -47,7 +60,7 @@ def parseScript(test, preamble, fileDependencies):
     """
 
     # Get the default substitutions
-    tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
+    tmpDir, tmpBase = _getTempPaths(test)
     useExternalSh = True
     substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase,
                                                            normalize_slashes=useExternalSh)
@@ -311,6 +324,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         if litConfig.noExecute:
             return lit.Test.Result(lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS)
         else:
-            _, tmpBase = lit.TestRunner.getTempPaths(test)
+            _, tmpBase = _getTempPaths(test)
             useExternalSh = True
             return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)
