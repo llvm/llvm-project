@@ -550,15 +550,15 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addImm(0)
       .addImm(0)
       .addImm(0x13b);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(0)
       .addReg(VE::SX63);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(8)
       .addReg(VE::SX8);
-  BuildMI(BB, dl, TII.get(VE::SHMri))
+  BuildMI(BB, dl, TII.get(VE::SHMLri))
       .addReg(VE::SX61)
       .addImm(16)
       .addReg(VE::SX11);
