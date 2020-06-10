@@ -179,9 +179,10 @@ static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
   if (FromVersionArray.size() != ToVersionArray.size())
     return false;
 
-  for (auto i = 0; i < FromVersionArray.size(); i++)
+  for (size_t i = 0, e = FromVersionArray.size(); i != e; ++i) {
     if (!(FromVersionArray[i] == ToVersionArray[i]))
       return false;
+  }
 
   auto FromKernelArray = FromMapNode.find(KernelStrKey);
   auto ToKernelArray = ToMapNode.find(KernelStrKey);
