@@ -314,6 +314,79 @@ define void @test_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <16 x 
   ret void
 }
 
+define void @test_vXi1(<2 x i1> %src2, <4 x i1> %src4, <8 x i1> %src8, <16 x i1> %src16, <32 x i1> %src32, <64 x i1> %src64) {
+; SSE2-LABEL: 'test_vXi1'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SSSE3-LABEL: 'test_vXi1'
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SSE42-LABEL: 'test_vXi1'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX1-LABEL: 'test_vXi1'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX2-LABEL: 'test_vXi1'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512-LABEL: 'test_vXi1'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; BTVER2-LABEL: 'test_vXi1'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2 = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4 = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8 = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %V2  = shufflevector <2 x i1> %src2, <2 x i1> undef, <2 x i32> zeroinitializer
+  %V4  = shufflevector <4 x i1> %src4, <4 x i1> undef, <4 x i32> zeroinitializer
+  %V8  = shufflevector <8 x i1> %src8, <8 x i1> undef, <8 x i32> zeroinitializer
+  %V16 = shufflevector <16 x i1> %src16, <16 x i1> undef, <16 x i32> zeroinitializer
+  %V32 = shufflevector <32 x i1> %src32, <32 x i1> undef, <32 x i32> zeroinitializer
+  %V64 = shufflevector <64 x i1> %src64, <64 x i1> undef, <64 x i32> zeroinitializer
+  ret void
+}
+
 ;
 ; Tests the cost model for broadcast shuffles of second operand.
 ;
