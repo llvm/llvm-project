@@ -199,10 +199,9 @@ bb3:
 
 define void @test12(i32* %P) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
@@ -225,10 +224,9 @@ bb3:
 
 define void @test13(i32* %P) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
