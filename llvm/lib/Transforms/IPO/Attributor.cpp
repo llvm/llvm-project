@@ -894,7 +894,7 @@ bool Attributor::checkForAllReadWriteInstructions(
   return true;
 }
 
-ChangeStatus Attributor::run() {
+void Attributor::runTillFixpoint() {
   LLVM_DEBUG(dbgs() << "[Attributor] Identified and initialized "
                     << AllAbstractAttributes.size()
                     << " abstract attributes.\n");
@@ -988,8 +988,6 @@ ChangeStatus Attributor::run() {
                     << IterationCounter << "/" << MaxFixpointIterations
                     << " iterations\n");
 
-  size_t NumFinalAAs = AllAbstractAttributes.size();
-
   // Reset abstract arguments not settled in a sound fixpoint by now. This
   // happens when we stopped the fixpoint iteration early. Note that only the
   // ones marked as "changed" *and* the ones transitively depending on them
@@ -1019,6 +1017,19 @@ ChangeStatus Attributor::run() {
       dbgs() << "\n[Attributor] Finalized " << Visited.size()
              << " abstract attributes.\n";
   });
+
+  if (VerifyMaxFixpointIterations &&
+      IterationCounter != MaxFixpointIterations) {
+    errs() << "\n[Attributor] Fixpoint iteration done after: "
+           << IterationCounter << "/" << MaxFixpointIterations
+           << " iterations\n";
+    llvm_unreachable("The fixpoint was not reached with exactly the number of "
+                     "specified iterations!");
+  }
+}
+
+ChangeStatus Attributor::manifestAttributes() {
+  size_t NumFinalAAs = AllAbstractAttributes.size();
 
   unsigned NumManifested = 0;
   unsigned NumAtFixpoint = 0;
@@ -1072,9 +1083,11 @@ ChangeStatus Attributor::run() {
     llvm_unreachable("Expected the final number of abstract attributes to "
                      "remain unchanged!");
   }
+  return ManifestChange;
+}
 
+ChangeStatus Attributor::cleanupIR() {
   // Delete stuff at the end to avoid invalid references and a nice order.
-  {
     LLVM_DEBUG(dbgs() << "\n[Attributor] Delete at least "
                       << ToBeDeletedFunctions.size() << " functions and "
                       << ToBeDeletedBlocks.size() << " blocks and "
@@ -1212,28 +1225,18 @@ ChangeStatus Attributor::run() {
         FoundDeadFn = true;
       }
     }
-  }
 
   // Rewrite the functions as requested during manifest.
-  ManifestChange =
-      ManifestChange | rewriteFunctionSignatures(CGModifiedFunctions);
+    ChangeStatus ManifestChange =
+        rewriteFunctionSignatures(CGModifiedFunctions);
 
-  for (Function *Fn : CGModifiedFunctions)
-    CGUpdater.reanalyzeFunction(*Fn);
+    for (Function *Fn : CGModifiedFunctions)
+      CGUpdater.reanalyzeFunction(*Fn);
 
-  for (Function *Fn : ToBeDeletedFunctions)
-    CGUpdater.removeFunction(*Fn);
+    for (Function *Fn : ToBeDeletedFunctions)
+      CGUpdater.removeFunction(*Fn);
 
-  NumFnDeleted += ToBeDeletedFunctions.size();
-
-  if (VerifyMaxFixpointIterations &&
-      IterationCounter != MaxFixpointIterations) {
-    errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxFixpointIterations
-           << " iterations\n";
-    llvm_unreachable("The fixpoint was not reached with exactly the number of "
-                     "specified iterations!");
-  }
+    NumFnDeleted += ToBeDeletedFunctions.size();
 
 #ifdef EXPENSIVE_CHECKS
   for (Function *F : Functions) {
@@ -1244,6 +1247,13 @@ ChangeStatus Attributor::run() {
 #endif
 
   return ManifestChange;
+}
+
+ChangeStatus Attributor::run() {
+  runTillFixpoint();
+  ChangeStatus ManifestChange = manifestAttributes();
+  ChangeStatus CleanupChange = cleanupIR();
+  return ManifestChange | CleanupChange;
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
