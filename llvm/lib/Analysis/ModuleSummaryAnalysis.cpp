@@ -25,6 +25,7 @@
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -238,12 +239,12 @@ static bool isNonVolatileStore(const Instruction *I) {
   return false;
 }
 
-static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
-                                   const Function &F, BlockFrequencyInfo *BFI,
-                                   ProfileSummaryInfo *PSI, DominatorTree &DT,
-                                   bool HasLocalsInUsedOrAsm,
-                                   DenseSet<GlobalValue::GUID> &CantBePromoted,
-                                   bool IsThinLTO) {
+static void computeFunctionSummary(
+    ModuleSummaryIndex &Index, const Module &M, const Function &F,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, DominatorTree &DT,
+    bool HasLocalsInUsedOrAsm, DenseSet<GlobalValue::GUID> &CantBePromoted,
+    bool IsThinLTO,
+    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
   assert(F.hasName());
@@ -469,12 +470,15 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       // Don't try to import functions with noinline attribute.
       F.getAttributes().hasFnAttribute(Attribute::NoInline),
       F.hasFnAttribute(Attribute::AlwaysInline)};
+  std::vector<FunctionSummary::ParamAccess> ParamAccesses;
+  if (auto *SSI = GetSSICallback(F))
+    ParamAccesses = SSI->getParamAccesses();
   auto FuncSummary = std::make_unique<FunctionSummary>(
       Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
       CallGraphEdges.takeVector(), TypeTests.takeVector(),
       TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
-      TypeCheckedLoadConstVCalls.takeVector());
+      TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses));
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
   Index.addGlobalValueSummary(F, std::move(FuncSummary));
@@ -643,7 +647,8 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
-    ProfileSummaryInfo *PSI) {
+    ProfileSummaryInfo *PSI,
+    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
   bool EnableSplitLTOUnit = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -716,7 +721,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
-                    ArrayRef<FunctionSummary::ConstVCall>{});
+                    ArrayRef<FunctionSummary::ConstVCall>{},
+                    ArrayRef<FunctionSummary::ParamAccess>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =
@@ -756,7 +762,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
     computeFunctionSummary(Index, M, F, BFI, PSI, DT,
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
-                           CantBePromoted, IsThinLTO);
+                           CantBePromoted, IsThinLTO, GetSSICallback);
   }
 
   // Compute summaries for all variables defined in module, and save in the
@@ -838,13 +844,19 @@ ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  bool NeedSSI = needsParamAccessSummary(M);
   return buildModuleSummaryIndex(
       M,
       [&FAM](const Function &F) {
         return &FAM.getResult<BlockFrequencyAnalysis>(
             *const_cast<Function *>(&F));
       },
-      &PSI);
+      &PSI,
+      [&FAM, NeedSSI](const Function &F) -> const StackSafetyInfo * {
+        return NeedSSI ? &FAM.getResult<StackSafetyAnalysis>(
+                             const_cast<Function &>(F))
+                       : nullptr;
+      });
 }
 
 char ModuleSummaryIndexWrapperPass::ID = 0;
@@ -853,6 +865,7 @@ INITIALIZE_PASS_BEGIN(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                       "Module Summary Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(StackSafetyInfoWrapperPass)
 INITIALIZE_PASS_END(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                     "Module Summary Analysis", false, true)
 
@@ -867,6 +880,7 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  bool NeedSSI = needsParamAccessSummary(M);
   Index.emplace(buildModuleSummaryIndex(
       M,
       [this](const Function &F) {
@@ -874,7 +888,13 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      PSI));
+      PSI,
+      [&](const Function &F) -> const StackSafetyInfo * {
+        return NeedSSI ? &getAnalysis<StackSafetyInfoWrapperPass>(
+                              const_cast<Function &>(F))
+                              .getResult()
+                       : nullptr;
+      }));
   return false;
 }
 
@@ -887,4 +907,5 @@ void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  AU.addRequired<StackSafetyInfoWrapperPass>();
 }
