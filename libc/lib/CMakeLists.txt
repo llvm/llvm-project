@@ -9,9 +9,3 @@ add_entrypoint_library(
   DEPENDS
   ${TARGET_LIBM_ENTRYPOINTS}
 )
-
-add_redirector_library(
-  llvmlibc_redirectors
-  DEPENDS
-    round_redirector
-)
