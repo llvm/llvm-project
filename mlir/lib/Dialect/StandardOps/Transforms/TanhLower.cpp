@@ -23,9 +23,7 @@ private:
       return SymbolRefAttr::get(symbol, context);
     }
     OpBuilder builder(module.getBodyRegion());
-    std::array<Type, 1> inputs{opType};
-    ArrayRef<Type> results{opType};
-    auto funcType = builder.getFunctionType(inputs, results);
+    auto funcType = builder.getFunctionType(ArrayRef<Type>{opType}, ArrayRef<Type>{opType});
     ArrayRef<NamedAttribute> attrs{};
     builder.create<FuncOp>(loc, symbol, funcType, attrs);
     return SymbolRefAttr::get(symbol, context);
@@ -37,10 +35,12 @@ public:
   LogicalResult matchAndRewrite(TanhOp op,
                                 PatternRewriter &rewriter) const final {
     Type resultType = op.getResult().getType();
+    Type operandType = op.getOperand().getType();
+
     const char* funcName;
-    if (resultType.isF32())
+    if (resultType.isF32() && operandType.isF32())
       funcName = static_cast<const char*>("tanhf");
-    else if (resultType.isF64())
+    else if (resultType.isF64() && operandType.isF64())
       funcName = static_cast<const char*>("tanh");
     else
       return failure();
