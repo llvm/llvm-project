@@ -50,10 +50,11 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    .cfi_offset w26, -80
 ; CHECK-NEXT:    .cfi_offset w27, -88
 ; CHECK-NEXT:    .cfi_offset w28, -96
-; CHECK-NEXT:    mov x27, x8
-; CHECK-NEXT:    adrp x8, _asdf@PAGE
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    add x0, x8, _asdf@PAGEOFF
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x0, _asdf@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    add x0, x0, _asdf@PAGEOFF
 ; CHECK-NEXT:    mov x20, x1
 ; CHECK-NEXT:    mov x21, x2
 ; CHECK-NEXT:    mov x22, x3
@@ -65,6 +66,7 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    stp q3, q2, [sp, #64] ; 32-byte Folded Spill
 ; CHECK-NEXT:    stp q5, q4, [sp, #32] ; 32-byte Folded Spill
 ; CHECK-NEXT:    stp q7, q6, [sp] ; 32-byte Folded Spill
+; CHECK-NEXT:    mov x27, x8
 ; CHECK-NEXT:    bl _puts
 ; CHECK-NEXT:    ldp q1, q0, [sp, #96] ; 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q3, q2, [sp, #64] ; 32-byte Folded Reload
@@ -87,6 +89,7 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    ldp x28, x27, [sp, #128] ; 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #224 ; =224
 ; CHECK-NEXT:    b _musttail_variadic_callee
+; CHECK-NEXT:    .loh AdrpAdd Lloh0, Lloh1
   call void @puts(i8* getelementptr ([4 x i8], [4 x i8]* @asdf, i32 0, i32 0))
   %r = musttail call i32 (i32, ...) @musttail_variadic_callee(i32 %arg0, ...)
   ret i32 %r
@@ -189,16 +192,16 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; CHECK-NEXT:    ldr x9, [x0, #8]
 ; CHECK-NEXT:    br x9
 ; CHECK-NEXT:  LBB5_2: ; %else
-; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    adrp x10, _g@GOTPAGE
 ; CHECK-NEXT:    ldr x9, [x0, #16]
-; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr x10, [x10, _g@GOTPAGEOFF]
 ; CHECK-NEXT:    mov w11, #42
-; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    str w11, [x10]
 ; CHECK-NEXT:    br x9
-; CHECK-NEXT:    .loh AdrpLdrGotStr Lloh0, Lloh1, Lloh2
+; CHECK-NEXT:    .loh AdrpLdrGotStr Lloh2, Lloh3, Lloh4
   %cond_p = getelementptr %struct.Foo, %struct.Foo* %this, i32 0, i32 0
   %cond = load i1, i1* %cond_p
   br i1 %cond, label %then, label %else
