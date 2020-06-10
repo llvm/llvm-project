@@ -275,17 +275,23 @@ func @struct_type_with_decoration7(!spv.struct<f32 [0], !spv.struct<i32, f32 [No
 // CHECK: func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
 func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
 
+// CHECK: func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
+func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
+
+// CHECK: func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
+func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
+
 // CHECK: func @struct_empty(!spv.struct<>)
 func @struct_empty(!spv.struct<>)
 
 // -----
 
-// expected-error @+1 {{layout specification must be given for all members}}
+// expected-error @+1 {{offset specification must be given for all members}}
 func @struct_type_missing_offset1((!spv.struct<f32, i32 [4]>) -> ()
 
 // -----
 
-// expected-error @+1 {{layout specification must be given for all members}}
+// expected-error @+1 {{offset specification must be given for all members}}
 func @struct_type_missing_offset2(!spv.struct<f32 [3], i32>) -> ()
 
 // -----
@@ -327,6 +333,16 @@ func @struct_type_missing_comma(!spv.struct<f32 [0 NonWritable], i32 [4]>)
 
 // expected-error @+1 {{expected ']'}}
 func @struct_type_missing_comma(!spv.struct<f32 [0, NonWritable NonReadable], i32 [4]>)
+
+// -----
+
+// expected-error @+1 {{expected ']'}}
+func @struct_type_missing_comma(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor MatrixStride=16]>)
+
+// -----
+
+// expected-error @+1 {{expected integer value}}
+func @struct_missing_member_decorator_value(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=]>)
 
 // -----
 

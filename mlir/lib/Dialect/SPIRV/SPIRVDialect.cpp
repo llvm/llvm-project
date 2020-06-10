@@ -535,30 +535,31 @@ static Type parseImageType(SPIRVDialect const &dialect,
 static ParseResult parseStructMemberDecorations(
     SPIRVDialect const &dialect, DialectAsmParser &parser,
     ArrayRef<Type> memberTypes,
-    SmallVectorImpl<StructType::LayoutInfo> &layoutInfo,
+    SmallVectorImpl<StructType::OffsetInfo> &offsetInfo,
     SmallVectorImpl<StructType::MemberDecorationInfo> &memberDecorationInfo) {
 
   // Check if the first element is offset.
-  llvm::SMLoc layoutLoc = parser.getCurrentLocation();
-  StructType::LayoutInfo layout = 0;
-  OptionalParseResult layoutParseResult = parser.parseOptionalInteger(layout);
-  if (layoutParseResult.hasValue()) {
-    if (failed(*layoutParseResult))
+  llvm::SMLoc offsetLoc = parser.getCurrentLocation();
+  StructType::OffsetInfo offset = 0;
+  OptionalParseResult offsetParseResult = parser.parseOptionalInteger(offset);
+  if (offsetParseResult.hasValue()) {
+    if (failed(*offsetParseResult))
       return failure();
 
-    if (layoutInfo.size() != memberTypes.size() - 1) {
-      return parser.emitError(
-          layoutLoc, "layout specification must be given for all members");
+    if (offsetInfo.size() != memberTypes.size() - 1) {
+      return parser.emitError(offsetLoc,
+                              "offset specification must be given for "
+                              "all members");
     }
-    layoutInfo.push_back(layout);
+    offsetInfo.push_back(offset);
   }
 
   // Check for no spirv::Decorations.
   if (succeeded(parser.parseOptionalRSquare()))
     return success();
 
-  // If there was a layout, make sure to parse the comma.
-  if (layoutParseResult.hasValue() && parser.parseComma())
+  // If there was an offset, make sure to parse the comma.
+  if (offsetParseResult.hasValue() && parser.parseComma())
     return failure();
 
   // Check for spirv::Decorations.
@@ -567,9 +568,23 @@ static ParseResult parseStructMemberDecorations(
     if (!memberDecoration)
       return failure();
 
-    memberDecorationInfo.emplace_back(
-        static_cast<uint32_t>(memberTypes.size() - 1),
-        memberDecoration.getValue());
+    // Parse member decoration value if it exists.
+    if (succeeded(parser.parseOptionalEqual())) {
+      auto memberDecorationValue =
+          parseAndVerifyInteger<uint32_t>(dialect, parser);
+
+      if (!memberDecorationValue)
+        return failure();
+
+      memberDecorationInfo.emplace_back(
+          static_cast<uint32_t>(memberTypes.size() - 1), 1,
+          memberDecoration.getValue(), memberDecorationValue.getValue());
+    } else {
+      memberDecorationInfo.emplace_back(
+          static_cast<uint32_t>(memberTypes.size() - 1), 0,
+          memberDecoration.getValue(), 0);
+    }
+
   } while (succeeded(parser.parseOptionalComma()));
 
   return parser.parseRSquare();
@@ -587,7 +602,7 @@ static Type parseStructType(SPIRVDialect const &dialect,
     return StructType::getEmpty(dialect.getContext());
 
   SmallVector<Type, 4> memberTypes;
-  SmallVector<StructType::LayoutInfo, 4> layoutInfo;
+  SmallVector<StructType::OffsetInfo, 4> offsetInfo;
   SmallVector<StructType::MemberDecorationInfo, 4> memberDecorationInfo;
 
   do {
@@ -597,21 +612,21 @@ static Type parseStructType(SPIRVDialect const &dialect,
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare())) {
-      if (parseStructMemberDecorations(dialect, parser, memberTypes, layoutInfo,
+      if (parseStructMemberDecorations(dialect, parser, memberTypes, offsetInfo,
                                        memberDecorationInfo)) {
         return Type();
       }
     }
   } while (succeeded(parser.parseOptionalComma()));
 
-  if (!layoutInfo.empty() && memberTypes.size() != layoutInfo.size()) {
+  if (!offsetInfo.empty() && memberTypes.size() != offsetInfo.size()) {
     parser.emitError(parser.getNameLoc(),
-                     "layout specification must be given for all members");
+                     "offset specification must be given for all members");
     return Type();
   }
   if (parser.parseGreater())
     return Type();
-  return StructType::get(memberTypes, layoutInfo, memberDecorationInfo);
+  return StructType::get(memberTypes, offsetInfo, memberDecorationInfo);
 }
 
 // spirv-type ::= array-type
@@ -679,17 +694,20 @@ static void print(StructType type, DialectAsmPrinter &os) {
   os << "struct<";
   auto printMember = [&](unsigned i) {
     os << type.getElementType(i);
-    SmallVector<spirv::Decoration, 0> decorations;
+    SmallVector<spirv::StructType::MemberDecorationInfo, 0> decorations;
     type.getMemberDecorations(i, decorations);
-    if (type.hasLayout() || !decorations.empty()) {
+    if (type.hasOffset() || !decorations.empty()) {
       os << " [";
-      if (type.hasLayout()) {
-        os << type.getOffset(i);
+      if (type.hasOffset()) {
+        os << type.getMemberOffset(i);
         if (!decorations.empty())
           os << ", ";
       }
-      auto eachFn = [&os](spirv::Decoration decoration) {
-        os << stringifyDecoration(decoration);
+      auto eachFn = [&os](spirv::StructType::MemberDecorationInfo decoration) {
+        os << stringifyDecoration(decoration.decoration);
+        if (decoration.hasValue) {
+          os << "=" << decoration.decorationValue;
+        }
       };
       llvm::interleaveComma(decorations, os, eachFn);
       os << "]";
