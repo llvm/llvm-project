@@ -223,7 +223,8 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
           developer_dir.c_str());
       m_core_simulator_framework_path = FileSpec(cs_path.GetData());
       FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
-    }
+    } else
+      m_core_simulator_framework_path = FileSpec();
   }
 
   return m_core_simulator_framework_path.getValue();
