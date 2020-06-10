@@ -7,8 +7,8 @@ int global;                                                         // to genera
 int aliased_global;                                                 // KASAN - ignore globals prefixed by aliases with __-prefix (below)
 extern int __attribute__((alias("aliased_global"))) __global_alias; // KASAN - aliased_global ignored
 
-// ASAN: @aliased_global{{.*}}{ i32, [60 x i8] }{{.*}}align 32
-// KASAN: @aliased_global{{.*}}i32
+// ASAN: @aliased_global{{.*}} global { i32, [60 x i8] }{{.*}}, align 32
+// KASAN: @aliased_global{{.*}} global i32
 
 // CHECK-LABEL: define internal void @asan.module_ctor
 // ASAN: call void @__asan_register_globals({{.*}}, i{{32|64}} 2)
