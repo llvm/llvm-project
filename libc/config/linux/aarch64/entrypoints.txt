@@ -1,0 +1,26 @@
+set(TARGET_LIBC_ENTRYPOINTS
+    # errno.h entrypoints
+    libc.src.errno.__errno_location
+
+    # string.h entrypoints
+    libc.src.string.strlen
+)
+
+set(TARGET_LIBM_ENTRYPOINTS
+    # math.h entrypoints
+    libc.src.math.ceil
+    libc.src.math.ceilf
+    libc.src.math.cosf
+    libc.src.math.expf
+    libc.src.math.exp2f
+    libc.src.math.fabs
+    libc.src.math.fabsf
+    libc.src.math.floor
+    libc.src.math.floorf
+    libc.src.math.round
+    libc.src.math.roundf
+    libc.src.math.sincosf
+    libc.src.math.sinf
+    libc.src.math.trunc
+    libc.src.math.truncf
+)
