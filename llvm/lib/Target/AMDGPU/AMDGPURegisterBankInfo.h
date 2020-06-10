@@ -185,6 +185,9 @@ private:
   bool foldExtractEltToCmpSelect(MachineInstr &MI,
                                  MachineRegisterInfo &MRI,
                                  const OperandsMapper &OpdMapper) const;
+  bool foldInsertEltToCmpSelect(MachineInstr &MI,
+                                MachineRegisterInfo &MRI,
+                                const OperandsMapper &OpdMapper) const;
 };
 } // End llvm namespace.
 #endif
