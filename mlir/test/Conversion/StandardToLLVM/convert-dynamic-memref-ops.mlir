@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
 // RUN: mlir-opt -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
 
 // CHECK-LABEL: func @check_strided_memref_arguments(
