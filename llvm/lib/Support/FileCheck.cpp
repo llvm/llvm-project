@@ -448,8 +448,9 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
 }
 
 Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
-    StringRef &Expr, AllowedOperand AO, Optional<size_t> LineNumber,
-    FileCheckPatternContext *Context, const SourceMgr &SM) {
+    StringRef &Expr, AllowedOperand AO, bool MaybeInvalidConstraint,
+    Optional<size_t> LineNumber, FileCheckPatternContext *Context,
+    const SourceMgr &SM) {
   if (Expr.startswith("(")) {
     if (AO != AllowedOperand::Any)
       return ErrorDiagnostic::get(
@@ -497,8 +498,11 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     return std::make_unique<ExpressionLiteral>(SaveExpr.drop_back(Expr.size()),
                                                SignedLiteralValue);
 
-  return ErrorDiagnostic::get(SM, Expr,
-                              "invalid operand format '" + Expr + "'");
+  return ErrorDiagnostic::get(
+      SM, Expr,
+      Twine("invalid ") +
+          (MaybeInvalidConstraint ? "matching constraint or " : "") +
+          "operand format");
 }
 
 Expected<std::unique_ptr<ExpressionAST>>
@@ -514,8 +518,9 @@ Pattern::parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
     return ErrorDiagnostic::get(SM, Expr, "missing operand in expression");
 
   // Note: parseNumericOperand handles nested opening parentheses.
-  Expected<std::unique_ptr<ExpressionAST>> SubExprResult =
-      parseNumericOperand(Expr, AllowedOperand::Any, LineNumber, Context, SM);
+  Expected<std::unique_ptr<ExpressionAST>> SubExprResult = parseNumericOperand(
+      Expr, AllowedOperand::Any, /*MaybeInvalidConstraint=*/false, LineNumber,
+      Context, SM);
   Expr = Expr.ltrim(SpaceChars);
   while (SubExprResult && !Expr.empty() && !Expr.startswith(")")) {
     StringRef OrigExpr = Expr;
@@ -568,7 +573,8 @@ Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
   AllowedOperand AO =
       IsLegacyLineExpr ? AllowedOperand::LegacyLiteral : AllowedOperand::Any;
   Expected<std::unique_ptr<ExpressionAST>> RightOpResult =
-      parseNumericOperand(RemainingExpr, AO, LineNumber, Context, SM);
+      parseNumericOperand(RemainingExpr, AO, /*MaybeInvalidConstraint=*/false,
+                          LineNumber, Context, SM);
   if (!RightOpResult)
     return RightOpResult;
 
@@ -606,8 +612,9 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
 
     // Parse the argument, which is an arbitary expression.
     StringRef OuterBinOpExpr = Expr;
-    Expected<std::unique_ptr<ExpressionAST>> Arg =
-        parseNumericOperand(Expr, AllowedOperand::Any, LineNumber, Context, SM);
+    Expected<std::unique_ptr<ExpressionAST>> Arg = parseNumericOperand(
+        Expr, AllowedOperand::Any, /*MaybeInvalidConstraint=*/false, LineNumber,
+        Context, SM);
     while (Arg && !Expr.empty()) {
       Expr = Expr.ltrim(SpaceChars);
       // Have we reached an argument terminator?
@@ -702,17 +709,27 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     Expr = Expr.substr(DefEnd + 1);
   }
 
+  // Parse matching constraint.
+  Expr = Expr.ltrim(SpaceChars);
+  bool HasParsedValidConstraint = false;
+  if (Expr.consume_front("=="))
+    HasParsedValidConstraint = true;
+
   // Parse the expression itself.
   Expr = Expr.ltrim(SpaceChars);
-  if (!Expr.empty()) {
+  if (Expr.empty()) {
+    if (HasParsedValidConstraint)
+      return ErrorDiagnostic::get(
+          SM, Expr, "empty numeric expression should not have a constraint");
+  } else {
     Expr = Expr.rtrim(SpaceChars);
     StringRef OuterBinOpExpr = Expr;
     // The first operand in a legacy @LINE expression is always the @LINE
     // pseudo variable.
     AllowedOperand AO =
         IsLegacyLineExpr ? AllowedOperand::LineVar : AllowedOperand::Any;
-    Expected<std::unique_ptr<ExpressionAST>> ParseResult =
-        parseNumericOperand(Expr, AO, LineNumber, Context, SM);
+    Expected<std::unique_ptr<ExpressionAST>> ParseResult = parseNumericOperand(
+        Expr, AO, !HasParsedValidConstraint, LineNumber, Context, SM);
     while (ParseResult && !Expr.empty()) {
       ParseResult = parseBinop(OuterBinOpExpr, Expr, std::move(*ParseResult),
                                IsLegacyLineExpr, LineNumber, Context, SM);
