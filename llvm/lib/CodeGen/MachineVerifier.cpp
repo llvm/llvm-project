@@ -863,6 +863,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   unsigned NumOps = MI->getNumOperands();
 
+  // Branches must reference a basic block if they are not indirect
+  if (MI->isBranch() && !MI->isIndirectBranch()) {
+    bool HasMBB = false;
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isMBB()) {
+        HasMBB = true;
+        break;
+      }
+    }
+
+    if (!HasMBB)
+      report("Branch instruction is missing a basic block operand or "
+             "isIndirectBranch property",
+             MI);
+  }
+
   // Check types.
   SmallVector<LLT, 4> Types;
   for (unsigned I = 0, E = std::min(MCID.getNumOperands(), NumOps);

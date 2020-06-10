@@ -1,0 +1,26 @@
+# RUN: llc -march=riscv32 -o - -run-pass=none -verify-machineinstrs %s | FileCheck %s
+# REQUIRES: global-isel, riscv-registered-target
+
+# This test checks that the G_BRJT is an indirect branch by leveraging RISCV's
+# version of analyzeBranch. If G_BRJT would not be an indirect branch, this
+# test would crash.
+
+---
+name:            test_jump_table
+legalized:       true
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.0' ]
+body:             |
+  bb.0:
+    liveins: $x0
+    %0:_(s32) = COPY $x0
+    %1:_(p0) = COPY $x0
+
+    ; CHECK-NOT: Branch instruction is missing a basic block operand or isIndirectBranch property
+    G_BRJT %1, %jump-table.0, %0
+
+...
