@@ -1,6 +1,5 @@
 // RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize <%s | FileCheck %s --dump-input=fail
 
-// -----
 // CHECK-LABEL: func @f
 func @f(%arg0: tensor<2x3x4xf32>) -> !shape.shape {
   // CHECK: shape.const_shape [2, 3, 4]
@@ -9,6 +8,7 @@ func @f(%arg0: tensor<2x3x4xf32>) -> !shape.shape {
 }
 
 // -----
+
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
@@ -22,6 +22,7 @@ func @f() -> (!shape.shape, !shape.shape) {
 }
 
 // -----
+
 // Negative split point.
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
@@ -34,6 +35,7 @@ func @f() -> (!shape.shape, !shape.shape) {
 }
 
 // -----
+
 // Out of range split point. No folding.
 // CHECK-LABEL: func @f
 func @f() -> (!shape.shape, !shape.shape) {
@@ -45,6 +47,7 @@ func @f() -> (!shape.shape, !shape.shape) {
 }
 
 // -----
+
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> !shape.shape {
@@ -56,6 +59,7 @@ func @f() -> !shape.shape {
 }
 
 // -----
+
 // Incompatible shapes. No folding.
 // CHECK-LABEL: func @f
 func @f() -> !shape.shape {
@@ -67,6 +71,7 @@ func @f() -> !shape.shape {
 }
 
 // -----
+
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> !shape.shape {
@@ -78,6 +83,7 @@ func @f() -> !shape.shape {
 }
 
 // -----
+
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> tensor<2xindex> {
@@ -88,6 +94,7 @@ func @f() -> tensor<2xindex> {
 }
 
 // -----
+
 // Basic case.
 // CHECK-LABEL: func @f()
 func @f() -> !shape.shape {
@@ -99,6 +106,8 @@ func @f() -> !shape.shape {
   return %ret : !shape.shape
 }
 
+// -----
+
 // CHECK-LABEL: func @no_fold
 func @no_fold(%arg0: index) -> !shape.shape {
   // CHECK-NOT: shape.const_shape
@@ -108,6 +117,7 @@ func @no_fold(%arg0: index) -> !shape.shape {
 }
 
 // -----
+
 // Cast constant size to index and fold it away.
 // CHECK-LABEL: func @const_size_to_index
 func @const_size_to_index() -> index {
@@ -119,6 +129,7 @@ func @const_size_to_index() -> index {
 }
 
 // -----
+
 // Cast constant index to size and fold it away.
 // CHECK-LABEL: func @const_index_to_size
 func @const_index_to_size() -> !shape.size {
@@ -130,6 +141,7 @@ func @const_index_to_size() -> !shape.size {
 }
 
 // -----
+
 // Cast constant index to size, then back, and fold it away.
 // CHECK-LABEL: func @const_index_to_size_to_index
 func @const_index_to_size_to_index() -> index {
@@ -143,6 +155,7 @@ func @const_index_to_size_to_index() -> index {
 }
 
 // -----
+
 // No folding.
 // CHECK-LABEL: func @nonfoldable_size_to_index
 func @nonfoldable_size_to_index(%cs : !shape.size) -> index {
@@ -152,6 +165,7 @@ func @nonfoldable_size_to_index(%cs : !shape.size) -> index {
 }
 
 // -----
+
 // No folding.
 // CHECK-LABEL: func @nonfoldable_index_to_size
 func @nonfoldable_index_to_size(%ci : index) -> !shape.size {
@@ -161,6 +175,7 @@ func @nonfoldable_index_to_size(%ci : index) -> !shape.size {
 }
 
 // -----
+
 // Fold number of elements computation.
 // CHECK-LABEL: func @num_elements
 func @num_elements() -> !shape.size {
@@ -174,6 +189,7 @@ func @num_elements() -> !shape.size {
 }
 
 // -----
+
 // No folding.
 // CHECK-LABEL: func @nonfoldable_num_elements
 func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
@@ -184,16 +200,17 @@ func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
 
 // -----
 
-// Canonicalization of shape.get_extent
-
 // Basic folding.
 // CHECK-LABEL: func @basic
 func @basic() -> !shape.size {
   // CHECK: shape.const_size 2
   %0 = shape.const_shape [0, 1, 2]
-  %1 = shape.get_extent %0, 2
+  %c2 = shape.const_size 2
+  %1 = shape.get_extent %0, %c2
   return %1 : !shape.size
 }
+
+// -----
 
 // Should not fold.
 // CHECK-LABEL: func @out_of_bounds
@@ -201,15 +218,19 @@ func @out_of_bounds() -> !shape.size {
   // CHECK: shape.const_shape
   // CHECK: shape.get_extent
   %0 = shape.const_shape [0, 1, 2]
-  %1 = shape.get_extent %0, 3
+  %c3 = shape.const_size 3
+  %1 = shape.get_extent %0, %c3
   return %1 : !shape.size
 }
+
+// -----
 
 // Should not fold.
 // CHECK-LABEL: func @not_const
 func @not_const(%arg0: !shape.shape) -> !shape.size {
   // CHECK: shape.get_extent
-  %0 = shape.get_extent %arg0, 3
+  %c3 = shape.const_size 3
+  %0 = shape.get_extent %arg0, %c3
   return %0 : !shape.size
 }
 
@@ -270,6 +291,7 @@ func @f(%arg0: !shape.shape, %arg1: !shape.shape) {
 }
 
 // -----
+
 // assuming_all with known passing witnesses can be folded
 // CHECK-LABEL: func @f
 func @f() {
@@ -285,6 +307,7 @@ func @f() {
 }
 
 // -----
+
 // assuming_all should not be removed if not all witnesses are statically passing.
 //
 // Additionally check that the attribute is moved to the end as this op is
@@ -303,6 +326,7 @@ func @f() {
 }
 
 // -----
+
 // any can be replaced with a constant input if it has one.
 // CHECK-LABEL: func @f
 func @f(%arg0 : !shape.shape) -> !shape.shape {
@@ -315,6 +339,7 @@ func @f(%arg0 : !shape.shape) -> !shape.shape {
 
 
 // -----
+
 // Folding of any with partially constant operands is not yet implemented.
 // CHECK-LABEL: func @f
 func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> !shape.shape {
@@ -325,6 +350,7 @@ func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> !shape.shape {
 }
 
 // -----
+
 // assuming with a known passing witness can be removed
 // CHECK-LABEL: func @f
 func @f() {
@@ -341,6 +367,7 @@ func @f() {
 }
 
 // -----
+
 // assuming without a known passing passing witness cannot be removed
 // CHECK-LABEL: func @f
 func @f() {
