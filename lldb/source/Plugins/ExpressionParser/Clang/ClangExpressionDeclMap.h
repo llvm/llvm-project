@@ -588,15 +588,19 @@ private:
   ///     The type that needs to be created.
   void AddOneType(NameSearchContext &context, const TypeFromUser &type);
 
-  /// Generate a Decl for "*this" and add a member function declaration to it
-  /// for the expression, then report it.
+  /// Adds the class in which the expression is evaluated to the lookup and
+  /// prepares the class to be used as a context for expression evaluation (for
+  /// example, it creates a fake member function that will contain the
+  /// expression LLDB is trying to evaluate).
   ///
   /// \param[in] context
-  ///     The NameSearchContext to use when constructing the Decl.
+  ///     The NameSearchContext to which the class should be added as a lookup
+  ///     result.
   ///
   /// \param[in] type
-  ///     The type for *this.
-  void AddThisType(NameSearchContext &context, const TypeFromUser &type);
+  ///     The type of the class that serves as the evaluation context.
+  void AddContextClassType(NameSearchContext &context,
+                           const TypeFromUser &type);
 
   /// Move a type out of the current ASTContext into another, but make sure to
   /// export all components of the type also.
