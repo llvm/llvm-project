@@ -95,7 +95,49 @@ static DecodeStatus DecodePTRREGSRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeFIORdA(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder);
+
 #include "AVRGenDisassemblerTables.inc"
+
+static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned addr = 0;
+  addr |= fieldFromInstruction(Insn, 0, 4);
+  addr |= fieldFromInstruction(Insn, 9, 2) << 4;
+  unsigned reg = fieldFromInstruction(Insn, 4, 5);
+  Inst.addOperand(MCOperand::createImm(addr));
+  if (DecodeGPR8RegisterClass(Inst, reg, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFIORdA(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned addr = 0;
+  addr |= fieldFromInstruction(Insn, 0, 4);
+  addr |= fieldFromInstruction(Insn, 9, 2) << 4;
+  unsigned reg = fieldFromInstruction(Insn, 4, 5);
+  if (DecodeGPR8RegisterClass(Inst, reg, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(addr));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned addr = fieldFromInstruction(Insn, 3, 5);
+  unsigned b = fieldFromInstruction(Insn, 0, 3);
+  Inst.addOperand(MCOperand::createImm(addr));
+  Inst.addOperand(MCOperand::createImm(b));
+  return MCDisassembler::Success;
+}
 
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn) {
