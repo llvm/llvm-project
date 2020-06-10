@@ -446,6 +446,7 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   // The x remains in the buffer, since it was written after the flush of
   // TiedTo.
   EXPECT_EQ("rwx", Buffer);
+  TiedTo.tie(nullptr);
 
   // Calling tie with nullptr unties stream.
   TiedStream.SetUnbuffered();
