@@ -423,12 +423,13 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
       Prologue.TotalLength + 1 + Prologue.sizeofTotalLength();
   EXPECT_THAT_ERROR(
       std::move(Recoverable),
-      FailedWithMessage(("parsing line table prologue at 0x00000000 should "
-                         "have ended at 0x000000" +
-                         Twine::utohexstr(ExpectedEnd) +
-                         " but it ended at 0x000000" +
-                         Twine::utohexstr(ExpectedEnd - 1))
-                            .str()));
+      FailedWithMessage(
+          ("unknown data in line table prologue at offset 0x00000000: "
+           "parsing ended (at offset 0x000000" +
+           Twine::utohexstr(ExpectedEnd - 1) +
+           ") before reaching the prologue at offset 0x000000" +
+           Twine::utohexstr(ExpectedEnd))
+              .str()));
 }
 
 TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
@@ -450,37 +451,28 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   DWARFDebugLine::LineTable Result(**ExpectedLineTable);
 
-  if (Version != 5) {
-    // Parsing will stop before reading a complete file entry.
-    ASSERT_EQ(Result.Prologue.IncludeDirectories.size(), 1u);
-    EXPECT_EQ(toStringRef(Result.Prologue.IncludeDirectories[0]), "a dir");
-    EXPECT_EQ(Result.Prologue.FileNames.size(), 0u);
-  } else {
-    // Parsing will continue past the presumed end of prologue.
-    ASSERT_EQ(Result.Prologue.FileNames.size(), 1u);
-    ASSERT_EQ(Result.Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
-    ASSERT_EQ(Result.Prologue.FileNames[0].DirIdx, 0u);
-    EXPECT_EQ(toStringRef(Result.Prologue.FileNames[0].Name), "a file");
-  }
+  // Parsing will stop before reading a complete file entry.
+  ASSERT_EQ(Result.Prologue.IncludeDirectories.size(), 1u);
+  EXPECT_EQ(toStringRef(Result.Prologue.IncludeDirectories[0]), "a dir");
+  EXPECT_EQ(Result.Prologue.FileNames.size(), 0u);
 
-  uint64_t ExpectedEnd =
-      Prologue.TotalLength - 2 + Prologue.sizeofTotalLength();
+  // The exact place where the parsing will stop depends on the structure of the
+  // prologue and the last complete field we are able to read. Before V5 we stop
+  // before reading the file length. In V5, we stop before the filename.
+  uint64_t ExpectedEnd = Prologue.TotalLength + Prologue.sizeofTotalLength() -
+                         (Version < 5 ? 2 : 8);
   std::vector<std::string> Errs;
-  if (Version != 5) {
-    Errs.emplace_back(
-        (Twine("parsing line table prologue at 0x00000000 found an invalid "
-               "directory or file table description at 0x000000") +
-         Twine::utohexstr(ExpectedEnd + 1))
-            .str());
+  Errs.emplace_back(
+      (Twine("parsing line table prologue at 0x00000000 found an invalid "
+             "directory or file table description at 0x000000") +
+       Twine::utohexstr(ExpectedEnd))
+          .str());
+  if (Version < 5) {
     Errs.emplace_back("file names table was not null terminated before the end "
                       "of the prologue");
   } else {
     Errs.emplace_back(
-        (Twine("parsing line table prologue at 0x00000000 should have ended at "
-               "0x000000") +
-         Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
-         Twine::utohexstr(ExpectedEnd + 2))
-            .str());
+        "failed to parse file entry because extracting the form value failed.");
   }
   EXPECT_THAT_ERROR(std::move(Recoverable),
                     FailedWithMessageArray(testing::ElementsAreArray(Errs)));
@@ -1514,6 +1506,7 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   P.FileNames.back().Name =
       DWARFFormValue::createFromPValue(DW_FORM_string, "b file");
   P.FileNames.back().DirIdx = 1;
+  P.TotalLength += 14;
   P.PrologueLength += 14;
   LT.setPrologue(P);
   generate();
