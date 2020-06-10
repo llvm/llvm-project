@@ -27,7 +27,7 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-2-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
 // TILE-2-DAG: [[C0:%.*]] = constant 0 : index
 // TILE-2-DAG: [[C2:%.*]] = constant 2 : index
-// TILE-2: [[LHS_ROWS:%.*]] = dim [[LHS]], 0
+// TILE-2: [[LHS_ROWS:%.*]] = dim [[LHS]], %c0
 // TILE-2: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_ROWS]]) step ([[C2]]) {
 // TILE-2-NO: scf.parallel
 // TILE-2:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
@@ -39,7 +39,7 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-02-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
 // TILE-02-DAG: [[C0:%.*]] = constant 0 : index
 // TILE-02-DAG: [[C2:%.*]] = constant 2 : index
-// TILE-02: [[LHS_COLS:%.*]] = dim [[LHS]], 1
+// TILE-02: [[LHS_COLS:%.*]] = dim [[LHS]], %c1
 // TILE-02: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_COLS]]) step ([[C2]]) {
 // TILE-02-NO: scf.parallel
 // TILE-02:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
@@ -57,8 +57,8 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-234-DAG: [[C0:%.*]] = constant 0 : index
 // TILE-234-DAG: [[C2:%.*]] = constant 2 : index
 // TILE-234-DAG: [[C3:%.*]] = constant 3 : index
-// TILE-234: [[LHS_ROWS:%.*]] = dim [[LHS]], 0
-// TILE-234: [[LHS_COLS:%.*]] = dim [[LHS]], 1
+// TILE-234: [[LHS_ROWS:%.*]] = dim [[LHS]], %c0
+// TILE-234: [[LHS_COLS:%.*]] = dim [[LHS]], %c1
 // TILE-234: scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]]) to ([[LHS_ROWS]], [[LHS_COLS]]) step ([[C2]], [[C3]]) {
 // TILE-234-NO: scf.parallel
 // TILE-234:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]

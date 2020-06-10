@@ -45,8 +45,8 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
     }
   }
   // CHECK: %[[tensor:[0-9]+]] = alloc
-  // CHECK-NOT: {{.*}} dim %[[tensor]], 0
-  // CHECK-NOT: {{.*}} dim %[[tensor]], 3
+  // CHECK-NOT: {{.*}} dim %[[tensor]], %c0
+  // CHECK-NOT: {{.*}} dim %[[tensor]], %c3
   return
 }
 
@@ -233,7 +233,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
 
   // CHECK-DAG: %[[splat:.*]] = constant dense<7.000000e+00> : vector<15xf32>
   // CHECK-DAG: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
-  // CHECK-DAG: %[[dim:.*]] = dim %[[A]], 0 : memref<?x?xf32>
+  // CHECK-DAG: %[[dim:.*]] = dim %[[A]], %c0 : memref<?x?xf32>
   // CHECK: affine.for %[[I:.*]] = 0 to 3 {
   // CHECK:   %[[add:.*]] = affine.apply #[[MAP0]](%[[I]])[%[[base]]]
   // CHECK:   %[[cond1:.*]] = cmpi "slt", %[[add]], %[[dim]] : index
@@ -249,7 +249,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
   // FULL-UNROLL: %[[pad:.*]] = constant 7.000000e+00 : f32
   // FULL-UNROLL: %[[VEC0:.*]] = constant dense<7.000000e+00> : vector<3x15xf32>
   // FULL-UNROLL: %[[SPLAT:.*]] = constant dense<7.000000e+00> : vector<15xf32>
-  // FULL-UNROLL: %[[DIM:.*]] = dim %[[A]], 0 : memref<?x?xf32>
+  // FULL-UNROLL: %[[DIM:.*]] = dim %[[A]], %c0 : memref<?x?xf32>
   // FULL-UNROLL: cmpi "slt", %[[base]], %[[DIM]] : index
   // FULL-UNROLL: %[[VEC1:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
   // FULL-UNROLL:   vector.transfer_read %[[A]][%[[base]], %[[base]]], %[[pad]] : memref<?x?xf32>, vector<15xf32>
@@ -307,7 +307,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
   // CHECK: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
   // CHECK: %[[vmemref:.*]] = vector.type_cast %[[alloc]] : memref<3xvector<15xf32>> to memref<vector<3x15xf32>>
   // CHECK: store %[[vec]], %[[vmemref]][] : memref<vector<3x15xf32>>
-  // CHECK: %[[dim:.*]] = dim %[[A]], 0 : memref<?x?xf32>
+  // CHECK: %[[dim:.*]] = dim %[[A]], %c0 : memref<?x?xf32>
   // CHECK: affine.for %[[I:.*]] = 0 to 3 {
   // CHECK:   %[[add:.*]] = affine.apply #[[MAP0]](%[[I]])[%[[base]]]
   // CHECK:   %[[cmp:.*]] = cmpi "slt", %[[add]], %[[dim]] : index
@@ -316,7 +316,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
   // CHECK:     vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // CHECK:   }
 
-  // FULL-UNROLL: %[[DIM:.*]] = dim %[[A]], 0 : memref<?x?xf32>
+  // FULL-UNROLL: %[[DIM:.*]] = dim %[[A]], %c0 : memref<?x?xf32>
   // FULL-UNROLL: %[[CMP0:.*]] = cmpi "slt", %[[base]], %[[DIM]] : index
   // FULL-UNROLL: scf.if %[[CMP0]] {
   // FULL-UNROLL:   %[[V0:.*]] = vector.extract %[[vec]][0] : vector<3x15xf32>
