@@ -13,4 +13,10 @@ parameters = [
             help="Whether to enable exceptions when compiling the test suite.",
             feature=lambda exceptions: None if exceptions else
               Feature(name='no-exceptions', compileFlag='-fno-exceptions')),
+
+  # Parameters to enable or disable parts of the test suite
+  Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
+            help="Whether to enable tests for the C++ <filesystem> library.",
+            feature=lambda filesystem: None if filesystem else
+              Feature(name='c++filesystem-disabled')),
 ]
