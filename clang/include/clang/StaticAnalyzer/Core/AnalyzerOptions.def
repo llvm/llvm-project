@@ -378,23 +378,8 @@ ANALYZER_OPTION(StringRef, CTUDir, "ctu-dir",
                 "The directory containing the CTU related files.", "")
 
 ANALYZER_OPTION(StringRef, CTUIndexName, "ctu-index-name",
-                "The name of the file containing the CTU index of definitions. "
-                "The index file maps USR-names to identifiers. An identifier "
-                "can end with an '.ast' suffix, indicating the indentifier is "
-                "a path to a pch-dump. Otherwise the identifier is regarded as "
-                "path to a source file which is parsed on-demand. Relative "
-                "paths are prefixed with ctu-dir, absolute paths are used "
-                "unmodified during lookup.",
+                "the name of the file containing the CTU index of definitions.",
                 "externalDefMap.txt")
-
-ANALYZER_OPTION(
-    StringRef, CTUInvocationList, "ctu-invocation-list",
-    "The path to the YAML format file containing a mapping from source file "
-    "paths to command-line invocations represented as a list of arguments. "
-    "This invocation is used produce the source-file's AST in case on-demand "
-    "loading is performed. Example file-content: "
-    "{/main.cpp: [clang++, /main.cpp], other.cpp: [clang++, /other.cpp]}",
-    "invocations.yaml")
 
 ANALYZER_OPTION(
     StringRef, ModelPath, "model-path",

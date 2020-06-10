@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CrossTU/CrossTranslationUnit.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -163,7 +162,7 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
   IndexFile.os().flush();
   EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
   llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
-      parseCrossTUIndex(IndexFileName);
+      parseCrossTUIndex(IndexFileName, "");
   EXPECT_TRUE((bool)IndexOrErr);
   llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
   for (const auto &E : Index) {
@@ -174,98 +173,24 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
     EXPECT_TRUE(Index.count(E.getKey()));
 }
 
-TEST(CrossTranslationUnit, EmptyInvocationListIsNotValid) {
-  auto Input = "";
+TEST(CrossTranslationUnit, CTUDirIsHandledCorrectly) {
+  llvm::StringMap<std::string> Index;
+  Index["a"] = "/b/c/d";
+  std::string IndexText = createCrossTUIndexString(Index);
 
-  llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
-  EXPECT_FALSE(static_cast<bool>(Result));
-  bool IsWrongFromatError = false;
-  llvm::handleAllErrors(Result.takeError(), [&](IndexError &Err) {
-    IsWrongFromatError =
-        Err.getCode() == index_error_code::invocation_list_wrong_format;
-  });
-  EXPECT_TRUE(IsWrongFromatError);
-}
-
-TEST(CrossTranslationUnit, AmbiguousInvocationListIsDetected) {
-  // The same source file occurs twice (for two different architecture) in
-  // this test case. The disambiguation is the responsibility of the user.
-  auto Input = R"(
-  /tmp/main.cpp:
-    - clang++
-    - -c
-    - -m32
-    - -o
-    - main32.o
-    - /tmp/main.cpp
-  /tmp/main.cpp:
-    - clang++
-    - -c
-    - -m64
-    - -o
-    - main64.o
-    - /tmp/main.cpp
-  )";
-
-  llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
-  EXPECT_FALSE(static_cast<bool>(Result));
-  bool IsAmbiguousError = false;
-  llvm::handleAllErrors(Result.takeError(), [&](IndexError &Err) {
-    IsAmbiguousError =
-        Err.getCode() == index_error_code::invocation_list_ambiguous;
-  });
-  EXPECT_TRUE(IsAmbiguousError);
-}
-
-TEST(CrossTranslationUnit, SingleInvocationCanBeParsed) {
-  auto Input = R"(
-  /tmp/main.cpp:
-    - clang++
-    - /tmp/main.cpp
-  )";
-  llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
-  EXPECT_TRUE(static_cast<bool>(Result));
-
-  EXPECT_EQ(Result->size(), 1u);
-
-  auto It = Result->find("/tmp/main.cpp");
-  EXPECT_TRUE(It != Result->end());
-  EXPECT_EQ(It->getValue()[0], "clang++");
-  EXPECT_EQ(It->getValue()[1], "/tmp/main.cpp");
-}
-
-TEST(CrossTranslationUnit, MultipleInvocationsCanBeParsed) {
-  auto Input = R"(
-  /tmp/main.cpp:
-    - clang++
-    - /tmp/other.o
-    - /tmp/main.cpp
-  /tmp/other.cpp:
-    - g++
-    - -c
-    - -o
-    - /tmp/other.o
-    - /tmp/other.cpp
-  )";
-  llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
-  EXPECT_TRUE(static_cast<bool>(Result));
-
-  EXPECT_EQ(Result->size(), 2u);
-
-  auto It = Result->find("/tmp/main.cpp");
-  EXPECT_TRUE(It != Result->end());
-  EXPECT_EQ(It->getKey(), "/tmp/main.cpp");
-  EXPECT_EQ(It->getValue()[0], "clang++");
-  EXPECT_EQ(It->getValue()[1], "/tmp/other.o");
-  EXPECT_EQ(It->getValue()[2], "/tmp/main.cpp");
-
-  It = Result->find("/tmp/other.cpp");
-  EXPECT_TRUE(It != Result->end());
-  EXPECT_EQ(It->getValue()[0], "g++");
-  EXPECT_EQ(It->getValue()[1], "-c");
-  EXPECT_EQ(It->getValue()[2], "-o");
-  EXPECT_EQ(It->getValue()[3], "/tmp/other.o");
-  EXPECT_EQ(It->getValue()[4], "/tmp/other.cpp");
+  int IndexFD;
+  llvm::SmallString<256> IndexFileName;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("index", "txt", IndexFD,
+                                                  IndexFileName));
+  llvm::ToolOutputFile IndexFile(IndexFileName, IndexFD);
+  IndexFile.os() << IndexText;
+  IndexFile.os().flush();
+  EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
+  llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
+      parseCrossTUIndex(IndexFileName, "/ctudir");
+  EXPECT_TRUE((bool)IndexOrErr);
+  llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
+  EXPECT_EQ(ParsedIndex["a"], "/ctudir/b/c/d");
 }
 
 } // end namespace cross_tu
