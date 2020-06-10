@@ -26,7 +26,7 @@
 ; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
 ; RUN: rm -f %t2.o.thinlto.bc %t4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.o %t3.o --start-lib %t2.o --end-lib -o %t4
-; RUN: ls %t2.o.thinlto.bc
+; RUN: llvm-dis < %t2.o.thinlto.bc | grep -q '\^0 = module:'
 ; RUN: not test -e %t4
 
 ; Test that LLD generates an empty index even for lazy object file that is not added to link.
