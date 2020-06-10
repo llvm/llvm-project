@@ -8589,11 +8589,14 @@ def err_conv_function_with_complex_decl : Error<
 def err_conv_function_redeclared : Error<
   "conversion function cannot be redeclared">;
 def warn_conv_to_self_not_used : Warning<
-  "conversion function converting %0 to itself will never be used">;
+  "conversion function converting %0 to itself will never be used">,
+  InGroup<ClassConversion>;
 def warn_conv_to_base_not_used : Warning<
-  "conversion function converting %0 to its base class %1 will never be used">;
+  "conversion function converting %0 to its base class %1 will never be used">,
+  InGroup<ClassConversion>;
 def warn_conv_to_void_not_used : Warning<
-  "conversion function converting %0 to %1 will never be used">;
+  "conversion function converting %0 to %1 will never be used">,
+  InGroup<ClassConversion>;
 
 def warn_not_compound_assign : Warning<
   "use of unary operator that may be intended as compound assignment (%0=)">;

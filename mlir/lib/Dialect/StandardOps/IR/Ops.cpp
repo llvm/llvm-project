@@ -1264,81 +1264,85 @@ LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,
 // DimOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, DimOp op) {
-  p << "dim " << op.getOperand() << ", " << op.getIndex();
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"index"});
-  p << " : " << op.getOperand().getType();
+void DimOp::build(OpBuilder &builder, OperationState &result,
+                  Value memrefOrTensor, int64_t index) {
+  auto loc = result.location;
+  Value indexValue = builder.create<ConstantIndexOp>(loc, index);
+  auto indexTy = builder.getIndexType();
+  build(builder, result, indexTy, memrefOrTensor, indexValue);
 }
 
-static ParseResult parseDimOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType operandInfo;
-  IntegerAttr indexAttr;
-  Type type;
-  Type indexType = parser.getBuilder().getIndexType();
-
-  return failure(
-      parser.parseOperand(operandInfo) || parser.parseComma() ||
-      parser.parseAttribute(indexAttr, indexType, "index", result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(operandInfo, type, result.operands) ||
-      parser.addTypeToList(indexType, result.types));
+Optional<int64_t> DimOp::getConstantIndex() {
+  auto constantOp = index().getDefiningOp<ConstantOp>();
+  if (constantOp) {
+    return constantOp.getValue().cast<IntegerAttr>().getInt();
+  }
+  return {};
 }
 
 static LogicalResult verify(DimOp op) {
-  // Check that we have an integer index operand.
-  auto indexAttr = op.getAttrOfType<IntegerAttr>("index");
-  if (!indexAttr)
-    return op.emitOpError("requires an integer attribute named 'index'");
-  int64_t index = indexAttr.getInt();
 
-  auto type = op.getOperand().getType();
+  // Assume unknown index to be in range.
+  Optional<int64_t> index = op.getConstantIndex();
+  if (!index.hasValue())
+    return success();
+
+  // Check that constant index is not knowingly out of range.
+  auto type = op.memrefOrTensor().getType();
   if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
-    if (index >= tensorType.getRank())
+    if (index.getValue() >= tensorType.getRank())
       return op.emitOpError("index is out of range");
   } else if (auto memrefType = type.dyn_cast<MemRefType>()) {
-    if (index >= memrefType.getRank())
+    if (index.getValue() >= memrefType.getRank())
       return op.emitOpError("index is out of range");
-
   } else if (type.isa<UnrankedTensorType>()) {
-    // ok, assumed to be in-range.
+    // Assume index to be in range.
   } else {
-    return op.emitOpError("requires an operand with tensor or memref type");
+    llvm_unreachable("expected operand with tensor or memref type");
   }
 
   return success();
 }
 
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
-  // Constant fold dim when the size along the index referred to is a constant.
-  auto opType = memrefOrTensor().getType();
-  if (auto shapedType = opType.dyn_cast<ShapedType>())
-    if (!shapedType.isDynamicDim(getIndex()))
-      return IntegerAttr::get(IndexType::get(getContext()),
-                              shapedType.getShape()[getIndex()]);
+  auto index = operands[1].dyn_cast<IntegerAttr>();
 
-  // Fold dim to the size argument for an AllocOp/ViewOp/SubViewOp.
-  auto memrefType = opType.dyn_cast<MemRefType>();
+  // All forms of folding require a known index.
+  if (!index)
+    return {};
+
+  // Fold if the shape extent along the given index is known.
+  auto argTy = memrefOrTensor().getType();
+  if (auto shapedTy = argTy.dyn_cast<ShapedType>()) {
+    if (!shapedTy.isDynamicDim(index.getInt())) {
+      Builder builder(getContext());
+      return builder.getIndexAttr(shapedTy.getShape()[index.getInt()]);
+    }
+  }
+
+  // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
+  auto memrefType = argTy.dyn_cast<MemRefType>();
   if (!memrefType)
     return {};
 
-  // The size at getIndex() is now known to be a dynamic size of a memref.
+  // The size at the given index is now known to be a dynamic size of a memref.
   auto memref = memrefOrTensor().getDefiningOp();
+  unsigned unsignedIndex = index.getValue().getZExtValue();
   if (auto alloc = dyn_cast_or_null<AllocOp>(memref))
     return *(alloc.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(getIndex()));
+             memrefType.getDynamicDimIndex(unsignedIndex));
 
   if (auto view = dyn_cast_or_null<ViewOp>(memref))
     return *(view.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(getIndex()));
+             memrefType.getDynamicDimIndex(unsignedIndex));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(memref)) {
-    assert(subview.isDynamicSize(getIndex()) &&
+    assert(subview.isDynamicSize(unsignedIndex) &&
            "Expected dynamic subview size");
-    return subview.getDynamicSize(getIndex());
+    return subview.getDynamicSize(unsignedIndex);
   }
 
-  /// dim(memrefcast) -> dim
+  // dim(memrefcast) -> dim
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
 

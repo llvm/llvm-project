@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s --dump-input-on-failure
 // RUN: mlir-opt -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
 
 // CHECK-LABEL: func @check_strided_memref_arguments(
@@ -355,15 +355,20 @@ func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
 
 // CHECK-LABEL: func @mixed_memref_dim
 func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
-//       CHECK:  llvm.mlir.constant(42 : index) : !llvm.i64
-  %0 = dim %mixed, 0 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld:.*]][3, 1] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %1 = dim %mixed, 1 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld]][3, 2] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %2 = dim %mixed, 2 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.mlir.constant(13 : index) : !llvm.i64
-  %3 = dim %mixed, 3 : memref<42x?x?x13x?xf32>
-//  CHECK-NEXT:  llvm.extractvalue %[[ld]][3, 4] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
-  %4 = dim %mixed, 4 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.mlir.constant(42 : index) : !llvm.i64
+  %c0 = constant 0 : index
+  %0 = dim %mixed, %c0 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld:.*]][3, 1] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c1 = constant 1 : index
+  %1 = dim %mixed, %c1 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld]][3, 2] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c2 = constant 2 : index
+  %2 = dim %mixed, %c2 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.mlir.constant(13 : index) : !llvm.i64
+  %c3 = constant 3 : index
+  %3 = dim %mixed, %c3 : memref<42x?x?x13x?xf32>
+// CHECK: llvm.extractvalue %[[ld]][3, 4] : !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64] }">
+  %c4 = constant 4 : index
+  %4 = dim %mixed, %c4 : memref<42x?x?x13x?xf32>
   return
 }

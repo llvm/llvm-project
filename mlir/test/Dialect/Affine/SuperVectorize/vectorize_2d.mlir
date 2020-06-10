@@ -12,9 +12,12 @@
 // VECT-DAG: #[[map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
 
 func @vec2d(%A : memref<?x?x?xf32>) {
-   %M = dim %A, 0 : memref<?x?x?xf32>
-   %N = dim %A, 1 : memref<?x?x?xf32>
-   %P = dim %A, 2 : memref<?x?x?xf32>
+   %c0 = constant 0 : index
+   %c1 = constant 1 : index
+   %c2 = constant 2 : index
+   %M = dim %A, %c0 : memref<?x?x?xf32>
+   %N = dim %A, %c1 : memref<?x?x?xf32>
+   %P = dim %A, %c2 : memref<?x?x?xf32>
    // CHECK: for  {{.*}} = 0 to %{{.*}} {
    // CHECK:   for {{.*}} = 0 to %{{.*}} step 32
    // CHECK:     for {{.*}} = 0 to %{{.*}} step 256
@@ -100,13 +103,15 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
 // VECT-LABEL: func @vectorize_matmul
 func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c0 = constant 0 : index
-  %M = dim %arg0, 0 : memref<?x?xf32>
-  %K = dim %arg0, 1 : memref<?x?xf32>
-  %N = dim %arg2, 1 : memref<?x?xf32>
+  %c1 = constant 1 : index
+  %M = dim %arg0, %c0 : memref<?x?xf32>
+  %K = dim %arg0, %c1 : memref<?x?xf32>
+  %N = dim %arg2, %c1 : memref<?x?xf32>
   //      VECT: %[[C0:.*]] = constant 0 : index
-  // VECT-NEXT: %[[M:.*]] = dim %{{.*}}, 0 : memref<?x?xf32>
-  // VECT-NEXT: %[[K:.*]] = dim %{{.*}}, 1 : memref<?x?xf32>
-  // VECT-NEXT: %[[N:.*]] = dim %{{.*}}, 1 : memref<?x?xf32>
+  // VECT-NEXT: %[[C1:.*]] = constant 1 : index
+  // VECT-NEXT: %[[M:.*]] = dim %{{.*}}, %[[C0]] : memref<?x?xf32>
+  // VECT-NEXT: %[[K:.*]] = dim %{{.*}}, %[[C1]] : memref<?x?xf32>
+  // VECT-NEXT: %[[N:.*]] = dim %{{.*}}, %[[C1]] : memref<?x?xf32>
   //      VECT: {{.*}} #[[map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:   {{.*}} #[[map_id1]](%[[N]]) step 8 {
   //      VECT:     %[[VC0:.*]] = constant dense<0.000000e+00> : vector<4x8xf32>

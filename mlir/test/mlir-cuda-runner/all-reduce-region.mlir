@@ -5,7 +5,8 @@ func @main() {
   %arg = alloc() : memref<35xf32>
   %dst = memref_cast %arg : memref<35xf32> to memref<?xf32>
   %one = constant 1 : index
-  %sx = dim %dst, 0 : memref<?xf32>
+  %c0 = constant 0 : index
+  %sx = dim %dst, %c0 : memref<?xf32>
   %cast_dst = memref_cast %dst : memref<?xf32> to memref<*xf32>
   call @mcuMemHostRegisterFloat(%cast_dst) : (memref<*xf32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)

@@ -330,8 +330,10 @@ func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>) {
 
 // Double buffering for dynamic shaped buffer.
 // CHECK:       alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 2>
-// CHECK-NEXT:  dim %{{.*}}, 0 : memref<?x?xf32, 2>
-// CHECK-NEXT:  dim %{{.*}}, 1 : memref<?x?xf32, 2>
+// CHECK-NEXT:  %[[C0:.*]] = constant 0 : index
+// CHECK-NEXT:  dim %{{.*}}, %[[C0]] : memref<?x?xf32, 2>
+// CHECK-NEXT:  %[[C1:.*]] = constant 1 : index
+// CHECK-NEXT:  dim %{{.*}}, %[[C1]] : memref<?x?xf32, 2>
 // CHECK-NEXT:  alloc(%{{.*}}, %{{.*}}) : memref<2x?x?xf32, 2>
 // CHECK:       affine.dma_start %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}} mod 2, 0, 0], %{{.*}}[%{{.*}} mod 2, 0], %{{.*}}
   affine.for %kTT = 0 to 16 {

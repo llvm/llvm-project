@@ -250,15 +250,22 @@ class Parameter(object):
   Represents a parameter of a Lit test suite.
 
   Parameters are used to customize the behavior of test suites in a user
-  controllable way, more specifically by passing `--param <KEY>=<VALUE>`
-  when running Lit. Parameters have multiple possible values, and they can
-  have a default value when left unspecified.
+  controllable way. There are two ways of setting the value of a Parameter.
+  The first one is to pass `--param <KEY>=<VALUE>` when running Lit (or
+  equivalenlty to set `litConfig.params[KEY] = VALUE` somewhere in the
+  Lit configuration files. This method will set the parameter globally for
+  all test suites being run.
 
-  Parameters can have a Feature associated to them, in which case the Feature
-  is added to the TestingConfig if the parameter is enabled. It is an error if
-  the Parameter is enabled but the Feature associated to it is not supported,
-  for example trying to set the compilation standard to C++17 when `-std=c++17`
-  is not supported by the compiler.
+  The second method is to set `config.KEY = VALUE` somewhere in the Lit
+  configuration files, which sets the parameter only for the test suite(s)
+  that use that `config` object.
+
+  Parameters can have multiple possible values, and they can have a default
+  value when left unspecified. They can also have a Feature associated to them,
+  in which case the Feature is added to the TestingConfig if the parameter is
+  enabled. It is an error if the Parameter is enabled but the Feature associated
+  to it is not supported, for example trying to set the compilation standard to
+  C++17 when `-std=c++17` is not supported by the compiler.
 
   One important point is that Parameters customize the behavior of the test
   suite in a bounded way, i.e. there should be a finite set of possible choices
@@ -332,9 +339,10 @@ class Parameter(object):
     return self._name
 
   def getFeature(self, config, litParams):
-    param = litParams.get(self.name, None)
+    param = getattr(config, self.name, None)
+    param = litParams.get(self.name, param)
     if param is None and self._default is None:
-      raise ValueError("Parameter {} doesn't have a default value, but it was not specified in the Lit parameters".format(self.name))
+      raise ValueError("Parameter {} doesn't have a default value, but it was not specified in the Lit parameters or in the Lit config".format(self.name))
     getDefault = lambda: self._default(config) if callable(self._default) else self._default
     value = self._parse(param) if param is not None else getDefault()
     if value not in self._choices:
