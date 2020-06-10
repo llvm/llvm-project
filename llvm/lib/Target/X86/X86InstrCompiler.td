@@ -318,15 +318,14 @@ def MOV64ImmSExti8 : I<0, Pseudo, (outs GR64:$dst), (ins i64i8imm:$src), "",
 // Materialize i64 constant where top 32-bits are zero. This could theoretically
 // use MOV32ri with a SUBREG_TO_REG to represent the zero-extension, however
 // that would make it more difficult to rematerialize.
-let isReMaterializable = 1, isAsCheapAsAMove = 1,
-    isPseudo = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
-def MOV32ri64 : I<0, Pseudo, (outs GR64:$dst), (ins i64i32imm:$src), "", []>;
+let AddedComplexity = 1, isReMaterializable = 1, isAsCheapAsAMove = 1,
+    isPseudo = 1, SchedRW = [WriteMove] in
+def MOV32ri64 : I<0, Pseudo, (outs GR64:$dst), (ins i64i32imm:$src), "",
+                  [(set GR64:$dst, i64immZExt32:$src)]>;
 
-// This 64-bit pseudo-move can be used for both a 64-bit constant that is
-// actually the zero-extension of a 32-bit constant and for labels in the
-// x86-64 small code model.
-def mov64imm32 : ComplexPattern<i64, 1, "selectMOV64Imm32", [imm, X86Wrapper]>;
-
+// This 64-bit pseudo-move can also be used for labels in the x86-64 small code
+// model.
+def mov64imm32 : ComplexPattern<i64, 1, "selectMOV64Imm32", [X86Wrapper]>;
 def : Pat<(i64 mov64imm32:$src), (MOV32ri64 mov64imm32:$src)>;
 
 // Use sbb to materialize carry bit.

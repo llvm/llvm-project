@@ -2479,15 +2479,6 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
-  if (const ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N)) {
-    uint64_t ImmVal = CN->getZExtValue();
-    if (!isUInt<32>(ImmVal))
-      return false;
-
-    Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), MVT::i64);
-    return true;
-  }
-
   // In static codegen with small code model, we can get the address of a label
   // into a register with 'movl'
   if (N->getOpcode() != X86ISD::Wrapper)
