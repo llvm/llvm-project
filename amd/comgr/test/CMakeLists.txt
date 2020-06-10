@@ -8,7 +8,7 @@ macro(add_test_input_binary name input output)
     COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -mcpu=gfx803 -nogpulib
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -o "${output}"
     VERBATIM
-    DEPENDS clang "${input}")
+    DEPENDS clang lld "${input}")
   add_custom_target("${name}"
     DEPENDS "${output}"
     SOURCES "${input}")
@@ -21,7 +21,7 @@ macro(add_test_shared_binary name input1 input2 output)
     COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa
       "${input1}" "${input2}" -o "${output}"
     VERBATIM
-    DEPENDS clang "${input1}" "${input2}")
+    DEPENDS clang lld "${input1}" "${input2}")
   add_custom_target("${name}"
     DEPENDS "${output}"
     SOURCES "${input1}" "${input2}")
