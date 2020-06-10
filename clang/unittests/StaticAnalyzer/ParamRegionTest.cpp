@@ -20,8 +20,8 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
                                 const StackFrameContext *SFC,
                                 const ParmVarDecl *PVD) {
     for (const auto *D2: PVD->redecls()) {
-      const auto *PVD2 = cast<ParmVarDecl>(D2);
-      assert(MRMgr.getVarRegion(PVD, SFC) == MRMgr.getVarRegion(PVD2, SFC));
+      assert(MRMgr.getVarRegion(PVD, SFC) ==
+             MRMgr.getVarRegion(cast<ParmVarDecl>(D2), SFC));
     }
   }
 
@@ -33,29 +33,26 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       for (const auto *P : FD->parameters()) {
-        const TypedValueRegion *Reg = MRMgr.getVarRegion(P, SFC);
         if (SFC->inTopFrame())
-          assert(isa<NonParamVarRegion>(Reg));
+          assert(isa<NonParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         else
-          assert(isa<ParamVarRegion>(Reg));
+          assert(isa<ParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         checkForSameParamRegions(MRMgr, SFC, P);
       }
     } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
       for (const auto *P : CD->parameters()) {
-        const TypedValueRegion *Reg = MRMgr.getVarRegion(P, SFC);
         if (SFC->inTopFrame())
-          assert(isa<NonParamVarRegion>(Reg));
+          assert(isa<NonParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         else
-          assert(isa<ParamVarRegion>(Reg));
+          assert(isa<ParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         checkForSameParamRegions(MRMgr, SFC, P);
       }
     } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
       for (const auto *P : MD->parameters()) {
-        const TypedValueRegion *Reg = MRMgr.getVarRegion(P, SFC);
         if (SFC->inTopFrame())
-          assert(isa<NonParamVarRegion>(Reg));
+          assert(isa<NonParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         else
-          assert(isa<ParamVarRegion>(Reg));
+          assert(isa<ParamVarRegion>(MRMgr.getVarRegion(P, SFC)));
         checkForSameParamRegions(MRMgr, SFC, P);
       }
     }
