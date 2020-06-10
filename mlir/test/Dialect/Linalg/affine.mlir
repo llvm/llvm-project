@@ -43,11 +43,11 @@ func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 
 // CHECK-LABEL: func @conv_view3(
 //  CHECK: %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>) {
-//       CHECK:   %[[Z0:.*]] = dim %arg0, 0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[Q:.*]] = dim %arg0, 1 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[K:.*]] = dim %arg0, 2 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[B:.*]] = dim %arg1, 0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[X0:.*]] = dim %arg2, 1 : memref<?x?x?xf32, #[[strided3D]]>
+//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?xf32, #[[strided3D]]>
+//       CHECK:   %[[Q:.*]] = dim %arg0, %c1 : memref<?x?x?xf32, #[[strided3D]]>
+//       CHECK:   %[[K:.*]] = dim %arg0, %c2 : memref<?x?x?xf32, #[[strided3D]]>
+//       CHECK:   %[[B:.*]] = dim %arg1, %c0 : memref<?x?x?xf32, #[[strided3D]]>
+//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?xf32, #[[strided3D]]>
 //       CHECK:   affine.for %{{.*}} = 0 to %[[B]] {
 //       CHECK:     affine.for %{{.*}} = 0 to %[[X0]] {
 //       CHECK:       affine.for %{{.*}} = 0 to %[[K]] {
@@ -70,13 +70,13 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 // CHECK-LABEL: func @conv_padding
 //       CHECK: %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>, %{{.*}}: memref<?x?x?x?xf32>) {
 //       CHECK:   %[[ZERO:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[Z0:.*]] = dim %arg0, 0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Z1:.*]] = dim %arg0, 1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[Q:.*]] =  dim %arg0, 2 : memref<?x?x?x?xf32>
-//       CHECK:   %[[K:.*]] =  dim %arg0, 3 : memref<?x?x?x?xf32>
-//       CHECK:   %[[B:.*]] =  dim %arg1, 0 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X0:.*]] = dim %arg2, 1 : memref<?x?x?x?xf32>
-//       CHECK:   %[[X1:.*]] = dim %arg2, 2 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Z1:.*]] = dim %arg0, %c1 : memref<?x?x?x?xf32>
+//       CHECK:   %[[Q:.*]] =  dim %arg0, %c2 : memref<?x?x?x?xf32>
+//       CHECK:   %[[K:.*]] =  dim %arg0, %c3 : memref<?x?x?x?xf32>
+//       CHECK:   %[[B:.*]] =  dim %arg1, %c0 : memref<?x?x?x?xf32>
+//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?x?xf32>
+//       CHECK:   %[[X1:.*]] = dim %arg2, %c2 : memref<?x?x?x?xf32>
 //       CHECK:   affine.for %{{.*}} = 0 to %[[B]] {
 //       CHECK:     affine.for %{{.*}} = 0 to %[[X0]] {
 //       CHECK:       affine.for %{{.*}} = 0 to %[[X1]] {
@@ -109,10 +109,10 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 //  CHECK-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
 //  CHECK-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
-//       CHECK: %[[B:.*]] = dim %[[mA]], 0 : memref<?x?x?xf32>
-//       CHECK: %[[M:.*]] = dim %[[mA]], 1 : memref<?x?x?xf32>
-//       CHECK: %[[K:.*]] = dim %[[mA]], 2 : memref<?x?x?xf32>
-//       CHECK: %[[N:.*]] = dim %[[mB]], 2 : memref<?x?x?xf32>
+//       CHECK: %[[B:.*]] = dim %[[mA]], %c0 : memref<?x?x?xf32>
+//       CHECK: %[[M:.*]] = dim %[[mA]], %c1 : memref<?x?x?xf32>
+//       CHECK: %[[K:.*]] = dim %[[mA]], %c2 : memref<?x?x?xf32>
+//       CHECK: %[[N:.*]] = dim %[[mB]], %c2 : memref<?x?x?xf32>
 //       CHECK: affine.for %[[b:.*]] = 0 to %[[B]] {
 //       CHECK:   affine.for %[[m:.*]] = 0 to %[[M]] {
 //       CHECK:     affine.for %[[n:.*]] = 0 to %[[N]] {

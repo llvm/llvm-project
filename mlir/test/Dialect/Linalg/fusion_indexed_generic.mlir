@@ -21,10 +21,10 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
   %c0 = constant 0 : index
   %c25 = constant 25 : index
   %c10 = constant 10 : index
-  %0 = dim %C, 0 : memref<?x?xf32>
-  %1 = dim %C, 1 : memref<?x?xf32>
-  %2 = dim %D, 0 : memref<?x?xf32>
-  %3 = dim %D, 1 : memref<?x?xf32>
+  %0 = dim %C, %c0 : memref<?x?xf32>
+  %1 = dim %C, %c1 : memref<?x?xf32>
+  %2 = dim %D, %c0 : memref<?x?xf32>
+  %3 = dim %D, %c1 : memref<?x?xf32>
   scf.for %arg2 = %c0 to %0 step %c10 {
     scf.for %arg3 = %c0 to %1 step %c25 {
       %4 = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
@@ -87,10 +87,10 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
       %out = addf %ab, %i_float : f32
       linalg.yield %out : f32
   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
-  %C_X = dim %C, 0 : memref<?x?xf32>
-  %C_Y = dim %C, 1 : memref<?x?xf32>
-  %D_X = dim %D, 0 : memref<?x?xf32>
-  %D_Y = dim %D, 1 : memref<?x?xf32>
+  %C_X = dim %C, %c0 : memref<?x?xf32>
+  %C_Y = dim %C, %c1 : memref<?x?xf32>
+  %D_X = dim %D, %c0 : memref<?x?xf32>
+  %D_Y = dim %D, %c1 : memref<?x?xf32>
   scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%C_X, %C_Y) step (%c10, %c25) {
     %C_view = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
         memref<?x?xf32> to memref<?x?xf32, #map>
@@ -145,10 +145,10 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
       %out = addf %ab, %j_float : f32
       linalg.yield %out : f32
   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
-  %C_X = dim %C, 0 : memref<?x?xf32>
-  %C_Y = dim %C, 1 : memref<?x?xf32>
-  %D_X = dim %D, 0 : memref<?x?xf32>
-  %D_Y = dim %D, 1 : memref<?x?xf32>
+  %C_X = dim %C, %c0 : memref<?x?xf32>
+  %C_Y = dim %C, %c1 : memref<?x?xf32>
+  %D_X = dim %D, %c0 : memref<?x?xf32>
+  %D_Y = dim %D, %c1 : memref<?x?xf32>
   %3 = linalg.range %c0 : %C_Y : %c3 : !linalg.range
   scf.parallel (%j) = (%c0) to (%C_Y) step (%c3) {
     %0 = affine.min affine_map<(d0, d1, d2) -> (d0, d1 - d2)>(%c3, %C_Y, %j)

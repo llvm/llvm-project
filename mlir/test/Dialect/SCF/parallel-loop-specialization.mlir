@@ -7,8 +7,8 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
                     %C: memref<?x?xf32>, %result: memref<?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %d0 = dim %A, 0 : memref<?x?xf32>
-  %d1 = dim %A, 1 : memref<?x?xf32>
+  %d0 = dim %A, %c0 : memref<?x?xf32>
+  %d1 = dim %A, %c1 : memref<?x?xf32>
   %b0 = affine.min #map0()[%d0, %outer_i0]
   %b1 = affine.min #map1()[%d1, %outer_i1]
   scf.parallel (%i0, %i1) = (%c0, %c0) to (%b0, %b1) step (%c1, %c1) {
@@ -24,8 +24,8 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
 // CHECK-SAME:                        [[VAL_0:%.*]]: index, [[VAL_1:%.*]]: index, [[VAL_2:%.*]]: memref<?x?xf32>, [[VAL_3:%.*]]: memref<?x?xf32>, [[VAL_4:%.*]]: memref<?x?xf32>, [[VAL_5:%.*]]: memref<?x?xf32>) {
 // CHECK:           [[VAL_6:%.*]] = constant 0 : index
 // CHECK:           [[VAL_7:%.*]] = constant 1 : index
-// CHECK:           [[VAL_8:%.*]] = dim [[VAL_2]], 0 : memref<?x?xf32>
-// CHECK:           [[VAL_9:%.*]] = dim [[VAL_2]], 1 : memref<?x?xf32>
+// CHECK:           [[VAL_8:%.*]] = dim [[VAL_2]], [[VAL_6]] : memref<?x?xf32>
+// CHECK:           [[VAL_9:%.*]] = dim [[VAL_2]], [[VAL_7]] : memref<?x?xf32>
 // CHECK:           [[VAL_10:%.*]] = affine.min #map0(){{\[}}[[VAL_8]], [[VAL_0]]]
 // CHECK:           [[VAL_11:%.*]] = affine.min #map1(){{\[}}[[VAL_9]], [[VAL_1]]]
 // CHECK:           [[VAL_12:%.*]] = constant 1024 : index

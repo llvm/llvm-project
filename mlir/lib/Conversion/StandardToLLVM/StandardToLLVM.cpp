@@ -583,7 +583,7 @@ void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
           createIndexAttrConstant(builder, loc, indexType, size));
 }
 
-/// Builds IR extracting the pos-th size from the descriptor.
+/// Builds IR extracting the pos-th stride from the descriptor.
 Value MemRefDescriptor::stride(OpBuilder &builder, Location loc, unsigned pos) {
   return builder.create<LLVM::ExtractValueOp>(
       loc, indexType, value,
@@ -2114,17 +2114,24 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto dimOp = cast<DimOp>(op);
     OperandAdaptor<DimOp> transformed(operands);
-    MemRefType type = dimOp.getOperand().getType().cast<MemRefType>();
+    MemRefType type = dimOp.memrefOrTensor().getType().cast<MemRefType>();
 
-    int64_t index = dimOp.getIndex();
+    Optional<int64_t> index = dimOp.getConstantIndex();
+    if (!index.hasValue()) {
+      // TODO(frgossen): Implement this lowering.
+      return failure();
+    }
+
+    int64_t i = index.getValue();
     // Extract dynamic size from the memref descriptor.
-    if (type.isDynamicDim(index))
+    if (type.isDynamicDim(i))
       rewriter.replaceOp(op, {MemRefDescriptor(transformed.memrefOrTensor())
-                                  .size(rewriter, op->getLoc(), index)});
+                                  .size(rewriter, op->getLoc(), i)});
     else
       // Use constant for static size.
-      rewriter.replaceOp(op, createIndexConstant(rewriter, op->getLoc(),
-                                                 type.getDimSize(index)));
+      rewriter.replaceOp(
+          op, createIndexConstant(rewriter, op->getLoc(), type.getDimSize(i)));
+
     return success();
   }
 };

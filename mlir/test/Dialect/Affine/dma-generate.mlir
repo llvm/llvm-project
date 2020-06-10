@@ -271,8 +271,9 @@ func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: in
 
 // CHECK-LABEL: func @dma_unknown_size
 func @dma_unknown_size(%arg0: memref<?x?xf32>) {
-  %M = dim %arg0, 0 : memref<? x ? x f32>
-  %N = dim %arg0, 0 : memref<? x ? x f32>
+  %c0 = constant 0 : index
+  %M = dim %arg0, %c0 : memref<? x ? x f32>
+  %N = dim %arg0, %c0 : memref<? x ? x f32>
   affine.for %i = 0 to %M {
     affine.for %j = 0 to %N {
       // If this loop nest isn't tiled, the access requires a non-constant DMA
