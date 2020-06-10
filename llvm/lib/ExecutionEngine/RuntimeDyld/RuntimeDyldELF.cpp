@@ -399,6 +399,13 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   case ELF::R_AARCH64_ABS64:
     write(isBE, TargetPtr, Value + Addend);
     break;
+  case ELF::R_AARCH64_PLT32: {
+    uint64_t Result = Value + Addend - FinalAddress;
+    assert(static_cast<int64_t>(Result) >= INT32_MIN &&
+           static_cast<int64_t>(Result) <= INT32_MAX);
+    write(isBE, TargetPtr, static_cast<uint32_t>(Result));
+    break;
+  }
   case ELF::R_AARCH64_PREL32: {
     uint64_t Result = Value + Addend - FinalAddress;
     assert(static_cast<int64_t>(Result) >= INT32_MIN &&
