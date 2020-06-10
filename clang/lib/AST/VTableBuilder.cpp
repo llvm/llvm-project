@@ -535,6 +535,8 @@ public:
     VBaseOffsetOffsetsMapTy;
 
 private:
+  const ItaniumVTableContext &VTables;
+
   /// MostDerivedClass - The most derived class for which we're building vcall
   /// and vbase offsets.
   const CXXRecordDecl *MostDerivedClass;
@@ -583,13 +585,15 @@ private:
   CharUnits getCurrentOffsetOffset() const;
 
 public:
-  VCallAndVBaseOffsetBuilder(const CXXRecordDecl *MostDerivedClass,
+  VCallAndVBaseOffsetBuilder(const ItaniumVTableContext &VTables,
+                             const CXXRecordDecl *MostDerivedClass,
                              const CXXRecordDecl *LayoutClass,
                              const FinalOverriders *Overriders,
                              BaseSubobject Base, bool BaseIsVirtual,
                              CharUnits OffsetInLayoutClass)
-    : MostDerivedClass(MostDerivedClass), LayoutClass(LayoutClass),
-    Context(MostDerivedClass->getASTContext()), Overriders(Overriders) {
+      : VTables(VTables), MostDerivedClass(MostDerivedClass),
+        LayoutClass(LayoutClass), Context(MostDerivedClass->getASTContext()),
+        Overriders(Overriders) {
 
     // Add vcall and vbase offsets.
     AddVCallAndVBaseOffsets(Base, BaseIsVirtual, OffsetInLayoutClass);
@@ -662,9 +666,13 @@ CharUnits VCallAndVBaseOffsetBuilder::getCurrentOffsetOffset() const {
   // vcall offset itself).
   int64_t OffsetIndex = -(int64_t)(3 + Components.size());
 
-  CharUnits PointerWidth =
-    Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
-  CharUnits OffsetOffset = PointerWidth * OffsetIndex;
+  // Under the relative ABI, the offset widths are 32-bit ints instead of
+  // pointer widths.
+  CharUnits OffsetWidth = Context.toCharUnitsFromBits(
+      VTables.isRelativeLayout() ? 32
+                                 : Context.getTargetInfo().getPointerWidth(0));
+  CharUnits OffsetOffset = OffsetWidth * OffsetIndex;
+
   return OffsetOffset;
 }
 
@@ -1271,13 +1279,13 @@ ThisAdjustment ItaniumVTableBuilder::ComputeThisAdjustment(
     if (VCallOffsets.empty()) {
       // We don't have vcall offsets for this virtual base, go ahead and
       // build them.
-      VCallAndVBaseOffsetBuilder Builder(MostDerivedClass, MostDerivedClass,
-                                         /*Overriders=*/nullptr,
-                                         BaseSubobject(Offset.VirtualBase,
-                                                       CharUnits::Zero()),
-                                         /*BaseIsVirtual=*/true,
-                                         /*OffsetInLayoutClass=*/
-                                             CharUnits::Zero());
+      VCallAndVBaseOffsetBuilder Builder(
+          VTables, MostDerivedClass, MostDerivedClass,
+          /*Overriders=*/nullptr,
+          BaseSubobject(Offset.VirtualBase, CharUnits::Zero()),
+          /*BaseIsVirtual=*/true,
+          /*OffsetInLayoutClass=*/
+          CharUnits::Zero());
 
       VCallOffsets = Builder.getVCallOffsets();
     }
@@ -1635,9 +1643,9 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
   VTableIndices.push_back(VTableIndex);
 
   // Add vcall and vbase offsets for this vtable.
-  VCallAndVBaseOffsetBuilder Builder(MostDerivedClass, LayoutClass, &Overriders,
-                                     Base, BaseIsVirtualInLayoutClass,
-                                     OffsetInLayoutClass);
+  VCallAndVBaseOffsetBuilder Builder(
+      VTables, MostDerivedClass, LayoutClass, &Overriders, Base,
+      BaseIsVirtualInLayoutClass, OffsetInLayoutClass);
   Components.append(Builder.components_begin(), Builder.components_end());
 
   // Check if we need to add these vcall offsets.
@@ -2200,12 +2208,40 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 }
 }
 
+static VTableLayout::AddressPointsIndexMapTy
+MakeAddressPointIndices(const VTableLayout::AddressPointsMapTy &addressPoints,
+                        unsigned numVTables) {
+  VTableLayout::AddressPointsIndexMapTy indexMap(numVTables);
+
+  for (auto it = addressPoints.begin(); it != addressPoints.end(); ++it) {
+    const auto &addressPointLoc = it->second;
+    unsigned vtableIndex = addressPointLoc.VTableIndex;
+    unsigned addressPoint = addressPointLoc.AddressPointIndex;
+    if (indexMap[vtableIndex]) {
+      // Multiple BaseSubobjects can map to the same AddressPointLocation, but
+      // every vtable index should have a unique address point.
+      assert(indexMap[vtableIndex] == addressPoint &&
+             "Every vtable index should have a unique address point. Found a "
+             "vtable that has two different address points.");
+    } else {
+      indexMap[vtableIndex] = addressPoint;
+    }
+  }
+
+  // Note that by this point, not all the address may be initialized if the
+  // AddressPoints map is empty. This is ok if the map isn't needed. See
+  // MicrosoftVTableContext::computeVTableRelatedInformation() which uses an
+  // emprt map.
+  return indexMap;
+}
+
 VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
                            ArrayRef<VTableComponent> VTableComponents,
                            ArrayRef<VTableThunkTy> VTableThunks,
                            const AddressPointsMapTy &AddressPoints)
     : VTableComponents(VTableComponents), VTableThunks(VTableThunks),
-      AddressPoints(AddressPoints) {
+      AddressPoints(AddressPoints), AddressPointIndices(MakeAddressPointIndices(
+                                        AddressPoints, VTableIndices.size())) {
   if (VTableIndices.size() <= 1)
     assert(VTableIndices.size() == 1 && VTableIndices[0] == 0);
   else
@@ -2221,8 +2257,9 @@ VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
 
 VTableLayout::~VTableLayout() { }
 
-ItaniumVTableContext::ItaniumVTableContext(ASTContext &Context)
-    : VTableContextBase(/*MS=*/false) {}
+ItaniumVTableContext::ItaniumVTableContext(
+    ASTContext &Context, VTableComponentLayout ComponentLayout)
+    : VTableContextBase(/*MS=*/false), ComponentLayout(ComponentLayout) {}
 
 ItaniumVTableContext::~ItaniumVTableContext() {}
 
@@ -2251,7 +2288,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
   if (I != VirtualBaseClassOffsetOffsets.end())
     return I->second;
 
-  VCallAndVBaseOffsetBuilder Builder(RD, RD, /*Overriders=*/nullptr,
+  VCallAndVBaseOffsetBuilder Builder(*this, RD, RD, /*Overriders=*/nullptr,
                                      BaseSubobject(RD, CharUnits::Zero()),
                                      /*BaseIsVirtual=*/false,
                                      /*OffsetInLayoutClass=*/CharUnits::Zero());
