@@ -295,7 +295,7 @@ ifndef NO_TEST_COMMON_H
   CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
 endif
 
-CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
+CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
@@ -335,6 +335,7 @@ ifeq "$(MAKE_GMODULES)" "YES"
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 endif
 
+CFLAGS += $(CFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
