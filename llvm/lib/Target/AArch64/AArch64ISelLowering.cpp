@@ -11897,14 +11897,14 @@ static SDValue performExtendCombine(SDNode *N,
   if (!ResVT.isSimple() || !SrcVT.isSimple())
     return SDValue();
 
-  // If the source VT is a 64-bit vector, we can play games and get the
-  // better results we want.
-  if (SrcVT.getSizeInBits() != 64)
+  // If the source VT is a 64-bit fixed or scalable vector, we can play games
+  // and get the better results we want.
+  if (SrcVT.getSizeInBits().getKnownMinSize() != 64)
     return SDValue();
 
   unsigned SrcEltSize = SrcVT.getScalarSizeInBits();
-  unsigned ElementCount = SrcVT.getVectorNumElements();
-  SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), ElementCount);
+  ElementCount SrcEC = SrcVT.getVectorElementCount();
+  SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), SrcEC);
   SDLoc DL(N);
   Src = DAG.getNode(N->getOpcode(), DL, SrcVT, Src);
 
@@ -11912,17 +11912,14 @@ static SDValue performExtendCombine(SDNode *N,
   // bit source.
   EVT LoVT, HiVT;
   SDValue Lo, Hi;
-  unsigned NumElements = ResVT.getVectorNumElements();
-  assert(!(NumElements & 1) && "Splitting vector, but not in half!");
-  LoVT = HiVT = EVT::getVectorVT(*DAG.getContext(),
-                                 ResVT.getVectorElementType(), NumElements / 2);
+  LoVT = HiVT = ResVT.getHalfNumVectorElementsVT(*DAG.getContext());
 
   EVT InNVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
-                               LoVT.getVectorNumElements());
+                               LoVT.getVectorElementCount());
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
                    DAG.getConstant(0, DL, MVT::i64));
   Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
-                   DAG.getConstant(InNVT.getVectorNumElements(), DL, MVT::i64));
+                   DAG.getConstant(InNVT.getVectorMinNumElements(), DL, MVT::i64));
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, Lo);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, Hi);
 
