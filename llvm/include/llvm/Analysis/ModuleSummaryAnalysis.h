@@ -25,6 +25,7 @@ class BlockFrequencyInfo;
 class Function;
 class Module;
 class ProfileSummaryInfo;
+class StackSafetyInfo;
 
 /// Direct function to compute a \c ModuleSummaryIndex from a given module.
 ///
@@ -35,7 +36,9 @@ class ProfileSummaryInfo;
 ModuleSummaryIndex buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
-    ProfileSummaryInfo *PSI);
+    ProfileSummaryInfo *PSI,
+    std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback =
+        [](const Function &F) -> const StackSafetyInfo * { return nullptr; });
 
 /// Analysis pass to provide the ModuleSummaryIndex object.
 class ModuleSummaryIndexAnalysis
