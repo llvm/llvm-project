@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: test.pass.cpp
-// FILE_DEPENDENCIES: %s
+// Make sure that FILE_DEPENDENCIES work with relative AND absolute paths.
 
-// RUN: echo %{file_dependencies} | grep 'test.pass.cpp'
-// RUN: echo %{file_dependencies} | grep '%s'
+// FILE_DEPENDENCIES: %S/a.txt
+// RUN: test -e %T/a.txt
+
+// FILE_DEPENDENCIES: dir/b.txt
+// RUN: test -e %T/b.txt

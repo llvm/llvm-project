@@ -11,6 +11,7 @@ import lit.formats
 import os
 import pipes
 import re
+import shutil
 import subprocess
 
 def _supportsVerify(config):
@@ -40,7 +41,7 @@ def _getTempPaths(test):
     tmpBase = os.path.join(tmpDir, 't')
     return tmpDir, tmpBase
 
-def parseScript(test, preamble, fileDependencies):
+def parseScript(test, preamble):
     """
     Extract the script from a test, with substitutions applied.
 
@@ -54,9 +55,6 @@ def parseScript(test, preamble, fileDependencies):
         These commands can contain unexpanded substitutions, but they
         must not be of the form 'RUN:' -- they must be proper commands
         once substituted.
-
-    - fileDependencies
-        A list of additional file dependencies for the test.
     """
 
     # Get the default substitutions
@@ -71,7 +69,7 @@ def parseScript(test, preamble, fileDependencies):
 
     # Parse the test file, including custom directives
     additionalCompileFlags = []
-    fileDependencies = list(fileDependencies)
+    fileDependencies = []
     parsers = [
         lit.TestRunner.IntegratedTestKeywordParser('FILE_DEPENDENCIES:',
                                                    lit.TestRunner.ParserKind.LIST,
@@ -81,29 +79,24 @@ def parseScript(test, preamble, fileDependencies):
                                                    initial_value=additionalCompileFlags)
     ]
 
-    script = list(preamble)
-    parsed = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
-                                                            require_script=not script)
-    if isinstance(parsed, lit.Test.Result):
-        return parsed
-    script += parsed
+    scriptInTest = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
+                                                            require_script=not preamble)
+    if isinstance(scriptInTest, lit.Test.Result):
+        return scriptInTest
+
+    script = []
+
+    # For each file dependency in FILE_DEPENDENCIES, inject a command to copy
+    # that file to the execution directory. Execute the copy from %S to allow
+    # relative paths from the test directory.
+    for dep in fileDependencies:
+        script += ['%dbg(SETUP) cd %S && cp {} %T'.format(dep)]
+    script += preamble
+    script += scriptInTest
 
     # Add compile flags specified with ADDITIONAL_COMPILE_FLAGS.
     substitutions = [(s, x + ' ' + ' '.join(additionalCompileFlags)) if s == '%{compile_flags}'
                             else (s, x) for (s, x) in substitutions]
-
-    # Perform substitutions inside FILE_DEPENDENCIES lines (or injected dependencies).
-    # This allows using variables like %t in file dependencies. Also note that we really
-    # need to resolve %{file_dependencies} now, because otherwise we won't be able to
-    # make all paths absolute below.
-    fileDependencies = lit.TestRunner.applySubstitutions(fileDependencies, substitutions,
-                                                         recursion_limit=test.config.recursiveExpansionLimit)
-
-    # Add the %{file_dependencies} substitution before we perform substitutions
-    # inside the script.
-    testDir = os.path.dirname(test.getSourcePath())
-    fileDependencies = [f if os.path.isabs(f) else os.path.join(testDir, f) for f in fileDependencies]
-    substitutions.append(('%{file_dependencies}', ' '.join(map(pipes.quote, fileDependencies))))
 
     # Perform substitutions in the script itself.
     script = lit.TestRunner.applySubstitutions(script, substitutions,
@@ -170,11 +163,10 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             This directive expresses that the test requires the provided files
             or directories in order to run. An example is a test that requires
             some test input stored in a data file. When a test file contains
-            such a directive, this test format will collect them and make them
-            available in a special %{file_dependencies} substitution. The intent
-            is that if one needs to e.g. execute tests on a remote host, the
-            %{exec} substitution could use %{file_dependencies} to know which
-            files and directories to copy to the remote host.
+            such a directive, this test format will collect them and copy them
+            to the directory represented by %T. The intent is that %T contains
+            all the inputs necessary to run the test, such that e.g. execution
+            on a remote host can be done by simply copying %T to the host.
 
         // ADDITIONAL_COMPILE_FLAGS: flag1, flag2, flag3
 
@@ -187,11 +179,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
     Additional provided substitutions and features
     ==============================================
     The test format will define the following substitutions for use inside tests:
-
-        %{file_dependencies}
-
-            Expands to the list of files that this test depends on.
-            See FILE_DEPENDENCIES above.
 
         %{build}
             Expands to a command-line that builds the current source
@@ -273,7 +260,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} ! %t.exe"
             ]
-            return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
+            return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.verify.cpp'):
             if not supportsVerify:
                 return lit.Test.Result(lit.Test.UNSUPPORTED,
@@ -291,7 +278,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe"
             ]
-            return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
+            return self._executeShTest(test, litConfig, steps)
         # This is like a .verify.cpp test when clang-verify is supported,
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
@@ -313,11 +300,11 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         string = ' '.join(flags)
         config.substitutions = [(s, x + ' ' + string) if s == '%{compile_flags}' else (s, x) for (s, x) in config.substitutions]
 
-    def _executeShTest(self, test, litConfig, steps, fileDependencies=None):
+    def _executeShTest(self, test, litConfig, steps):
         if test.config.unsupported:
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
 
-        script = parseScript(test, steps, fileDependencies or [])
+        script = parseScript(test, steps)
         if isinstance(script, lit.Test.Result):
             return script
 
