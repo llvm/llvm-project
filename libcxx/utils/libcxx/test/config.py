@@ -22,6 +22,7 @@ from libcxx.test.executor import *
 from libcxx.test.tracing import *
 import libcxx.util
 import libcxx.test.features
+import libcxx.test.params
 
 def loadSiteConfig(lit_config, config, param_name, env_name):
     # We haven't loaded the site specific configuration (the user is
@@ -141,12 +142,19 @@ class Configuration(object):
         self.configure_modules()
         self.configure_substitutions()
         self.configure_features()
+        self.configure_new_params()
         self.configure_new_features()
 
     def configure_new_features(self):
         supportedFeatures = [f for f in libcxx.test.features.features if f.isSupported(self.config)]
         for feature in supportedFeatures:
             feature.enableIn(self.config)
+
+    def configure_new_params(self):
+        for param in libcxx.test.params.parameters:
+            feature = param.getFeature(self.config, self.lit_config.params)
+            if feature:
+                feature.enableIn(self.config)
 
     def print_config_info(self):
         # Print the final compile and link flags.
@@ -391,7 +399,6 @@ class Configuration(object):
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
         # Configure feature flags.
-        self.configure_compile_flags_exceptions()
         self.configure_compile_flags_rtti()
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
@@ -478,12 +485,6 @@ class Configuration(object):
         if not os.path.isfile(config_site_header):
             return
         self.cxx.compile_flags += ['-include', config_site_header]
-
-    def configure_compile_flags_exceptions(self):
-        enable_exceptions = self.get_lit_bool('enable_exceptions', True)
-        if not enable_exceptions:
-            self.config.available_features.add('no-exceptions')
-            self.cxx.compile_flags += ['-fno-exceptions']
 
     def configure_compile_flags_rtti(self):
         enable_rtti = self.get_lit_bool('enable_rtti', True)
