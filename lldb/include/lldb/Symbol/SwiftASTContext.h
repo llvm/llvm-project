@@ -173,6 +173,8 @@ public:
       lldb::opaque_compiler_type_t type, Stream *s,
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+  virtual CompilerType
+  GetTypeFromMangledTypename(ConstString mangled_typename) = 0;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{
@@ -277,7 +279,8 @@ public:
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
-  CompilerType GetTypeFromMangledTypename(ConstString mangled_typename);
+  CompilerType
+  GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
   // PluginInterface functions
   ConstString GetPluginName() override;
@@ -748,7 +751,8 @@ public:
   /// components up in Swift modules.
   swift::TypeBase *ReconstructType(ConstString mangled_typename);
   swift::TypeBase *ReconstructType(ConstString mangled_typename, Status &error);
-  CompilerType GetTypeFromMangledTypename(ConstString mangled_typename);
+  CompilerType
+  GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
   // Retrieve the Swift.AnyObject type.
   CompilerType GetAnyObjectType();
