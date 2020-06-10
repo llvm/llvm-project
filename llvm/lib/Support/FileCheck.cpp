@@ -230,6 +230,34 @@ Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
   }
 }
 
+Expected<ExpressionValue> llvm::max(const ExpressionValue &LeftOperand,
+                                    const ExpressionValue &RightOperand) {
+  if (LeftOperand.isNegative() && RightOperand.isNegative()) {
+    int64_t LeftValue = cantFail(LeftOperand.getSignedValue());
+    int64_t RightValue = cantFail(RightOperand.getSignedValue());
+    return ExpressionValue(std::max(LeftValue, RightValue));
+  }
+
+  if (!LeftOperand.isNegative() && !RightOperand.isNegative()) {
+    uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
+    uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+    return ExpressionValue(std::max(LeftValue, RightValue));
+  }
+
+  if (LeftOperand.isNegative())
+    return RightOperand;
+
+  return LeftOperand;
+}
+
+Expected<ExpressionValue> llvm::min(const ExpressionValue &LeftOperand,
+                                    const ExpressionValue &RightOperand) {
+  if (cantFail(max(LeftOperand, RightOperand)) == LeftOperand)
+    return RightOperand;
+
+  return LeftOperand;
+}
+
 Expected<ExpressionValue> NumericVariableUse::eval() const {
   Optional<ExpressionValue> Value = Variable->getValue();
   if (Value)
@@ -309,23 +337,20 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
   if (Str.empty())
     return ErrorDiagnostic::get(SM, Str, "empty variable name");
 
-  bool ParsedOneChar = false;
-  unsigned I = 0;
+  size_t I = 0;
   bool IsPseudo = Str[0] == '@';
 
   // Global vars start with '$'.
   if (Str[0] == '$' || IsPseudo)
     ++I;
 
-  for (unsigned E = Str.size(); I != E; ++I) {
-    if (!ParsedOneChar && !isValidVarNameStart(Str[I]))
-      return ErrorDiagnostic::get(SM, Str, "invalid variable name");
+  if (!isValidVarNameStart(Str[I++]))
+    return ErrorDiagnostic::get(SM, Str, "invalid variable name");
 
+  for (size_t E = Str.size(); I != E; ++I)
     // Variable names are composed of alphanumeric characters and underscores.
     if (Str[I] != '_' && !isAlnum(Str[I]))
       break;
-    ParsedOneChar = true;
-  }
 
   StringRef Name = Str.take_front(I);
   Str = Str.substr(I);
@@ -436,10 +461,22 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     // Try to parse as a numeric variable use.
     Expected<Pattern::VariableProperties> ParseVarResult =
         parseVariable(Expr, SM);
-    if (ParseVarResult)
+    if (ParseVarResult) {
+      // Try to parse a function call.
+      if (Expr.ltrim(SpaceChars).startswith("(")) {
+        if (AO != AllowedOperand::Any)
+          return ErrorDiagnostic::get(SM, ParseVarResult->Name,
+                                      "unexpected function call");
+
+        return parseCallExpr(Expr, ParseVarResult->Name, LineNumber, Context,
+                             SM);
+      }
+
       return parseNumericVariableUse(ParseVarResult->Name,
                                      ParseVarResult->IsPseudo, LineNumber,
                                      Context, SM);
+    }
+
     if (AO == AllowedOperand::LineVar)
       return ParseVarResult.takeError();
     // Ignore the error and retry parsing as a literal.
@@ -540,6 +577,79 @@ Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
                                            std::move(*RightOpResult));
 }
 
+Expected<std::unique_ptr<ExpressionAST>>
+Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
+                       Optional<size_t> LineNumber,
+                       FileCheckPatternContext *Context, const SourceMgr &SM) {
+  Expr = Expr.ltrim(SpaceChars);
+  assert(Expr.startswith("("));
+
+  auto OptFunc = StringSwitch<Optional<binop_eval_t>>(FuncName)
+                     .Case("add", operator+)
+                     .Case("max", max)
+                     .Case("min", min)
+                     .Case("sub", operator-)
+                     .Default(None);
+
+  if (!OptFunc)
+    return ErrorDiagnostic::get(
+        SM, FuncName, Twine("call to undefined function '") + FuncName + "'");
+
+  Expr.consume_front("(");
+  Expr = Expr.ltrim(SpaceChars);
+
+  // Parse call arguments, which are comma separated.
+  SmallVector<std::unique_ptr<ExpressionAST>, 4> Args;
+  while (!Expr.empty() && !Expr.startswith(")")) {
+    if (Expr.startswith(","))
+      return ErrorDiagnostic::get(SM, Expr, "missing argument");
+
+    // Parse the argument, which is an arbitary expression.
+    StringRef OuterBinOpExpr = Expr;
+    Expected<std::unique_ptr<ExpressionAST>> Arg =
+        parseNumericOperand(Expr, AllowedOperand::Any, LineNumber, Context, SM);
+    while (Arg && !Expr.empty()) {
+      Expr = Expr.ltrim(SpaceChars);
+      // Have we reached an argument terminator?
+      if (Expr.startswith(",") || Expr.startswith(")"))
+        break;
+
+      // Arg = Arg <op> <expr>
+      Arg = parseBinop(OuterBinOpExpr, Expr, std::move(*Arg), false, LineNumber,
+                       Context, SM);
+    }
+
+    // Prefer an expression error over a generic invalid argument message.
+    if (!Arg)
+      return Arg.takeError();
+    Args.push_back(std::move(*Arg));
+
+    // Have we parsed all available arguments?
+    Expr = Expr.ltrim(SpaceChars);
+    if (!Expr.consume_front(","))
+      break;
+
+    Expr = Expr.ltrim(SpaceChars);
+    if (Expr.startswith(")"))
+      return ErrorDiagnostic::get(SM, Expr, "missing argument");
+  }
+
+  if (!Expr.consume_front(")"))
+    return ErrorDiagnostic::get(SM, Expr,
+                                "missing ')' at end of call expression");
+
+  const unsigned NumArgs = Args.size();
+  if (NumArgs == 2)
+    return std::make_unique<BinaryOperation>(Expr, *OptFunc, std::move(Args[0]),
+                                             std::move(Args[1]));
+
+  // TODO: Support more than binop_eval_t.
+  return ErrorDiagnostic::get(SM, FuncName,
+                              Twine("function '") + FuncName +
+                                  Twine("' takes 2 arguments but ") +
+                                  Twine(NumArgs) + " given");
+}
+
 Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     StringRef Expr, Optional<NumericVariable *> &DefinedNumericVariable,
     bool IsLegacyLineExpr, Optional<size_t> LineNumber,
@@ -549,9 +659,10 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   DefinedNumericVariable = None;
   ExpressionFormat ExplicitFormat = ExpressionFormat();
 
-  // Parse format specifier.
+  // Parse format specifier (NOTE: ',' is also an argument seperator).
   size_t FormatSpecEnd = Expr.find(',');
-  if (FormatSpecEnd != StringRef::npos) {
+  size_t FunctionStart = Expr.find('(');
+  if (FormatSpecEnd != StringRef::npos && FormatSpecEnd < FunctionStart) {
     Expr = Expr.ltrim(SpaceChars);
     if (!Expr.consume_front("%"))
       return ErrorDiagnostic::get(

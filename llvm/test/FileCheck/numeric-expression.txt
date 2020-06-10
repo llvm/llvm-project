@@ -55,20 +55,38 @@ USE EXPL FMT IMPL MATCH  // CHECK-LABEL: USE EXPL FMT IMPL MATCH
 11  // CHECK-NEXT: {{^}}[[#%u,UNSI]]
 12  // CHECK-NEXT: {{^}}[[#%u,UNSI+1]]
 10  // CHECK-NEXT: {{^}}[[#%u,UNSI-1]]
+15  // CHECK-NEXT: {{^}}[[#%u,add(UNSI,4)]]
+11  // CHECK-NEXT: {{^}}[[#%u,max(UNSI,7)]]
+99  // CHECK-NEXT: {{^}}[[#%u,max(UNSI,99)]]
+7   // CHECK-NEXT: {{^}}[[#%u,min(UNSI,7)]]
+11  // CHECK-NEXT: {{^}}[[#%u,min(UNSI,99)]]
+8   // CHECK-NEXT: {{^}}[[#%u,sub(UNSI,3)]]
 c   // CHECK-NEXT: {{^}}[[#%x,LHEX]]
 d   // CHECK-NEXT: {{^}}[[#%x,LHEX+1]]
 b   // CHECK-NEXT: {{^}}[[#%x,LHEX-1]]
 1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xe]]
 1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xE]]
+e   // CHECK-NEXT: {{^}}[[#%x,add(LHEX,2)]]
+ff  // CHECK-NEXT: {{^}}[[#%x,max(LHEX,0xff)]]
+a   // CHECK-NEXT: {{^}}[[#%x,min(LHEX,0xa)]]
+a   // CHECK-NEXT: {{^}}[[#%x,sub(LHEX,2)]]
 D   // CHECK-NEXT: {{^}}[[#%X,UHEX]]
 E   // CHECK-NEXT: {{^}}[[#%X,UHEX+1]]
 C   // CHECK-NEXT: {{^}}[[#%X,UHEX-1]]
 1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xe]]
 1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xE]]
+F   // CHECK-NEXT: {{^}}[[#%X,add(UHEX,2)]]
+FF  // CHECK-NEXT: {{^}}[[#%X,max(UHEX,0xff)]]
+A   // CHECK-NEXT: {{^}}[[#%X,min(UHEX,0xa)]]
+B   // CHECK-NEXT: {{^}}[[#%X,sub(UHEX,2)]]
 -30 // CHECK-NEXT: {{^}}[[#%d,SIGN]]
 -29 // CHECK-NEXT: {{^}}[[#%d,SIGN+1]]
 -31 // CHECK-NEXT: {{^}}[[#%d,SIGN-1]]
 42  // CHECK-NEXT: {{^}}[[#%d,SIGN+72]]
+-29 // CHECK-NEXT: {{^}}[[#%d,add(SIGN,1)]]
+-17 // CHECK-NEXT: {{^}}[[#%d,max(SIGN,-17)]]
+-30 // CHECK-NEXT: {{^}}[[#%d,min(SIGN,-17)]]
+-31 // CHECK-NEXT: {{^}}[[#%d,sub(SIGN,1)]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIa]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIb]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIc]]
@@ -92,6 +110,15 @@ USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
 10  // CHECK-NEXT: {{^}}[[# %u , UNSI -1]]
 10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1]]
 10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1 ]]
+13  // CHECK-NEXT: {{^}}[[#%u, add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u, add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI, 2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add( UNSI, 2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add( UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI,2) ]]
+13  // CHECK-NEXT: {{^}}[[# %u , add (UNSI,2)]]
+104 // CHECK-NEXT: {{^}}[[# %u , UNSI + sub( add (100 , UNSI+ 1 ), 20) +1 ]]
 
 ; Numeric expressions in implicit matching format and default matching rule using
 ; variables defined on other lines.
@@ -99,16 +126,22 @@ USE IMPL FMT IMPL MATCH  // CHECK-LABEL: USE IMPL FMT IMPL MATCH
 11  // CHECK-NEXT: {{^}}[[#UNSI]]
 12  // CHECK-NEXT: {{^}}[[#UNSI+1]]
 10  // CHECK-NEXT: {{^}}[[#UNSI-1]]
+99  // CHECK-NEXT: {{^}}[[#max(UNSI,99)]]
+7   // CHECK-NEXT: {{^}}[[#min(UNSI,7)]]
 c   // CHECK-NEXT: {{^}}[[#LHEX]]
 d   // CHECK-NEXT: {{^}}[[#LHEX+1]]
 b   // CHECK-NEXT: {{^}}[[#LHEX-1]]
 1a  // CHECK-NEXT: {{^}}[[#LHEX+0xe]]
 1a  // CHECK-NEXT: {{^}}[[#LHEX+0xE]]
+ff  // CHECK-NEXT: {{^}}[[#max(LHEX,255)]]
+a   // CHECK-NEXT: {{^}}[[#min(LHEX,10)]]
 D   // CHECK-NEXT: {{^}}[[#UHEX]]
 E   // CHECK-NEXT: {{^}}[[#UHEX+1]]
 C   // CHECK-NEXT: {{^}}[[#UHEX-1]]
 1B  // CHECK-NEXT: {{^}}[[#UHEX+0xe]]
 1B  // CHECK-NEXT: {{^}}[[#UHEX+0xE]]
+FF  // CHECK-NEXT: {{^}}[[#max(UHEX,255)]]
+A   // CHECK-NEXT: {{^}}[[#min(UHEX,10)]]
 -30 // CHECK-NEXT: {{^}}[[#SIGN]]
 -29 // CHECK-NEXT: {{^}}[[#SIGN+1]]
 -31 // CHECK-NEXT: {{^}}[[#SIGN-1]]
@@ -367,3 +400,51 @@ UNDERFLOW-NEXT: TINYVAR: [[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000]]
 UNDERFLOW-MSG: numeric-expression.txt:[[#@LINE-1]]:29: error: unable to substitute variable or numeric expression
 UNDERFLOW-MSG-NEXT: {{U}}NDERFLOW-NEXT: TINYVAR: {{\[\[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000\]\]}}
 UNDERFLOW-MSG-NEXT:    {{^}}                            ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-MISSING-CLOSING-BRACKET --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-MISSING-CLOSING-BRACKET-MSG %s
+
+CALL MISSING CLOSING BRACKET
+30
+CALL-MISSING-CLOSING-BRACKET-LABEL: CALL MISSING CLOSING BRACKET
+CALL-MISSING-CLOSING-BRACKET-NEXT: [[#add(NUMVAR,3]]
+CALL-MISSING-CLOSING-BRACKET-MSG: numeric-expression.txt:[[#@LINE-1]]:51: error: missing ')' at end of call expression
+CALL-MISSING-CLOSING-BRACKET-MSG-NEXT: {{C}}ALL-MISSING-CLOSING-BRACKET-NEXT: {{\[\[#add\(NUMVAR,3\]\]}}
+CALL-MISSING-CLOSING-BRACKET-MSG-NEXT:      {{^}}                                                  ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-MISSING-ARGUMENT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-MISSING-ARGUMENT-MSG %s
+
+CALL MISSING ARGUMENT
+30
+CALL-MISSING-ARGUMENT-LABEL: CALL MISSING ARGUMENT
+CALL-MISSING-ARGUMENT-NEXT: [[#add(NUMVAR,)]]
+CALL-MISSING-ARGUMENT-MSG: numeric-expression.txt:[[#@LINE-1]]:43: error: missing argument
+CALL-MISSING-ARGUMENT-MSG-NEXT: {{C}}ALL-MISSING-ARGUMENT-NEXT: {{\[\[#add\(NUMVAR,\)\]\]}}
+CALL-MISSING-ARGUMENT-MSG-NEXT:      {{^}}                                          ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-WRONG-ARGUMENT-COUNT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-WRONG-ARGUMENT-COUNT-MSG %s
+
+CALL WRONG ARGUMENT COUNT
+30
+CALL-WRONG-ARGUMENT-COUNT-LABEL: CALL WRONG ARGUMENT COUNT
+CALL-WRONG-ARGUMENT-COUNT-NEXT: [[#add(NUMVAR)]]
+CALL-WRONG-ARGUMENT-COUNT-MSG: numeric-expression.txt:[[#@LINE-1]]:36: error: function 'add' takes 2 arguments but 1 given
+CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT: {{C}}ALL-WRONG-ARGUMENT-COUNT-NEXT: {{\[\[#add\(NUMVAR\)\]\]}}
+CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT:    {{^}}                                   ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-UNDEFINED-FUNCTION --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-UNDEFINED-FUNCTION-MSG %s
+
+CALL UNDEFINED FUNCTION
+30
+CALL-UNDEFINED-FUNCTION-LABEL: CALL UNDEFINED FUNCTION
+CALL-UNDEFINED-FUNCTION-NEXT: [[#bogus_function(NUMVAR)]]
+CALL-UNDEFINED-FUNCTION-MSG: numeric-expression.txt:[[#@LINE-1]]:34: error: call to undefined function 'bogus_function'
+CALL-UNDEFINED-FUNCTION-MSG-NEXT: {{C}}ALL-UNDEFINED-FUNCTION-NEXT: {{\[\[#bogus_function\(NUMVAR\)\]\]}}
+CALL-UNDEFINED-FUNCTION-MSG-NEXT:    {{^}}                                 ^{{$}}

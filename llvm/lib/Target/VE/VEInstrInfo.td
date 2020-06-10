@@ -251,6 +251,7 @@ def CCUIOp : PatLeaf<(cond), [{
   }
 }]>;
 
+//===----------------------------------------------------------------------===//
 // Addressing modes.
 // SX-Aurora has following fields.
 //    sz: register or 0
@@ -276,7 +277,8 @@ def CCUIOp : PatLeaf<(cond), [{
 // AS format:
 //    MEMriASX, MEMziASX    : simple AS format
 //    MEMriRRM, MEMziRRM    : AS format in RRM format
-//    well be added later.
+//    MEMriHM, MEMziHM      : AS format in RRM format for host memory access
+//===----------------------------------------------------------------------===//
 
 // DAG selections for both ASX and AS formats.
 def ADDRrri : ComplexPattern<iPTR, 3, "selectADDRrri", [frameindex], []>;
@@ -361,11 +363,21 @@ def MEMziRRM : Operand<iPTR> {
   let ParserMatchClass = VEMEMziAsmOperand;
 }
 
-def MEMASri : Operand<iPTR> {
-  let PrintMethod = "printMemASOperand";
+//   3. AS HM style assembly instruction format:
+def MEMriHM : Operand<iPTR> {
+  let PrintMethod = "printMemASOperandHM";
   let MIOperandInfo = (ops ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
+def MEMziHM : Operand<iPTR> {
+  let PrintMethod = "printMemASOperandHM";
+  let MIOperandInfo = (ops i32imm /* = 0 */, i32imm);
+  let ParserMatchClass = VEMEMziAsmOperand;
+}
+
+//===----------------------------------------------------------------------===//
+// Other operands.
+//===----------------------------------------------------------------------===//
 
 // Branch targets have OtherVT type.
 def brtarget32 : Operand<OtherVT> {
@@ -846,6 +858,26 @@ multiclass FIDCRm<string opcStr, bits<8>opc, RegisterClass RC> {
               !strconcat(opcStr, " $sx, $sy, $sz")>;
   let cy = 0 in def ii : RR<opc, (outs RC:$sx), (ins simm7:$sy, uimm3:$sz),
                             !strconcat(opcStr, " $sx, $sy, $sz")>;
+}
+
+// Multiclass for LHM instruction.
+let mayLoad = 1, hasSideEffects = 0 in
+multiclass LHMm<string opcStr, bits<8> opc, RegisterClass RC> {
+  def ri : RRMHM<opc, (outs RC:$dest), (ins MEMriHM:$addr),
+                 !strconcat(opcStr, " $dest, $addr")>;
+  let cz = 0 in
+  def zi : RRMHM<opc, (outs RC:$dest), (ins MEMziHM:$addr),
+                 !strconcat(opcStr, " $dest, $addr")>;
+}
+
+// Multiclass for SHM instruction.
+let mayStore = 1, hasSideEffects = 0 in
+multiclass SHMm<string opcStr, bits<8> opc, RegisterClass RC> {
+  def ri : RRMHM<opc, (outs), (ins MEMriHM:$addr, RC:$sx),
+                 !strconcat(opcStr, " $sx, $addr")>;
+  let cz = 0 in
+  def zi : RRMHM<opc, (outs), (ins MEMziHM:$addr, RC:$sx),
+                 !strconcat(opcStr, " $sx, $addr")>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1405,12 +1437,29 @@ defm TSCR : LOADCRm<"tscr", 0x41, I64>;
 // Section 8.19.12 - FIDCR (Fetch & Increment/Decrement CR)
 defm FIDCR : FIDCRm<"fidcr", 0x51, I64>;
 
-let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
-let sy = 3 in
-def SHMri : RM<
-    0x31, (outs), (ins MEMASri:$addr, I64:$sx),
-    "shm.l $sx, $addr">;
-}
+//-----------------------------------------------------------------------------
+// Section 8.20 - Host Memory Access Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.20.1 - LHM (Load Host Memory)
+let ry = 3, DecoderMethod = "DecodeLoadASI64" in
+defm LHML : LHMm<"lhm.l", 0x21, I64>;
+let ry = 2, DecoderMethod = "DecodeLoadASI64" in
+defm LHMW : LHMm<"lhm.w", 0x21, I64>;
+let ry = 1, DecoderMethod = "DecodeLoadASI64" in
+defm LHMH : LHMm<"lhm.h", 0x21, I64>;
+let ry = 0, DecoderMethod = "DecodeLoadASI64" in
+defm LHMB : LHMm<"lhm.b", 0x21, I64>;
+
+// Section 8.20.2 - SHM (Store Host Memory)
+let ry = 3, DecoderMethod = "DecodeStoreASI64" in
+defm SHML : SHMm<"shm.l", 0x31, I64>;
+let ry = 2, DecoderMethod = "DecodeStoreASI64" in
+defm SHMW : SHMm<"shm.w", 0x31, I64>;
+let ry = 1, DecoderMethod = "DecodeStoreASI64" in
+defm SHMH : SHMm<"shm.h", 0x31, I64>;
+let ry = 0, DecoderMethod = "DecodeStoreASI64" in
+defm SHMB : SHMm<"shm.b", 0x31, I64>;
 
 //===----------------------------------------------------------------------===//
 // Instructions for CodeGenOnly

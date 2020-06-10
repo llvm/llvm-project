@@ -665,6 +665,33 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
   return *Info;
 }
 
+// Converts a StackSafetyFunctionInfo to the relevant FunctionSummary
+// constructor fields
+std::vector<FunctionSummary::ParamAccess>
+StackSafetyInfo::getParamAccesses() const {
+  assert(needsParamAccessSummary(*F->getParent()));
+
+  std::vector<FunctionSummary::ParamAccess> ParamAccesses;
+  for (const auto &KV : getInfo().Info.Params) {
+    auto &PS = KV.second;
+    if (PS.Range.isFullSet())
+      continue;
+
+    ParamAccesses.emplace_back(KV.first, PS.Range);
+    FunctionSummary::ParamAccess &Param = ParamAccesses.back();
+
+    Param.Calls.reserve(PS.Calls.size());
+    for (auto &C : PS.Calls) {
+      if (C.Offset.isFullSet()) {
+        ParamAccesses.pop_back();
+        break;
+      }
+      Param.Calls.emplace_back(C.ParamNo, C.Callee->getGUID(), C.Offset);
+    }
+  }
+  return ParamAccesses;
+}
+
 StackSafetyGlobalInfo::StackSafetyGlobalInfo() = default;
 
 StackSafetyGlobalInfo::StackSafetyGlobalInfo(
@@ -782,6 +809,13 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
   SSGI = {&M, [this](Function &F) -> const StackSafetyInfo & {
             return getAnalysis<StackSafetyInfoWrapperPass>(F).getResult();
           }};
+  return false;
+}
+
+bool llvm::needsParamAccessSummary(const Module &M) {
+  for (auto &F : M.functions())
+    if (F.hasFnAttribute(Attribute::SanitizeMemTag))
+      return true;
   return false;
 }
 

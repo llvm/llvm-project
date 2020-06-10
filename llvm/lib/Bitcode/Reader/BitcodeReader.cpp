@@ -5804,6 +5804,41 @@ static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
     parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId);
 }
 
+static std::vector<FunctionSummary::ParamAccess>
+parseParamAccesses(ArrayRef<uint64_t> Record) {
+  auto ReadRange = [&]() {
+    APInt Lower(FunctionSummary::ParamAccess::RangeWidth,
+                BitcodeReader::decodeSignRotatedValue(Record.front()));
+    Record = Record.drop_front();
+    APInt Upper(FunctionSummary::ParamAccess::RangeWidth,
+                BitcodeReader::decodeSignRotatedValue(Record.front()));
+    Record = Record.drop_front();
+    ConstantRange Range{Lower, Upper};
+    assert(!Range.isFullSet());
+    assert(!Range.isUpperSignWrapped());
+    return Range;
+  };
+
+  std::vector<FunctionSummary::ParamAccess> PendingParamAccesses;
+  while (!Record.empty()) {
+    PendingParamAccesses.emplace_back();
+    FunctionSummary::ParamAccess &ParamAccess = PendingParamAccesses.back();
+    ParamAccess.ParamNo = Record.front();
+    Record = Record.drop_front();
+    ParamAccess.Use = ReadRange();
+    ParamAccess.Calls.resize(Record.front());
+    Record = Record.drop_front();
+    for (auto &Call : ParamAccess.Calls) {
+      Call.ParamNo = Record.front();
+      Record = Record.drop_front();
+      Call.Callee = Record.front();
+      Record = Record.drop_front();
+      Call.Offsets = ReadRange();
+    }
+  }
+  return PendingParamAccesses;
+}
+
 void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableInfo(
     ArrayRef<uint64_t> Record, size_t &Slot,
     TypeIdCompatibleVtableInfo &TypeId) {
@@ -5881,6 +5916,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       PendingTypeCheckedLoadVCalls;
   std::vector<FunctionSummary::ConstVCall> PendingTypeTestAssumeConstVCalls,
       PendingTypeCheckedLoadConstVCalls;
+  std::vector<FunctionSummary::ParamAccess> PendingParamAccesses;
 
   while (true) {
     Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
@@ -5979,7 +6015,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
-          std::move(PendingTypeCheckedLoadConstVCalls));
+          std::move(PendingTypeCheckedLoadConstVCalls),
+          std::move(PendingParamAccesses));
       auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
       FS->setModulePath(getThisModule()->first());
       FS->setOriginalName(VIAndOriginalGUID.second);
@@ -6121,7 +6158,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
-          std::move(PendingTypeCheckedLoadConstVCalls));
+          std::move(PendingTypeCheckedLoadConstVCalls),
+          std::move(PendingParamAccesses));
       LastSeenSummary = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);
@@ -6242,6 +6280,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_BLOCK_COUNT:
       TheIndex.addBlockCount(Record[0]);
+      break;
+
+    case bitc::FS_PARAM_ACCESS: {
+      PendingParamAccesses = parseParamAccesses(Record);
+      break;
+    }
     }
   }
   llvm_unreachable("Exit infinite loop");

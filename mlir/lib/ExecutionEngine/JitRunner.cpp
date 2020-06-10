@@ -36,6 +36,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <cstdint>
 #include <numeric>
 
 using namespace mlir;
@@ -54,7 +55,7 @@ struct Options {
   llvm::cl::opt<std::string> mainFuncType{
       "entry-point-result",
       llvm::cl::desc("Textual description of the function type to be called"),
-      llvm::cl::value_desc("f32 | void"), llvm::cl::init("f32")};
+      llvm::cl::value_desc("f32 | i32 | i64 | void"), llvm::cl::init("f32")};
 
   llvm::cl::OptionCategory optFlags{"opt-like flags"};
 
@@ -172,7 +173,28 @@ static Error compileAndExecuteVoidFunction(
   return compileAndExecute(options, module, entryPoint, transformer, &empty);
 }
 
-static Error compileAndExecuteSingleFloatReturnFunction(
+template <typename Type>
+Error checkCompatibleReturnType(LLVM::LLVMFuncOp mainFunction);
+template <>
+Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
+  if (!mainFunction.getType().getFunctionResultType().isIntegerTy(32))
+    return make_string_error("only single llvm.i32 function result supported");
+  return Error::success();
+}
+template <>
+Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
+  if (!mainFunction.getType().getFunctionResultType().isIntegerTy(64))
+    return make_string_error("only single llvm.i64 function result supported");
+  return Error::success();
+}
+template <>
+Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
+  if (!mainFunction.getType().getFunctionResultType().isFloatTy())
+    return make_string_error("only single llvm.f32 function result supported");
+  return Error::success();
+}
+template <typename Type>
+Error compileAndExecuteSingleReturnFunction(
     Options &options, ModuleOp module, StringRef entryPoint,
     std::function<llvm::Error(llvm::Module *)> transformer) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
@@ -182,10 +204,10 @@ static Error compileAndExecuteSingleFloatReturnFunction(
   if (mainFunction.getType().getFunctionNumParams() != 0)
     return make_string_error("function inputs not supported");
 
-  if (!mainFunction.getType().getFunctionResultType().isFloatTy())
-    return make_string_error("only single llvm.f32 function result supported");
+  if (Error error = checkCompatibleReturnType<Type>(mainFunction))
+    return error;
 
-  float res;
+  Type res;
   struct {
     void *data;
   } data;
@@ -196,13 +218,14 @@ static Error compileAndExecuteSingleFloatReturnFunction(
 
   // Intentional printing of the output so we can test.
   llvm::outs() << res << '\n';
+
   return Error::success();
 }
 
-/// Entry point for all CPU runners. Expects the common argc/argv arguments for
-/// standard C++ main functions and an mlirTransformer.
-/// The latter is applied after parsing the input into MLIR IR and before
-/// passing the MLIR module to the ExecutionEngine.
+/// Entry point for all CPU runners. Expects the common argc/argv
+/// arguments for standard C++ main functions and an mlirTransformer.
+/// The latter is applied after parsing the input into MLIR IR and
+/// before passing the MLIR module to the ExecutionEngine.
 int mlir::JitRunnerMain(
     int argc, char **argv,
     function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer) {
@@ -267,7 +290,9 @@ int mlir::JitRunnerMain(
                 std::function<llvm::Error(llvm::Module *)>);
   auto compileAndExecuteFn =
       llvm::StringSwitch<CompileAndExecuteFnT>(options.mainFuncType.getValue())
-          .Case("f32", compileAndExecuteSingleFloatReturnFunction)
+          .Case("i32", compileAndExecuteSingleReturnFunction<int32_t>)
+          .Case("i64", compileAndExecuteSingleReturnFunction<int64_t>)
+          .Case("f32", compileAndExecuteSingleReturnFunction<float>)
           .Case("void", compileAndExecuteVoidFunction)
           .Default(nullptr);
 

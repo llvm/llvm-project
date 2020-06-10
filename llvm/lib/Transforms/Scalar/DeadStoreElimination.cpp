@@ -83,6 +83,9 @@ STATISTIC(NumFastOther, "Number of other instrs removed");
 STATISTIC(NumCompletePartials, "Number of stores dead by later partials");
 STATISTIC(NumModifiedStores, "Number of stores modified");
 STATISTIC(NumNoopStores, "Number of noop stores deleted");
+STATISTIC(NumCFGChecks, "Number of stores modified");
+STATISTIC(NumCFGTries, "Number of stores modified");
+STATISTIC(NumCFGSuccess, "Number of stores modified");
 
 DEBUG_COUNTER(MemorySSACounter, "dse-memoryssa",
               "Controls which MemoryDefs are eliminated.");
@@ -110,6 +113,11 @@ static cl::opt<unsigned> MemorySSADefsPerBlockLimit(
     "dse-memoryssa-defs-per-block-limit", cl::init(5000), cl::Hidden,
     cl::desc("The number of MemoryDefs we consider as candidates to eliminated "
              "other stores per basic block (default = 5000)"));
+
+static cl::opt<unsigned> MemorySSAPathCheckLimit(
+    "dse-memoryssa-path-check-limit", cl::init(50), cl::Hidden,
+    cl::desc("The maximum number of blocks to check when trying to prove that "
+             "all paths to an exit go through a killing block (default = 50)"));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -1591,15 +1599,15 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    ModRefInfo MR = AA.getModRefInfo(UseInst, DefLoc);
-    // If necessary, perform additional analysis.
-    if (isModSet(MR) && isa<CallBase>(UseInst))
-      MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
+    int64_t InstWriteOffset, DepWriteOffset;
+    auto CC = getLocForWriteEx(UseInst);
+    InstOverlapIntervalsTy IOL;
 
-    Optional<MemoryLocation> UseLoc = getLocForWriteEx(UseInst);
-    return isModSet(MR) && isMustSet(MR) &&
-           (UseLoc->Size.hasValue() && DefLoc.Size.hasValue() &&
-            UseLoc->Size.getValue() >= DefLoc.Size.getValue());
+    const DataLayout &DL = F.getParent()->getDataLayout();
+
+    return CC &&
+           isOverwrite(DefLoc, *CC, DL, TLI, DepWriteOffset, InstWriteOffset,
+                       UseInst, IOL, AA, &F) == OW_Complete;
   }
 
   /// Returns true if \p Use may read from \p DefLoc.
@@ -1653,19 +1661,20 @@ struct DSEState {
       if (isa<MemoryPhi>(DomAccess))
         break;
 
-      // Check if we can skip DomDef for DSE. For accesses to objects that are
-      // accessible after the function returns, KillingDef must execute whenever
-      // DomDef executes and use post-dominance to ensure that.
+      // Check if we can skip DomDef for DSE.
       MemoryDef *DomDef = dyn_cast<MemoryDef>(DomAccess);
-      if ((DomDef && canSkipDef(DomDef, DefVisibleToCallerBeforeRet)) ||
-          (DefVisibleToCallerAfterRet &&
-           !PDT.dominates(KillingDef->getBlock(), DomDef->getBlock()))) {
+      if (DomDef && canSkipDef(DomDef, DefVisibleToCallerBeforeRet)) {
         StepAgain = true;
         Current = DomDef->getDefiningAccess();
       }
 
     } while (StepAgain);
 
+    // Accesses to objects accessible after the function returns can only be
+    // eliminated if the access is killed along all paths to the exit. Collect
+    // the blocks with killing (=completely overwriting MemoryDefs) and check if
+    // they cover all paths from DomAccess to any function exit.
+    SmallPtrSet<BasicBlock *, 16> KillingBlocks = {KillingDef->getBlock()};
     LLVM_DEBUG({
       dbgs() << "  Checking for reads of " << *DomAccess;
       if (isa<MemoryDef>(DomAccess))
@@ -1733,9 +1742,90 @@ struct DSEState {
       //   3 = Def(1)   ; <---- Current  (3, 2) = NoAlias, (3,1) = MayAlias,
       //                  stores [0,1]
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
-        if (!isCompleteOverwrite(DefLoc, UseInst))
+        if (isCompleteOverwrite(DefLoc, UseInst)) {
+          if (DefVisibleToCallerAfterRet && UseAccess != DomAccess) {
+            BasicBlock *MaybeKillingBlock = UseInst->getParent();
+            if (PostOrderNumbers.find(MaybeKillingBlock)->second <
+                PostOrderNumbers.find(DomAccess->getBlock())->second) {
+
+              LLVM_DEBUG(dbgs() << "    ... found killing block "
+                                << MaybeKillingBlock->getName() << "\n");
+              KillingBlocks.insert(MaybeKillingBlock);
+            }
+          }
+        } else
           PushMemUses(UseDef);
       }
+    }
+
+    // For accesses to locations visible after the function returns, make sure
+    // that the location is killed (=overwritten) along all paths from DomAccess
+    // to the exit.
+    if (DefVisibleToCallerAfterRet) {
+      assert(!KillingBlocks.empty() &&
+             "Expected at least a single killing block");
+      // Find the common post-dominator of all killing blocks.
+      BasicBlock *CommonPred = *KillingBlocks.begin();
+      for (auto I = std::next(KillingBlocks.begin()), E = KillingBlocks.end();
+           I != E; I++) {
+        if (!CommonPred)
+          break;
+        CommonPred = PDT.findNearestCommonDominator(CommonPred, *I);
+      }
+
+      // If CommonPred is in the set of killing blocks, just check if it
+      // post-dominates DomAccess.
+      if (KillingBlocks.count(CommonPred)) {
+        if (PDT.dominates(CommonPred, DomAccess->getBlock()))
+          return {DomAccess};
+        return None;
+      }
+
+      // If the common post-dominator does not post-dominate DomAccess, there
+      // is a path from DomAccess to an exit not going through a killing block.
+      if (PDT.dominates(CommonPred, DomAccess->getBlock())) {
+        SetVector<BasicBlock *> WorkList;
+
+        // DomAccess's post-order number provides an upper bound of the blocks
+        // on a path starting at DomAccess.
+        unsigned UpperBound =
+            PostOrderNumbers.find(DomAccess->getBlock())->second;
+
+        // If CommonPred is null, there are multiple exits from the function.
+        // They all have to be added to the worklist.
+        if (CommonPred)
+          WorkList.insert(CommonPred);
+        else
+          for (BasicBlock *R : PDT.getRoots()) {
+            if (!DT.isReachableFromEntry(R))
+              continue;
+            WorkList.insert(R);
+          }
+
+        NumCFGTries++;
+        // Check if all paths starting from an exit node go through one of the
+        // killing blocks before reaching DomAccess.
+        for (unsigned I = 0; I < WorkList.size(); I++) {
+          NumCFGChecks++;
+          BasicBlock *Current = WorkList[I];
+          if (KillingBlocks.count(Current))
+            continue;
+          if (Current == DomAccess->getBlock())
+            return None;
+          unsigned CPO = PostOrderNumbers.find(Current)->second;
+          // Current block is not on a path starting at DomAccess.
+          if (CPO > UpperBound)
+            continue;
+          for (BasicBlock *Pred : predecessors(Current))
+            WorkList.insert(Pred);
+
+          if (WorkList.size() >= MemorySSAPathCheckLimit)
+            return None;
+        }
+        NumCFGSuccess++;
+        return {DomAccess};
+      }
+      return None;
     }
 
     // No aliasing MemoryUses of DomAccess found, DomAccess is potentially dead.

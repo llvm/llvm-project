@@ -292,6 +292,9 @@ enum GlobalValueSummarySymtabCodes {
   FS_PERMODULE_VTABLE_GLOBALVAR_INIT_REFS = 23,
   // The total number of basic blocks in the module.
   FS_BLOCK_COUNT = 24,
+  // Range information for accessed offsets for every argument.
+  // [n x (paramno, range, numcalls, numcalls x (callee_guid, paramno, range))]
+  FS_PARAM_ACCESS = 25,
 };
 
 enum MetadataCodes {

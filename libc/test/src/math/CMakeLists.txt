@@ -176,6 +176,32 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  round_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    round_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.round
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  roundf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    roundf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   expf_test
   NEED_MPFR
   SUITE
