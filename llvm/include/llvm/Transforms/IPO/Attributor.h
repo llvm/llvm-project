@@ -1213,22 +1213,6 @@ struct Attributor {
   BumpPtrAllocator &Allocator;
 
 private:
-  /// This method will do fixpoint iteration until fixpoint or the
-  /// maximum iteration count is reached.
-  ///
-  /// If the maximum iteration count is reached, This method will
-  /// indicate pessimistic fixpoint on attributes that transitively depend
-  /// on attributes that were scheduled for an update.
-  void runTillFixpoint();
-
-  /// Gets called after scheduling, manifests attributes to the LLVM IR.
-  ChangeStatus manifestAttributes();
-
-  /// Gets called after attributes have been manifested, cleans up the IR.
-  /// Deletes dead functions, blocks and instructions.
-  /// Rewrites function signitures and updates the call graph.
-  ChangeStatus cleanupIR();
-
   /// Run `::update` on \p AA and track the dependences queried while doing so.
   /// Also adjust the state if we know further updates are not necessary.
   ChangeStatus updateAA(AbstractAttribute &AA);
