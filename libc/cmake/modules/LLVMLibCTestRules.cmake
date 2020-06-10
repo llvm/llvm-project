@@ -198,6 +198,24 @@ function(add_libc_fuzzer target_name)
   endif()
 
   get_fq_target_name(${target_name} fq_target_name)
+  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
+  get_object_files_for_test(
+      link_object_files skipped_entrypoints_list ${fq_deps_list})
+  if(skipped_entrypoints_list)
+    set(msg "Skipping fuzzer target ${fq_target_name} as it has missing deps: "
+            "${skipped_entrypoints_list}.")
+    message(STATUS ${msg})
+    add_custom_target(${fq_target_name})
+
+    # A post build custom command is used to avoid running the command always.
+    add_custom_command(
+      TARGET ${fq_target_name}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo ${msg}
+    )
+    return()
+  endif()
+
   add_executable(
     ${fq_target_name}
     EXCLUDE_FROM_ALL
@@ -212,8 +230,6 @@ function(add_libc_fuzzer target_name)
       ${LIBC_BUILD_DIR}/include
   )
 
-  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
-  get_object_files_for_test(link_object_files ${fq_deps_list})
   target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
 
   set_target_properties(${fq_target_name}
