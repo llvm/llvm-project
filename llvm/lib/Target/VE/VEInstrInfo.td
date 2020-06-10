@@ -396,9 +396,15 @@ def CCOp : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = CCOpAsmOperand;
 }
 
-// Operand for printing out a rounding mode code.
+// Operand for a rounding mode code.
+def RDOpAsmOperand : AsmOperandClass {
+  let Name = "RDOp";
+}
 def RDOp : Operand<i32> {
   let PrintMethod = "printRDOperand";
+  let DecoderMethod = "DecodeRDOperand";
+  let EncoderMethod = "getRDOpValue";
+  let ParserMatchClass = RDOpAsmOperand;
 }
 
 def VEhi    : SDNode<"VEISD::Hi", SDTIntUnaryOp>;
@@ -1333,11 +1339,18 @@ defm CVTDL : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, sint_to_fp>;
 
 // Section 8.7.15 - CVS (Convert to Single-format)
 defm CVTSD : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, fpround>;
+let cx = 1 in
+defm CVTSQ : CVTm<"cvt.s.q", 0x1F, F32, f32, F128, f128>;
 
 // Section 8.7.16 - CVD (Convert to Double-format)
 defm CVTDS : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, fpextend>;
+let cx = 1 in
+defm CVTDQ : CVTm<"cvt.d.q", 0x0F, I64, f64, F128, f128>;
 
 // Section 8.7.17 - CVQ (Convert to Single-format)
+defm CVTQD : CVTm<"cvt.q.d", 0x2D, F128, f128, I64, f64>;
+let cx = 1 in
+defm CVTQS : CVTm<"cvt.q.s", 0x2D, F128, f128, F32, f32>;
 
 //-----------------------------------------------------------------------------
 // Section 8.8 - Branch instructions
