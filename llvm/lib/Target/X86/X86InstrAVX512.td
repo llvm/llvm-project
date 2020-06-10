@@ -1310,12 +1310,14 @@ defm VBROADCASTSD  : avx512_fp_broadcast_sd<0x19, "vbroadcastsd",
 multiclass avx512_int_broadcast_reg<bits<8> opc, SchedWrite SchedRR,
                                     X86VectorVTInfo _, SDPatternOperator OpNode,
                                     RegisterClass SrcRC> {
+  // Fold with a mask even if it has multiple uses since it is cheap.
   let ExeDomain = _.ExeDomain in
   defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                           (ins SrcRC:$src),
                           "vpbroadcast"#_.Suffix, "$src", "$src",
-                          (_.VT (OpNode SrcRC:$src))>, T8PD, EVEX,
-                          Sched<[SchedRR]>;
+                          (_.VT (OpNode SrcRC:$src)), /*IsCommutable*/0,
+                          /*IsKCommutable*/0, /*IsKZCommutable*/0, vselect>,
+                          T8PD, EVEX, Sched<[SchedRR]>;
 }
 
 multiclass avx512_int_broadcastbw_reg<bits<8> opc, string Name, SchedWrite SchedRR,
@@ -1333,11 +1335,12 @@ multiclass avx512_int_broadcastbw_reg<bits<8> opc, string Name, SchedWrite Sched
              (!cast<Instruction>(Name#rr)
               (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
 
-  def : Pat <(vselect_mask _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.RC:$src0),
+  // Fold with a mask even if it has multiple uses since it is cheap.
+  def : Pat <(vselect _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.RC:$src0),
              (!cast<Instruction>(Name#rrk) _.RC:$src0, _.KRCWM:$mask,
               (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
 
-  def : Pat <(vselect_mask _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.ImmAllZerosV),
+  def : Pat <(vselect _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.ImmAllZerosV),
              (!cast<Instruction>(Name#rrkz) _.KRCWM:$mask,
               (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
 }
