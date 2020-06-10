@@ -113,7 +113,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64PBQPRegAlloc.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
-    "AArch64RegisterBankInfo.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",
     "AArch64SelectionDAGInfo.cpp",
