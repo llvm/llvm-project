@@ -33,7 +33,7 @@ def _executeScriptInternal(test, commands):
       self.isWindows = platform.system() == 'Windows'
       self.maxIndividualTestTime = 0
   litConfig = FakeLitConfig()
-  _, tmpBase = lit.TestRunner.getTempPaths(test)
+  _, tmpBase = libcxx.test.newformat._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
   if not os.path.exists(execDir):
     os.makedirs(execDir)
