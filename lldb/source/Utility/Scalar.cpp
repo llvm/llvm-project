@@ -355,14 +355,9 @@ Scalar &Scalar::operator=(double v) {
 
 Scalar &Scalar::operator=(long double v) {
   m_type = e_long_double;
-  if (m_ieee_quad)
-    m_float = llvm::APFloat(llvm::APFloat::IEEEquad(),
-                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                        (reinterpret_cast<type128 *>(&v))->x));
-  else
-    m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                        (reinterpret_cast<type128 *>(&v))->x));
+  m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                          llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                                      (reinterpret_cast<type128 *>(&v))->x));
   return *this;
 }
 
@@ -523,8 +518,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -593,8 +587,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -659,8 +652,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -721,8 +713,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -779,8 +770,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -833,8 +823,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -887,8 +876,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -937,8 +925,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -987,8 +974,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, true,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -1034,8 +1020,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended());
       m_float.convertFromAPInt(m_integer, false,
                                llvm::APFloat::rmNearestTiesToEven);
       success = true;
@@ -1074,8 +1059,7 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double: {
       bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
+      m_float.convert(llvm::APFloat::x87DoubleExtended(),
                       llvm::APFloat::rmNearestTiesToEven, &ignore);
       success = true;
       break;
@@ -1105,8 +1089,7 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
     case e_long_double: {
       bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
+      m_float.convert(llvm::APFloat::x87DoubleExtended(),
                       llvm::APFloat::rmNearestTiesToEven, &ignore);
       success = true;
       break;

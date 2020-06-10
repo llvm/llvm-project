@@ -83,20 +83,11 @@ public:
   Scalar(double v) : m_type(e_double), m_float(v) {
     m_float = llvm::APFloat(v);
   }
-  Scalar(long double v, bool ieee_quad)
-      : m_type(e_long_double), m_float(static_cast<float>(0)),
-        m_ieee_quad(ieee_quad) {
-    if (ieee_quad)
-      m_float =
-          llvm::APFloat(llvm::APFloat::IEEEquad(),
-                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                    (reinterpret_cast<type128 *>(&v))->x));
-    else
-      m_float =
-          llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                    (reinterpret_cast<type128 *>(&v))->x));
-  }
+  Scalar(long double v)
+      : m_type(e_long_double),
+        m_float(llvm::APFloat::x87DoubleExtended(),
+                llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                            (reinterpret_cast<type128 *>(&v))->x)) {}
   Scalar(llvm::APInt v) : m_type(), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(v);
     m_type = GetBestTypeForBitSize(m_integer.getBitWidth(), true);
@@ -282,7 +273,6 @@ protected:
   Scalar::Type m_type;
   llvm::APInt m_integer;
   llvm::APFloat m_float;
-  bool m_ieee_quad = false;
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
