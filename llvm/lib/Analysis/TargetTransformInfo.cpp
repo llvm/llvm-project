@@ -1275,16 +1275,8 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor: {
-    TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
-    TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
-    Op1VK = getOperandInfo(I->getOperand(0), Op1VP);
-    Op2VK = getOperandInfo(I->getOperand(1), Op2VP);
-    SmallVector<const Value *, 2> Operands(I->operand_values());
-    return getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
-                                  Op1VK, Op2VK,
-                                  Op1VP, Op2VP, Operands, I);
-  }
+  case Instruction::Xor:
+    return getUserCost(I, CostKind);
   case Instruction::FNeg: {
     TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
     TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
