@@ -275,6 +275,52 @@ inline static const char *VERDToString(VERD::RoundingMode R) {
   }
 }
 
+inline static VERD::RoundingMode stringToVERD(StringRef S) {
+  return StringSwitch<VERD::RoundingMode>(S)
+      .Case("", VERD::RD_NONE)
+      .Case(".rz", VERD::RD_RZ)
+      .Case(".rp", VERD::RD_RP)
+      .Case(".rm", VERD::RD_RM)
+      .Case(".rn", VERD::RD_RN)
+      .Case(".ra", VERD::RD_RA)
+      .Default(VERD::UNKNOWN);
+}
+
+inline static unsigned VERDToVal(VERD::RoundingMode R) {
+  switch (R) {
+  case VERD::RD_NONE:
+  case VERD::RD_RZ:
+  case VERD::RD_RP:
+  case VERD::RD_RM:
+  case VERD::RD_RN:
+  case VERD::RD_RA:
+    return static_cast<unsigned>(R);
+  default:
+    break;
+  }
+  llvm_unreachable("Invalid branch predicates");
+}
+
+inline static VERD::RoundingMode VEValToRD(unsigned Val) {
+  switch (Val) {
+  case static_cast<unsigned>(VERD::RD_NONE):
+    return VERD::RD_NONE;
+  case static_cast<unsigned>(VERD::RD_RZ):
+    return VERD::RD_RZ;
+  case static_cast<unsigned>(VERD::RD_RP):
+    return VERD::RD_RP;
+  case static_cast<unsigned>(VERD::RD_RM):
+    return VERD::RD_RM;
+  case static_cast<unsigned>(VERD::RD_RN):
+    return VERD::RD_RN;
+  case static_cast<unsigned>(VERD::RD_RA):
+    return VERD::RD_RA;
+  default:
+    break;
+  }
+  llvm_unreachable("Invalid branch predicates");
+}
+
 // MImm - Special immediate value of sequential bit stream of 0 or 1.
 //   See VEInstrInfo.td for details.
 inline static bool isMImmVal(uint64_t Val) {
