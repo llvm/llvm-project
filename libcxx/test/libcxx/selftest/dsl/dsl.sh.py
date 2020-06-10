@@ -263,11 +263,11 @@ class TestParameter(SetupConfigs):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
         self.assertEqual(param.name, 'std')
 
-    def test_no_value_provided_on_command_line_and_no_default_value(self):
+    def test_no_value_provided_and_no_default_value(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
         self.assertRaises(ValueError, lambda: param.getFeature(self.config, self.litConfig.params))
 
-    def test_no_value_provided_on_command_line_and_default_value(self):
+    def test_no_value_provided_and_default_value(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', default='c++03',
                               feature=lambda std: dsl.Feature(name=std))
         param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
@@ -281,12 +281,32 @@ class TestParameter(SetupConfigs):
         self.assertIn('c++03', self.config.available_features)
 
     def test_value_provided_on_command_line_and_default_value(self):
+        """The value provided on the command line should override the default value"""
         self.litConfig.params['std'] = 'c++11'
         param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
                               feature=lambda std: dsl.Feature(name=std))
         param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
         self.assertIn('c++11', self.config.available_features)
         self.assertNotIn('c++03', self.config.available_features)
+
+    def test_value_provided_in_config_and_default_value(self):
+        """The value provided in the config should override the default value"""
+        self.config.std ='c++11'
+        param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
+                              feature=lambda std: dsl.Feature(name=std))
+        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+        self.assertIn('c++11', self.config.available_features)
+        self.assertNotIn('c++03', self.config.available_features)
+
+    def test_value_provided_in_config_and_on_command_line(self):
+        """The value on the command line should override the one in the config"""
+        self.config.std = 'c++11'
+        self.litConfig.params['std'] = 'c++03'
+        param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, help='',
+                              feature=lambda std: dsl.Feature(name=std))
+        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+        self.assertIn('c++03', self.config.available_features)
+        self.assertNotIn('c++11', self.config.available_features)
 
     def test_feature_is_None(self):
         self.litConfig.params['std'] = 'c++03'
