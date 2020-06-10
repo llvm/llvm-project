@@ -226,7 +226,7 @@ TEST(CrossTranslationUnit, SingleInvocationCanBeParsed) {
   llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
   EXPECT_TRUE(static_cast<bool>(Result));
 
-  EXPECT_EQ(Result->size(), 1);
+  EXPECT_EQ(Result->size(), 1u);
 
   auto It = Result->find("/tmp/main.cpp");
   EXPECT_TRUE(It != Result->end());
@@ -250,7 +250,7 @@ TEST(CrossTranslationUnit, MultipleInvocationsCanBeParsed) {
   llvm::Expected<InvocationListTy> Result = parseInvocationList(Input);
   EXPECT_TRUE(static_cast<bool>(Result));
 
-  EXPECT_EQ(Result->size(), 2);
+  EXPECT_EQ(Result->size(), 2u);
 
   auto It = Result->find("/tmp/main.cpp");
   EXPECT_TRUE(It != Result->end());
