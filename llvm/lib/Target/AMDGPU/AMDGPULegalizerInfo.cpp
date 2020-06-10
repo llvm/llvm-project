@@ -2561,7 +2561,7 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
   // Quotient_S_One = Quotient - 1
   auto Quotient_S_One = B.buildSub(S32, Quotient, One);
 
-  // Div = (Tmp1 == 0 ? Quotient_A_One : Quotient)
+  // Div = (Tmp1 ? Quotient : Quotient_A_One)
   auto Div = B.buildSelect(S32, Tmp1, Quotient, Quotient_A_One);
 
   // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
