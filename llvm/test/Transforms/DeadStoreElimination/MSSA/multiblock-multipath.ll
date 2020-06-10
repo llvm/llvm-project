@@ -9,10 +9,9 @@ declare void @use(i32 *)
 
 define void @accessible_after_return_1(i32* noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_1(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
@@ -38,10 +37,9 @@ bb5:
 
 define void @accessible_after_return_2(i32* noalias %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return_2(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
@@ -77,6 +75,8 @@ bb5:
   ret void
 }
 
+; Cannot remove store in entry block because it is not overwritten on path
+; entry->bb2->bb5.
 define void @accessible_after_return_3(i32* noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_3(
 ; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
@@ -105,6 +105,8 @@ bb5:
   ret void
 }
 
+; Cannot remove store in entry block because it is not overwritten on path
+; entry->bb2->bb5.
 define void @accessible_after_return_4(i32* noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_4(
 ; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
@@ -179,12 +181,11 @@ bb5:
 define void @accessible_after_return6(i32* %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
@@ -220,10 +221,9 @@ define void @accessible_after_return7(i32* %P, i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 2, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
@@ -257,7 +257,7 @@ bb5:
 
 
 ; Cannot remove store in entry block, because it is overwritten along each path to
-; the exit (entry->bb1->bb5->bb5).
+; the exit (entry->bb1->bb4->bb5).
 define void @accessible_after_return8(i32* %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return8(
 ; CHECK-NEXT:  entry:
@@ -353,6 +353,9 @@ for.end:
   ret void
 }
 
+; Cannot remove store in entry block because it is not overwritten on path
+; entry->bb2->bb4. Also make sure we deal with dead exit blocks without
+; crashing.
 define void @accessible_after_return10_dead_block(i32* %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return10_dead_block(
 ; CHECK-NEXT:  entry:
