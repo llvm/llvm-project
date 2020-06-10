@@ -403,17 +403,9 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExprOMP(
         Address SrcAddr = Address(Arg, CharUnits::fromQuantity(1));
         Builder.CreateMemCpy(BufferPtrByteAddr, SrcAddr, varStrLength);
         // update BufferPtrByteAddr for next string memcpy
-        llvm::Type *OrigTy = BufferPtrByteAddr.getType();
         llvm::Value *PtrAsInt = BufferPtrByteAddr.getPointer();
-        PtrAsInt = Builder.CreatePtrToInt(PtrAsInt, IntPtrTy);
-        auto *bigint =
-            Builder.CreateZExt(varStrLength, PtrAsInt->getType(), "PtyAdder");
-        PtrAsInt = Builder.CreateAdd(PtrAsInt, bigint);
-        // Instead of recreating a new Address here, can we just set
-        // it's pointer to Builder.CreateIntToPtr(PtrAsInt, OrigTy) ???
         BufferPtrByteAddr = Address(
-            Builder.CreatePointerCast(Builder.CreateIntToPtr(PtrAsInt, OrigTy),
-                                      llvm::PointerType::get(Int8Ty, AS)),
+            Builder.CreateGEP(PtrAsInt, ArrayRef<llvm::Value*>(varStrLength)),
             CharUnits::fromQuantity(1));
       } else {
         const StringLiteral *SL = getSL(argX, argXTy);
