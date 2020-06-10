@@ -759,7 +759,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     if (!ctx_obj_ptr || status.Fail())
       return;
 
-    AddThisType(context, TypeFromUser(m_ctx_obj->GetCompilerType()));
+    AddContextClassType(context, TypeFromUser(m_ctx_obj->GetCompilerType()));
 
     m_struct_vars->m_object_pointer_type =
         TypeFromUser(ctx_obj_ptr->GetCompilerType());
@@ -797,7 +797,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     LLDB_LOG(log, "  CEDM::FEVD Adding type for $__lldb_class: {1}",
              class_qual_type.getAsString());
 
-    AddThisType(context, class_user_type);
+    AddContextClassType(context, class_user_type);
 
     if (method_decl->isInstance()) {
       // self is a pointer to the object
@@ -839,7 +839,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     LLDB_LOG(log, "  FEVD Adding type for $__lldb_class: {1}",
              ClangUtil::GetQualType(pointee_type).getAsString());
 
-    AddThisType(context, pointee_type);
+    AddContextClassType(context, pointee_type);
     TypeFromUser this_user_type(this_type->GetFullCompilerType());
     m_struct_vars->m_object_pointer_type = this_user_type;
   }
@@ -1876,8 +1876,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   }
 }
 
-void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
-                                         const TypeFromUser &ut) {
+void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
+                                                 const TypeFromUser &ut) {
   CompilerType copied_clang_type = GuardedCopyType(ut);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));

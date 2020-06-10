@@ -18,14 +18,19 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Index/USRGeneration.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <tuple>
 
 namespace clang {
 namespace cross_tu {
@@ -110,6 +115,17 @@ public:
       return "Language dialect mismatch";
     case index_error_code::load_threshold_reached:
       return "Load threshold reached";
+    case index_error_code::invocation_list_ambiguous:
+      return "Invocation list file contains multiple references to the same "
+             "source file.";
+    case index_error_code::invocation_list_file_not_found:
+      return "Invocation list file is not found.";
+    case index_error_code::invocation_list_empty:
+      return "Invocation list file is empty.";
+    case index_error_code::invocation_list_wrong_format:
+      return "Invocation list file is in wrong format.";
+    case index_error_code::invocation_list_lookup_unsuccessful:
+      return "Invocation list file does not contain the requested source file.";
     }
     llvm_unreachable("Unrecognized index_error_code.");
   }
@@ -129,7 +145,7 @@ std::error_code IndexError::convertToErrorCode() const {
 }
 
 llvm::Expected<llvm::StringMap<std::string>>
-parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
+parseCrossTUIndex(StringRef IndexPath) {
   std::ifstream ExternalMapFile{std::string(IndexPath)};
   if (!ExternalMapFile)
     return llvm::make_error<IndexError>(index_error_code::missing_index_file,
@@ -139,21 +155,26 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
   std::string Line;
   unsigned LineNo = 1;
   while (std::getline(ExternalMapFile, Line)) {
-    const size_t Pos = Line.find(" ");
-    if (Pos > 0 && Pos != std::string::npos) {
-      StringRef LineRef{Line};
-      StringRef LookupName = LineRef.substr(0, Pos);
-      if (Result.count(LookupName))
+    StringRef LineRef{Line};
+    const size_t Delimiter = LineRef.find(" ");
+    if (Delimiter > 0 && Delimiter != std::string::npos) {
+      StringRef LookupName = LineRef.substr(0, Delimiter);
+
+      // Store paths with posix-style directory separator.
+      SmallVector<char, 32> FilePath;
+      llvm::Twine{LineRef.substr(Delimiter + 1)}.toVector(FilePath);
+      llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
+
+      bool InsertionOccured;
+      std::tie(std::ignore, InsertionOccured) =
+          Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
+      if (!InsertionOccured)
         return llvm::make_error<IndexError>(
             index_error_code::multiple_definitions, IndexPath.str(), LineNo);
-      StringRef FileName = LineRef.substr(Pos + 1);
-      SmallString<256> FilePath = CrossTUDir;
-      llvm::sys::path::append(FilePath, FileName);
-      Result[LookupName] = std::string(FilePath);
     } else
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);
-    LineNo++;
+    ++LineNo;
   }
   return Result;
 }
@@ -341,30 +362,11 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   }
 }
 
-CrossTranslationUnitContext::ASTFileLoader::ASTFileLoader(
-    const CompilerInstance &CI)
-    : CI(CI) {}
-
-std::unique_ptr<ASTUnit>
-CrossTranslationUnitContext::ASTFileLoader::operator()(StringRef ASTFilePath) {
-  // Load AST from ast-dump.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
-
-  return ASTUnit::LoadFromASTFile(
-      std::string(ASTFilePath), CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts());
-}
-
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
-    const CompilerInstance &CI)
-    : FileAccessor(CI), LoadGuard(const_cast<CompilerInstance &>(CI)
-                                      .getAnalyzerOpts()
-                                      ->CTUImportThreshold) {}
+    CompilerInstance &CI)
+    : Loader(CI, CI.getAnalyzerOpts()->CTUDir,
+             CI.getAnalyzerOpts()->CTUInvocationList),
+      LoadGuard(CI.getAnalyzerOpts()->CTUImportThreshold) {}
 
 llvm::Expected<ASTUnit *>
 CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
@@ -380,8 +382,12 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
           index_error_code::load_threshold_reached);
     }
 
-    // Load the ASTUnit from the pre-dumped AST file specified by ASTFileName.
-    std::unique_ptr<ASTUnit> LoadedUnit = FileAccessor(FileName);
+    auto LoadAttempt = Loader.load(FileName);
+
+    if (!LoadAttempt)
+      return LoadAttempt.takeError();
+
+    std::unique_ptr<ASTUnit> LoadedUnit = std::move(LoadAttempt.get());
 
     // Need the raw pointer and the unique_ptr as well.
     ASTUnit *Unit = LoadedUnit.get();
@@ -461,7 +467,7 @@ llvm::Error CrossTranslationUnitContext::ASTUnitStorage::ensureCTUIndexLoaded(
   else
     llvm::sys::path::append(IndexFile, IndexName);
 
-  if (auto IndexMapping = parseCrossTUIndex(IndexFile, CrossTUDir)) {
+  if (auto IndexMapping = parseCrossTUIndex(IndexFile)) {
     // Initialize member map.
     NameFileMap = *IndexMapping;
     return llvm::Error::success();
@@ -492,6 +498,193 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
         index_error_code::failed_to_get_external_ast);
 
   return Unit;
+}
+
+CrossTranslationUnitContext::ASTLoader::ASTLoader(
+    CompilerInstance &CI, StringRef CTUDir, StringRef InvocationListFilePath)
+    : CI(CI), CTUDir(CTUDir), InvocationListFilePath(InvocationListFilePath) {}
+
+CrossTranslationUnitContext::LoadResultTy
+CrossTranslationUnitContext::ASTLoader::load(StringRef Identifier) {
+  llvm::SmallString<256> Path;
+  if (llvm::sys::path::is_absolute(Identifier, PathStyle)) {
+    Path = Identifier;
+  } else {
+    Path = CTUDir;
+    llvm::sys::path::append(Path, PathStyle, Identifier);
+  }
+
+  // The path is stored in the InvocationList member in posix style. To
+  // successfully lookup an entry based on filepath, it must be converted.
+  llvm::sys::path::native(Path, PathStyle);
+
+  // Normalize by removing relative path components.
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dot*/ true, PathStyle);
+
+  if (Path.endswith(".ast"))
+    return loadFromDump(Path);
+  else
+    return loadFromSource(Path);
+}
+
+CrossTranslationUnitContext::LoadResultTy
+CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
+  return ASTUnit::LoadFromASTFile(
+      std::string(ASTDumpPath.str()),
+      CI.getPCHContainerOperations()->getRawReader(), ASTUnit::LoadEverything,
+      Diags, CI.getFileSystemOpts());
+}
+
+/// Load the AST from a source-file, which is supposed to be located inside the
+/// YAML formatted invocation list file under the filesystem path specified by
+/// \p InvocationList. The invocation list should contain absolute paths.
+/// \p SourceFilePath is the absolute path of the source file that contains the
+/// function definition the analysis is looking for. The Index is built by the
+/// \p clang-extdef-mapping tool, which is also supposed to be generating
+/// absolute paths.
+///
+/// Proper diagnostic emission requires absolute paths, so even if a future
+/// change introduces the handling of relative paths, this must be taken into
+/// consideration.
+CrossTranslationUnitContext::LoadResultTy
+CrossTranslationUnitContext::ASTLoader::loadFromSource(
+    StringRef SourceFilePath) {
+
+  if (llvm::Error InitError = lazyInitInvocationList())
+    return std::move(InitError);
+  assert(InvocationList);
+
+  auto Invocation = InvocationList->find(SourceFilePath);
+  if (Invocation == InvocationList->end())
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_lookup_unsuccessful);
+
+  const InvocationListTy::mapped_type &InvocationCommand = Invocation->second;
+
+  SmallVector<const char *, 32> CommandLineArgs(InvocationCommand.size());
+  std::transform(InvocationCommand.begin(), InvocationCommand.end(),
+                 CommandLineArgs.begin(),
+                 [](auto &&CmdPart) { return CmdPart.c_str(); });
+
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts{&CI.getDiagnosticOpts()};
+  auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
+      CI.getDiagnostics().getDiagnosticIDs()};
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
+
+  return std::unique_ptr<ASTUnit>(ASTUnit::LoadFromCommandLine(
+      CommandLineArgs.begin(), (CommandLineArgs.end()),
+      CI.getPCHContainerOperations(), Diags,
+      CI.getHeaderSearchOpts().ResourceDir));
+}
+
+llvm::Expected<InvocationListTy>
+parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
+  InvocationListTy InvocationList;
+
+  /// LLVM YAML parser is used to extract information from invocation list file.
+  llvm::SourceMgr SM;
+  llvm::yaml::Stream InvocationFile(FileContent, SM);
+
+  /// Only the first document is processed.
+  llvm::yaml::document_iterator FirstInvocationFile = InvocationFile.begin();
+
+  /// There has to be at least one document available.
+  if (FirstInvocationFile == InvocationFile.end())
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_empty);
+
+  llvm::yaml::Node *DocumentRoot = FirstInvocationFile->getRoot();
+  if (!DocumentRoot)
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_wrong_format);
+
+  /// According to the format specified the document must be a mapping, where
+  /// the keys are paths to source files, and values are sequences of invocation
+  /// parts.
+  auto *Mappings = dyn_cast<llvm::yaml::MappingNode>(DocumentRoot);
+  if (!Mappings)
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_wrong_format);
+
+  for (auto &NextMapping : *Mappings) {
+    /// The keys should be strings, which represent a source-file path.
+    auto *Key = dyn_cast<llvm::yaml::ScalarNode>(NextMapping.getKey());
+    if (!Key)
+      return llvm::make_error<IndexError>(
+          index_error_code::invocation_list_wrong_format);
+
+    SmallVector<char, 32> ValueStorage;
+    StringRef SourcePath = Key->getValue(ValueStorage);
+
+    // Store paths with PathStyle directory separator.
+    SmallVector<char, 32> NativeSourcePath;
+    llvm::Twine{SourcePath}.toVector(NativeSourcePath);
+    llvm::sys::path::native(NativeSourcePath, PathStyle);
+
+    StringRef InvocationKey{NativeSourcePath.begin(), NativeSourcePath.size()};
+
+    if (InvocationList.find(InvocationKey) != InvocationList.end())
+      return llvm::make_error<IndexError>(
+          index_error_code::invocation_list_ambiguous);
+
+    /// The values should be sequences of strings, each representing a part of
+    /// the invocation.
+    auto *Args = dyn_cast<llvm::yaml::SequenceNode>(NextMapping.getValue());
+    if (!Args)
+      return llvm::make_error<IndexError>(
+          index_error_code::invocation_list_wrong_format);
+
+    for (auto &Arg : *Args) {
+      auto *CmdString = dyn_cast<llvm::yaml::ScalarNode>(&Arg);
+      if (!CmdString)
+        return llvm::make_error<IndexError>(
+            index_error_code::invocation_list_wrong_format);
+      /// Every conversion starts with an empty working storage, as it is not
+      /// clear if this is a requirement of the YAML parser.
+      ValueStorage.clear();
+      InvocationList[InvocationKey].emplace_back(
+          CmdString->getValue(ValueStorage));
+    }
+
+    if (InvocationList[InvocationKey].empty())
+      return llvm::make_error<IndexError>(
+          index_error_code::invocation_list_wrong_format);
+  }
+
+  return InvocationList;
+}
+
+llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
+  /// Lazily initialize the invocation list member used for on-demand parsing.
+  if (InvocationList)
+    return llvm::Error::success();
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
+      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+  if (!FileContent)
+    return llvm::make_error<IndexError>(
+        index_error_code::invocation_list_file_not_found);
+  std::unique_ptr<llvm::MemoryBuffer> ContentBuffer = std::move(*FileContent);
+  assert(ContentBuffer && "If no error was produced after loading, the pointer "
+                          "should not be nullptr.");
+
+  llvm::Expected<InvocationListTy> ExpectedInvocationList =
+      parseInvocationList(ContentBuffer->getBuffer(), PathStyle);
+
+  if (!ExpectedInvocationList)
+    return ExpectedInvocationList.takeError();
+
+  InvocationList = *ExpectedInvocationList;
+
+  return llvm::Error::success();
 }
 
 template <typename T>

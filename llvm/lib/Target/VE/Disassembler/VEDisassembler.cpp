@@ -189,6 +189,8 @@ static DecodeStatus DecodeSIMM7(MCInst &Inst, uint64_t insn, uint64_t Address,
                                 const void *Decoder);
 static DecodeStatus DecodeCCOperand(MCInst &Inst, uint64_t insn,
                                     uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeRDOperand(MCInst &Inst, uint64_t insn,
+                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeBranchCondition(MCInst &Inst, uint64_t insn,
                                           uint64_t Address,
                                           const void *Decoder);
@@ -506,6 +508,13 @@ static bool isIntegerBCKind(MCInst &MI) {
 static DecodeStatus DecodeCCOperand(MCInst &MI, uint64_t cf, uint64_t Address,
                                     const void *Decoder) {
   MI.addOperand(MCOperand::createImm(VEValToCondCode(cf, isIntegerBCKind(MI))));
+  return MCDisassembler::Success;
+}
+
+// Decode RD Operand field.
+static DecodeStatus DecodeRDOperand(MCInst &MI, uint64_t cf, uint64_t Address,
+                                    const void *Decoder) {
+  MI.addOperand(MCOperand::createImm(VEValToRD(cf)));
   return MCDisassembler::Success;
 }
 
