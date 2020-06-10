@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <thread>
+#include <cstdlib>
 
 namespace clang {
 namespace clangd {
