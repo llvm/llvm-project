@@ -55,8 +55,14 @@ namespace clangd {
 // Iterates over unicode codepoints in the (UTF-8) string. For each,
 // invokes CB(UTF-8 length, UTF-16 length), and breaks if it returns true.
 // Returns true if CB returned true, false if we hit the end of string.
+//
+// If the string is not valid UTF-8, we log this error and "decode" the
+// text in some arbitrary way. This is pretty sad, but this tends to happen deep
+// within indexing of headers where clang misdetected the encoding, and
+// propagating the error all the way back up is (probably?) not be worth it.
 template <typename Callback>
 static bool iterateCodepoints(llvm::StringRef U8, const Callback &CB) {
+  bool LoggedInvalid = false;
   // A codepoint takes two UTF-16 code unit if it's astral (outside BMP).
   // Astral codepoints are encoded as 4 bytes in UTF-8, starting with 11110xxx.
   for (size_t I = 0; I < U8.size();) {
@@ -70,9 +76,20 @@ static bool iterateCodepoints(llvm::StringRef U8, const Callback &CB) {
     // This convenient property of UTF-8 holds for all non-ASCII characters.
     size_t UTF8Length = llvm::countLeadingOnes(C);
     // 0xxx is ASCII, handled above. 10xxx is a trailing byte, invalid here.
-    // 11111xxx is not valid UTF-8 at all. Assert because it's probably our bug.
-    assert((UTF8Length >= 2 && UTF8Length <= 4) &&
-           "Invalid UTF-8, or transcoding bug?");
+    // 11111xxx is not valid UTF-8 at all, maybe some ISO-8859-*.
+    if (LLVM_UNLIKELY(UTF8Length < 2 || UTF8Length > 4)) {
+      if (!LoggedInvalid) {
+        elog("File has invalid UTF-8 near offset {0}: {1}", I, llvm::toHex(U8));
+        LoggedInvalid = true;
+      }
+      // We can't give a correct result, but avoid returning something wild.
+      // Pretend this is a valid ASCII byte, for lack of better options.
+      // (Too late to get ISO-8859-* right, we've skipped some bytes already).
+      if (CB(1, 1))
+        return true;
+      ++I;
+      continue;
+    }
     I += UTF8Length; // Skip over all trailing bytes.
     // A codepoint takes two UTF-16 code unit if it's astral (outside BMP).
     // Astral codepoints are encoded as 4 bytes in UTF-8 (11110xxx ...)
