@@ -144,8 +144,14 @@ Changes to the AVR Target
 Changes to the WebAssembly Target
 ---------------------------------
 
-During this release ...
+* Programs which don't have a "main" function, called "reactors" are now
+  properly supported, with a new `-mexec-model=reactor` flag. Programs which
+  previously used `-Wl,--no-entry` to avoid having a main function should
+  switch to this new flag, so that static initialization is properly
+  performed.
 
+* `__attribute__((visibility("protected")))` now evokes a warning, as
+  WebAssembly does not support "protected" visibility.
 
 Changes to the OCaml bindings
 -----------------------------
