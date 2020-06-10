@@ -21,21 +21,6 @@ add_object_library(
 )
 
 add_entrypoint_object(
-  round
-  REDIRECTED
-  SRCS
-    round.cpp
-  HDRS
-    round.h
-)
-
-add_redirector_object(
-  round_redirector
-  SRC
-    round_redirector.cpp
-)
-
-add_entrypoint_object(
   cosf
   SRCS
     cosf.cpp
@@ -147,6 +132,26 @@ add_entrypoint_object(
     floorf.cpp
   HDRS
     floorf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  round
+  SRCS
+    round.cpp
+  HDRS
+    round.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  roundf
+  SRCS
+    roundf.cpp
+  HDRS
+    roundf.h
   DEPENDS
     libc.utils.FPUtil.fputil
 )
