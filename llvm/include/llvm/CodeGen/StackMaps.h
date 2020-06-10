@@ -166,21 +166,23 @@ class StatepointOpers {
   enum { CCOffset = 1, FlagsOffset = 3, NumDeoptOperandsOffset = 5 };
 
 public:
-  explicit StatepointOpers(const MachineInstr *MI) : MI(MI) {}
+  explicit StatepointOpers(const MachineInstr *MI) : MI(MI) {
+    NumDefs = MI->getNumDefs();
+  }
 
   /// Get index of statepoint ID operand.
-  unsigned getIDPos() const { return IDPos; }
+  unsigned getIDPos() const { return NumDefs + IDPos; }
 
   /// Get index of Num Patch Bytes operand.
-  unsigned getNBytesPos() const { return NBytesPos; }
+  unsigned getNBytesPos() const { return NumDefs + NBytesPos; }
 
   /// Get index of Num Call Arguments operand.
-  unsigned getNCallArgsPos() const { return NCallArgsPos; }
+  unsigned getNCallArgsPos() const { return NumDefs + NCallArgsPos; }
 
   /// Get starting index of non call related arguments
   /// (calling convention, statepoint flags, vm state and gc state).
   unsigned getVarIdx() const {
-    return MI->getOperand(NCallArgsPos).getImm() + MetaEnd;
+    return MI->getOperand(NumDefs + NCallArgsPos).getImm() + MetaEnd + NumDefs;
   }
 
   /// Get index of Calling Convention operand.
@@ -195,16 +197,16 @@ public:
   }
 
   /// Return the ID for the given statepoint.
-  uint64_t getID() const { return MI->getOperand(IDPos).getImm(); }
+  uint64_t getID() const { return MI->getOperand(NumDefs + IDPos).getImm(); }
 
   /// Return the number of patchable bytes the given statepoint should emit.
   uint32_t getNumPatchBytes() const {
-    return MI->getOperand(NBytesPos).getImm();
+    return MI->getOperand(NumDefs + NBytesPos).getImm();
   }
 
   /// Return the target of the underlying call.
   const MachineOperand &getCallTarget() const {
-    return MI->getOperand(CallTargetPos);
+    return MI->getOperand(NumDefs + CallTargetPos);
   }
 
   /// Return the calling convention.
@@ -217,6 +219,7 @@ public:
 
 private:
   const MachineInstr *MI;
+  unsigned NumDefs;
 };
 
 class StackMaps {
