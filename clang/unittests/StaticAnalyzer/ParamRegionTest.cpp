@@ -19,9 +19,9 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
   void checkForSameParamRegions(MemRegionManager &MRMgr,
                                 const StackFrameContext *SFC,
                                 const ParmVarDecl *PVD) {
-    assert(llvm::all_of(PVD->redecls(), [](const clang::VarDecl *D2) {
+    assert(llvm::all_of(PVD->redecls(), [&](const clang::VarDecl *D2) {
       return MRMgr.getVarRegion(PVD, SFC) ==
-             MRMgr.getVarRegion(cast<ParmVarDecl>(D2), SFC)
+             MRMgr.getVarRegion(cast<ParmVarDecl>(D2), SFC);
     }));
   }
 
