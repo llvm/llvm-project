@@ -30088,25 +30088,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::ADDRSPACECAST: {
-    SDValue Src = N->getOperand(0);
-    EVT DstVT = N->getValueType(0);
-    AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
-    unsigned SrcAS = CastN->getSrcAddressSpace();
-
-    assert(SrcAS != CastN->getDestAddressSpace() &&
-           "addrspacecast must be between different address spaces");
-
-    SDValue Res;
-    if (SrcAS == X86AS::PTR32_UPTR && DstVT == MVT::i64)
-      Res = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Src);
-    else if (DstVT == MVT::i64)
-      Res = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Src);
-    else if (DstVT == MVT::i32)
-      Res = DAG.getNode(ISD::TRUNCATE, dl, DstVT, Src);
-    else
-      report_fatal_error("Unrecognized addrspacecast type legalization");
-
-    Results.push_back(Res);
+    SDValue V = LowerADDRSPACECAST(SDValue(N,0), DAG);
+    Results.push_back(V);
     return;
   }
   }
