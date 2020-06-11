@@ -22,6 +22,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -376,7 +377,13 @@ public:
   /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
   /// zero or one incoming values, and don't simplify PHIs with all incoming
   /// values the same.
-  void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
+  ///
+  /// If \p MaybeDeadInstrs is not nullptr then whenever we drop a reference to
+  /// an instruction, append it to the vector. The caller should check whether
+  /// these instructions are now trivially dead, and if so delete them.
+  void
+  removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false,
+                    SmallVectorImpl<WeakTrackingVH> *MaybeDeadInstrs = nullptr);
 
   bool canSplitPredecessors() const;
 
