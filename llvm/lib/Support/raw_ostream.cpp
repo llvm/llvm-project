@@ -878,7 +878,6 @@ raw_fd_ostream &llvm::outs() {
 raw_fd_ostream &llvm::errs() {
   // Set standard error to be unbuffered and tied to outs() by default.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
-  S.tie(&outs());
   return S;
 }
 
