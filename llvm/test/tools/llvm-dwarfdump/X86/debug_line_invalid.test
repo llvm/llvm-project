@@ -105,7 +105,7 @@
 
 ## Prologue with length longer than parsed.
 # NONFATAL:      debug_line[0x000000c7]
-# SOME-ERR-NEXT: warning: unknown data in line table prologue at offset 0x000000c7: parsing ended (at offset 0x00000101) before reaching the prologue at offset 0x00000102
+# SOME-ERR-NEXT: warning: unknown data in line table prologue at offset 0x000000c7: parsing ended (at offset 0x00000101) before reaching the prologue end at offset 0x00000102
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      file_names[  2]:
 # NONFATAL-NEXT:            name: "file2"

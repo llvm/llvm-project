@@ -433,7 +433,7 @@ Error DWARFDebugLine::Prologue::parse(
         errc::invalid_argument,
         "unknown data in line table prologue at offset 0x%8.8" PRIx64
         ": parsing ended (at offset 0x%8.8" PRIx64
-        ") before reaching the prologue at offset 0x%8.8" PRIx64,
+        ") before reaching the prologue end at offset 0x%8.8" PRIx64,
         PrologueOffset, *OffsetPtr, EndPrologueOffset));
   }
   return Error::success();
