@@ -18,6 +18,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TypeTraits.h"
 
 using namespace clang;
 
@@ -833,23 +834,8 @@ void TextNodeDumper::VisitUnaryOperator(const UnaryOperator *Node) {
 
 void TextNodeDumper::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *Node) {
-  switch (Node->getKind()) {
-  case UETT_SizeOf:
-    OS << " sizeof";
-    break;
-  case UETT_AlignOf:
-    OS << " alignof";
-    break;
-  case UETT_VecStep:
-    OS << " vec_step";
-    break;
-  case UETT_OpenMPRequiredSimdAlign:
-    OS << " __builtin_omp_required_simd_align";
-    break;
-  case UETT_PreferredAlignOf:
-    OS << " __alignof";
-    break;
-  }
+  OS << " " << getTraitSpelling(Node->getKind());
+
   if (Node->isArgumentType())
     dumpType(Node->getArgumentType());
 }
