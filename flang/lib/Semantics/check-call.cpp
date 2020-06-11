@@ -332,7 +332,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (auto why{WhyNotModifiable(
             messages.at(), actual, *scope, vectorSubscriptIsOk)}) {
       if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s must be definable"_err_en_US,
+              "Actual argument associated with %s %s must be definable"_err_en_US, // C1158
               reason, dummyName)}) {
         msg->Attach(*why);
       }
