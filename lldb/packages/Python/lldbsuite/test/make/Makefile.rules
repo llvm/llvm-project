@@ -342,9 +342,6 @@ else
 SWIFT_BRIDGING_PCH :=
 SWIFT_HFLAGS :=
 endif
-=======
-CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
->>>>>>> refs/am/changes/e357ff65f5ff51c91c374bb4897d0daca8d0736c_swift/master-next
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
