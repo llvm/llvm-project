@@ -63,6 +63,8 @@ def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
 
   let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
   let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
