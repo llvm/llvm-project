@@ -52,8 +52,8 @@ class DefaultInlineAdvice : public InlineAdvice {
 public:
   DefaultInlineAdvice(DefaultInlineAdvisor *Advisor, CallBase &CB,
                       Optional<InlineCost> OIC, OptimizationRemarkEmitter &ORE)
-      : InlineAdvice(Advisor, CB, OIC.hasValue()), OriginalCB(&CB), OIC(OIC),
-        ORE(ORE), DLoc(CB.getDebugLoc()), Block(CB.getParent()) {}
+      : InlineAdvice(Advisor, CB, ORE, OIC.hasValue()), OriginalCB(&CB),
+        OIC(OIC) {}
 
 private:
   void recordUnsuccessfulInliningImpl(const InlineResult &Result) override {
@@ -79,13 +79,6 @@ private:
 private:
   CallBase *const OriginalCB;
   Optional<InlineCost> OIC;
-  OptimizationRemarkEmitter &ORE;
-
-  // Capture the context of CB before inlining, as a successful inlining may
-  // change that context, and we want to report success or failure in the
-  // original context.
-  const DebugLoc DLoc;
-  const BasicBlock *const Block;
 };
 
 } // namespace
@@ -124,8 +117,10 @@ std::unique_ptr<InlineAdvice> DefaultInlineAdvisor::getAdvice(CallBase &CB) {
 }
 
 InlineAdvice::InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
+                           OptimizationRemarkEmitter &ORE,
                            bool IsInliningRecommended)
     : Advisor(Advisor), Caller(CB.getCaller()), Callee(CB.getCalledFunction()),
+      DLoc(CB.getDebugLoc()), Block(CB.getParent()), ORE(ORE),
       IsInliningRecommended(IsInliningRecommended) {}
 
 void InlineAdvisor::markFunctionAsDeleted(Function *F) {
