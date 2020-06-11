@@ -4,7 +4,7 @@
 #define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
-struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}}
+struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated __ptrauth field}}
   int * AQ m0;
 };
 

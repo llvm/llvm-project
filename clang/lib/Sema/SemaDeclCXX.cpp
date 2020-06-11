@@ -9780,7 +9780,7 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
 
     // Ill-formed if the field is an address-discriminated pointer.
     if (FT.hasAddressDiscriminatedPointerAuth()) {
-      PrintDiagAndRemoveAttr();
+      PrintDiagAndRemoveAttr(6);
       return;
     }
 
