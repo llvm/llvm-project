@@ -38,6 +38,7 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                  CodeGenOpt::Level OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoPass();
+FunctionPass *createAArch64SLSHardeningPass();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptimizationPass();
 FunctionPass *createAArch64SIMDInstrOptPass();
@@ -74,6 +75,7 @@ void initializeAArch64ConditionOptimizerPass(PassRegistry&);
 void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandHardenedPseudosPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry&);
+void initializeAArch64SLSHardeningPass(PassRegistry&);
 void initializeAArch64SpeculationHardeningPass(PassRegistry&);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64SIMDInstrOptPass(PassRegistry&);

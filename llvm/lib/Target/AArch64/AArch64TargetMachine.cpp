@@ -192,6 +192,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(*PR);
   initializeSVEIntrinsicOptsPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
+  initializeAArch64SLSHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64ExpandHardenedPseudosPass(*PR);
@@ -643,6 +644,8 @@ void AArch64PassConfig::addPreSched2() {
   // FalkorHWPFFixPass to avoid recomputing dominator tree and natural loop
   // info.
   addPass(createAArch64SpeculationHardeningPass());
+
+  addPass(createAArch64SLSHardeningPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None) {
     if (EnableFalkorHWPFFix)
