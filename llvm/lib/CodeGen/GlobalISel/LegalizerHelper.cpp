@@ -4604,12 +4604,12 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   Register UH = Unmerge.getReg(1);
 
   auto E = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 20));
+  E = MIRBuilder.buildAnd(S32, E, MIRBuilder.buildConstant(S32, ExpMask));
 
   // Subtract the fp64 exponent bias (1023) to get the real exponent and
   // add the f16 bias (15) to get the biased exponent for the f16 format.
   E = MIRBuilder.buildAdd(
     S32, E, MIRBuilder.buildConstant(S32, -ExpBiasf64 + ExpBiasf16));
-  E = MIRBuilder.buildAnd(S32, E, MIRBuilder.buildConstant(S32, ExpMask));
 
   auto M = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 8));
   M = MIRBuilder.buildAnd(S32, M, MIRBuilder.buildConstant(S32, 0xffe));
