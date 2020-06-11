@@ -10600,10 +10600,15 @@ bool ASTContext::isNearlyEmpty(const CXXRecordDecl *RD) const {
 
 VTableContextBase *ASTContext::getVTableContext() {
   if (!VTContext.get()) {
-    if (Target->getCXXABI().isMicrosoft())
+    auto ABI = Target->getCXXABI();
+    if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));
-    else
-      VTContext.reset(new ItaniumVTableContext(*this));
+    else {
+      auto ComponentLayout = getLangOpts().RelativeCXXABIVTables
+                                 ? ItaniumVTableContext::Relative
+                                 : ItaniumVTableContext::Pointer;
+      VTContext.reset(new ItaniumVTableContext(*this, ComponentLayout));
+    }
   }
   return VTContext.get();
 }
