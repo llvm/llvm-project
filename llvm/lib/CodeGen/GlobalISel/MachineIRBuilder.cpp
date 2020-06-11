@@ -97,7 +97,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  auto MIB = buildInstr(TargetOpcode::DBG_VALUE);
+  auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
   if (auto *CI = dyn_cast<ConstantInt>(&C)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -110,7 +110,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addReg(0U);
   }
 
-  return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  return insertInstr(MIB);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
