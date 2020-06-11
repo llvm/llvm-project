@@ -512,12 +512,12 @@ let SchedRW = [WriteSystem] in {
 let SchedRW = [WriteSystem] in {
 let Predicates = [HasXSAVE] in {
 let Defs = [EDX, EAX], Uses = [ECX] in
-  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, TB;
+  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
 
 let Uses = [EDX, EAX, ECX] in
   def XSETBV : I<0x01, MRM_D1, (outs), (ins),
                 "xsetbv",
-                [(int_x86_xsetbv ECX, EDX, EAX)]>, TB;
+                [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
 
 } // HasXSAVE
 
@@ -542,22 +542,22 @@ def XSAVEOPT64 : RI<0xAE, MRM6m, (outs), (ins opaquemem:$dst),
                     [(int_x86_xsaveopt64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEOPT, In64BitMode]>;
 def XSAVEC : I<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                "xsavec\t$dst",
-               [(int_x86_xsavec addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC]>;
+               [(int_x86_xsavec addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEC]>;
 def XSAVEC64 : RI<0xC7, MRM4m, (outs), (ins opaquemem:$dst),
                  "xsavec64\t$dst",
-                 [(int_x86_xsavec64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVEC, In64BitMode]>;
+                 [(int_x86_xsavec64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVEC, In64BitMode]>;
 def XSAVES : I<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                "xsaves\t$dst",
-               [(int_x86_xsaves addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
+               [(int_x86_xsaves addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES]>;
 def XSAVES64 : RI<0xC7, MRM5m, (outs), (ins opaquemem:$dst),
                   "xsaves64\t$dst",
-                  [(int_x86_xsaves64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVE, In64BitMode]>;
+                  [(int_x86_xsaves64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVE, In64BitMode]>;
 def XRSTORS : I<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                 "xrstors\t$dst",
-                [(int_x86_xrstors addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES]>;
+                [(int_x86_xrstors addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES]>;
 def XRSTORS64 : RI<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
                    "xrstors64\t$dst",
-                   [(int_x86_xrstors64 addr:$dst, EDX, EAX)]>, TB, Requires<[HasXSAVES, In64BitMode]>;
+                   [(int_x86_xrstors64 addr:$dst, EDX, EAX)]>, PS, Requires<[HasXSAVES, In64BitMode]>;
 } // Uses
 } // SchedRW
 
@@ -590,10 +590,10 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, PS;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
-                  [(X86wrpkru EAX, EDX, ECX)]>, TB;
+                  [(X86wrpkru EAX, EDX, ECX)]>, PS;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -653,15 +653,15 @@ let Predicates = [In64BitMode, HasINVPCID] in {
 //===----------------------------------------------------------------------===//
 // SMAP Instruction
 let Defs = [EFLAGS], SchedRW = [WriteSystem] in {
-  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", []>, TB;
-  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", []>, TB;
+  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", []>, PS;
+  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", []>, PS;
 }
 
 //===----------------------------------------------------------------------===//
 // SMX Instruction
 let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX] in {
-  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", []>, TB;
+  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", []>, PS;
 } // Uses, Defs
 } // SchedRW
 
@@ -729,6 +729,6 @@ def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
 
 let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX, RDX, EFLAGS] in
-    def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, TB,
+    def PCONFIG : I<0x01, MRM_C5, (outs), (ins), "pconfig", []>, PS,
                   Requires<[HasPCONFIG]>;
 } // SchedRW
