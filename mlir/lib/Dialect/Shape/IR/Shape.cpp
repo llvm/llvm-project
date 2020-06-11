@@ -187,7 +187,7 @@ struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
     return success();
   }
 };
-}; // namespace
+} // namespace
 
 void AssumingOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
                                              MLIRContext *context) {

@@ -651,7 +651,6 @@ namespace {
 struct ConvertVectorToSCFPass
     : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
   ConvertVectorToSCFPass() = default;
-  ConvertVectorToSCFPass(const ConvertVectorToSCFPass &pass) {}
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
   }
