@@ -21,25 +21,27 @@
 // BIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // BIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
 // BIN-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
+// RDC-DAG: [[P12:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
+// RDC-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
 
 // BIN-DAG: [[P3:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH:gfx803]])
 // BIN-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // BIN-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH]])
 // NRD-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, assembler, (device-[[T]], [[ARCH]])
 // NRD-DAG: [[P7:[0-9]+]]: assembler, {[[P6]]}, object, (device-[[T]], [[ARCH]])
-// NRD-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH]])
-// NRD-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
+// RDC-DAG: [[P7:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
+// BIN-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH]])
+// BIN-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
 // NRD-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, hip-fatbin, (device-[[T]])
-// RDC-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
-// RDC-DAG: [[P10:[0-9]+]]: linker, {[[P6]]}, image, (device-[[T]], [[ARCH]])
+// RDC-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, object, (device-[[T]])
 
-// NRD-DAG: [[P12:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, ir
+// NRD-DAG: [[P11:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, ir
+// RDC-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, object
+// NRD-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
+// NRD-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
+// NRD-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
+// RDC-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
 
-// NRD-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, assembler, (host-[[T]])
-// RDC-DAG: [[P13:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
-// BIN-DAG: [[P14:[0-9]+]]: assembler, {[[P13]]}, object, (host-[[T]])
-// BIN-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image, (host-[[T]])
-// RDC-DAG: [[P16:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P15]]}, "device-[[T]] (amdgcn-amd-amdhsa:gfx803)" {[[P10]]}, image
 //
 // Test single gpu architecture up to the assemble phase.
 //
@@ -56,59 +58,84 @@
 // ASM-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (host-[[T]])
 
 //
-// Test two gpu architectures with complete compilation.
+// Test two gpu architectures with complete compilation with -fno-gpu-rdc.
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN2,NRD2,CL2 %s
+// RUN: | FileCheck -check-prefixes=NRD2,NCL2 %s
 
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -c 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN2,NRD2 %s
+// RUN: | FileCheck -check-prefixes=NRD2 %s
 
+// NRD2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
+// NRD2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
+// NRD2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
+
+// NRD2-DAG: [[P3:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH1:gfx803]])
+// NRD2-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
+// NRD2-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH1]])
+// NRD2-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, assembler, (device-[[T]], [[ARCH1]])
+// NRD2-DAG: [[P7:[0-9]+]]: assembler, {[[P6]]}, object, (device-[[T]], [[ARCH1]])
+// NRD2-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH1]])
+// NRD2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P8]]}, image
+
+// NRD2-DAG: [[P10:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
+// NRD2-DAG: [[P11:[0-9]+]]: preprocessor, {[[P10]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// NRD2-DAG: [[P12:[0-9]+]]: compiler, {[[P11]]}, ir, (device-[[T]], [[ARCH2]])
+// NRD2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, assembler, (device-[[T]], [[ARCH2]])
+// NRD2-DAG: [[P14:[0-9]+]]: assembler, {[[P13]]}, object, (device-[[T]], [[ARCH2]])
+// NRD2-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image, (device-[[T]], [[ARCH2]])
+// NRD2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P15]]}, image
+// NRD2-DAG: [[P17:[0-9]+]]: linker, {[[P9]], [[P16]]}, hip-fatbin, (device-[[T]])
+// NRD2-DAG: [[P18:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P17]]}, ir
+// NRD2-DAG: [[P19:[0-9]+]]: backend, {[[P18]]}, assembler, (host-[[T]])
+// NRD2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
+// NCL2-DAG: [[P21:[0-9]+]]: linker, {[[P20]]}, image, (host-[[T]])
+
+//
+// Test two gpu architectures with complete compilation with -fgpu-rdc.
+//
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN2,RDC2,CL2,RCL2 %s
+// RUN: | FileCheck -check-prefixes=RDC2,CL2,RCL2 %s
 
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s -fgpu-rdc -c 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN2,RDC2,RC2 %s
+// RUN: | FileCheck -check-prefixes=RDC2,RC2 %s
 
-// BIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
-// BIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
-// BIN2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
+// RCL2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
+// RCL2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
+// RCL2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
+// RCL2-DAG: [[P19:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
+// RCL2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
 
-// BIN2-DAG: [[P3:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH1:gfx803]])
-// BIN2-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
-// BIN2-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH1]])
-// NRD2-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, assembler, (device-[[T]], [[ARCH1]])
+// RDC2-DAG: [[P3:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH1:gfx803]])
+// RDC2-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
+// RDC2-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH1]])
 // RDC2-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH1]])
-// NRD2-DAG: [[P7:[0-9]+]]: assembler, {[[P6]]}, object, (device-[[T]], [[ARCH1]])
-// NRD2-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH1]])
 // RCL2-DAG: [[P8:[0-9]+]]: linker, {[[P6]]}, image, (device-[[T]], [[ARCH1]])
-// NRD2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P8]]}, image
+// RCL2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P8]]}, image
 // RC2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P6]]}, ir
 
-// BIN2-DAG: [[P10:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
-// BIN2-DAG: [[P11:[0-9]+]]: preprocessor, {[[P10]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
-// BIN2-DAG: [[P12:[0-9]+]]: compiler, {[[P11]]}, ir, (device-[[T]], [[ARCH2]])
-// NRD2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, assembler, (device-[[T]], [[ARCH2]])
+// RDC2-DAG: [[P10:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
+// RDC2-DAG: [[P11:[0-9]+]]: preprocessor, {[[P10]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// RDC2-DAG: [[P12:[0-9]+]]: compiler, {[[P11]]}, ir, (device-[[T]], [[ARCH2]])
 // RDC2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, ir, (device-[[T]], [[ARCH2]])
-// NRD2-DAG: [[P14:[0-9]+]]: assembler, {[[P13]]}, object, (device-[[T]], [[ARCH2]])
-// NRD2-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image, (device-[[T]], [[ARCH2]])
 // RCL2-DAG: [[P15:[0-9]+]]: linker, {[[P13]]}, image, (device-[[T]], [[ARCH2]])
-// NRD2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P15]]}, image
+// RCL2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P15]]}, image
 // RC2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P13]]}, ir
 
-// NRD2-DAG: [[P17:[0-9]+]]: linker, {[[P9]], [[P16]]}, hip-fatbin, (device-[[T]])
+// RC2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
+// RC2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
+// RC2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (host-[[T]])
+// RC2-DAG: [[P19:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
+// RC2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
 
-// NRD2-DAG: [[P18:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P17]]}, ir
-// NRD2-DAG: [[P19:[0-9]+]]: backend, {[[P18]]}, assembler, (host-[[T]])
-// RDC2-DAG: [[P19:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
-// BIN2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
-// CL2-DAG: [[P21:[0-9]+]]: linker, {[[P20]]}, image, (host-[[T]])
-// RCL2-DAG: [[P22:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P21]]}, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P8]]}, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P15]]}, image
-// RC2-DAG: [[P22:[0-9]+]]: clang-offload-bundler, {[[P9]], [[P16]], [[P20]]}, object, (host-[[T]])
+// RCL2-DAG: [[P17:[0-9]+]]: linker, {[[P9]], [[P16]]}, object, (device-[[T]])
+// RCL2-DAG: [[P22:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P17]]}, object
+// RCL2-DAG: [[P23:[0-9]+]]: linker, {[[P20]], [[P22]]}, image, (host-[[T]])
+// RC2-DAG: [[P23:[0-9]+]]: clang-offload-bundler, {[[P9]], [[P16]], [[P20]]}, object, (host-[[T]])
 
 //
 // Test two gpu architecturess up to the assemble phase.
@@ -253,8 +280,13 @@
 // RL2-DAG: [[P1:[0-9]+]]: clang-offload-unbundler, {[[P0]]}, object, (host-[[T]])
 // L2-DAG: [[P2:[0-9]+]]: input, "{{.*}}obj2.o", object, (host-[[T]])
 // RL2-DAG: [[P3:[0-9]+]]: clang-offload-unbundler, {[[P2]]}, object, (host-[[T]])
-// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T]])
-// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (host-[[T]])
-// RL2-DAG: [[P5:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T]], [[ARCH1:gfx803]])
+
+// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T]], [[ARCH1:gfx803]])
+// RL2-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P4]]}, image
 // RL2-DAG: [[P6:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T]], [[ARCH2:gfx900]])
-// RL2-DAG: [[P7:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P4]]}, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P5]]}, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P6]]}, image
+// RL2-DAG: [[P7:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P6]]}, image
+// RL2-DAG: [[P8:[0-9]+]]: linker, {[[P5]], [[P7]]}, object, (device-[[T]])
+// RL2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, object
+
+// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T]])
+// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]], [[P9]]}, image, (host-[[T]])
