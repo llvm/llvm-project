@@ -115,6 +115,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",
+    "AArch64SLSHardening.cpp",
     "AArch64SelectionDAGInfo.cpp",
     "AArch64SpeculationHardening.cpp",
     "AArch64StackTagging.cpp",
