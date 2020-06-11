@@ -31,6 +31,8 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
 
+static const VarDecl *getBaseDecl(const Expr *Ref);
+
 namespace {
 /// Lexical scope for OpenMP executable constructs, that handles correct codegen
 /// for captured expressions.
@@ -217,6 +219,12 @@ public:
       } else if (const auto *UDP = dyn_cast<OMPUseDevicePtrClause>(C)) {
         for (const Expr *E : UDP->varlists()) {
           const Decl *D = cast<DeclRefExpr>(E)->getDecl();
+          if (const auto *OED = dyn_cast<OMPCapturedExprDecl>(D))
+            CGF.EmitVarDecl(*OED);
+        }
+      } else if (const auto *UDP = dyn_cast<OMPUseDeviceAddrClause>(C)) {
+        for (const Expr *E : UDP->varlists()) {
+          const Decl *D = getBaseDecl(E);
           if (const auto *OED = dyn_cast<OMPCapturedExprDecl>(D))
             CGF.EmitVarDecl(*OED);
         }
@@ -5804,9 +5812,8 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
 }
 
 void CodeGenFunction::EmitOMPUseDevicePtrClause(
-    const OMPClause &NC, OMPPrivateScope &PrivateScope,
+    const OMPUseDevicePtrClause &C, OMPPrivateScope &PrivateScope,
     const llvm::DenseMap<const ValueDecl *, Address> &CaptureDeviceAddrMap) {
-  const auto &C = cast<OMPUseDevicePtrClause>(NC);
   auto OrigVarIt = C.varlist_begin();
   auto InitIt = C.inits().begin();
   for (const Expr *PvtVarIt : C.private_copies()) {
@@ -5867,6 +5874,60 @@ void CodeGenFunction::EmitOMPUseDevicePtrClause(
   }
 }
 
+static const VarDecl *getBaseDecl(const Expr *Ref) {
+  const Expr *Base = Ref->IgnoreParenImpCasts();
+  while (const auto *OASE = dyn_cast<OMPArraySectionExpr>(Base))
+    Base = OASE->getBase()->IgnoreParenImpCasts();
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Base))
+    Base = ASE->getBase()->IgnoreParenImpCasts();
+  return cast<VarDecl>(cast<DeclRefExpr>(Base)->getDecl());
+}
+
+void CodeGenFunction::EmitOMPUseDeviceAddrClause(
+    const OMPUseDeviceAddrClause &C, OMPPrivateScope &PrivateScope,
+    const llvm::DenseMap<const ValueDecl *, Address> &CaptureDeviceAddrMap) {
+  llvm::SmallDenseSet<CanonicalDeclPtr<const Decl>, 4> Processed;
+  for (const Expr *Ref : C.varlists()) {
+    const VarDecl *OrigVD = getBaseDecl(Ref);
+    if (!Processed.insert(OrigVD).second)
+      continue;
+    // In order to identify the right initializer we need to match the
+    // declaration used by the mapping logic. In some cases we may get
+    // OMPCapturedExprDecl that refers to the original declaration.
+    const ValueDecl *MatchingVD = OrigVD;
+    if (const auto *OED = dyn_cast<OMPCapturedExprDecl>(MatchingVD)) {
+      // OMPCapturedExprDecl are used to privative fields of the current
+      // structure.
+      const auto *ME = cast<MemberExpr>(OED->getInit());
+      assert(isa<CXXThisExpr>(ME->getBase()) &&
+             "Base should be the current struct!");
+      MatchingVD = ME->getMemberDecl();
+    }
+
+    // If we don't have information about the current list item, move on to
+    // the next one.
+    auto InitAddrIt = CaptureDeviceAddrMap.find(MatchingVD);
+    if (InitAddrIt == CaptureDeviceAddrMap.end())
+      continue;
+
+    Address PrivAddr = InitAddrIt->getSecond();
+    // For declrefs and variable length array need to load the pointer for
+    // correct mapping, since the pointer to the data was passed to the runtime.
+    if (isa<DeclRefExpr>(Ref->IgnoreParenImpCasts()) ||
+        MatchingVD->getType()->isArrayType())
+      PrivAddr =
+          EmitLoadOfPointer(PrivAddr, getContext()
+                                          .getPointerType(OrigVD->getType())
+                                          ->castAs<PointerType>());
+    llvm::Type *RealTy =
+        ConvertTypeForMem(OrigVD->getType().getNonReferenceType())
+            ->getPointerTo();
+    PrivAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(PrivAddr, RealTy);
+
+    (void)PrivateScope.addPrivate(OrigVD, [PrivAddr]() { return PrivAddr; });
+  }
+}
+
 // Generate the instructions for '#pragma omp target data' directive.
 void CodeGenFunction::EmitOMPTargetDataDirective(
     const OMPTargetDataDirective &S) {
@@ -5911,6 +5972,9 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
         for (const auto *C : S.getClausesOfKind<OMPUseDevicePtrClause>())
           CGF.EmitOMPUseDevicePtrClause(*C, PrivateScope,
                                         Info.CaptureDeviceAddrMap);
+        for (const auto *C : S.getClausesOfKind<OMPUseDeviceAddrClause>())
+          CGF.EmitOMPUseDeviceAddrClause(*C, PrivateScope,
+                                         Info.CaptureDeviceAddrMap);
         (void)PrivateScope.Privatize();
         RCG(CGF);
       } else {

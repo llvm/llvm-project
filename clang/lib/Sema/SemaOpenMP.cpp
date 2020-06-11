@@ -18513,8 +18513,12 @@ OMPClause *Sema::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
     // only need a component.
     MVLI.VarBaseDeclarations.push_back(D);
     MVLI.VarComponents.emplace_back();
+    Expr *Component = SimpleRefExpr;
+    if (VD && (isa<OMPArraySectionExpr>(RefExpr->IgnoreParenImpCasts()) ||
+               isa<ArraySubscriptExpr>(RefExpr->IgnoreParenImpCasts())))
+      Component = DefaultFunctionArrayLvalueConversion(SimpleRefExpr).get();
     MVLI.VarComponents.back().push_back(
-        OMPClauseMappableExprCommon::MappableComponent(SimpleRefExpr, D));
+        OMPClauseMappableExprCommon::MappableComponent(Component, D));
   }
 
   if (MVLI.ProcessedVarList.empty())
