@@ -861,9 +861,8 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
 #else
   __sanitizer_kernel_sigset_t *k_set = (__sanitizer_kernel_sigset_t *)set;
   __sanitizer_kernel_sigset_t *k_oldset = (__sanitizer_kernel_sigset_t *)oldset;
-  return internal_syscall(SYSCALL(rt_sigprocmask), (uptr)how,
-                          (uptr)&k_set->sig[0], (uptr)&k_oldset->sig[0],
-                          sizeof(__sanitizer_kernel_sigset_t));
+  return internal_syscall(SYSCALL(rt_sigprocmask), (uptr)how, (uptr)k_set,
+                          (uptr)k_oldset, sizeof(__sanitizer_kernel_sigset_t));
 #endif
 }
 
