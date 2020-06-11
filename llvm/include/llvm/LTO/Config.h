@@ -130,6 +130,9 @@ struct Config {
   /// Statistics output file path.
   std::string StatsFile;
 
+  /// Specific thinLTO modules to compile.
+  std::vector<std::string> ThinLTOModulesToCompile;
+
   /// Time trace enabled.
   bool TimeTraceEnabled = false;
 

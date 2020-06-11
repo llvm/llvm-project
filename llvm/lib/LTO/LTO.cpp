@@ -870,12 +870,28 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
 
+  if (!Conf.ThinLTOModulesToCompile.empty()) {
+    if (!ThinLTO.ModulesToCompile)
+      ThinLTO.ModulesToCompile = ModuleMapType();
+    // This is a fuzzy name matching where only modules with name containing the
+    // specified switch values are going to be compiled.
+    for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
+      if (BM.getModuleIdentifier().contains(Name)) {
+        ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
+        llvm::errs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
+                     << " to compile\n";
+      }
+    }
+  }
+
   return Error::success();
 }
 
 unsigned LTO::getMaxTasks() const {
   CalledGetMaxTasks = true;
-  return RegularLTO.ParallelCodeGenParallelismLevel + ThinLTO.ModuleMap.size();
+  auto ModuleCount = ThinLTO.ModulesToCompile ? ThinLTO.ModulesToCompile->size()
+                                              : ThinLTO.ModuleMap.size();
+  return RegularLTO.ParallelCodeGenParallelismLevel + ModuleCount;
 }
 
 // If only some of the modules were split, we cannot correctly handle
@@ -1312,6 +1328,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
 
+  if (ThinLTO.ModulesToCompile && ThinLTO.ModulesToCompile->empty()) {
+    llvm::errs() << "warning: [ThinLTO] No module compiled\n";
+    return Error::success();
+  }
+
   if (Conf.CombinedIndexHook &&
       !Conf.CombinedIndexHook(ThinLTO.CombinedIndex, GUIDPreservedSymbols))
     return Error::success();
@@ -1416,10 +1437,13 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, Cache);
 
+  auto &ModuleMap =
+      ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
   // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for combined
   // module and parallel code generation partitions.
   unsigned Task = RegularLTO.ParallelCodeGenParallelismLevel;
-  for (auto &Mod : ThinLTO.ModuleMap) {
+  for (auto &Mod : ModuleMap) {
     if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
                                      ExportLists[Mod.first],
                                      ResolvedODR[Mod.first], ThinLTO.ModuleMap))
