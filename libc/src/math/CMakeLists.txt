@@ -189,3 +189,83 @@ add_entrypoint_object(
     .math_utils
     libc.include.math
 )
+
+add_entrypoint_object(
+  copysign
+  SRCS
+    copysign.cpp
+  HDRS
+    copysign.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  copysignf
+  SRCS
+    copysignf.cpp
+  HDRS
+    copysignf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  frexp
+  SRCS
+    frexp.cpp
+  HDRS
+    frexp.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  frexpf
+  SRCS
+    frexpf.cpp
+  HDRS
+    frexpf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  logb
+  SRCS
+    logb.cpp
+  HDRS
+    logb.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  logbf
+  SRCS
+    logbf.cpp
+  HDRS
+    logbf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  modf
+  SRCS
+    modf.cpp
+  HDRS
+    modf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  modff
+  SRCS
+    modff.cpp
+  HDRS
+    modff.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
