@@ -593,6 +593,7 @@ public:
   const_global_iterator global_begin() const { return GlobalList.begin(); }
   global_iterator       global_end  ()       { return GlobalList.end(); }
   const_global_iterator global_end  () const { return GlobalList.end(); }
+  size_t                global_size () const { return GlobalList.size(); }
   bool                  global_empty() const { return GlobalList.empty(); }
 
   iterator_range<global_iterator> globals() {
