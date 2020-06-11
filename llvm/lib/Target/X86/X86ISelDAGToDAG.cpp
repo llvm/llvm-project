@@ -1574,13 +1574,13 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM){
         (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
          Subtarget->isTargetFuchsia()))
       switch (N->getPointerInfo().getAddrSpace()) {
-      case 256:
+      case X86AS::GS:
         AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
         return false;
-      case 257:
+      case X86AS::FS:
         AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
         return false;
-      // Address space 258 is not handled here, because it is not used to
+      // Address space X86AS::SS is not handled here, because it is not used to
       // address TLS areas.
       }
 
@@ -2458,12 +2458,11 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
       Parent->getOpcode() != X86ISD::EH_SJLJ_LONGJMP) { // longjmp
     unsigned AddrSpace =
       cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
-    // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
-    if (AddrSpace == 256)
+    if (AddrSpace == X86AS::GS)
       AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
-    if (AddrSpace == 257)
+    if (AddrSpace == X86AS::FS)
       AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
-    if (AddrSpace == 258)
+    if (AddrSpace == X86AS::SS)
       AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
   }
 
