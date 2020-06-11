@@ -16,6 +16,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -379,17 +380,27 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
 }
 
 std::string
-SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
+SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode,
                                              const SymbolContext *sc) {
   bool did_init = false;
   llvm::DenseMap<ArchetypePath, StringRef> dict;
   swift::Demangle::DemangleOptions options;
-  if (simplified)
+  switch (mode) {
+  case eSimplified:
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
-  else {
+    break;
+  case eTypeName:
     options.DisplayModuleNames = true;
     options.ShowPrivateDiscriminators = false;
     options.DisplayExtensionContexts = false;
+    break;
+  case eDisplayTypeName:
+    options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
+    options.DisplayStdlibModule = false;
+    options.DisplayObjCModule = false;
+    options.QualifyEntities = true;
+    options.DisplayModuleNames = true;
+    break;    
   }
 
   if (sc) {
