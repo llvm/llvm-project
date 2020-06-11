@@ -36,8 +36,8 @@ for.body.lr.ph:                                   ; preds = %entry
   ; The add is later eliminated, so we verify that the dbg.value is salvaged by using DW_OP_minus.
   ; CHECK-LABEL: for.body.lr.ph:
   ; CHECK-NEXT: %0 = load
-  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression()), !dbg !
   ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !26, metadata !DIExpression(DW_OP_constu, 4096, DW_OP_minus, DW_OP_stack_value)), !dbg !
+  ; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %0, metadata !25, metadata !DIExpression()), !dbg !
   br label %for.body, !dbg !32
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
