@@ -3618,6 +3618,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
                        /*PathSize*/ Record[ASTStmtReader::NumExprFields]);
       break;
 
+    case EXPR_BUILTIN_BIT_CAST:
+      assert(Record[ASTStmtReader::NumExprFields] == 0 && "Wrong PathSize!");
+      S = new (Context) BuiltinBitCastExpr(Empty);
+      break;
+
     case EXPR_USER_DEFINED_LITERAL:
       S = UserDefinedLiteral::CreateEmpty(
           Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);

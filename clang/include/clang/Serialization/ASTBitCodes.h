@@ -1796,6 +1796,9 @@ public:
       /// A CXXFunctionalCastExpr record.
       EXPR_CXX_FUNCTIONAL_CAST,
 
+      /// A BuiltinBitCastExpr record.
+      EXPR_BUILTIN_BIT_CAST,
+
       /// A UserDefinedLiteral record.
       EXPR_USER_DEFINED_LITERAL,
 
