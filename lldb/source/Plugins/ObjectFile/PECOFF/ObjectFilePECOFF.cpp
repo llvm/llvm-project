@@ -969,13 +969,12 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
 
   for (const auto &entry : COFFObj->import_directories()) {
     llvm::StringRef dll_name;
-    auto ec = entry.getName(dll_name);
     // Report a bogus entry.
-    if (ec != std::error_code()) {
+    if (llvm::Error e = entry.getName(dll_name)) {
       LLDB_LOGF(log,
                 "ObjectFilePECOFF::ParseDependentModules() - failed to get "
                 "import directory entry name: %s",
-                ec.message().c_str());
+                llvm::toString(std::move(e)).c_str());
       continue;
     }
 

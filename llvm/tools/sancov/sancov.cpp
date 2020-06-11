@@ -672,12 +672,10 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     for (const object::ExportDirectoryEntryRef &Export :
          CO->export_directories()) {
       uint32_t RVA;
-      std::error_code EC = Export.getExportRVA(RVA);
-      failIfError(EC);
+      failIfError(Export.getExportRVA(RVA));
 
       StringRef Name;
-      EC = Export.getSymbolName(Name);
-      failIfError(EC);
+      failIfError(Export.getSymbolName(Name));
 
       if (isCoveragePointSymbol(Name))
         Result.insert(CO->getImageBase() + RVA);

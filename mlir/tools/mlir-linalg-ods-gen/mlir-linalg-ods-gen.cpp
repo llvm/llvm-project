@@ -846,9 +846,8 @@ struct Expression {
   };
 
   explicit Expression(Kind k = Kind::Uninitialized) : kind(k) {}
-  virtual ~Expression() = 0;
+  virtual ~Expression() = default;
 
-  bool operator==(const Expression &e) const;
   operator bool() const { return kind != Kind::Uninitialized; }
 
   Kind kind;
@@ -929,20 +928,6 @@ struct TensorExpr : public Expression {
   SmallVector<std::unique_ptr<Expression>, 4> expressions;
   SetVector<unsigned> reductionDimensions;
 };
-
-Expression::~Expression() {}
-
-bool Expression::operator==(const Expression &e) const {
-  if (this->kind != e.kind)
-    return false;
-  if (e.kind == Expression::Kind::TensorUse)
-    return static_cast<const TensorUse &>(*this) ==
-           static_cast<const TensorUse &>(e);
-  if (e.kind == Expression::Kind::TensorExpr)
-    return static_cast<const TensorExpr &>(*this) ==
-           static_cast<const TensorExpr &>(e);
-  llvm_unreachable("Unexpected case");
-}
 
 /// This is a specialized parser for a TCDef.
 /// This maintains the dims it finds in an eager fashion.
