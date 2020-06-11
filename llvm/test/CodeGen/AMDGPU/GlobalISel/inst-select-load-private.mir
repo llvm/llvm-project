@@ -98,6 +98,9 @@ name: load_private_p3_from_4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  stackPtrOffsetReg: $sgpr32
 
 body: |
   bb.0:
@@ -105,14 +108,14 @@ body: |
 
     ; GFX6-LABEL: name: load_private_p3_from_4
     ; GFX6: liveins: $vgpr0
-    ; GFX6: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX6: [[LOAD:%[0-9]+]]:vgpr_32(p3) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX6: $vgpr0 = COPY [[LOAD]](p3)
+    ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     ; GFX9-LABEL: name: load_private_p3_from_4
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:vgpr_32(p3) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX9: $vgpr0 = COPY [[LOAD]](p3)
+    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(p3) = G_LOAD %0 :: (load 4, align 4, addrspace 5)
     $vgpr0 = COPY %1
@@ -135,14 +138,14 @@ body: |
 
     ; GFX6-LABEL: name: load_private_p5_from_4
     ; GFX6: liveins: $vgpr0
-    ; GFX6: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX6: [[LOAD:%[0-9]+]]:vgpr_32(p5) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX6: $vgpr0 = COPY [[LOAD]](p5)
+    ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     ; GFX9-LABEL: name: load_private_p5_from_4
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:vgpr_32(p5) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX9: $vgpr0 = COPY [[LOAD]](p5)
+    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(p5) = G_LOAD %0 :: (load 4, align 4, addrspace 5)
     $vgpr0 = COPY %1
@@ -156,6 +159,7 @@ legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 machineFunctionInfo:
+  isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
 
@@ -165,14 +169,14 @@ body: |
 
     ; GFX6-LABEL: name: load_private_v2s16
     ; GFX6: liveins: $vgpr0
-    ; GFX6: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX6: [[LOAD:%[0-9]+]]:vgpr_32(<2 x s16>) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX6: $vgpr0 = COPY [[LOAD]](<2 x s16>)
+    ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX6: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     ; GFX9-LABEL: name: load_private_v2s16
     ; GFX9: liveins: $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:vgpr(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:vgpr_32(<2 x s16>) = G_LOAD [[COPY]](p5) :: (load 4, addrspace 5)
-    ; GFX9: $vgpr0 = COPY [[LOAD]](<2 x s16>)
+    ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9: [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 5)
+    ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = G_LOAD %0 :: (load 4, align 4, addrspace 5)
     $vgpr0 = COPY %1
