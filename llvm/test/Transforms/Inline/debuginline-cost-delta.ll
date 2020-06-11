@@ -1,7 +1,7 @@
 ; Require asserts for -debug-only
 ; REQUIRES: asserts
 
-; RUN: opt < %s -inline -debug-only=inline-cost -disable-output -print-instruction-deltas 2>&1 | FileCheck %s
+; RUN: opt < %s -inline -debug-only=inline-cost -disable-output -print-instruction-comments 2>&1 | FileCheck %s
 
 ; CHECK:       Analyzing call of callee1... (caller:foo)
 ; CHECK: define i32 @callee1(i32 %x) {
