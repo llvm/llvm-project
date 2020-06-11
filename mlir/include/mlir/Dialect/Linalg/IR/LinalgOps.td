@@ -70,10 +70,10 @@ class Linalg_ReshapeLikeOp<string mnemonic> :
               "ArrayRef<ReassociationExprs> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}">,
     OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
-              "ArrayRef<ReassociationIndicies> reassociation, "
+              "ArrayRef<ReassociationIndices> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       auto reassociationMaps =
-          convertReassociationIndiciesToMaps(b, reassociation);
+          convertReassociationIndicesToMaps(b, reassociation);
       build(b, result, src, reassociationMaps, attrs);
     }]>,
 
@@ -83,10 +83,10 @@ class Linalg_ReshapeLikeOp<string mnemonic> :
               "Value src, ArrayRef<ReassociationExprs> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}">,
     OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, "
-              "Value src, ArrayRef<ReassociationIndicies> reassociation, "
+              "Value src, ArrayRef<ReassociationIndices> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       auto reassociationMaps =
-          convertReassociationIndiciesToMaps(b, reassociation);
+          convertReassociationIndicesToMaps(b, reassociation);
       build(b, result, src, reassociationMaps, attrs);
     }]>
   ];
