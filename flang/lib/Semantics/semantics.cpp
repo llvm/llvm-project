@@ -26,6 +26,7 @@
 #include "check-purity.h"
 #include "check-return.h"
 #include "check-select-rank.h"
+#include "check-select-type.h"
 #include "check-stop.h"
 #include "compute-offsets.h"
 #include "mod-file.h"
@@ -157,7 +158,8 @@ using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
     DataChecker, DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
     MiscChecker, NamelistChecker, NullifyChecker, OmpStructureChecker,
-    PurityChecker, ReturnStmtChecker, SelectRankConstructChecker, StopChecker>;
+    PurityChecker, ReturnStmtChecker, SelectRankConstructChecker,
+    SelectTypeChecker, StopChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
