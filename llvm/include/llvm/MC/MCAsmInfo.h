@@ -311,10 +311,6 @@ protected:
   /// false.
   bool HasAltEntry = false;
 
-  /// True if this target supports the XCOFF .extern directive.  Defaults to
-  /// false.
-  bool HasDotExternDirective = false;
-
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
   const char *WeakDirective;
 
@@ -334,10 +330,6 @@ protected:
   /// weak*/linkonce*, if the symbol has a comdat.
   /// Defaults to false.
   bool AvoidWeakIfComdat = false;
-
-  /// True if we have a .lglobl directive, which is used to emit the information
-  /// of a static symbol into the symbol table. Defaults to false.
-  bool HasDotLGloblDirective = false;
 
   /// This attribute, if not MCSA_Invalid, is used to declare a symbol as having
   /// hidden visibility.  Defaults to MCSA_Hidden.
@@ -594,7 +586,6 @@ public:
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
   bool hasAltEntry() const { return HasAltEntry; }
-  bool hasDotExternDirective() const { return HasDotExternDirective; }
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
   bool hasWeakDefDirective() const { return HasWeakDefDirective; }
@@ -604,8 +595,6 @@ public:
   }
 
   bool avoidWeakIfComdat() const { return AvoidWeakIfComdat; }
-
-  bool hasDotLGloblDirective() const { return HasDotLGloblDirective; }
 
   MCSymbolAttr getHiddenVisibilityAttr() const { return HiddenVisibilityAttr; }
 

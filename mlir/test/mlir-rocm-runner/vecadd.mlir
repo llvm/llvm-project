@@ -1,10 +1,11 @@
 // RUN: mlir-rocm-runner %s --shared-libs=%rocm_wrapper_library_dir/librocm-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
 
 func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>) {
-  %cst = constant 1 : index
-  %cst2 = dim %arg0, 0 : memref<?xf32>
-  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst, %grid_z = %cst)
-             threads(%tx, %ty, %tz) in (%block_x = %cst2, %block_y = %cst, %block_z = %cst) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %block_dim = dim %arg0, %c0 : memref<?xf32>
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %block_dim, %block_y = %c1, %block_z = %c1) {
     %a = load %arg0[%tx] : memref<?xf32>
     %b = load %arg1[%tx] : memref<?xf32>
     %c = addf %a, %b : f32

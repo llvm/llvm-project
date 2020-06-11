@@ -9,7 +9,7 @@ func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
   %init = shape.const_size 0
   %num_elements = shape.reduce(%shape, %init) -> !shape.size {
     ^bb0(%index: index, %dim: !shape.size, %lci: !shape.size):
-      %acc = "shape.add"(%lci, %dim) : (!shape.size, !shape.size) -> !shape.size
+      %acc = shape.add %lci, %dim
       shape.yield %acc : !shape.size
   }
   return %num_elements : !shape.size
