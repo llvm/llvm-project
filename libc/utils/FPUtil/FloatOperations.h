@@ -57,26 +57,30 @@ static inline int getExponent(T x) {
   return getExponentFromBits(valueAsBits(x));
 }
 
+template <typename BitsType> static inline bool bitsAreInf(BitsType bits) {
+  using FPType = typename FloatType<BitsType>::Type;
+  return ((bits & BitPatterns<FPType>::inf) == BitPatterns<FPType>::inf) &&
+         ((bits & FloatProperties<FPType>::mantissaMask) == 0);
+}
+
 // Return true if x is infinity (positive or negative.)
 template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline bool isInf(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::inf) == BitPatterns<T>::inf) &&
-         ((bits & Properties::mantissaMask) == 0);
+  return bitsAreInf(valueAsBits(x));
+}
+
+template <typename BitsType> static inline bool bitsAreNaN(BitsType bits) {
+  using FPType = typename FloatType<BitsType>::Type;
+  return ((bits & BitPatterns<FPType>::inf) == BitPatterns<FPType>::inf) &&
+         ((bits & FloatProperties<FPType>::mantissaMask) != 0);
 }
 
 // Return true if x is a NAN (quiet or signalling.)
 template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline bool isNaN(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename FloatProperties<T>::BitsType;
-  BitsType bits = valueAsBits(x);
-  return ((bits & BitPatterns<T>::inf) == BitPatterns<T>::inf) &&
-         ((bits & Properties::mantissaMask) != 0);
+  return bitsAreNaN(valueAsBits(x));
 }
 
 template <typename BitsType> static inline bool bitsAreInfOrNaN(BitsType bits) {
