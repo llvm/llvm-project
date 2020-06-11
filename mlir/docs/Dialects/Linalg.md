@@ -130,9 +130,9 @@ Consider the following, partially specified, `linalg.generic` example:
   (i, j) -> (j)
 }
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>,
+func @example(%A: memref<8x?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
-  linalg.generic #attrs (%A, %B): memref<?xf32, layout1>,
+  linalg.generic #attrs (%A, %B): memref<8x?xf32, layout1>,
                                   memref<?xvector<4xf32, layout2>>
   return
 }
@@ -142,21 +142,21 @@ The property "*Reversible Mappings Between Control and Data Structures*" is
 materialized by a lowering into a form that will resemble:
 ```
 #attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<?xf32, layout1>,
+func @example(%A: memref<8x?xf32, layout1>,
               %B: memref<?xvector<4xf32, layout2>>) {
   // loop bounds determined from data sizes by “inverting the map”
-  %J = "dim" %2, 0: index
-  %I = "dim" %2, 1: index
-  %J2 = "dim" %3, 0: index
+  %J = "dim" %A, 0: index
+  %I = "dim" %A, 1: index
+  %J2 = "dim" %B, 0: index
   // iteration space is consistent with data + mapping inference
   %eq = "eq" %J, %J2: i1
   "assert" %eq: (i1) -> ()
   for %i = 0 to %I {           // loop order is fully defined by indexing maps
     for %j = 0 to %J {         // arbitrary permutations are possible
-      %a = "load" %2, %j, %i: memref<8x?xf32>
-      %b = "load" %3, %j: memref<?xvector<4xf32>>
+      %a = "load" %A, %j, %i: memref<8x?xf32>
+      %b = "load" %B, %j: memref<?xvector<4xf32>>
       %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
-      "store" %c, %3, %j: memref<?xvector<4xf32>>
+      "store" %c, %B, %j: memref<?xvector<4xf32>>
     }
   }
   return
