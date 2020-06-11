@@ -323,8 +323,13 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
 /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
 /// zero or one incoming values, and don't simplify PHIs with all incoming
 /// values the same.
-void BasicBlock::removePredecessor(BasicBlock *Pred,
-                                   bool KeepOneInputPHIs) {
+///
+/// If \p MaybeDeadInstrs is not nullptr then whenever we drop a reference to
+/// an instruction, append it to the vector. The caller should check whether
+/// these instructions are now trivially dead, and if so delete them.
+void BasicBlock::removePredecessor(
+    BasicBlock *Pred, bool KeepOneInputPHIs,
+    SmallVectorImpl<WeakTrackingVH> *MaybeDeadInstrs) {
   // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
   assert((hasNUsesOrMore(16) ||
           find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
@@ -338,7 +343,11 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   // Update all PHI nodes.
   for (iterator II = begin(); isa<PHINode>(II);) {
     PHINode *PN = cast<PHINode>(II++);
-    PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
+    Value *V = PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
+    if (MaybeDeadInstrs) {
+      if (auto *I = dyn_cast<Instruction>(V))
+        MaybeDeadInstrs->push_back(I);
+    }
     if (!KeepOneInputPHIs) {
       // If we have a single predecessor, removeIncomingValue erased the PHI
       // node itself.
