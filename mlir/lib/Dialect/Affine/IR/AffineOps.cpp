@@ -2348,6 +2348,18 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
     ensureTerminator(*bodyRegion, builder, result.location);
 }
 
+Region &AffineParallelOp::getLoopBody() { return region(); }
+
+bool AffineParallelOp::isDefinedOutsideOfLoop(Value value) {
+  return !region().isAncestor(value.getParentRegion());
+}
+
+LogicalResult AffineParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
+  for (auto *op : ops)
+    op->moveBefore(*this);
+  return success();
+}
+
 unsigned AffineParallelOp::getNumDims() { return steps().size(); }
 
 AffineParallelOp::operand_range AffineParallelOp::getLowerBoundsOperands() {
@@ -2418,6 +2430,92 @@ static LogicalResult verify(AffineParallelOp op) {
                                            op.upperBoundsMap().getNumDims())))
     return failure();
   return success();
+}
+
+namespace {
+/// This pattern removes affine.parallel ops with no induction variables.
+struct AffineParallelRank0LoopRemover
+    : public OpRewritePattern<AffineParallelOp> {
+  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    // Check that there are no induction variables
+    if (op.lowerBoundsMap().getNumResults())
+      return failure();
+    // Remove the affine.parallel wrapper, retain the body in the same location
+    auto &parentOps = rewriter.getInsertionBlock()->getOperations();
+    auto &parallelBodyOps = op.region().front().getOperations();
+    auto yield = mlir::cast<AffineYieldOp>(std::prev(parallelBodyOps.end()));
+    for (auto it : zip(op.getResults(), yield.results())) {
+      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+    }
+    parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
+                     parallelBodyOps.begin(), std::prev(parallelBodyOps.end()));
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/// This pattern removes indexes that go over an empty range.
+struct AffineParallelRange1IndexRemover
+    : public OpRewritePattern<AffineParallelOp> {
+  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    auto ranges = op.getRangesValueMap();
+    auto origNumArgs = op.getBody()->getArguments().size();
+    size_t curArgNum = 0;
+    SmallVector<AffineExpr, 6> newLowerBounds;
+    SmallVector<AffineExpr, 6> newUpperBounds;
+    SmallVector<int64_t, 6> newSteps;
+    for (unsigned i = 0; i < origNumArgs; i++) {
+      // Is the range a constant value of 1?
+      auto constExpr = ranges.getResult(i).dyn_cast<AffineConstantExpr>();
+      if (constExpr && constExpr.getValue() == 1) {
+        // Remove argument and replace with 0
+        auto curArg = op.getBody()->getArgument(curArgNum);
+        auto lowerBoundValue = rewriter.create<AffineApplyOp>(
+            op.getLoc(), op.lowerBoundsMap().getSubMap({i}),
+            op.getLowerBoundsOperands());
+        curArg.replaceAllUsesWith(lowerBoundValue);
+        op.getBody()->eraseArgument(curArgNum);
+      } else {
+        // Keep argument
+        newLowerBounds.push_back(op.lowerBoundsMap().getResult(i));
+        newUpperBounds.push_back(op.upperBoundsMap().getResult(i));
+        newSteps.push_back(op.steps()[i].template cast<IntegerAttr>().getInt());
+        curArgNum++;
+      }
+    }
+    // If no arguments were removed, return failure to match
+    if (newLowerBounds.size() == op.lowerBoundsMap().getNumResults())
+      return failure();
+    // Update attributes and return success
+    auto newLower = AffineMap::get(op.lowerBoundsMap().getNumDims(),
+                                   op.lowerBoundsMap().getNumSymbols(),
+                                   newLowerBounds, op.getContext());
+    auto newUpper = AffineMap::get(op.upperBoundsMap().getNumDims(),
+                                   op.upperBoundsMap().getNumSymbols(),
+                                   newUpperBounds, op.getContext());
+    op.setAttr(AffineParallelOp::getLowerBoundsMapAttrName(),
+               AffineMapAttr::get(newLower));
+    op.setAttr(AffineParallelOp::getUpperBoundsMapAttrName(),
+               AffineMapAttr::get(newUpper));
+    op.setAttr(AffineParallelOp::getStepsAttrName(),
+               rewriter.getI64ArrayAttr(newSteps));
+    return success();
+  }
+};
+
+} // end anonymous namespace
+
+void AffineParallelOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results
+      .insert<AffineParallelRank0LoopRemover, AffineParallelRange1IndexRemover>(
+          context);
 }
 
 static void print(OpAsmPrinter &p, AffineParallelOp op) {
@@ -2690,92 +2788,6 @@ static LogicalResult verify(AffineVectorStoreOp op) {
     return failure();
 
   return success();
-}
-
-namespace {
-/// This pattern removes affine.parallel ops with no induction variables
-struct AffineParallelRank0LoopRemover
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineParallelOp op,
-                                PatternRewriter &rewriter) const override {
-    // Check that there are no induction variables
-    if (op.lowerBoundsMap().getNumResults() != 0)
-      return failure();
-    // Remove the affine.parallel wrapper, retain the body in the same location
-    auto &parentOps = rewriter.getInsertionBlock()->getOperations();
-    auto &parallelBodyOps = op.region().front().getOperations();
-    auto yield = mlir::cast<AffineYieldOp>(std::prev(parallelBodyOps.end()));
-    for (auto it : zip(op.getResults(), yield.results())) {
-      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
-    }
-    parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
-                     parallelBodyOps.begin(), std::prev(parallelBodyOps.end()));
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
-/// This pattern removes indexs that go over an empty range
-struct AffineParallelRange1IndexRemover
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineParallelOp op,
-                                PatternRewriter &rewriter) const override {
-    auto ranges = op.getRangesValueMap();
-    auto origNumArgs = op.getBody()->getArguments().size();
-    size_t curArgNum = 0;
-    SmallVector<AffineExpr, 6> newLowerBounds;
-    SmallVector<AffineExpr, 6> newUpperBounds;
-    SmallVector<int64_t, 6> newSteps;
-    for (unsigned i = 0; i < origNumArgs; i++) {
-      // Is the range a constant value of 1?
-      auto const_expr = ranges.getResult(i).dyn_cast<AffineConstantExpr>();
-      if (const_expr && const_expr.getValue() == 1) {
-        // Remove arcument and replace with 0
-        auto curArg = op.getBody()->getArgument(curArgNum);
-        auto lowerBoundValue = rewriter.create<AffineApplyOp>(
-            op.getLoc(), op.lowerBoundsMap().getSubMap({i}),
-            op.getLowerBoundsOperands());
-        curArg.replaceAllUsesWith(lowerBoundValue);
-        op.getBody()->eraseArgument(curArgNum);
-      } else {
-        // Keep argument
-        newLowerBounds.push_back(op.lowerBoundsMap().getResult(i));
-        newUpperBounds.push_back(op.upperBoundsMap().getResult(i));
-        newSteps.push_back(op.steps()[i].template cast<IntegerAttr>().getInt());
-        curArgNum++;
-      }
-    }
-    // If no arguments were removed, return failur to match
-    if (newLowerBounds.size() == op.lowerBoundsMap().getNumResults())
-      return failure();
-    // Update attributes and return success
-    auto newLower = AffineMap::get(op.lowerBoundsMap().getNumDims(),
-                                   op.lowerBoundsMap().getNumSymbols(),
-                                   newLowerBounds, op.getContext());
-    auto newUpper = AffineMap::get(op.upperBoundsMap().getNumDims(),
-                                   op.upperBoundsMap().getNumSymbols(),
-                                   newUpperBounds, op.getContext());
-    op.setAttr(AffineParallelOp::getLowerBoundsMapAttrName(),
-               AffineMapAttr::get(newLower));
-    op.setAttr(AffineParallelOp::getUpperBoundsMapAttrName(),
-               AffineMapAttr::get(newUpper));
-    op.setAttr(AffineParallelOp::getStepsAttrName(),
-               rewriter.getI64ArrayAttr(newSteps));
-    return success();
-  }
-};
-
-} // end anonymous namespace
-
-void AffineParallelOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results
-      .insert<AffineParallelRank0LoopRemover, AffineParallelRange1IndexRemover>(
-          context);
 }
 
 //===----------------------------------------------------------------------===//
