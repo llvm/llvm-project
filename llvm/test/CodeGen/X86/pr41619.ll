@@ -44,8 +44,6 @@ define i32 @bar(double %blah) nounwind {
 ; AVX512-LABEL: bar:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    kmovd %eax, %k0
-; AVX512-NEXT:    kmovq %k0, %rax
 ; AVX512-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    retq
   %z = bitcast double %blah to i64
