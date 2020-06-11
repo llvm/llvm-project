@@ -273,8 +273,7 @@ public:
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::LLVM::LLVMType convertSequenceType(fir::SequenceType seq) {
-    if (!seq.hasConstantInterior())
-      llvm_unreachable("cannot lower type to LLVM IR");
+    assert(seq.hasConstantInterior() && "cannot lower type to LLVM IR");
     auto baseTy = unwrap(convertType(seq.getEleTy()));
     auto shape = seq.getShape();
     auto constRows = seq.getConstantRows();
@@ -2012,7 +2011,8 @@ struct SelectTypeOpConversion : public FIROpConversion<fir::SelectTypeOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::SelectTypeOp select, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    llvm_unreachable("fir.select_type should have already been converted");
+    mlir::emitError(select.getLoc(),
+                    "fir.select_type should have already been converted");
     return failure();
   }
 };
