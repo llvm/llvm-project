@@ -374,8 +374,10 @@ void salvageDebugInfo(Instruction &I);
 
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
-/// \p Insns, rather than all debug users of \p I.
-bool salvageDebugInfoForDbgValues(Instruction &I,
+/// \p Insns, rather than all debug users from findDbgUsers( \p I).
+/// Returns true if any debug users were updated.
+/// Mark undef if salvaging cannot be completed.
+void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on it, write

@@ -909,3 +909,25 @@ void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.addRequired<StackSafetyInfoWrapperPass>();
 }
+
+char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
+
+ImmutableModuleSummaryIndexWrapperPass::ImmutableModuleSummaryIndexWrapperPass(
+    const ModuleSummaryIndex *Index)
+    : ImmutablePass(ID), Index(Index) {
+  initializeImmutableModuleSummaryIndexWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
+void ImmutableModuleSummaryIndexWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+}
+
+ImmutablePass *llvm::createImmutableModuleSummaryIndexWrapperPass(
+    const ModuleSummaryIndex *Index) {
+  return new ImmutableModuleSummaryIndexWrapperPass(Index);
+}
+
+INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
+                "Module summary info", false, true)

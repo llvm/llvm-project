@@ -18,7 +18,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/OpenMPGridValues.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
@@ -31,6 +30,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -200,8 +200,9 @@ protected:
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  const int *GridValues;
-  const long long int *LongGridValues;
+  const unsigned *GridValues =
+      nullptr; // Array of target-specific GPU grid values that must be
+               // consistent between host RTL (plugin), device RTL, and clang.
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -1325,10 +1326,10 @@ public:
     return LangAS::Default;
   }
 
-  int getGridValue(GPU::GVIDX gv) const { return GridValues[gv]; }
-
-  long long getLongGridValue(GPU::GVLIDX gv) const {
-    return LongGridValues[gv];
+  /// Return a target-specific GPU grid value based on the GVIDX enum \p gv
+  unsigned getGridValue(llvm::omp::GVIDX gv) const {
+    assert(GridValues != nullptr && "GridValues not initialized");
+    return GridValues[gv];
   }
 
   /// Retrieve the name of the platform as it is used in the

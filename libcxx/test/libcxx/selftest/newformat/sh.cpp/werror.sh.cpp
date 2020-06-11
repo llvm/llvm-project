@@ -14,7 +14,6 @@
 // TODO: We don't enable -Werror on GCC right now, because too many tests fail.
 // UNSUPPORTED: gcc
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -Wunused-variable
 // RUN: %{run}
 

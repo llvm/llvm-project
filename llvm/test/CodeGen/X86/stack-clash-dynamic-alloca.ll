@@ -26,8 +26,8 @@ attributes #0 =  {"probe-stack"="inline-asm"}
 ; CHECK-X86-64-NEXT:  	cmpq	%rax, %rsp
 ; CHECK-X86-64-NEXT:  	jl	.LBB0_3
 ; CHECK-X86-64-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; CHECK-X86-64-NEXT:  	subq	$4096, %rsp # imm = 0x1000
 ; CHECK-X86-64-NEXT:  	movq	$0, (%rsp)
+; CHECK-X86-64-NEXT:  	subq	$4096, %rsp # imm = 0x1000
 ; CHECK-X86-64-NEXT:  	cmpq	%rax, %rsp
 ; CHECK-X86-64-NEXT:  	jge	.LBB0_2
 ; CHECK-X86-64-NEXT:  .LBB0_3:
@@ -56,8 +56,8 @@ attributes #0 =  {"probe-stack"="inline-asm"}
 ; CHECK-X86-32-NEXT:    cmpl    %eax, %esp
 ; CHECK-X86-32-NEXT:    jl  .LBB0_3
 ; CHECK-X86-32-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; CHECK-X86-32-NEXT:    subl    $4096, %esp # imm = 0x1000
 ; CHECK-X86-32-NEXT:    movl    $0, (%esp)
+; CHECK-X86-32-NEXT:    subl    $4096, %esp # imm = 0x1000
 ; CHECK-X86-32-NEXT:    cmpl    %eax, %esp
 ; CHECK-X86-32-NEXT:    jge .LBB0_2
 ; CHECK-X86-32-NEXT:  .LBB0_3:

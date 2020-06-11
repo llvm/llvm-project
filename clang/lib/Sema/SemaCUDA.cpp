@@ -219,7 +219,7 @@ template <typename AttrT> static bool hasImplicitAttr(const FunctionDecl *D) {
   return D->isImplicit();
 }
 
-bool Sema::IsCUDAImplicitHostDeviceFunction(const FunctionDecl *D) {
+bool Sema::isCUDAImplicitHostDeviceFunction(const FunctionDecl *D) {
   bool IsImplicitDevAttr = hasImplicitAttr<CUDADeviceAttr>(D);
   bool IsImplicitHostAttr = hasImplicitAttr<CUDAHostAttr>(D);
   return IsImplicitDevAttr && IsImplicitHostAttr;

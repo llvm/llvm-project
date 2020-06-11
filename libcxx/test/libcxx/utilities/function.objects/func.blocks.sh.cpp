@@ -14,7 +14,6 @@
 // on Darwin out-of-the-box.
 // REQUIRES: has-fblocks && darwin
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -fblocks
 // RUN: %{run}
 

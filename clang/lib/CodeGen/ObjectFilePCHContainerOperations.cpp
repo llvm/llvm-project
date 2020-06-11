@@ -173,8 +173,8 @@ public:
     // Prepare CGDebugInfo to emit debug info for a clang module.
     auto *DI = Builder->getModuleDebugInfo();
     StringRef ModuleName = llvm::sys::path::filename(MainFileName);
-    DI->setPCHDescriptor({ModuleName, "", OutputFileName,
-                          ASTFileSignature{{{~0U, ~0U, ~0U, ~0U, ~1U}}}});
+    DI->setPCHDescriptor(
+        {ModuleName, "", OutputFileName, ASTFileSignature::createDISentinel()});
     DI->setModuleMap(MMap);
   }
 

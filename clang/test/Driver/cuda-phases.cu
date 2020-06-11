@@ -49,9 +49,10 @@
 // BIN_AMD_NRDC-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // BIN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
 // BIN-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
-// BIN_AMD_RDC-DAG: [[P15:[0-9]+]]: linker, {[[P5]]}, image, (device-[[T]], [[ARCH]])
-// BIN_AMD_RDC-DAG: [[P16:[0-9]+]]: offload, "host-[[T]] (powerpc64le-ibm-linux-gnu)" {[[P14]]},
-// BIN_AMD_RDC-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH]])" {[[P15]]}, object
+// BIN_AMD_RDC-DAG: [[P15:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
+// BIN_AMD_RDC-DAG: [[P16:[0-9]+]]: linker, {[[P15]]}, image, (device-[[T]], [[ARCH]])
+// BIN_AMD_RDC-DAG: [[P17:[0-9]+]]: offload, "host-[[T]] (powerpc64le-ibm-linux-gnu)" {[[P14]]},
+// BIN_AMD_RDC-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH]])" {[[P16]]}, object
 
 //
 // Test single gpu architecture up to the assemble phase.
@@ -109,11 +110,13 @@
 // BIN2_AMD-DAG: [[P19:[0-9]+]]: backend, {[[P2]]}, assembler, (host-[[T]])
 // BIN2-DAG: [[P20:[0-9]+]]: assembler, {[[P19]]}, object, (host-[[T]])
 // BIN2-DAG: [[P21:[0-9]+]]: linker, {[[P20]]}, image, (host-[[T]])
-// BIN2_AMD-DAG: [[P22:[0-9]+]]: linker, {[[P5]]}, image, (device-[[T]], [[ARCH1]])
-// BIN2_AMD-DAG: [[P23:[0-9]+]]: linker, {[[P12]]}, image, (device-[[T]], [[ARCH2]])
-// BIN2_AMD-DAG: [[P24:[0-9]+]]: offload, "host-[[T]] (powerpc64le-ibm-linux-gnu)" {[[P21]]},
-// BIN2_AMD-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH1]])" {[[P22]]},
-// BIN2_AMD-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH2]])" {[[P23]]}, object
+// BIN2_AMD-DAG: [[P22:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH1]])
+// BIN2_AMD-DAG: [[P23:[0-9]+]]: backend, {[[P12]]}, ir, (device-[[T]], [[ARCH2]])
+// BIN2_AMD-DAG: [[P24:[0-9]+]]: linker, {[[P22]]}, image, (device-[[T]], [[ARCH1]])
+// BIN2_AMD-DAG: [[P25:[0-9]+]]: linker, {[[P23]]}, image, (device-[[T]], [[ARCH2]])
+// BIN2_AMD-DAG: [[P26:[0-9]+]]: offload, "host-[[T]] (powerpc64le-ibm-linux-gnu)" {[[P21]]},
+// BIN2_AMD-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH1]])" {[[P24]]},
+// BIN2_AMD-DAG-SAME:  "device-[[T]] ([[TRIPLE:amdgcn-amd-amdhsa]]:[[ARCH2]])" {[[P25]]}, object
 
 //
 // Test two gpu architecturess up to the assemble phase.

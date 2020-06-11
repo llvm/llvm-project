@@ -689,6 +689,9 @@ public:
     return Context >= IC_StaticCast;
   }
 
+  /// Determine whether this initialization is a static cast.
+  bool isStaticCast() const { return Context == IC_StaticCast; }
+
   /// Determine whether this initialization is a C-style cast.
   bool isCStyleOrFunctionalCast() const {
     return Context >= IC_CStyleCast;

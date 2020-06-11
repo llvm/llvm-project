@@ -23,8 +23,8 @@ body:             |
 
     ; CHECK-LABEL: name: test_gep_i32
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64_nosp = MOV64ri32 20
-    ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 1, [[MOV64ri32_]], 0, $noreg
+    ; CHECK: [[MOV32ri64_:%[0-9]+]]:gr64_nosp = MOV32ri64 20
+    ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 1, [[MOV32ri64_]], 0, $noreg
     ; CHECK: $rax = COPY [[LEA64r]]
     ; CHECK: RET 0, implicit $rax
     %0(p0) = COPY $rdi

@@ -256,7 +256,7 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   Dl_info info;
   dladdr(reinterpret_cast<void *>(ptr), &info);
   auto *ehdr = reinterpret_cast<const ElfW(Ehdr) *>(info.dli_fbase);
-  auto *phdr = reinterpret_cast<const ElfW(Phdr) *>(
+  auto *phdr_begin = reinterpret_cast<const ElfW(Phdr) *>(
       reinterpret_cast<const u8 *>(ehdr) + ehdr->e_phoff);
 
   // Get the load bias. This is normally the same as the dli_fbase address on
@@ -265,7 +265,7 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   // linker script.
   ElfW(Addr) load_bias = 0;
   for (const auto &phdr :
-       ArrayRef<const ElfW(Phdr)>(phdr, phdr + ehdr->e_phnum)) {
+       ArrayRef<const ElfW(Phdr)>(phdr_begin, phdr_begin + ehdr->e_phnum)) {
     if (phdr.p_type != PT_LOAD || phdr.p_offset != 0)
       continue;
     load_bias = reinterpret_cast<ElfW(Addr)>(ehdr) - phdr.p_vaddr;
@@ -276,7 +276,7 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   // in. Once we find it, we can stop iterating and return the size of the
   // global we're interested in.
   for (const hwasan_global &global :
-       HwasanGlobalsFor(load_bias, phdr, ehdr->e_phnum))
+       HwasanGlobalsFor(load_bias, phdr_begin, ehdr->e_phnum))
     if (global.addr() <= ptr && ptr < global.addr() + global.size())
       return global.size();
 

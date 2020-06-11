@@ -129,6 +129,14 @@ if(LLDB_USE_ENTITLEMENTS)
   endif()
 endif()
 
+if($ENV{SDKROOT} MATCHES ".Internal.sdk$")
+  message(STATUS "LLDB debugserver energy support is enabled")
+  add_definitions(-DLLDB_ENERGY)
+  set(ENERGY_LIBRARY -lpmenergy -lpmsample)
+else()
+  message(STATUS "LLDB debugserver energy support is disabled")
+endif()
+
 set(generated_mach_interfaces
   ${CMAKE_CURRENT_BINARY_DIR}/mach_exc.h
   ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
@@ -208,7 +216,8 @@ target_link_libraries(lldbDebugserverCommon
                       lldbDebugserverDarwin_DarwinLog
                       ${FOUNDATION_LIBRARY}
                       ${SECURITY_LIBRARY}
-                      ${LIBCOMPRESSION})
+                      ${LIBCOMPRESSION}
+                      ${ENERGY_LIBRARY})
 if(HAVE_LIBCOMPRESSION)
   set_property(TARGET lldbDebugserverCommon APPEND PROPERTY
                 COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)

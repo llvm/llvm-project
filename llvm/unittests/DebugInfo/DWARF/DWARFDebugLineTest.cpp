@@ -427,7 +427,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
           ("unknown data in line table prologue at offset 0x00000000: "
            "parsing ended (at offset 0x000000" +
            Twine::utohexstr(ExpectedEnd - 1) +
-           ") before reaching the prologue at offset 0x000000" +
+           ") before reaching the prologue end at offset 0x000000" +
            Twine::utohexstr(ExpectedEnd))
               .str()));
 }
@@ -472,7 +472,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
                       "of the prologue");
   } else {
     Errs.emplace_back(
-        "failed to parse file entry because extracting the form value failed.");
+        "failed to parse file entry because extracting the form value failed");
   }
   EXPECT_THAT_ERROR(std::move(Recoverable),
                     FailedWithMessageArray(testing::ElementsAreArray(Errs)));

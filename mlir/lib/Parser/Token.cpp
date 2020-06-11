@@ -124,6 +124,18 @@ std::string Token::getStringValue() const {
   return result;
 }
 
+/// Given a token containing a symbol reference, return the unescaped string
+/// value.
+std::string Token::getSymbolReference() const {
+  assert(is(Token::at_identifier) && "expected valid @-identifier");
+  StringRef nameStr = getSpelling().drop_front();
+
+  // Check to see if the reference is a string literal, or a bare identifier.
+  if (nameStr.front() == '"')
+    return getStringValue();
+  return std::string(nameStr);
+}
+
 /// Given a hash_identifier token like #123, try to parse the number out of
 /// the identifier, returning None if it is a named identifier like #x or
 /// if the integer doesn't fit.

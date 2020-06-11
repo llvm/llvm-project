@@ -16,7 +16,6 @@
 // %{exec}, the one difference we can rely on is that we're in a temporary
 // directory with all file dependencies satisfied, so that's what we use.
 
-// FILE_DEPENDENCIES: %t.foobar
 // RUN: touch %t.foobar
 // RUN: %{exec} echo \| ls > %t.out
 // RUN: grep -e ".foobar" %t.out

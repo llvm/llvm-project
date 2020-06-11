@@ -1115,6 +1115,25 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case AArch64::SpeculationBarrierISBDSBEndBB: {
+    // Print DSB SYS + ISB
+    MCInst TmpInstDSB;
+    TmpInstDSB.setOpcode(AArch64::DSB);
+    TmpInstDSB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstDSB);
+    MCInst TmpInstISB;
+    TmpInstISB.setOpcode(AArch64::ISB);
+    TmpInstISB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstISB);
+    return;
+  }
+  case AArch64::SpeculationBarrierSBEndBB: {
+    // Print SB
+    MCInst TmpInstSB;
+    TmpInstSB.setOpcode(AArch64::SB);
+    EmitToStreamer(*OutStreamer, TmpInstSB);
+    return;
+  }
   case AArch64::TLSDESC_CALLSEQ: {
     /// lower this to:
     ///    adrp  x0, :tlsdesc:var

@@ -78,6 +78,27 @@ public:
 //
 ModulePass *createModuleSummaryIndexWrapperPass();
 
+/// Legacy wrapper pass to provide the ModuleSummaryIndex object.
+class ImmutableModuleSummaryIndexWrapperPass : public ImmutablePass {
+  const ModuleSummaryIndex *Index;
+
+public:
+  static char ID;
+
+  ImmutableModuleSummaryIndexWrapperPass(
+      const ModuleSummaryIndex *Index = nullptr);
+  const ModuleSummaryIndex *getIndex() const { return Index; }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+//===--------------------------------------------------------------------===//
+//
+// ImmutableModuleSummaryIndexWrapperPass - This pass wrap provided
+// ModuleSummaryIndex object for the module, to be used by other passes.
+//
+ImmutablePass *
+createImmutableModuleSummaryIndexWrapperPass(const ModuleSummaryIndex *Index);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
