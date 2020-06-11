@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
@@ -90,11 +91,11 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
       return false;
     // Compare operands.
     if (lhs->isCommutative()) {
-      SmallVector<void*, 8> lops;
+      SmallVector<void *, 8> lops;
       for (const auto &lod : lhs->getOperands())
         lops.push_back(lod.getAsOpaquePointer());
       llvm::sort(lops.begin(), lops.end());
-      SmallVector<void*, 8> rops;
+      SmallVector<void *, 8> rops;
       for (const auto &rod : rhs->getOperands())
         rops.push_back(rod.getAsOpaquePointer());
       llvm::sort(rops.begin(), rops.end());
@@ -112,7 +113,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 };
 
 /// Basic common sub-expression elimination.
-struct BasicCSE : public mlir::PassWrapper<BasicCSE, mlir::FunctionPass> {
+struct BasicCSE : public fir::BasicCSEBase<BasicCSE> {
   BasicCSE() {}
   BasicCSE(const BasicCSE &) {}
 
