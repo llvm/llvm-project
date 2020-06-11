@@ -30,84 +30,84 @@
 namespace clang {
 namespace serialization {
 
-    /// AST file major version number supported by this version of
-    /// Clang.
-    ///
-    /// Whenever the AST file format changes in a way that makes it
-    /// incompatible with previous versions (such that a reader
-    /// designed for the previous version could not support reading
-    /// the new version), this number should be increased.
-    ///
-    /// Version 4 of AST files also requires that the version control branch and
-    /// revision match exactly, since there is no backward compatibility of
-    /// AST files at this time.
-    const unsigned VERSION_MAJOR = 10;
+/// AST file major version number supported by this version of
+/// Clang.
+///
+/// Whenever the AST file format changes in a way that makes it
+/// incompatible with previous versions (such that a reader
+/// designed for the previous version could not support reading
+/// the new version), this number should be increased.
+///
+/// Version 4 of AST files also requires that the version control branch and
+/// revision match exactly, since there is no backward compatibility of
+/// AST files at this time.
+const unsigned VERSION_MAJOR = 10;
 
-    /// AST file minor version number supported by this version of
-    /// Clang.
-    ///
-    /// Whenever the AST format changes in a way that is still
-    /// compatible with previous versions (such that a reader designed
-    /// for the previous version could still support reading the new
-    /// version by ignoring new kinds of subblocks), this number
-    /// should be increased.
-    const unsigned VERSION_MINOR = 0;
+/// AST file minor version number supported by this version of
+/// Clang.
+///
+/// Whenever the AST format changes in a way that is still
+/// compatible with previous versions (such that a reader designed
+/// for the previous version could still support reading the new
+/// version by ignoring new kinds of subblocks), this number
+/// should be increased.
+const unsigned VERSION_MINOR = 0;
 
-    /// An ID number that refers to an identifier in an AST file.
-    ///
-    /// The ID numbers of identifiers are consecutive (in order of discovery)
-    /// and start at 1. 0 is reserved for NULL.
-    using IdentifierID = uint32_t;
+/// An ID number that refers to an identifier in an AST file.
+///
+/// The ID numbers of identifiers are consecutive (in order of discovery)
+/// and start at 1. 0 is reserved for NULL.
+using IdentifierID = uint32_t;
 
-    /// An ID number that refers to a declaration in an AST file.
-    ///
-    /// The ID numbers of declarations are consecutive (in order of
-    /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
-    /// At the start of a chain of precompiled headers, declaration ID 1 is
-    /// used for the translation unit declaration.
-    using DeclID = uint32_t;
+/// An ID number that refers to a declaration in an AST file.
+///
+/// The ID numbers of declarations are consecutive (in order of
+/// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
+/// At the start of a chain of precompiled headers, declaration ID 1 is
+/// used for the translation unit declaration.
+using DeclID = uint32_t;
 
-    // FIXME: Turn these into classes so we can have some type safety when
-    // we go from local ID to global and vice-versa.
-    using LocalDeclID = DeclID;
-    using GlobalDeclID = DeclID;
+// FIXME: Turn these into classes so we can have some type safety when
+// we go from local ID to global and vice-versa.
+using LocalDeclID = DeclID;
+using GlobalDeclID = DeclID;
 
-    /// An ID number that refers to a type in an AST file.
-    ///
-    /// The ID of a type is partitioned into two parts: the lower
-    /// three bits are used to store the const/volatile/restrict
-    /// qualifiers (as with QualType) and the upper bits provide a
-    /// type index. The type index values are partitioned into two
-    /// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
-    /// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
-    /// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
-    /// other types that have serialized representations.
-    using TypeID = uint32_t;
+/// An ID number that refers to a type in an AST file.
+///
+/// The ID of a type is partitioned into two parts: the lower
+/// three bits are used to store the const/volatile/restrict
+/// qualifiers (as with QualType) and the upper bits provide a
+/// type index. The type index values are partitioned into two
+/// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
+/// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
+/// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
+/// other types that have serialized representations.
+using TypeID = uint32_t;
 
-    /// A type index; the type ID with the qualifier bits removed.
-    class TypeIdx {
-      uint32_t Idx = 0;
+/// A type index; the type ID with the qualifier bits removed.
+class TypeIdx {
+  uint32_t Idx = 0;
 
-    public:
-      TypeIdx() = default;
-      explicit TypeIdx(uint32_t index) : Idx(index) {}
+public:
+  TypeIdx() = default;
+  explicit TypeIdx(uint32_t index) : Idx(index) {}
 
-      uint32_t getIndex() const { return Idx; }
+  uint32_t getIndex() const { return Idx; }
 
-      TypeID asTypeID(unsigned FastQuals) const {
-        if (Idx == uint32_t(-1))
-          return TypeID(-1);
+  TypeID asTypeID(unsigned FastQuals) const {
+    if (Idx == uint32_t(-1))
+      return TypeID(-1);
 
-        return (Idx << Qualifiers::FastWidth) | FastQuals;
-      }
+    return (Idx << Qualifiers::FastWidth) | FastQuals;
+  }
 
-      static TypeIdx fromTypeID(TypeID ID) {
-        if (ID == TypeID(-1))
-          return TypeIdx(-1);
+  static TypeIdx fromTypeID(TypeID ID) {
+    if (ID == TypeID(-1))
+      return TypeIdx(-1);
 
-        return TypeIdx(ID >> Qualifiers::FastWidth);
-      }
-    };
+    return TypeIdx(ID >> Qualifiers::FastWidth);
+  }
+};
 
     /// A structure for putting "fast"-unqualified QualTypes into a
     /// DenseMap.  This uses the standard pointer hash function.
