@@ -941,6 +941,8 @@ TEST_FUNC(linalg_generic_dilated_conv_nhwc) {
 //       CHECK: linalg.reshape {{.*}} [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>] : memref<32x16xf32> into memref<4x8x16xf32>
 // clang-format on
 TEST_FUNC(linalg_metadata_ops) {
+  using linalg::ReassociationExprs;
+
   auto f32Type = FloatType::getF32(&globalContext());
   auto memrefType = MemRefType::get({4, 8, 16}, f32Type, {}, 0);
   auto f = makeFunction("linalg_metadata_ops", {}, {memrefType});
@@ -950,9 +952,10 @@ TEST_FUNC(linalg_metadata_ops) {
   AffineExpr i, j, k;
   bindDims(&globalContext(), i, j, k);
   Value v(f.getArgument(0));
-  auto reshaped = linalg_reshape(v, ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
-  linalg_reshape(memrefType, reshaped,
-                 ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
+  SmallVector<ReassociationExprs, 2> maps = {ReassociationExprs({i, j}),
+                                             ReassociationExprs({k})};
+  auto reshaped = linalg_reshape(v, maps);
+  linalg_reshape(memrefType, reshaped, maps);
 
   f.print(llvm::outs());
   f.erase();
