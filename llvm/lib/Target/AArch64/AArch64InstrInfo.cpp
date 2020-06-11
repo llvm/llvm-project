@@ -6092,7 +6092,9 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   }
 
   else if (LastInstrOpcode == AArch64::BL ||
-           (LastInstrOpcode == AArch64::BLR && !HasBTI)) {
+           ((LastInstrOpcode == AArch64::BLR ||
+             LastInstrOpcode == AArch64::BLRNoIP) &&
+            !HasBTI)) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = 0;
@@ -6409,7 +6411,8 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // as a tail-call.  Whitelist the call instructions we know about so we
     // don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
-    if (MI.getOpcode() == AArch64::BLR || MI.getOpcode() == AArch64::BL)
+    if (MI.getOpcode() == AArch64::BLR ||
+        MI.getOpcode() == AArch64::BLRNoIP || MI.getOpcode() == AArch64::BL)
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)
@@ -6557,7 +6560,8 @@ void AArch64InstrInfo::buildOutlinedFrame(
     if (Call->getOpcode() == AArch64::BL) {
       TailOpcode = AArch64::TCRETURNdi;
     } else {
-      assert(Call->getOpcode() == AArch64::BLR);
+      assert(Call->getOpcode() == AArch64::BLR ||
+             Call->getOpcode() == AArch64::BLRNoIP);
       TailOpcode = AArch64::TCRETURNriALL;
     }
     MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
@@ -6891,6 +6895,13 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
 
 uint64_t AArch64InstrInfo::getElementSizeForOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::ElementSizeMask;
+}
+
+unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
+  if (MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr())
+    return AArch64::BLRNoIP;
+  else
+    return AArch64::BLR;
 }
 
 #define GET_INSTRINFO_HELPERS
