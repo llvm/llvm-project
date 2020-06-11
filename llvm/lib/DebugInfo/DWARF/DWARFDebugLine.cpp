@@ -275,14 +275,14 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
         if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, &Ctx, U))
           return createStringError(errc::invalid_argument,
                                    "failed to parse directory entry because "
-                                   "extracting the form value failed.");
+                                   "extracting the form value failed");
         IncludeDirectories.push_back(Value);
         break;
       default:
         if (!Value.skipValue(DebugLineData, OffsetPtr, FormParams))
           return createStringError(errc::invalid_argument,
                                    "failed to parse directory entry because "
-                                   "skipping the form value failed.");
+                                   "skipping the form value failed");
       }
     }
   }
@@ -302,7 +302,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, &Ctx, U))
         return createStringError(errc::invalid_argument,
                                  "failed to parse file entry because "
-                                 "extracting the form value failed.");
+                                 "extracting the form value failed");
       switch (Descriptor.Type) {
       case DW_LNCT_path:
         FileEntry.Name = Value;
