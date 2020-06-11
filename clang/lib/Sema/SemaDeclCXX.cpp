@@ -52,102 +52,100 @@ using namespace clang;
 //===----------------------------------------------------------------------===//
 
 namespace {
-  /// CheckDefaultArgumentVisitor - C++ [dcl.fct.default] Traverses
-  /// the default argument of a parameter to determine whether it
-  /// contains any ill-formed subexpressions. For example, this will
-  /// diagnose the use of local variables or parameters within the
-  /// default argument expression.
-  class CheckDefaultArgumentVisitor
-    : public StmtVisitor<CheckDefaultArgumentVisitor, bool> {
-    Expr *DefaultArg;
-    Sema *S;
+/// CheckDefaultArgumentVisitor - C++ [dcl.fct.default] Traverses
+/// the default argument of a parameter to determine whether it
+/// contains any ill-formed subexpressions. For example, this will
+/// diagnose the use of local variables or parameters within the
+/// default argument expression.
+class CheckDefaultArgumentVisitor
+    : public ConstStmtVisitor<CheckDefaultArgumentVisitor, bool> {
+  Sema &S;
+  const Expr *DefaultArg;
 
-  public:
-    CheckDefaultArgumentVisitor(Expr *defarg, Sema *s)
-        : DefaultArg(defarg), S(s) {}
+public:
+  CheckDefaultArgumentVisitor(Sema &S, const Expr *DefaultArg)
+      : S(S), DefaultArg(DefaultArg) {}
 
-    bool VisitExpr(Expr *Node);
-    bool VisitDeclRefExpr(DeclRefExpr *DRE);
-    bool VisitCXXThisExpr(CXXThisExpr *ThisE);
-    bool VisitLambdaExpr(LambdaExpr *Lambda);
-    bool VisitPseudoObjectExpr(PseudoObjectExpr *POE);
-  };
+  bool VisitExpr(const Expr *Node);
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE);
+  bool VisitCXXThisExpr(const CXXThisExpr *ThisE);
+  bool VisitLambdaExpr(const LambdaExpr *Lambda);
+  bool VisitPseudoObjectExpr(const PseudoObjectExpr *POE);
+};
 
-  /// VisitExpr - Visit all of the children of this expression.
-  bool CheckDefaultArgumentVisitor::VisitExpr(Expr *Node) {
-    bool IsInvalid = false;
-    for (Stmt *SubStmt : Node->children())
-      IsInvalid |= Visit(SubStmt);
-    return IsInvalid;
-  }
-
-  /// VisitDeclRefExpr - Visit a reference to a declaration, to
-  /// determine whether this declaration can be used in the default
-  /// argument expression.
-  bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(DeclRefExpr *DRE) {
-    NamedDecl *Decl = DRE->getDecl();
-    if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(Decl)) {
-      // C++ [dcl.fct.default]p9
-      //   Default arguments are evaluated each time the function is
-      //   called. The order of evaluation of function arguments is
-      //   unspecified. Consequently, parameters of a function shall not
-      //   be used in default argument expressions, even if they are not
-      //   evaluated. Parameters of a function declared before a default
-      //   argument expression are in scope and can hide namespace and
-      //   class member names.
-      return S->Diag(DRE->getBeginLoc(),
-                     diag::err_param_default_argument_references_param)
-             << Param->getDeclName() << DefaultArg->getSourceRange();
-    } else if (VarDecl *VDecl = dyn_cast<VarDecl>(Decl)) {
-      // C++ [dcl.fct.default]p7
-      //   Local variables shall not be used in default argument
-      //   expressions.
-      if (VDecl->isLocalVarDecl())
-        return S->Diag(DRE->getBeginLoc(),
-                       diag::err_param_default_argument_references_local)
-               << VDecl->getDeclName() << DefaultArg->getSourceRange();
-    }
-
-    return false;
-  }
-
-  /// VisitCXXThisExpr - Visit a C++ "this" expression.
-  bool CheckDefaultArgumentVisitor::VisitCXXThisExpr(CXXThisExpr *ThisE) {
-    // C++ [dcl.fct.default]p8:
-    //   The keyword this shall not be used in a default argument of a
-    //   member function.
-    return S->Diag(ThisE->getBeginLoc(),
-                   diag::err_param_default_argument_references_this)
-           << ThisE->getSourceRange();
-  }
-
-  bool CheckDefaultArgumentVisitor::VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
-    bool Invalid = false;
-    for (PseudoObjectExpr::semantics_iterator
-           i = POE->semantics_begin(), e = POE->semantics_end(); i != e; ++i) {
-      Expr *E = *i;
-
-      // Look through bindings.
-      if (OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E)) {
-        E = OVE->getSourceExpr();
-        assert(E && "pseudo-object binding without source expression?");
-      }
-
-      Invalid |= Visit(E);
-    }
-    return Invalid;
-  }
-
-  bool CheckDefaultArgumentVisitor::VisitLambdaExpr(LambdaExpr *Lambda) {
-    // C++11 [expr.lambda.prim]p13:
-    //   A lambda-expression appearing in a default argument shall not
-    //   implicitly or explicitly capture any entity.
-    if (Lambda->capture_begin() == Lambda->capture_end())
-      return false;
-
-    return S->Diag(Lambda->getBeginLoc(), diag::err_lambda_capture_default_arg);
-  }
+/// VisitExpr - Visit all of the children of this expression.
+bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
+  bool IsInvalid = false;
+  for (const Stmt *SubStmt : Node->children())
+    IsInvalid |= Visit(SubStmt);
+  return IsInvalid;
 }
+
+/// VisitDeclRefExpr - Visit a reference to a declaration, to
+/// determine whether this declaration can be used in the default
+/// argument expression.
+bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
+  const NamedDecl *Decl = DRE->getDecl();
+  if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
+    // C++ [dcl.fct.default]p9
+    //   Default arguments are evaluated each time the function is
+    //   called. The order of evaluation of function arguments is
+    //   unspecified. Consequently, parameters of a function shall not
+    //   be used in default argument expressions, even if they are not
+    //   evaluated. Parameters of a function declared before a default
+    //   argument expression are in scope and can hide namespace and
+    //   class member names.
+    return S.Diag(DRE->getBeginLoc(),
+                  diag::err_param_default_argument_references_param)
+           << Param->getDeclName() << DefaultArg->getSourceRange();
+  } else if (const auto *VDecl = dyn_cast<VarDecl>(Decl)) {
+    // C++ [dcl.fct.default]p7
+    //   Local variables shall not be used in default argument
+    //   expressions.
+    if (VDecl->isLocalVarDecl())
+      return S.Diag(DRE->getBeginLoc(),
+                    diag::err_param_default_argument_references_local)
+             << VDecl->getDeclName() << DefaultArg->getSourceRange();
+  }
+
+  return false;
+}
+
+/// VisitCXXThisExpr - Visit a C++ "this" expression.
+bool CheckDefaultArgumentVisitor::VisitCXXThisExpr(const CXXThisExpr *ThisE) {
+  // C++ [dcl.fct.default]p8:
+  //   The keyword this shall not be used in a default argument of a
+  //   member function.
+  return S.Diag(ThisE->getBeginLoc(),
+                diag::err_param_default_argument_references_this)
+         << ThisE->getSourceRange();
+}
+
+bool CheckDefaultArgumentVisitor::VisitPseudoObjectExpr(
+    const PseudoObjectExpr *POE) {
+  bool Invalid = false;
+  for (const Expr *E : POE->semantics()) {
+    // Look through bindings.
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+      E = OVE->getSourceExpr();
+      assert(E && "pseudo-object binding without source expression?");
+    }
+
+    Invalid |= Visit(E);
+  }
+  return Invalid;
+}
+
+bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
+  // C++11 [expr.lambda.prim]p13:
+  //   A lambda-expression appearing in a default argument shall not
+  //   implicitly or explicitly capture any entity.
+  if (Lambda->capture_begin() == Lambda->capture_end())
+    return false;
+
+  return S.Diag(Lambda->getBeginLoc(), diag::err_lambda_capture_default_arg);
+}
+} // namespace
 
 void
 Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
@@ -335,7 +333,7 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
   }
 
   // Check that the default argument is well-formed
-  CheckDefaultArgumentVisitor DefaultArgChecker(DefaultArg, this);
+  CheckDefaultArgumentVisitor DefaultArgChecker(*this, DefaultArg);
   if (DefaultArgChecker.Visit(DefaultArg))
     return Fail();
 
