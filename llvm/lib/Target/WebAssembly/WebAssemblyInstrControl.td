@@ -40,21 +40,25 @@ def brlist : Operand<i32> {
   let PrintMethod = "printBrList";
 }
 
-// TODO: SelectionDAG's lowering insists on using a pointer as the index for
-// jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
-// currently.
-let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+// Duplicating a BR_TABLE is almost never a good idea. In particular, it can
+// lead to some nasty irreducibility due to tail merging when the br_table is in
+// a loop.
+let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1, isNotDuplicable = 1 in {
+
 defm BR_TABLE_I32 : I<(outs), (ins I32:$index, variable_ops),
                       (outs), (ins brlist:$brl),
                       [(WebAssemblybr_table I32:$index)],
                       "br_table \t$index", "br_table \t$brl",
                       0x0e>;
+// TODO: SelectionDAG's lowering insists on using a pointer as the index for
+// jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
+// currently.
 defm BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
                       (outs), (ins brlist:$brl),
                       [(WebAssemblybr_table I64:$index)],
                       "br_table \t$index", "br_table \t$brl",
                       0x0e>;
-} // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+} // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1, isNotDuplicable = 1
 
 // This is technically a control-flow instruction, since all it affects is the
 // IP.
