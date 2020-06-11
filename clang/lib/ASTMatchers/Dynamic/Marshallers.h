@@ -219,14 +219,12 @@ template <> struct ArgTypeTraits<UnaryExprOrTypeTrait> {
 private:
   static Optional<UnaryExprOrTypeTrait>
   getUnaryOrTypeTraitKind(llvm::StringRef ClauseKind) {
-    // FIXME: Type traits should probably be in a `.def` to make less error
-    // prone.
     return llvm::StringSwitch<Optional<UnaryExprOrTypeTrait>>(ClauseKind)
-        .Case("UETT_SizeOf", UETT_SizeOf)
-        .Case("UETT_AlignOf", UETT_AlignOf)
-        .Case("UETT_VecStep", UETT_VecStep)
-        .Case("UETT_OpenMPRequiredSimdAlign", UETT_OpenMPRequiredSimdAlign)
-        .Case("UETT_PreferredAlignOf", UETT_PreferredAlignOf)
+#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                          \
+  .Case("UETT_" #Name, UETT_##Name)
+#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
+  .Case("UETT_" #Name, UETT_##Name)
+#include "clang/Basic/TokenKinds.def"
         .Default(llvm::None);
   }
 
