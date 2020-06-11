@@ -47,7 +47,7 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/Support/X86TargetParser.h"
 #include <sstream>
 
 using namespace clang;

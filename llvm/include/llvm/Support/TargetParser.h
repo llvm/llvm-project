@@ -25,55 +25,12 @@ namespace llvm {
 class StringRef;
 
 // Target specific information in their own namespaces.
-// (ARM/AArch64 are declared in ARM/AArch64TargetParser.h)
+// (ARM/AArch64/X86 are declared in ARM/AArch64/X86TargetParser.h)
 // These should be generated from TableGen because the information is already
 // there, and there is where new information about targets will be added.
 // FIXME: To TableGen this we need to make some table generated files available
 // even if the back-end is not compiled with LLVM, plus we need to create a new
 // back-end to TableGen to create these clean tables.
-namespace X86 {
-
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorVendors : unsigned {
-  VENDOR_DUMMY,
-#define X86_VENDOR(ENUM, STRING) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  VENDOR_OTHER
-};
-
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorTypes : unsigned {
-  CPU_TYPE_DUMMY,
-#define X86_CPU_TYPE(ARCHNAME, ENUM) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  CPU_TYPE_MAX
-};
-
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorSubtypes : unsigned {
-  CPU_SUBTYPE_DUMMY,
-#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  CPU_SUBTYPE_MAX
-};
-
-// This should be kept in sync with libcc/compiler-rt as it should be used
-// by clang as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorFeatures {
-#define X86_FEATURE(VAL, ENUM) \
-  ENUM = VAL,
-#include "llvm/Support/X86TargetParser.def"
-
-};
-
-} // namespace X86
-
 namespace AMDGPU {
 
 /// GPU kinds supported by the AMDGPU target.
