@@ -20,17 +20,13 @@ config.suffixes = ['.py']
 config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = config.test_source_root
 
-if 'Address' in config.llvm_use_sanitizer:
-  config.environment['ASAN_OPTIONS'] = 'detect_stack_use_after_return=1'
-  # macOS flags needed for LLDB built with address sanitizer.
-  if 'Darwin' in config.host_os and 'x86' in config.host_triple:
-    import subprocess
-    resource_dir = subprocess.check_output(
-        [config.cmake_cxx_compiler,
-         '-print-resource-dir']).decode('utf-8').strip()
-    runtime = os.path.join(resource_dir, 'lib', 'darwin',
-                           'libclang_rt.asan_osx_dynamic.dylib')
-    config.environment['DYLD_INSERT_LIBRARIES'] = runtime
+
+def find_sanitizer_runtime(name):
+  import subprocess
+  resource_dir = subprocess.check_output(
+      [config.cmake_cxx_compiler,
+       '-print-resource-dir']).decode('utf-8').strip()
+  return os.path.join(resource_dir, 'lib', 'darwin', name)
 
 
 def find_shlibpath_var():
@@ -41,6 +37,17 @@ def find_shlibpath_var():
   elif platform.system() == 'Windows':
     yield 'PATH'
 
+
+if 'Address' in config.llvm_use_sanitizer:
+  config.environment['ASAN_OPTIONS'] = 'detect_stack_use_after_return=1'
+  if 'Darwin' in config.host_os and 'x86' in config.host_triple:
+    config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
+        'libclang_rt.asan_osx_dynamic.dylib')
+
+if 'Thread' in config.llvm_use_sanitizer:
+  if 'Darwin' in config.host_os and 'x86' in config.host_triple:
+    config.environment['DYLD_INSERT_LIBRARIES'] = find_sanitizer_runtime(
+        'libclang_rt.tsan_osx_dynamic.dylib')
 
 # Shared library build of LLVM may require LD_LIBRARY_PATH or equivalent.
 if config.shared_libs:

@@ -2493,3 +2493,45 @@ func @vector_loop(%a : memref<10x20xf32>, %b : memref<10x20xf32>,
 // CHECK-NEXT:     affine.vector_load
 // CHECK-NEXT:     affine.vector_store
 // CHECK-NOT:  affine.for
+
+// -----
+
+// CHECK-LABEL: func @multi_outgoing_edges
+func @multi_outgoing_edges(%in0 : memref<32xf32>,
+                      %in1 : memref<32xf32>) {
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = addf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = subf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = mulf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = divf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  return
+}
+
+// CHECK:      affine.for
+// CHECK-NOT:  affine.for
+// CHECK:        addf
+// CHECK-NOT:  affine.for
+// CHECK:        subf
+// CHECK-NOT:  affine.for
+// CHECK:        mulf
+// CHECK-NOT:  affine.for
+// CHECK:        divf

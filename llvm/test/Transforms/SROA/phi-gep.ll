@@ -416,6 +416,42 @@ end:
   ret i32 %load
 }
 
+define void @unreachable_term() {
+; CHECK-LABEL: @unreachable_term(
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_CAST1:%.*]] = bitcast i32* [[A_SROA_0]] to [3 x i32]*
+; CHECK-NEXT:    unreachable
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB1_I:%.*]]
+; CHECK:       bb1.i:
+; CHECK-NEXT:    [[PHI:%.*]] = phi [3 x i32]* [ [[A_SROA_0_0_A_SROA_CAST1]], [[BB1:%.*]] ], [ null, [[BB1_I]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [3 x i32], [3 x i32]* [[PHI]], i64 0, i64 0
+; CHECK-NEXT:    store i32 0, i32* [[GEP]], align 1
+; CHECK-NEXT:    br i1 undef, label [[BB1_I]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [3 x i32], align 1
+  unreachable
+
+bb1:
+  br label %bb1.i
+
+bb1.i:
+  %phi = phi [3 x i32]* [ %a, %bb1 ], [ null, %bb1.i ]
+  %gep = getelementptr [3 x i32], [3 x i32]* %phi, i64 0, i64 0
+  store i32 0, i32* %gep, align 1
+  br i1 undef, label %bb1.i, label %exit
+
+exit:
+  br label %bb2
+
+bb2:
+  ret void
+}
+
 declare %pair* @foo()
 
 declare i32 @__gxx_personality_v0(...)
