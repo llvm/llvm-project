@@ -194,10 +194,16 @@ write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
   VERSION "${amd_comgr_VERSION}"
   COMPATIBILITY SameMajorVersion)
 
-install(TARGETS amd_comgr
-  EXPORT amd_comgr_export
-  COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(NOT UNIX)
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT amd-comgr)
+else()
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT amd-comgr
+    DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
