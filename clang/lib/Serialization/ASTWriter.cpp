@@ -1032,16 +1032,7 @@ ASTFileSignature ASTWriter::createSignature(StringRef Bytes) {
   Hasher.update(ArrayRef<uint8_t>(Bytes.bytes_begin(), Bytes.size()));
   auto Hash = Hasher.result();
 
-  // Convert to an array [5*i32].
-  ASTFileSignature Signature;
-  auto LShift = [&](unsigned char Val, unsigned Shift) {
-    return (uint32_t)Val << Shift;
-  };
-  for (int I = 0; I != 5; ++I)
-    Signature[I] = LShift(Hash[I * 4 + 0], 24) | LShift(Hash[I * 4 + 1], 16) |
-                   LShift(Hash[I * 4 + 2], 8) | LShift(Hash[I * 4 + 3], 0);
-
-  return Signature;
+  return ASTFileSignature::create(Hash);
 }
 
 ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,

@@ -643,10 +643,10 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
         // Skip the stored signature.
         // FIXME: we could read the signature out of the import and validate it.
-        ASTFileSignature StoredSignature = {
-            {{(uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
-              (uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
-              (uint32_t)Record[Idx++]}}};
+        auto FirstSignatureByte = Record.begin() + Idx;
+        ASTFileSignature StoredSignature = ASTFileSignature::create(
+            FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
+        Idx += ASTFileSignature::size;
 
         // Skip the module name (currently this is only used for prebuilt
         // modules while here we are only dealing with cached).
@@ -704,9 +704,8 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
     // Get Signature.
     if (State == DiagnosticOptionsBlock && Code == SIGNATURE)
-      getModuleFileInfo(File).Signature = {
-          {{(uint32_t)Record[0], (uint32_t)Record[1], (uint32_t)Record[2],
-            (uint32_t)Record[3], (uint32_t)Record[4]}}};
+      getModuleFileInfo(File).Signature = ASTFileSignature::create(
+          Record.begin(), Record.begin() + ASTFileSignature::size);
 
     // We don't care about this record.
   }
