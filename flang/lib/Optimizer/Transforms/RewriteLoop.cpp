@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -259,8 +260,7 @@ public:
 };
 
 /// Convert FIR structured control flow ops to CFG ops.
-class CfgConversion
-    : public mlir::PassWrapper<CfgConversion, mlir::FunctionPass> {
+class CfgConversion : public CFGConversionBase<CfgConversion> {
 public:
   void runOnFunction() override {
     if (disableCfgConversion)

@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -136,7 +137,7 @@ struct SelectTypeOpConversion : public FIROpConversion<SelectTypeOp> {
 
 /// Convert affine dialect, fir.select_type to standard dialect
 class ControlFlowLoweringPass
-    : public mlir::PassWrapper<ControlFlowLoweringPass, mlir::FunctionPass> {
+    : public ControlFlowLoweringBase<ControlFlowLoweringPass> {
 public:
   explicit ControlFlowLoweringPass() {}
 
