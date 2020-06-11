@@ -2275,11 +2275,7 @@ bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
 /// for bits that V cannot have.
 bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
                                      unsigned Depth) const {
-  EVT VT = V.getValueType();
-  APInt DemandedElts = VT.isVector()
-                           ? APInt::getAllOnesValue(VT.getVectorNumElements())
-                           : APInt(1, 1);
-  return MaskedValueIsZero(V, Mask, DemandedElts, Depth);
+  return Mask.isSubsetOf(computeKnownBits(V, Depth).Zero);
 }
 
 /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero in
@@ -2548,6 +2544,14 @@ const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(
 /// every vector element.
 KnownBits SelectionDAG::computeKnownBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
+
+  // TOOD: Until we have a plan for how to represent demanded elements for
+  // scalable vectors, we can just bail out for now.
+  if (Op.getValueType().isScalableVector()) {
+    unsigned BitWidth = Op.getScalarValueSizeInBits();
+    return KnownBits(BitWidth);
+  }
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnesValue(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -2562,6 +2566,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   unsigned BitWidth = Op.getScalarValueSizeInBits();
 
   KnownBits Known(BitWidth);   // Don't know anything.
+
+  // TOOD: Until we have a plan for how to represent demanded elements for
+  // scalable vectors, we can just bail out for now.
+  if (Op.getValueType().isScalableVector())
+    return Known;
 
   if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
     // We know all of the bits for a constant!
