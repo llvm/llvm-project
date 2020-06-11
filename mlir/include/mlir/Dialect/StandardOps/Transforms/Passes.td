@@ -16,9 +16,9 @@ def ExpandAtomic : FunctionPass<"expand-atomic"> {
   let constructor = "mlir::createExpandAtomicPass()";
 }
 
-def TanhLower : FunctionPass<"tanh-lower"> {
+def TanhLowering : FunctionPass<"tanh-lowering"> {
   let summary = "Lowers TanhOp to a runtime call.";
-  let constructor = "mlir::createTanhLowerPass()";
+  let constructor = "mlir::createTanhLoweringPass()";
 }
 
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES

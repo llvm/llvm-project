@@ -2440,6 +2440,12 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
     llvm::interleaveComma(steps, p);
     p << ')';
   }
+  if (op.getNumResults()) {
+    p << " : ";
+    for (auto type : op.getResultTypes()) {
+      p << type;
+    }
+  }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.getNumResults());
@@ -2702,7 +2708,7 @@ struct AffineParallelRank0LoopRemover
     auto &parallelBodyOps = op.region().front().getOperations();
     auto yield = mlir::cast<AffineYieldOp>(std::prev(parallelBodyOps.end()));
     for (auto it : zip(op.getResults(), yield.results())) {
-     std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
     }
     parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
                      parallelBodyOps.begin(), std::prev(parallelBodyOps.end()));
@@ -2731,15 +2737,15 @@ struct AffineParallelRange1IndexRemover
         // Remove arcument and replace with 0
         auto curArg = op.getBody()->getArgument(curArgNum);
         auto lowerBoundValue = rewriter.create<AffineApplyOp>(
-          op.getLoc(), op.lowerBoundsMap().getSubMap({i}), op.getLowerBoundsOperands());
+            op.getLoc(), op.lowerBoundsMap().getSubMap({i}),
+            op.getLowerBoundsOperands());
         curArg.replaceAllUsesWith(lowerBoundValue);
         op.getBody()->eraseArgument(curArgNum);
       } else {
         // Keep argument
         newLowerBounds.push_back(op.lowerBoundsMap().getResult(i));
         newUpperBounds.push_back(op.upperBoundsMap().getResult(i));
-        newSteps.push_back(
-            op.steps()[i].template cast<IntegerAttr>().getInt());
+        newSteps.push_back(op.steps()[i].template cast<IntegerAttr>().getInt());
         curArgNum++;
       }
     }
@@ -2747,7 +2753,7 @@ struct AffineParallelRange1IndexRemover
     if (newLowerBounds.size() == op.lowerBoundsMap().getNumResults())
       return failure();
     // Update attributes and return success
-    auto newLower = AffineMap::get(op.lowerBoundsMap().getNumDims(), 
+    auto newLower = AffineMap::get(op.lowerBoundsMap().getNumDims(),
                                    op.lowerBoundsMap().getNumSymbols(),
                                    newLowerBounds, op.getContext());
     auto newUpper = AffineMap::get(op.upperBoundsMap().getNumDims(),
@@ -2767,7 +2773,9 @@ struct AffineParallelRange1IndexRemover
 
 void AffineParallelOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<AffineParallelRank0LoopRemover, AffineParallelRange1IndexRemover>(context);
+  results
+      .insert<AffineParallelRank0LoopRemover, AffineParallelRange1IndexRemover>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
