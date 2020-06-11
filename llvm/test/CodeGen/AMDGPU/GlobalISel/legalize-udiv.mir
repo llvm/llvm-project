@@ -36,7 +36,7 @@ body: |
     ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: $vgpr0 = COPY [[SELECT3]](s32)
     ; GFX8-LABEL: name: test_udiv_s32
@@ -66,7 +66,7 @@ body: |
     ; GFX8: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: $vgpr0 = COPY [[SELECT3]](s32)
     ; GFX9-LABEL: name: test_udiv_s32
@@ -96,7 +96,7 @@ body: |
     ; GFX9: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: $vgpr0 = COPY [[SELECT3]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -140,7 +140,7 @@ body: |
     ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[UV3]](s32)
     ; GFX6: [[AMDGPU_RCP_IFLAG1:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP1]](s32)
@@ -164,7 +164,7 @@ body: |
     ; GFX6: [[AND1:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX6: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C2]]
     ; GFX6: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C2]]
-    ; GFX6: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX6: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[ADD3]], [[UMULH5]]
     ; GFX6: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX6: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT3]](s32), [[SELECT7]](s32)
     ; GFX6: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
@@ -197,7 +197,7 @@ body: |
     ; GFX8: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[UV3]](s32)
     ; GFX8: [[AMDGPU_RCP_IFLAG1:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP1]](s32)
@@ -221,7 +221,7 @@ body: |
     ; GFX8: [[AND1:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX8: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C2]]
     ; GFX8: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C2]]
-    ; GFX8: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX8: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[ADD3]], [[UMULH5]]
     ; GFX8: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT3]](s32), [[SELECT7]](s32)
     ; GFX8: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
@@ -254,7 +254,7 @@ body: |
     ; GFX9: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C2]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C2]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[UV3]](s32)
     ; GFX9: [[AMDGPU_RCP_IFLAG1:%[0-9]+]]:_(s32) = G_AMDGPU_RCP_IFLAG [[UITOFP1]](s32)
@@ -278,7 +278,7 @@ body: |
     ; GFX9: [[AND1:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX9: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C2]]
     ; GFX9: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C2]]
-    ; GFX9: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX9: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND1]](s1), [[ADD3]], [[UMULH5]]
     ; GFX9: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT3]](s32), [[SELECT7]](s32)
     ; GFX9: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
@@ -1715,7 +1715,7 @@ body: |
     ; GFX6: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX6: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
@@ -1752,7 +1752,7 @@ body: |
     ; GFX8: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX8: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
@@ -1789,7 +1789,7 @@ body: |
     ; GFX9: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX9: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
@@ -1846,7 +1846,7 @@ body: |
     ; GFX6: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C4]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C4]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; GFX6: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
@@ -1874,7 +1874,7 @@ body: |
     ; GFX6: [[AND5:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX6: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C4]]
     ; GFX6: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C4]]
-    ; GFX6: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX6: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[ADD3]], [[UMULH5]]
     ; GFX6: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX6: [[COPY6:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX6: [[AND6:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
@@ -1921,7 +1921,7 @@ body: |
     ; GFX8: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C4]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C4]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; GFX8: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
@@ -1949,7 +1949,7 @@ body: |
     ; GFX8: [[AND5:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX8: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C4]]
     ; GFX8: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C4]]
-    ; GFX8: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX8: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[ADD3]], [[UMULH5]]
     ; GFX8: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX8: [[COPY6:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX8: [[AND6:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
@@ -1996,7 +1996,7 @@ body: |
     ; GFX9: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C4]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C4]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; GFX9: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
@@ -2024,7 +2024,7 @@ body: |
     ; GFX9: [[AND5:%[0-9]+]]:_(s1) = G_AND [[ICMP4]], [[ICMP5]]
     ; GFX9: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH5]], [[C4]]
     ; GFX9: [[SUB7:%[0-9]+]]:_(s32) = G_SUB [[UMULH5]], [[C4]]
-    ; GFX9: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[UMULH5]], [[ADD3]]
+    ; GFX9: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[AND5]](s1), [[ADD3]], [[UMULH5]]
     ; GFX9: [[SELECT7:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[SELECT6]], [[SUB7]]
     ; GFX9: [[COPY6:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX9: [[COPY7:%[0-9]+]]:_(s32) = COPY [[SELECT7]](s32)
@@ -2074,7 +2074,7 @@ body: |
     ; GFX6: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX6: $vgpr0 = COPY [[COPY4]](s32)
@@ -2110,7 +2110,7 @@ body: |
     ; GFX8: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX8: $vgpr0 = COPY [[COPY4]](s32)
@@ -2146,7 +2146,7 @@ body: |
     ; GFX9: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX9: $vgpr0 = COPY [[COPY4]](s32)
@@ -2197,7 +2197,7 @@ body: |
     ; GFX6: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX6: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX6: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX6: $vgpr0 = COPY [[COPY4]](s32)
@@ -2233,7 +2233,7 @@ body: |
     ; GFX8: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX8: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX8: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX8: $vgpr0 = COPY [[COPY4]](s32)
@@ -2269,7 +2269,7 @@ body: |
     ; GFX9: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH2]], [[C3]]
     ; GFX9: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[UMULH2]], [[C3]]
-    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[UMULH2]], [[ADD1]]
+    ; GFX9: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[AND2]](s1), [[ADD1]], [[UMULH2]]
     ; GFX9: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[SELECT2]], [[SUB3]]
     ; GFX9: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SELECT3]](s32)
     ; GFX9: $vgpr0 = COPY [[COPY4]](s32)
