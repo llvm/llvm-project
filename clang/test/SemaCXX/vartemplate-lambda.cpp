@@ -6,10 +6,7 @@ template <typename> void foo0() { fn0<char>(); }
 template<typename T> auto fn1 = [](auto a) { return a + T(1); };
 template<typename T> auto v1 = [](int a = T()) { return a; }();
 // expected-error@-1{{cannot initialize a parameter of type 'int' with an rvalue of type 'int *'}}
-// expected-error@-2{{no matching function for call}}
-// expected-note@-3{{passing argument to parameter 'a' here}}
-// expected-note@-4{{candidate function not viable}}
-// expected-note@-5{{conversion candidate of type 'int (*)(int)'}}
+// expected-note@-2{{passing argument to parameter 'a' here}}
 
 struct S {
   template<class T>

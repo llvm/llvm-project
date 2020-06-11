@@ -6,5 +6,10 @@ class A {
 };
 
 void A::test() {
-  void g(int = this); // expected-error {{default argument references 'this'}}
+  void g(int = this);
+  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'A *'}}
+  // expected-note@-2 {{passing argument to parameter here}}
+
+  void h(int = ((void)this,42));
+  // expected-error@-1 {{default argument references 'this'}}
 }
