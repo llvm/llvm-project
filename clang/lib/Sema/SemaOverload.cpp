@@ -9397,16 +9397,22 @@ static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
   return Comparison::Equal;
 }
 
-static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
-                                          const OverloadCandidate &Cand2) {
+static Comparison
+isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
+                              const OverloadCandidate &Cand2) {
   if (!Cand1.Function || !Cand1.Function->isMultiVersion() || !Cand2.Function ||
       !Cand2.Function->isMultiVersion())
-    return false;
+    return Comparison::Equal;
 
-  // If Cand1 is invalid, it cannot be a better match, if Cand2 is invalid, this
-  // is obviously better.
-  if (Cand1.Function->isInvalidDecl()) return false;
-  if (Cand2.Function->isInvalidDecl()) return true;
+  // If both are invalid, they are equal. If one of them is invalid, the other
+  // is better.
+  if (Cand1.Function->isInvalidDecl()) {
+    if (Cand2.Function->isInvalidDecl())
+      return Comparison::Equal;
+    return Comparison::Worse;
+  }
+  if (Cand2.Function->isInvalidDecl())
+    return Comparison::Better;
 
   // If this is a cpu_dispatch/cpu_specific multiversion situation, prefer
   // cpu_dispatch, else arbitrarily based on the identifiers.
@@ -9416,16 +9422,18 @@ static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
   const auto *Cand2CPUSpec = Cand2.Function->getAttr<CPUSpecificAttr>();
 
   if (!Cand1CPUDisp && !Cand2CPUDisp && !Cand1CPUSpec && !Cand2CPUSpec)
-    return false;
+    return Comparison::Equal;
 
   if (Cand1CPUDisp && !Cand2CPUDisp)
-    return true;
+    return Comparison::Better;
   if (Cand2CPUDisp && !Cand1CPUDisp)
-    return false;
+    return Comparison::Worse;
 
   if (Cand1CPUSpec && Cand2CPUSpec) {
     if (Cand1CPUSpec->cpus_size() != Cand2CPUSpec->cpus_size())
-      return Cand1CPUSpec->cpus_size() < Cand2CPUSpec->cpus_size();
+      return Cand1CPUSpec->cpus_size() < Cand2CPUSpec->cpus_size()
+                 ? Comparison::Better
+                 : Comparison::Worse;
 
     std::pair<CPUSpecificAttr::cpus_iterator, CPUSpecificAttr::cpus_iterator>
         FirstDiff = std::mismatch(
@@ -9438,7 +9446,9 @@ static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
     assert(FirstDiff.first != Cand1CPUSpec->cpus_end() &&
            "Two different cpu-specific versions should not have the same "
            "identifier list, otherwise they'd be the same decl!");
-    return (*FirstDiff.first)->getName() < (*FirstDiff.second)->getName();
+    return (*FirstDiff.first)->getName() < (*FirstDiff.second)->getName()
+               ? Comparison::Better
+               : Comparison::Worse;
   }
   llvm_unreachable("No way to get here unless both had cpu_dispatch");
 }
@@ -9745,7 +9755,8 @@ bool clang::isBetterOverloadCandidate(
   if (HasPS1 != HasPS2 && HasPS1)
     return true;
 
-  return isBetterMultiversionCandidate(Cand1, Cand2);
+  Comparison MV = isBetterMultiversionCandidate(Cand1, Cand2);
+  return MV == Comparison::Better;
 }
 
 /// Determine whether two declarations are "equivalent" for the purposes of
