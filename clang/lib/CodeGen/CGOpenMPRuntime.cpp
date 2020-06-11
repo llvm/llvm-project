@@ -7031,7 +7031,7 @@ public:
     OMP_MAP_TARGET_PARAM = 0x20,
     /// Signal that the runtime library has to return the device pointer
     /// in the current position for the data being mapped. Used when we have the
-    /// use_device_ptr clause.
+    /// use_device_ptr or use_device_addr clause.
     OMP_MAP_RETURN_PARAM = 0x40,
     /// This flag signals that the reference being passed is a pointer to
     /// private data.
@@ -7099,26 +7099,30 @@ private:
     ArrayRef<OpenMPMapModifierKind> MapModifiers;
     bool ReturnDevicePointer = false;
     bool IsImplicit = false;
+    bool ForDeviceAddr = false;
 
     MapInfo() = default;
     MapInfo(
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
         OpenMPMapClauseKind MapType,
-        ArrayRef<OpenMPMapModifierKind> MapModifiers,
-        bool ReturnDevicePointer, bool IsImplicit)
+        ArrayRef<OpenMPMapModifierKind> MapModifiers, bool ReturnDevicePointer,
+        bool IsImplicit, bool ForDeviceAddr = false)
         : Components(Components), MapType(MapType), MapModifiers(MapModifiers),
-          ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit) {}
+          ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit),
+          ForDeviceAddr(ForDeviceAddr) {}
   };
 
-  /// If use_device_ptr is used on a pointer which is a struct member and there
-  /// is no map information about it, then emission of that entry is deferred
-  /// until the whole struct has been processed.
+  /// If use_device_ptr or use_device_addr is used on a decl which is a struct
+  /// member and there is no map information about it, then emission of that
+  /// entry is deferred until the whole struct has been processed.
   struct DeferredDevicePtrEntryTy {
     const Expr *IE = nullptr;
     const ValueDecl *VD = nullptr;
+    bool ForDeviceAddr = false;
 
-    DeferredDevicePtrEntryTy(const Expr *IE, const ValueDecl *VD)
-        : IE(IE), VD(VD) {}
+    DeferredDevicePtrEntryTy(const Expr *IE, const ValueDecl *VD,
+                             bool ForDeviceAddr)
+        : IE(IE), VD(VD), ForDeviceAddr(ForDeviceAddr) {}
   };
 
   /// The target directive from where the mappable clauses were extracted. It
@@ -7306,13 +7310,12 @@ private:
   /// \a IsFirstComponent should be set to true if the provided set of
   /// components is the first associated with a capture.
   void generateInfoForComponentList(
-      OpenMPMapClauseKind MapType,
-      ArrayRef<OpenMPMapModifierKind> MapModifiers,
+      OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
       MapBaseValuesArrayTy &BasePointers, MapValuesArrayTy &Pointers,
       MapValuesArrayTy &Sizes, MapFlagsArrayTy &Types,
       StructRangeInfoTy &PartialStruct, bool IsFirstComponentList,
-      bool IsImplicit,
+      bool IsImplicit, bool ForDeviceAddr = false,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedElements = llvm::None) const {
     // The following summarizes what has to be generated for each map and the
@@ -7623,8 +7626,8 @@ private:
         // If this component is a pointer inside the base struct then we don't
         // need to create any entry for it - it will be combined with the object
         // it is pointing to into a single PTR_AND_OBJ entry.
-        bool IsMemberPointer =
-            IsPointer && EncounteredME &&
+        bool IsMemberPointerOrAddr =
+            (IsPointer || ForDeviceAddr) && EncounteredME &&
             (dyn_cast<MemberExpr>(I->getAssociatedExpression()) ==
              EncounteredME);
         if (!OverlappedElements.empty()) {
@@ -7691,7 +7694,7 @@ private:
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
-        if (!IsMemberPointer) {
+        if (!IsMemberPointerOrAddr) {
           BasePointers.push_back(BP.getPointer());
           Pointers.push_back(LB.getPointer());
           Sizes.push_back(
@@ -7952,17 +7955,18 @@ public:
 
     // Helper function to fill the information map for the different supported
     // clauses.
-    auto &&InfoGen = [&Info](
-        const ValueDecl *D,
-        OMPClauseMappableExprCommon::MappableExprComponentListRef L,
-        OpenMPMapClauseKind MapType,
-        ArrayRef<OpenMPMapModifierKind> MapModifiers,
-        bool ReturnDevicePointer, bool IsImplicit) {
-      const ValueDecl *VD =
-          D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
-      Info[VD].emplace_back(L, MapType, MapModifiers, ReturnDevicePointer,
-                            IsImplicit);
-    };
+    auto &&InfoGen =
+        [&Info](const ValueDecl *D,
+                OMPClauseMappableExprCommon::MappableExprComponentListRef L,
+                OpenMPMapClauseKind MapType,
+                ArrayRef<OpenMPMapModifierKind> MapModifiers,
+                bool ReturnDevicePointer, bool IsImplicit,
+                bool ForDeviceAddr = false) {
+          const ValueDecl *VD =
+              D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
+          Info[VD].emplace_back(L, MapType, MapModifiers, ReturnDevicePointer,
+                                IsImplicit, ForDeviceAddr);
+        };
 
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
@@ -8032,10 +8036,74 @@ public:
           // partial struct.
           InfoGen(nullptr, L.second, OMPC_MAP_unknown, llvm::None,
                   /*ReturnDevicePointer=*/false, C->isImplicit());
-          DeferredInfo[nullptr].emplace_back(IE, VD);
+          DeferredInfo[nullptr].emplace_back(IE, VD, /*ForDeviceAddr=*/false);
         } else {
           llvm::Value *Ptr =
               CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
+          BasePointers.emplace_back(Ptr, VD);
+          Pointers.push_back(Ptr);
+          Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
+          Types.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_TARGET_PARAM);
+        }
+      }
+    }
+
+    // Look at the use_device_addr clause information and mark the existing map
+    // entries as such. If there is no map information for an entry in the
+    // use_device_addr list, we create one with map type 'alloc' and zero size
+    // section. It is the user fault if that was not mapped before. If there is
+    // no map information and the pointer is a struct member, then we defer the
+    // emission of that entry until the whole struct has been processed.
+    llvm::SmallDenseSet<CanonicalDeclPtr<const Decl>, 4> Processed;
+    for (const auto *C :
+         CurExecDir->getClausesOfKind<OMPUseDeviceAddrClause>()) {
+      for (const auto L : C->component_lists()) {
+        assert(!L.second.empty() && "Not expecting empty list of components!");
+        const ValueDecl *VD = L.second.back().getAssociatedDeclaration();
+        if (!Processed.insert(VD).second)
+          continue;
+        VD = cast<ValueDecl>(VD->getCanonicalDecl());
+        const Expr *IE = L.second.back().getAssociatedExpression();
+        // If the first component is a member expression, we have to look into
+        // 'this', which maps to null in the map of map information. Otherwise
+        // look directly for the information.
+        auto It = Info.find(isa<MemberExpr>(IE) ? nullptr : VD);
+
+        // We potentially have map information for this declaration already.
+        // Look for the first set of components that refer to it.
+        if (It != Info.end()) {
+          auto *CI = llvm::find_if(It->second, [VD](const MapInfo &MI) {
+            return MI.Components.back().getAssociatedDeclaration() == VD;
+          });
+          // If we found a map entry, signal that the pointer has to be returned
+          // and move on to the next declaration.
+          if (CI != It->second.end()) {
+            CI->ReturnDevicePointer = true;
+            continue;
+          }
+        }
+
+        // We didn't find any match in our map information - generate a zero
+        // size array section - if the pointer is a struct member we defer this
+        // action until the whole struct has been processed.
+        if (isa<MemberExpr>(IE)) {
+          // Insert the pointer into Info to be processed by
+          // generateInfoForComponentList. Because it is a member pointer
+          // without a pointee, no entry will be generated for it, therefore
+          // we need to generate one after the whole struct has been processed.
+          // Nonetheless, generateInfoForComponentList must be called to take
+          // the pointer into account for the calculation of the range of the
+          // partial struct.
+          InfoGen(nullptr, L.second, OMPC_MAP_unknown, llvm::None,
+                  /*ReturnDevicePointer=*/false, C->isImplicit(),
+                  /*ForDeviceAddr=*/true);
+          DeferredInfo[nullptr].emplace_back(IE, VD, /*ForDeviceAddr=*/true);
+        } else {
+          llvm::Value *Ptr;
+          if (IE->isGLValue())
+            Ptr = CGF.EmitLValue(IE).getPointer(CGF);
+          else
+            Ptr = CGF.EmitScalarExpr(IE);
           BasePointers.emplace_back(Ptr, VD);
           Pointers.push_back(Ptr);
           Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
@@ -8062,10 +8130,10 @@ public:
 
         // Remember the current base pointer index.
         unsigned CurrentBasePointersIdx = CurBasePointers.size();
-        generateInfoForComponentList(L.MapType, L.MapModifiers, L.Components,
-                                     CurBasePointers, CurPointers, CurSizes,
-                                     CurTypes, PartialStruct,
-                                     IsFirstComponentList, L.IsImplicit);
+        generateInfoForComponentList(
+            L.MapType, L.MapModifiers, L.Components, CurBasePointers,
+            CurPointers, CurSizes, CurTypes, PartialStruct,
+            IsFirstComponentList, L.IsImplicit, L.ForDeviceAddr);
 
         // If this entry relates with a device pointer, set the relevant
         // declaration and add the 'return pointer' flag.
@@ -8085,21 +8153,35 @@ public:
       }
 
       // Append any pending zero-length pointers which are struct members and
-      // used with use_device_ptr.
+      // used with use_device_ptr or use_device_addr.
       auto CI = DeferredInfo.find(M.first);
       if (CI != DeferredInfo.end()) {
         for (const DeferredDevicePtrEntryTy &L : CI->second) {
-          llvm::Value *BasePtr = this->CGF.EmitLValue(L.IE).getPointer(CGF);
-          llvm::Value *Ptr = this->CGF.EmitLoadOfScalar(
-              this->CGF.EmitLValue(L.IE), L.IE->getExprLoc());
+          llvm::Value *BasePtr;
+          llvm::Value *Ptr;
+          if (L.ForDeviceAddr) {
+            if (L.IE->isGLValue())
+              Ptr = this->CGF.EmitLValue(L.IE).getPointer(CGF);
+            else
+              Ptr = this->CGF.EmitScalarExpr(L.IE);
+            BasePtr = Ptr;
+            // Entry is RETURN_PARAM. Also, set the placeholder value
+            // MEMBER_OF=FFFF so that the entry is later updated with the
+            // correct value of MEMBER_OF.
+            CurTypes.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_MEMBER_OF);
+          } else {
+            BasePtr = this->CGF.EmitLValue(L.IE).getPointer(CGF);
+            Ptr = this->CGF.EmitLoadOfScalar(this->CGF.EmitLValue(L.IE),
+                                             L.IE->getExprLoc());
+            // Entry is PTR_AND_OBJ and RETURN_PARAM. Also, set the placeholder
+            // value MEMBER_OF=FFFF so that the entry is later updated with the
+            // correct value of MEMBER_OF.
+            CurTypes.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_RETURN_PARAM |
+                               OMP_MAP_MEMBER_OF);
+          }
           CurBasePointers.emplace_back(BasePtr, L.VD);
           CurPointers.push_back(Ptr);
           CurSizes.push_back(llvm::Constant::getNullValue(this->CGF.Int64Ty));
-          // Entry is PTR_AND_OBJ and RETURN_PARAM. Also, set the placeholder
-          // value MEMBER_OF=FFFF so that the entry is later updated with the
-          // correct value of MEMBER_OF.
-          CurTypes.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_RETURN_PARAM |
-                             OMP_MAP_MEMBER_OF);
         }
       }
 
@@ -8168,10 +8250,10 @@ public:
       for (const MapInfo &L : M.second) {
         assert(!L.Components.empty() &&
                "Not expecting declaration with no component lists.");
-        generateInfoForComponentList(L.MapType, L.MapModifiers, L.Components,
-                                     CurBasePointers, CurPointers, CurSizes,
-                                     CurTypes, PartialStruct,
-                                     IsFirstComponentList, L.IsImplicit);
+        generateInfoForComponentList(
+            L.MapType, L.MapModifiers, L.Components, CurBasePointers,
+            CurPointers, CurSizes, CurTypes, PartialStruct,
+            IsFirstComponentList, L.IsImplicit, L.ForDeviceAddr);
         IsFirstComponentList = false;
       }
 
@@ -8437,10 +8519,10 @@ public:
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedComponents = Pair.getSecond();
       bool IsFirstComponentList = true;
-      generateInfoForComponentList(MapType, MapModifiers, Components,
-                                   BasePointers, Pointers, Sizes, Types,
-                                   PartialStruct, IsFirstComponentList,
-                                   IsImplicit, OverlappedComponents);
+      generateInfoForComponentList(
+          MapType, MapModifiers, Components, BasePointers, Pointers, Sizes,
+          Types, PartialStruct, IsFirstComponentList, IsImplicit,
+          /*ForDeviceAddr=*/false, OverlappedComponents);
     }
     // Go through other elements without overlapped elements.
     bool IsFirstComponentList = OverlappedData.empty();

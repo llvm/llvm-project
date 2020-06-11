@@ -15,7 +15,6 @@
 // We also check that the path of test-executables is replaced whether they
 // appear first in the command-line or not.
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe 0
 // RUN: %{exec} ! %t.exe 1

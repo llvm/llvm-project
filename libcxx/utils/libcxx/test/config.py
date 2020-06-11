@@ -747,15 +747,14 @@ class Configuration(object):
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
         exec_args = [
+            '--execdir %T',
             '--codesign_identity "{}"'.format(codesign_ident),
-            '--dependencies %{file_dependencies}',
             '--env {}'.format(env_vars)
         ]
         if isinstance(self.executor, SSHExecutor):
             exec_args.append('--host {}'.format(self.executor.user_prefix + self.executor.host))
             executor = os.path.join(self.libcxx_src_root, 'utils', 'ssh.py')
         else:
-            exec_args.append('--execdir %t.execdir')
             executor = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
         sub.append(('%{exec}', '{} {} {} -- '.format(pipes.quote(sys.executable),
                                                      pipes.quote(executor),

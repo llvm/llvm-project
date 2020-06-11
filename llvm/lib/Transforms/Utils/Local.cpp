@@ -126,8 +126,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest     = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
-      OldDest->removePredecessor(BB);
+      // it will adjust its PHI nodes.
+      SmallVector<WeakTrackingVH, 8> MaybeDeadInstrs;
+      OldDest->removePredecessor(BB, false, &MaybeDeadInstrs);
+      RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDeadInstrs,
+                                                           TLI);
 
       // Replace the conditional branch with an unconditional one.
       Builder.CreateBr(Destination);
@@ -470,8 +473,8 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     MemorySSAUpdater *MSSAU) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
-    auto *I = cast<Instruction>(DeadInsts[S]);
-    if (!isInstructionTriviallyDead(I)) {
+    auto *I = dyn_cast<Instruction>(DeadInsts[S]);
+    if (!I || !isInstructionTriviallyDead(I)) {
       DeadInsts[S] = nullptr;
       ++Alive;
     }
@@ -1628,23 +1631,18 @@ static MetadataAsValue *wrapValueInMetadata(LLVMContext &C, Value *V) {
   return MetadataAsValue::get(C, ValueAsMetadata::get(V));
 }
 
-static bool attemptToSalvageDebugInfo(Instruction &I) {
+/// Where possible to salvage debug information for \p I do so
+/// and return True. If not possible mark undef and return False.
+void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);
-  if (DbgUsers.empty())
-    return false;
-
-  return salvageDebugInfoForDbgValues(I, DbgUsers);
+  salvageDebugInfoForDbgValues(I, DbgUsers);
 }
 
-void llvm::salvageDebugInfo(Instruction &I) {
-  if (!attemptToSalvageDebugInfo(I))
-    replaceDbgUsesWithUndef(&I);
-}
-
-bool llvm::salvageDebugInfoForDbgValues(
+void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   auto &Ctx = I.getContext();
+  bool Salvaged = false;
   auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
   for (auto *DII : DbgUsers) {
@@ -1659,14 +1657,22 @@ bool llvm::salvageDebugInfoForDbgValues(
     // salvageDebugInfoImpl should fail on examining the first element of
     // DbgUsers, or none of them.
     if (!DIExpr)
-      return false;
+      break;
 
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
+    Salvaged = true;
   }
 
-  return true;
+  if (Salvaged)
+    return;
+
+  for (auto *DII : DbgUsers) {
+    Value *Undef = UndefValue::get(I.getType());
+    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
+                                            ValueAsMetadata::get(Undef)));
+  }
 }
 
 DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,

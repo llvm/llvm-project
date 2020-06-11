@@ -2405,7 +2405,12 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
       if (NewArg.isUsable()) {
         // It would be nice if we still had this.
         SourceLocation EqualLoc = NewArg.get()->getBeginLoc();
-        SetParamDefaultArgument(NewParm, NewArg.get(), EqualLoc);
+        ExprResult Result =
+            ConvertParamDefaultArgument(NewParm, NewArg.get(), EqualLoc);
+        if (Result.isInvalid())
+          return nullptr;
+
+        SetParamDefaultArgument(NewParm, Result.getAs<Expr>(), EqualLoc);
       }
     } else {
       // FIXME: if we non-lazily instantiated non-dependent default args for

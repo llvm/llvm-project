@@ -565,6 +565,21 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
         "No such thing as reference indexing maps for a generic op.");
      }
   }];
+
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "ArrayRef<Type> resultTypes, ValueRange args, "
+              "int64_t inputCount, int64_t outputCount, "
+              "ArrayRef<AffineMap> indexingMaps, "
+              "ArrayRef<StringRef> iteratorTypes", [{
+        return build(builder, result, resultTypes, args,
+                     builder.getI64IntegerAttr(inputCount),
+                     builder.getI64IntegerAttr(outputCount),
+                     builder.getAffineMapArrayAttr(indexingMaps),
+                     builder.getStrArrayAttr(iteratorTypes),
+                     /*doc=*/nullptr, /*library_call=*/nullptr);
+  }]>];
+
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseGenericOp(parser, result); }];
 }

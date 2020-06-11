@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; PRFB <prfop>, <Pg>, [<Xn|SP>, <Zm>.S, <mod>]    -> 32-bit indexes
 define void @llvm_aarch64_sve_prfb_gather_uxtw_index_nx4vi32(<vscale x 4 x i1> %Pg, i8* %base, <vscale x 4 x i32> %indexes) nounwind {

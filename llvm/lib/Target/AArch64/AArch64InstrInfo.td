@@ -711,6 +711,14 @@ let hasSideEffects = 1, isCodeGenOnly = 1 in {
       : Pseudo<(outs GPR32:$dst), (ins GPR32:$src), []>, Sched<[]>;
 }
 
+// SpeculationBarrierEndBB must only be used after an unconditional control
+// flow, i.e. after a terminator for which isBarrier is True.
+let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  def SpeculationBarrierISBDSBEndBB
+      : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SpeculationBarrierSBEndBB
+      : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
 
 //===----------------------------------------------------------------------===//
 // System instructions.

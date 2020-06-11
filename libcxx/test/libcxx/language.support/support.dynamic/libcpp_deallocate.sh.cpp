@@ -35,7 +35,6 @@
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}
 // RUN: %{build} -faligned-allocation -fno-sized-deallocation -DNO_SIZE

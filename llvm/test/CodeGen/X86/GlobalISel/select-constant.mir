@@ -136,8 +136,8 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_u32
-    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 1879048192
-    ; CHECK: $rax = COPY [[MOV64ri32_]]
+    ; CHECK: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 1879048192
+    ; CHECK: $rax = COPY [[MOV32ri64_]]
     ; CHECK: RET 0, implicit $rax
     %0(s64) = G_CONSTANT i64 1879048192
     $rax = COPY %0(s64)

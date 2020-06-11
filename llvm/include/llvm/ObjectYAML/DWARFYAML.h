@@ -82,7 +82,7 @@ struct RangeEntry {
 
 /// Class that describes a single range list inside the .debug_ranges section.
 struct Ranges {
-  llvm::yaml::Hex64 Offset;
+  Optional<llvm::yaml::Hex64> Offset;
   llvm::yaml::Hex8 AddrSize;
   std::vector<RangeEntry> Entries;
 };

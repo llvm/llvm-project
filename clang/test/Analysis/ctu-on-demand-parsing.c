@@ -18,8 +18,8 @@
 // RUN:   -analyzer-config ctu-invocation-list=invocations.yaml \
 // RUN:   -verify ctu-on-demand-parsing.c
 //
-// FIXME: remove xfail when PS4-windows buildslave can be satisfied
-// UNSUPPORTED: windows
+// FIXME: Path handling should work on all platforms.
+// REQUIRES: linux
 
 void clang_analyzer_eval(int);
 

@@ -1207,8 +1207,8 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
   Sizes.NumComponents = getComponentsTotalNumber(ComponentLists);
 
   // We need to allocate:
-  // 3 x NumVars x Expr* - we have an original list expression for each clause
-  // list entry and an equal number of private copies and inits.
+  // NumVars x Expr* - we have an original list expression for each clause
+  // list entry.
   // NumUniqueDeclarations x ValueDecl* - unique base declarations associated
   // with each component list.
   // (NumUniqueDeclarations + NumComponentLists) x unsigned - we specify the

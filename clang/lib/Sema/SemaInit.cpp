@@ -8200,9 +8200,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
         if (const auto *ToPtrType = Step->Type->getAs<PointerType>()) {
           if (FromPtrType->getPointeeType()->hasAttr(attr::NoDeref) &&
               !ToPtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
-            S.Diag(CurInit.get()->getExprLoc(),
-                   diag::warn_noderef_to_dereferenceable_pointer)
-                << CurInit.get()->getSourceRange();
+            // Do not check static casts here because they are checked earlier
+            // in Sema::ActOnCXXNamedCast()
+            if (!Kind.isStaticCast()) {
+              S.Diag(CurInit.get()->getExprLoc(),
+                     diag::warn_noderef_to_dereferenceable_pointer)
+                  << CurInit.get()->getSourceRange();
+            }
           }
         }
       }

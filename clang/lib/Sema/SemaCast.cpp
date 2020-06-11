@@ -161,6 +161,30 @@ namespace {
       PlaceholderKind = (BuiltinType::Kind) 0;
     }
   };
+
+  void CheckNoDeref(Sema &S, const QualType FromType, const QualType ToType,
+                    SourceLocation OpLoc) {
+    if (const auto *PtrType = dyn_cast<PointerType>(FromType)) {
+      if (PtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
+        if (const auto *DestType = dyn_cast<PointerType>(ToType)) {
+          if (!DestType->getPointeeType()->hasAttr(attr::NoDeref)) {
+            S.Diag(OpLoc, diag::warn_noderef_to_dereferenceable_pointer);
+          }
+        }
+      }
+    }
+  }
+
+  struct CheckNoDerefRAII {
+    CheckNoDerefRAII(CastOperation &Op) : Op(Op) {}
+    ~CheckNoDerefRAII() {
+      if (!Op.SrcExpr.isInvalid())
+        CheckNoDeref(Op.Self, Op.SrcExpr.get()->getType(), Op.ResultType,
+                     Op.OpRange.getBegin());
+    }
+
+    CastOperation &Op;
+  };
 }
 
 static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
@@ -723,6 +747,8 @@ static TryCastResult getCastAwayConstnessCastKind(CastAwayConstnessKind CACK,
 /// Refer to C++ 5.2.7 for details. Dynamic casts are used mostly for runtime-
 /// checked downcasts in class hierarchies.
 void CastOperation::CheckDynamicCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (ValueKind == VK_RValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
@@ -876,6 +902,8 @@ void CastOperation::CheckDynamicCast() {
 /// const char *str = "literal";
 /// legacy_function(const_cast\<char*\>(str));
 void CastOperation::CheckConstCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (ValueKind == VK_RValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
@@ -1045,6 +1073,8 @@ void CastOperation::CheckReinterpretCast() {
 /// Refer to C++ 5.2.9 for details. Static casts are mostly used for making
 /// implicit conversions explicit and getting rid of data loss warnings.
 void CastOperation::CheckStaticCast() {
+  CheckNoDerefRAII NoderefCheck(*this);
+
   if (isPlaceholder()) {
     checkNonOverloadPlaceholders();
     if (SrcExpr.isInvalid())

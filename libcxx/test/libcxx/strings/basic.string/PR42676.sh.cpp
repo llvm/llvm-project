@@ -8,7 +8,6 @@
 
 // Regression test for PR42676.
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} %{link_flags} -D_LIBCPP_HIDE_FROM_ABI_PER_TU
 // RUN: %{run}
 

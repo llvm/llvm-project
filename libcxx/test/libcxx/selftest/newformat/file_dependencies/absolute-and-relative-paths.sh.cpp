@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that %{file_dependencies} is empty when no FILE_DEPENDENCIES
-// line appears. Amongst other things, this makes sure that we don't share
-// file dependencies across unrelated Lit tests.
+// Make sure that FILE_DEPENDENCIES work with relative AND absolute paths.
 
-// RUN: test -z "%{file_dependencies}"
+// FILE_DEPENDENCIES: %S/a.txt
+// RUN: test -e %T/a.txt
+
+// FILE_DEPENDENCIES: dir/b.txt
+// RUN: test -e %T/b.txt

@@ -2810,6 +2810,7 @@ destroy the object before returning.
 Attribute ``trivial_abi`` has no effect in the following cases:
 
 - The class directly declares a virtual base or virtual methods.
+- Copy constructors and move constructors of the class are all deleted.
 - The class has a base class that is non-trivial for the purposes of calls.
 - The class has a non-static data member whose type is non-trivial for the purposes of calls, which includes:
 

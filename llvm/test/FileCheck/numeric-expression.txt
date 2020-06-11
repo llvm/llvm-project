@@ -426,6 +426,7 @@ REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,UNSI:\]\]}}
 REDEF-NEW-FMT-MSG-NEXT:    {{^}}                              ^{{$}}
 
 ; Numeric expression with overflow.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix OVERFLOW --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefix OVERFLOW-MSG --strict-whitespace %s
 
@@ -438,6 +439,7 @@ OVERFLOW-MSG-NEXT: {{O}}VERFLOW-NEXT: BIGVAR: {{\[\[#BIGVAR:0x8000000000000000\+
 OVERFLOW-MSG-NEXT:    {{^}}                          ^{{$}}
 
 ; Numeric expression with underflow.
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck --check-prefix UNDERFLOW --input-file %s %s 2>&1 \
 RUN:   | FileCheck --check-prefix UNDERFLOW-MSG --strict-whitespace %s
 

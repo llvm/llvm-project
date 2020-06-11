@@ -458,6 +458,14 @@ def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
   "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
 
 //===----------------------------------------------------------------------===//
+// Control codegen mitigation against Straight Line Speculation vulnerability.
+//===----------------------------------------------------------------------===//
+
+def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
+  "HardenSlsRetBr", "true",
+  "Harden against straight line speculation across RET and BR instructions">;
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 

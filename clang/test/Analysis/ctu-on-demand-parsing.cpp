@@ -29,8 +29,8 @@
 // CHECK: CTU loaded AST file: {{.*}}ctu-other.cpp
 // CHECK: CTU loaded AST file: {{.*}}ctu-chain.cpp
 //
-// FIXME: remove xfail when PS4-windows buildslave can be satisfied
-// UNSUPPORTED: windows
+// FIXME: Path handling should work on all platforms.
+// REQUIRES: linux
 
 #include "ctu-hdr.h"
 

@@ -98,6 +98,25 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   EXPECT_TRUE(Known.isZero());
 }
 
+TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
+  if (!TM)
+    return;
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4, true);
+  auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2, true);
+  auto InVec = DAG->getConstant(0, Loc, InVecVT);
+  auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
+  auto DemandedElts = APInt(2, 3);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
+
+  // We don't know anything for SVE at the moment.
+  EXPECT_EQ(Known.Zero, APInt(16, 0u));
+  EXPECT_EQ(Known.One, APInt(16, 0u));
+  EXPECT_FALSE(Known.isZero());
+}
+
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
   if (!TM)
     return;
