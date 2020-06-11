@@ -415,16 +415,15 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   for (unsigned i = 0; i != calls.size(); ++i) {
     ResolvedCall it = calls[i];
     bool doInline = shouldInline(it);
+    CallOpInterface call = it.call;
     LLVM_DEBUG({
       if (doInline)
-        llvm::dbgs() << "* Inlining call: ";
+        llvm::dbgs() << "* Inlining call: " << call << "\n";
       else
-        llvm::dbgs() << "* Not inlining call: ";
-      it.call.dump();
+        llvm::dbgs() << "* Not inlining call: " << call << "\n";
     });
     if (!doInline)
       continue;
-    CallOpInterface call = it.call;
     Region *targetRegion = it.targetNode->getCallableRegion();
 
     // If this is the last call to the target node and the node is discardable,
@@ -434,8 +433,10 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
     LogicalResult inlineResult = inlineCall(
         inliner, call, cast<CallableOpInterface>(targetRegion->getParentOp()),
         targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
-    if (failed(inlineResult))
+    if (failed(inlineResult)) {
+      LLVM_DEBUG(llvm::dbgs() << "** Failed to inline\n");
       continue;
+    }
     inlinedAnyCalls = true;
 
     // If the inlining was successful, Merge the new uses into the source node.
