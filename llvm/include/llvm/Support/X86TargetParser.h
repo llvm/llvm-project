@@ -20,45 +20,6 @@ class StringRef;
 
 namespace X86 {
 
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorVendors : unsigned {
-  VENDOR_DUMMY,
-#define X86_VENDOR(ENUM, STRING) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  VENDOR_OTHER
-};
-
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorTypes : unsigned {
-  CPU_TYPE_DUMMY,
-#define X86_CPU_TYPE(ARCHNAME, ENUM) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  CPU_TYPE_MAX
-};
-
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorSubtypes : unsigned {
-  CPU_SUBTYPE_DUMMY,
-#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
-  ENUM,
-#include "llvm/Support/X86TargetParser.def"
-  CPU_SUBTYPE_MAX
-};
-
-// This should be kept in sync with libcc/compiler-rt as it should be used
-// by clang as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorFeatures {
-#define X86_FEATURE(VAL, ENUM) \
-  ENUM = VAL,
-#include "llvm/Support/X86TargetParser.def"
-
-};
-
 enum CPUKind {
   CK_None,
 #define PROC(ENUM, STRING, IS64BIT) CK_##ENUM,
