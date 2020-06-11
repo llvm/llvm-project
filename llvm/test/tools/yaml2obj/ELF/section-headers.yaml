@@ -79,9 +79,27 @@ SectionHeaderTable:
 # ERR2-NEXT: error: section '.section.foo' should be present in the 'Sections' or 'Excluded' lists
 # ERR2-NEXT: error: section header contains undefined section '.filler'
 
-## Test that we are able to specify an empty sections list for
-## the "SectionHeaderTable" tag to produce no section header.
-# RUN: yaml2obj %s --docnum=2 -o %t3
+## Check that when the an empty "Sections" list is used, we do not create an empty section header table.
+# RUN: not yaml2obj %s --docnum=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=EMPTY-SECTIONS
+
+# EMPTY-SECTIONS:      error: section '.foo' should be present in the 'Sections' or 'Excluded' lists
+# EMPTY-SECTIONS-NEXT: error: section '.strtab' should be present in the 'Sections' or 'Excluded' lists
+# EMPTY-SECTIONS-NEXT: error: section '.shstrtab' should be present in the 'Sections' or 'Excluded' lists
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  Sections: []
+
+## Test that we are able to use "NoHeaders" property to produce an empty section header table.
+# RUN: yaml2obj %s --docnum=3 -o %t3
 # RUN: llvm-readelf --file-headers %t3 | FileCheck %s --check-prefix=NO-HEADERS
 
 # NO-HEADERS: Start of section headers:          0  (bytes into file)
@@ -99,11 +117,50 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
 SectionHeaderTable:
-  Sections: []
+  NoHeaders: true
+
+## Check we do not allow using "Sections" together with "NoHeaders".
+# RUN: not yaml2obj %s --docnum=4 -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECTIONS-NO-HEADERS
+
+# SECTIONS-NO-HEADERS: error: NoHeaders can't be used together with Sections/Excluded
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable:
+  Sections:  []
+  NoHeaders: true
+
+## Check that we do not allow an empty SectionHeaderTable tag and suggest to use an explicit syntax instead.
+# RUN: not yaml2obj %s --docnum=5 -DVAL="" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-VALUE
+
+# NO-VALUE: SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the section header table
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+SectionHeaderTable: [[VAL]]
+
+## An empty mapping is also not allowed for the SectionHeaderTable tag.
+# RUN: not yaml2obj %s --docnum=5 -DVAL="[]" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOT-A-MAPPING
+
+# NOT-A-MAPPING: error: not a mapping
 
 ## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
 ## fields even when we do not produce section headers.
-# RUN: yaml2obj %s --docnum=3 -o %t4
+# RUN: yaml2obj %s --docnum=6 -o %t4
 # RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
 
 # NO-HEADERS-OVERRIDE: Start of section headers:          2 (bytes into file)
@@ -123,13 +180,13 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
 SectionHeaderTable:
-  Sections: []
+  NoHeaders: true
 
 ## Check that section indices are updated properly in other places when we
 ## reorder sections in the section header table.
-# RUN: yaml2obj %s --docnum=4 -o %t5 -DSEC1=".foo" -DSEC2=".bar"
+# RUN: yaml2obj %s --docnum=7 -o %t5 -DSEC1=".foo" -DSEC2=".bar"
 # RUN: llvm-readelf --section-headers --symbols %t5 | FileCheck %s --check-prefix=INDICES-A
-# RUN: yaml2obj %s --docnum=4 -o %t6 -DSEC2=".foo" -DSEC1=".bar"
+# RUN: yaml2obj %s --docnum=7 -o %t6 -DSEC2=".foo" -DSEC1=".bar"
 # RUN: llvm-readelf --section-headers --symbols %t6 | FileCheck %s --check-prefix=INDICES-B
 
 # INDICES-A:      [Nr] Name       Type     Address          Off    Size   ES Flg Lk

@@ -92,8 +92,9 @@ struct SectionHeader {
 };
 
 struct SectionHeaderTable {
-  std::vector<SectionHeader> Sections;
+  Optional<std::vector<SectionHeader>> Sections;
   Optional<std::vector<SectionHeader>> Excluded;
+  bool NoHeaders;
 };
 
 struct SectionName {
@@ -685,6 +686,7 @@ struct MappingTraits<ELFYAML::FileHeader> {
 
 template <> struct MappingTraits<ELFYAML::SectionHeaderTable> {
   static void mapping(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
+  static StringRef validate(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
 };
 
 template <> struct MappingTraits<ELFYAML::SectionHeader> {
