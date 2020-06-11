@@ -2749,6 +2749,8 @@ public:
       : Expr(ArrayTypeTraitExprClass, ty, VK_RValue, OK_Ordinary), ATT(att),
         Value(value), Dimension(dimension), Loc(loc), RParen(rparen),
         QueriedType(queried) {
+    assert(att <= ATT_Last && "invalid enum value!");
+    assert(static_cast<unsigned>(att) == ATT && "ATT overflow!");
     setDependence(computeDependence(this));
   }
 
@@ -2813,6 +2815,8 @@ public:
       : Expr(ExpressionTraitExprClass, resultType, VK_RValue, OK_Ordinary),
         ET(et), Value(value), Loc(loc), RParen(rparen),
         QueriedExpression(queried) {
+    assert(et <= ET_Last && "invalid enum value!");
+    assert(static_cast<unsigned>(et) == ET && "ET overflow!");
     setDependence(computeDependence(this));
   }
 
