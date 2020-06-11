@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
@@ -26,7 +27,6 @@
 
 namespace llvm {
 
-class BitcodeModule;
 class Error;
 class IRMover;
 class LLVMContext;
@@ -330,12 +330,17 @@ private:
     bool EmptyCombinedModule = true;
   } RegularLTO;
 
+  using ModuleMapType = MapVector<StringRef, BitcodeModule>;
+
   struct ThinLTOState {
     ThinLTOState(ThinBackend Backend);
 
     ThinBackend Backend;
     ModuleSummaryIndex CombinedIndex;
-    MapVector<StringRef, BitcodeModule> ModuleMap;
+    // The full set of bitcode modules in input order.
+    ModuleMapType ModuleMap;
+    // The bitcode modules to compile, if specified by the LTO Config.
+    Optional<ModuleMapType> ModulesToCompile;
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
