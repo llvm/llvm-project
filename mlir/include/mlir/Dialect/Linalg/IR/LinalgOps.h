@@ -34,6 +34,9 @@ class PoolingMaxOp;
 class PoolingMinOp;
 class PoolingSumOp;
 
+using ReassociationIndicies = SmallVector<int64_t, 2>;
+using ReassociationExprs = SmallVector<AffineExpr, 2>;
+
 /// Returns the name mangled library call name to disambiguate between different
 /// overloads at the C level. The name mangling scheme is basic and uses MLIR
 /// type names:
