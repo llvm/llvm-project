@@ -497,7 +497,10 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86FloatingPointStackifierPass());
-  addPass(createX86LoadValueInjectionLoadHardeningPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createX86LoadValueInjectionLoadHardeningPass());
+  else
+    addPass(createX86LoadValueInjectionLoadHardeningUnoptimizedPass());
 }
 
 void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
