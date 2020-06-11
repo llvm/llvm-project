@@ -892,10 +892,7 @@ define void @PR32547(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    vcmpltps %zmm3, %zmm2, %k1
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k1
+; AVX512F-NEXT:    kunpckbw %k1, %k0, %k1
 ; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
@@ -905,8 +902,7 @@ define void @PR32547(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 ; AVX512VL:       # %bb.0: # %entry
 ; AVX512VL-NEXT:    vcmpltps %ymm1, %ymm0, %k0
 ; AVX512VL-NEXT:    vcmpltps %ymm3, %ymm2, %k1
-; AVX512VL-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512VL-NEXT:    korw %k1, %k0, %k1
+; AVX512VL-NEXT:    kunpckbw %k1, %k0, %k1
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    vzeroupper
@@ -916,8 +912,7 @@ define void @PR32547(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
 ; VL_BW_DQ:       # %bb.0: # %entry
 ; VL_BW_DQ-NEXT:    vcmpltps %ymm1, %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vcmpltps %ymm3, %ymm2, %k1
-; VL_BW_DQ-NEXT:    kshiftlw $8, %k0, %k0
-; VL_BW_DQ-NEXT:    korw %k1, %k0, %k1
+; VL_BW_DQ-NEXT:    kunpckbw %k1, %k0, %k1
 ; VL_BW_DQ-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; VL_BW_DQ-NEXT:    vzeroupper
@@ -945,10 +940,7 @@ define void @PR32547_swap(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x f
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    vcmpltps %zmm3, %zmm2, %k1
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
-; AVX512F-NEXT:    korw %k0, %k1, %k1
+; AVX512F-NEXT:    kunpckbw %k1, %k0, %k1
 ; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
@@ -958,8 +950,7 @@ define void @PR32547_swap(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x f
 ; AVX512VL:       # %bb.0: # %entry
 ; AVX512VL-NEXT:    vcmpltps %ymm1, %ymm0, %k0
 ; AVX512VL-NEXT:    vcmpltps %ymm3, %ymm2, %k1
-; AVX512VL-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512VL-NEXT:    korw %k0, %k1, %k1
+; AVX512VL-NEXT:    kunpckbw %k1, %k0, %k1
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    vzeroupper
@@ -969,8 +960,7 @@ define void @PR32547_swap(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x f
 ; VL_BW_DQ:       # %bb.0: # %entry
 ; VL_BW_DQ-NEXT:    vcmpltps %ymm1, %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vcmpltps %ymm3, %ymm2, %k1
-; VL_BW_DQ-NEXT:    kshiftlw $8, %k0, %k0
-; VL_BW_DQ-NEXT:    korw %k0, %k1, %k1
+; VL_BW_DQ-NEXT:    kunpckbw %k1, %k0, %k1
 ; VL_BW_DQ-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
 ; VL_BW_DQ-NEXT:    vzeroupper
