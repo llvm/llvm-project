@@ -882,6 +882,7 @@ define i64 @shuf64i1_zero(i64 %a) {
   ret i64 %d
 }
 
+; OR(KSHIFTL(X,8),Y) -> KUNPCKBW
 define void @PR32547(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d, float* %p) {
 ; AVX512F-LABEL: PR32547:
 ; AVX512F:       # %bb.0: # %entry
@@ -928,6 +929,59 @@ define void @PR32547(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float>
    %conv.i18 = zext i8 %1 to i16
    %shl = shl nuw i16 %conv.i, 8
    %or = or i16 %shl, %conv.i18
+   %2 = bitcast float* %p to <16 x float>*
+   %3 = bitcast i16 %or to <16 x i1>
+   tail call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> zeroinitializer, <16 x float>* %2, i32 64, <16 x i1> %3) #4
+   ret void
+}
+
+; OR(X, KSHIFTL(Y,8)) -> KUNPCKBW
+define void @PR32547_swap(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d, float* %p) {
+; AVX512F-LABEL: PR32547_swap:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vcmpltps %zmm3, %zmm2, %k1
+; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
+; AVX512F-NEXT:    kshiftlw $8, %k1, %k1
+; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
+; AVX512F-NEXT:    korw %k0, %k1, %k1
+; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR32547_swap:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vcmpltps %ymm1, %ymm0, %k0
+; AVX512VL-NEXT:    vcmpltps %ymm3, %ymm2, %k1
+; AVX512VL-NEXT:    kshiftlw $8, %k0, %k0
+; AVX512VL-NEXT:    korw %k0, %k1, %k1
+; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; VL_BW_DQ-LABEL: PR32547_swap:
+; VL_BW_DQ:       # %bb.0: # %entry
+; VL_BW_DQ-NEXT:    vcmpltps %ymm1, %ymm0, %k0
+; VL_BW_DQ-NEXT:    vcmpltps %ymm3, %ymm2, %k1
+; VL_BW_DQ-NEXT:    kshiftlw $8, %k0, %k0
+; VL_BW_DQ-NEXT:    korw %k0, %k1, %k1
+; VL_BW_DQ-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; VL_BW_DQ-NEXT:    vmovaps %zmm0, (%rdi) {%k1}
+; VL_BW_DQ-NEXT:    vzeroupper
+; VL_BW_DQ-NEXT:    retq
+ entry:
+   %0 = tail call i8 @llvm.x86.avx512.mask.cmp.ps.256(<8 x float> %a, <8 x float> %b, i32 1, i8 -1)
+   %1 = tail call i8 @llvm.x86.avx512.mask.cmp.ps.256(<8 x float> %c, <8 x float> %d, i32 1, i8 -1)
+   %conv.i = zext i8 %0 to i16
+   %conv.i18 = zext i8 %1 to i16
+   %shl = shl nuw i16 %conv.i, 8
+   %or = or i16 %conv.i18, %shl
    %2 = bitcast float* %p to <16 x float>*
    %3 = bitcast i16 %or to <16 x i1>
    tail call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> zeroinitializer, <16 x float>* %2, i32 64, <16 x i1> %3) #4
