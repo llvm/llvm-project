@@ -1765,6 +1765,15 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
 
 // Index cast is applicable from index to integer and backwards.
 bool IndexCastOp::areCastCompatible(Type a, Type b) {
+  if (a.isa<ShapedType>() && b.isa<ShapedType>()) {
+    auto aShaped = a.cast<ShapedType>();
+    auto bShaped = b.cast<ShapedType>();
+
+    return (aShaped.getShape() == bShaped.getShape()) &&
+           areCastCompatible(aShaped.getElementType(),
+                             bShaped.getElementType());
+  }
+
   return (a.isIndex() && b.isSignlessInteger()) ||
          (a.isSignlessInteger() && b.isIndex());
 }
