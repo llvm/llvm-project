@@ -327,14 +327,18 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
 
       case Instruction::Call:
       case Instruction::Invoke: {
-        const auto &CB = cast<CallBase>(*I);
-
         if (I->isLifetimeStartOrEnd())
           break;
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           US.updateRange(getMemIntrinsicAccessRange(MI, UI, Ptr));
           break;
+        }
+
+        const auto &CB = cast<CallBase>(*I);
+        if (!CB.isArgOperand(&UI)) {
+          US.updateRange(UnknownRange);
+          return false;
         }
 
         // FIXME: consult devirt?
@@ -348,19 +352,8 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
-
-        int Found = 0;
-        for (size_t ArgNo = 0; ArgNo < CB.getNumArgOperands(); ++ArgNo) {
-          if (CB.getArgOperand(ArgNo) == V) {
-            ++Found;
-            US.Calls.emplace_back(Callee, ArgNo, offsetFrom(UI, Ptr));
-          }
-        }
-        if (!Found) {
-          US.updateRange(UnknownRange);
-          return false;
-        }
-
+        US.Calls.emplace_back(Callee, CB.getArgOperandNo(&UI),
+                              offsetFrom(UI, Ptr));
         break;
       }
 
