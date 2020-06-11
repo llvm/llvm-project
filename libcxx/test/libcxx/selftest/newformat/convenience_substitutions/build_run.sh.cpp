@@ -8,7 +8,6 @@
 
 // Make sure that we provide the %{build} and %{run} convenience substitutions.
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build}
 // RUN: %{run} "HELLO"
 
