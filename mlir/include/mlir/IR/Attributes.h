@@ -213,6 +213,7 @@ public:
   iterator begin() const { return getValue().begin(); }
   iterator end() const { return getValue().end(); }
   size_t size() const { return getValue().size(); }
+  bool empty() const { return size() == 0; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) {
