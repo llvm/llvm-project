@@ -15150,24 +15150,37 @@ static bool actOnOMPReductionKindClause(
           S.ActOnFinishFullExpr(CopyOpRes.get(), /*DiscardedValue=*/true);
       if (!CopyOpRes.isUsable())
         continue;
-      // Build temp array for prefix sum.
-      auto *Dim = new (S.Context)
-          OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
-      QualType ArrayTy =
-          S.Context.getVariableArrayType(PrivateTy, Dim, ArrayType::Normal,
-                                         /*IndexTypeQuals=*/0, {ELoc, ELoc});
-      VarDecl *TempArrayVD =
-          buildVarDecl(S, ELoc, ArrayTy, D->getName(),
-                       D->hasAttrs() ? &D->getAttrs() : nullptr);
-      // Add a constructor to the temp decl.
-      S.ActOnUninitializedDecl(TempArrayVD);
-      TempArrayRes = buildDeclRefExpr(S, TempArrayVD, ArrayTy, ELoc);
-      TempArrayElem =
-          S.DefaultFunctionArrayLvalueConversion(TempArrayRes.get());
-      auto *Idx = new (S.Context)
-          OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
-      TempArrayElem = S.CreateBuiltinArraySubscriptExpr(TempArrayElem.get(),
-                                                        ELoc, Idx, ELoc);
+      // For simd directive and simd-based directives in simd mode no need to
+      // construct temp array, need just a single temp element.
+      if (Stack->getCurrentDirective() == OMPD_simd ||
+          (S.getLangOpts().OpenMPSimd &&
+           isOpenMPSimdDirective(Stack->getCurrentDirective()))) {
+        VarDecl *TempArrayVD =
+            buildVarDecl(S, ELoc, PrivateTy, D->getName(),
+                         D->hasAttrs() ? &D->getAttrs() : nullptr);
+        // Add a constructor to the temp decl.
+        S.ActOnUninitializedDecl(TempArrayVD);
+        TempArrayRes = buildDeclRefExpr(S, TempArrayVD, PrivateTy, ELoc);
+      } else {
+        // Build temp array for prefix sum.
+        auto *Dim = new (S.Context)
+            OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
+        QualType ArrayTy =
+            S.Context.getVariableArrayType(PrivateTy, Dim, ArrayType::Normal,
+                                           /*IndexTypeQuals=*/0, {ELoc, ELoc});
+        VarDecl *TempArrayVD =
+            buildVarDecl(S, ELoc, ArrayTy, D->getName(),
+                         D->hasAttrs() ? &D->getAttrs() : nullptr);
+        // Add a constructor to the temp decl.
+        S.ActOnUninitializedDecl(TempArrayVD);
+        TempArrayRes = buildDeclRefExpr(S, TempArrayVD, ArrayTy, ELoc);
+        TempArrayElem =
+            S.DefaultFunctionArrayLvalueConversion(TempArrayRes.get());
+        auto *Idx = new (S.Context)
+            OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
+        TempArrayElem = S.CreateBuiltinArraySubscriptExpr(TempArrayElem.get(),
+                                                          ELoc, Idx, ELoc);
+      }
     }
 
     // OpenMP [2.15.4.6, Restrictions, p.2]

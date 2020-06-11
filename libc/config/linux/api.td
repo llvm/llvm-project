@@ -150,6 +150,8 @@ def MathAPI : PublicAPI<"math.h"> {
     FloatT,
   ];
   let Functions = [
+   "copysign",
+   "copysignf",
    "ceil",
    "ceilf",
    "cosf",
@@ -157,6 +159,12 @@ def MathAPI : PublicAPI<"math.h"> {
    "fabsf",
    "floor",
    "floorf",
+   "frexp",
+   "frexpf",
+   "logb",
+   "logbf",
+   "modf",
+   "modff",
    "expf",
    "exp2f",
    "round",

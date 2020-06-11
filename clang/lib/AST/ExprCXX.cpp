@@ -1579,6 +1579,7 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              SourceLocation RParenLoc, bool Value)
     : Expr(TypeTraitExprClass, T, VK_RValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
+  assert(Kind <= TT_Last && "invalid enum value!");
   TypeTraitExprBits.Kind = Kind;
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");

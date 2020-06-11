@@ -126,53 +126,13 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR)
-  set(LIBCXXABI_LIBCXX_SRC_DIRS ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-else()
-  set(LIBCXXABI_LIBCXX_SRC_DIRS
-    "${LLVM_MAIN_SRC_DIR}/projects/libcxx"
-    "${LLVM_MAIN_SRC_DIR}/runtimes/libcxx"
-    "${LLVM_MAIN_SRC_DIR}/../libcxx"
-    )
-endif()
+set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
+set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include")
 
-set(LIBCXXABI_LIBCXX_INCLUDE_DIRS "")
-foreach(dir ${LIBCXXABI_LIBCXX_SRC_DIRS})
-  list(APPEND LIBCXXABI_LIBCXX_INCLUDE_DIRS "${dir}/include")
-endforeach()
-
-find_path(
-  LIBCXXABI_LIBCXX_INCLUDES
-  __config
-  PATHS ${LIBCXXABI_LIBCXX_INCLUDES}
-        ${LIBCXXABI_LIBCXX_PATH}/include
-        ${CMAKE_BINARY_DIR}/${LIBCXXABI_LIBCXX_INCLUDES}
-        ${LIBCXXABI_LIBCXX_INCLUDE_DIRS}
-        ${LLVM_INCLUDE_DIR}/c++/v1
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
-
-set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_INCLUDES}" CACHE PATH
-    "Specify path to libc++ includes." FORCE)
-
-find_path(
-  LIBCXXABI_LIBCXX_PATH
-  utils/libcxx/test/__init__.py
-  PATHS ${LIBCXXABI_LIBCXX_PATH}
-        ${LIBCXXABI_LIBCXX_INCLUDES}/../
-        ${LIBCXXABI_LIBCXX_SRC_DIRS}
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
-
-if (LIBCXXABI_LIBCXX_PATH STREQUAL "LIBCXXABI_LIBCXX_PATH-NOTFOUND")
-  message(WARNING "LIBCXXABI_LIBCXX_PATH was not specified and couldn't be infered.")
-  set(LIBCXXABI_LIBCXX_PATH "")
-endif()
-
-set(LIBCXXABI_LIBCXX_PATH "${LIBCXXABI_LIBCXX_PATH}" CACHE PATH
+set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
     "Specify path to libc++ source." FORCE)
+set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
+    "Specify path to libc++ includes." FORCE)
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
