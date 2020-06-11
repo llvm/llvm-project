@@ -2846,7 +2846,6 @@ static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
 void
 Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
-  const std::string& SysRoot = getDriver().SysRoot;
   auto AddIncludePath = [&](std::string Path) {
     std::string IncludePath = DetectLibcxxIncludePath(getVFS(), Path);
     if (IncludePath.empty() || !getVFS().exists(IncludePath))
@@ -2862,6 +2861,7 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
+  std::string SysRoot = computeSysRoot();
   if (AddIncludePath(SysRoot + "/usr/local/include/c++"))
     return;
   if (AddIncludePath(SysRoot + "/usr/include/c++"))
