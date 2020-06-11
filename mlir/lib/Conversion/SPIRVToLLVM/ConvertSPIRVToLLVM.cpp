@@ -24,30 +24,51 @@
 
 using namespace mlir;
 
+//===----------------------------------------------------------------------===//
+// Operation conversion
+//===----------------------------------------------------------------------===//
+
 namespace {
 
-class BitwiseAndOpConversion : public ConvertToLLVMPattern {
+/// Converts SPIR-V operations that have straightforward LLVM equivalent
+/// into LLVM dialect operations.
+template <typename SPIRVOp, typename LLVMOp>
+class DirectConversionPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  explicit BitwiseAndOpConversion(MLIRContext *context,
-                                  LLVMTypeConverter &typeConverter)
-      : ConvertToLLVMPattern(spirv::BitwiseAndOp::getOperationName(), context,
-                             typeConverter) {}
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(SPIRVOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto bitwiseAndOp = cast<spirv::BitwiseAndOp>(op);
-    auto dstType = typeConverter.convertType(bitwiseAndOp.getType());
+    auto dstType = this->typeConverter.convertType(operation.getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::AndOp>(bitwiseAndOp, dstType, operands);
+    rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands);
     return success();
   }
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// Pattern population
+//===----------------------------------------------------------------------===//
+
 void mlir::populateSPIRVToLLVMConversionPatterns(
     MLIRContext *context, LLVMTypeConverter &typeConverter,
     OwningRewritePatternList &patterns) {
-  patterns.insert<BitwiseAndOpConversion>(context, typeConverter);
+  patterns.insert<DirectConversionPattern<spirv::IAddOp, LLVM::AddOp>,
+                  DirectConversionPattern<spirv::IMulOp, LLVM::MulOp>,
+                  DirectConversionPattern<spirv::ISubOp, LLVM::SubOp>,
+                  DirectConversionPattern<spirv::FAddOp, LLVM::FAddOp>,
+                  DirectConversionPattern<spirv::FNegateOp, LLVM::FNegOp>,
+                  DirectConversionPattern<spirv::FDivOp, LLVM::FDivOp>,
+                  DirectConversionPattern<spirv::FRemOp, LLVM::FRemOp>,
+                  DirectConversionPattern<spirv::FSubOp, LLVM::FSubOp>,
+                  DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
+                  DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
+                  DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
+                  DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
+                  DirectConversionPattern<spirv::BitwiseOrOp, LLVM::OrOp>,
+                  DirectConversionPattern<spirv::BitwiseXorOp, LLVM::XOrOp>>(
+      context, typeConverter);
 }
