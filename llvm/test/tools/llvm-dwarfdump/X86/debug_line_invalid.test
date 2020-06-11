@@ -161,7 +161,7 @@
 ## V5 prologue ends during directory table.
 # NONFATAL:      debug_line[0x00000214]
 # SOME-ERR-NEXT: warning: parsing line table prologue at 0x00000214 found an invalid directory or file table description at 0x00000236
-# SOME-ERR-NEXT: warning: failed to parse directory entry because extracting the form value failed.
+# SOME-ERR-NEXT: warning: failed to parse directory entry because extracting the form value failed
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL-NOT:  include_directories
 # VERBOSE:       DW_LNE_set_address (0x4444333322221111)
@@ -170,7 +170,7 @@
 ## V5 invalid MD5 hash form when there is still data to be read.
 # NONFATAL:      debug_line[0x00000244]
 # SOME-ERR-NEXT: warning: parsing line table prologue at 0x00000244 found an invalid directory or file table description at 0x00000277
-# SOME-ERR-NEXT: warning: failed to parse file entry because extracting the form value failed.
+# SOME-ERR-NEXT: warning: failed to parse file entry because extracting the form value failed
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
@@ -190,7 +190,7 @@
 ## V5 invalid directory content description has unsupported form.
 # NONFATAL:      debug_line[0x000002c0]
 # SOME-ERR-NEXT: warning: parsing line table prologue at 0x000002c0 found an invalid directory or file table description at 0x000002e9
-# SOME-ERR-NEXT: warning: failed to parse directory entry because skipping the form value failed.
+# SOME-ERR-NEXT: warning: failed to parse directory entry because skipping the form value failed
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/foo"
 # NONFATAL-NOT:  include_directories

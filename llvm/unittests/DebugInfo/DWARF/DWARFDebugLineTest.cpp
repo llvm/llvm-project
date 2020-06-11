@@ -472,7 +472,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
                       "of the prologue");
   } else {
     Errs.emplace_back(
-        "failed to parse file entry because extracting the form value failed.");
+        "failed to parse file entry because extracting the form value failed");
   }
   EXPECT_THAT_ERROR(std::move(Recoverable),
                     FailedWithMessageArray(testing::ElementsAreArray(Errs)));
