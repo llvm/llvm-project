@@ -1326,7 +1326,7 @@ public:
     return LangAS::Default;
   }
 
-  /// Return a target-specific GPU grid value based on the GVIDX enum \param gv
+  /// Return a target-specific GPU grid value based on the GVIDX enum \p gv
   unsigned getGridValue(llvm::omp::GVIDX gv) const {
     assert(GridValues != nullptr && "GridValues not initialized");
     return GridValues[gv];
