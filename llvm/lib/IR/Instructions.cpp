@@ -2053,8 +2053,8 @@ static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
     if (UsesLHS && UsesRHS)
       return false;
   }
-  assert((UsesLHS ^ UsesRHS) && "Should have selected from exactly 1 source");
-  return true;
+  // Allow for degenerate case: completely undef mask means neither source is used.
+  return UsesLHS || UsesRHS;
 }
 
 bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
@@ -2182,6 +2182,8 @@ bool ShuffleVectorInst::isExtractSubvectorMask(ArrayRef<int> Mask,
 }
 
 bool ShuffleVectorInst::isIdentityWithPadding() const {
+  if (isa<UndefValue>(Op<2>()))
+    return false;
   int NumOpElts = cast<VectorType>(Op<0>()->getType())->getNumElements();
   int NumMaskElts = cast<VectorType>(getType())->getNumElements();
   if (NumMaskElts <= NumOpElts)
@@ -2201,6 +2203,8 @@ bool ShuffleVectorInst::isIdentityWithPadding() const {
 }
 
 bool ShuffleVectorInst::isIdentityWithExtract() const {
+  if (isa<UndefValue>(Op<2>()))
+    return false;
   int NumOpElts = cast<VectorType>(Op<0>()->getType())->getNumElements();
   int NumMaskElts = getType()->getNumElements();
   if (NumMaskElts >= NumOpElts)
@@ -2211,7 +2215,8 @@ bool ShuffleVectorInst::isIdentityWithExtract() const {
 
 bool ShuffleVectorInst::isConcat() const {
   // Vector concatenation is differentiated from identity with padding.
-  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
+  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()) ||
+      isa<UndefValue>(Op<2>()))
     return false;
 
   int NumOpElts = cast<VectorType>(Op<0>()->getType())->getNumElements();
