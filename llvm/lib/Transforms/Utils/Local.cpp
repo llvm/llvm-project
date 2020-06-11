@@ -126,11 +126,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest     = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust its PHI nodes.
-      SmallVector<WeakTrackingVH, 8> MaybeDeadInstrs;
-      OldDest->removePredecessor(BB, false, &MaybeDeadInstrs);
-      RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDeadInstrs,
-                                                           TLI);
+      // it will adjust it's PHI nodes.
+      OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
       Builder.CreateBr(Destination);
@@ -473,8 +470,8 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     MemorySSAUpdater *MSSAU) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
-    auto *I = dyn_cast<Instruction>(DeadInsts[S]);
-    if (!I || !isInstructionTriviallyDead(I)) {
+    auto *I = cast<Instruction>(DeadInsts[S]);
+    if (!isInstructionTriviallyDead(I)) {
       DeadInsts[S] = nullptr;
       ++Alive;
     }
