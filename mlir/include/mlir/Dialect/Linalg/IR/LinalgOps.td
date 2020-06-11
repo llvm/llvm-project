@@ -64,16 +64,32 @@ def Linalg_RangeOp :
 class Linalg_ReshapeLikeOp<string mnemonic> :
     Linalg_Op<mnemonic, [NoSideEffect]> {
   let builders = [
-    // Builder for a contracting reshape whose result type is computed from
+    // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
     OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
-    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
-    "ArrayRef<NamedAttribute> attrs = {}">,
-    // Builder for a reshape whose result type is passed explicitly. This may be
-    // either a contracting or expanding reshape.
-    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, Value src,"
-    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
-    "ArrayRef<NamedAttribute> attrs = {}">];
+              "ArrayRef<ReassociationExprs> reassociation, "
+              "ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
+              "ArrayRef<ReassociationIndicies> reassociation, "
+              "ArrayRef<NamedAttribute> attrs = {}", [{
+      auto reassociationMaps =
+          convertReassociationIndiciesToMaps(b, reassociation);
+      build(b, result, src, reassociationMaps, attrs);
+    }]>,
+
+    // Builders for a reshape whose result type is passed explicitly. This may
+    // be either a contracting or expanding reshape.
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, "
+              "Value src, ArrayRef<ReassociationExprs> reassociation, "
+              "ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, "
+              "Value src, ArrayRef<ReassociationIndicies> reassociation, "
+              "ArrayRef<NamedAttribute> attrs = {}", [{
+      auto reassociationMaps =
+          convertReassociationIndiciesToMaps(b, reassociation);
+      build(b, result, src, reassociationMaps, attrs);
+    }]>
+  ];
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
