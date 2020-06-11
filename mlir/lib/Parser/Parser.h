@@ -1,0 +1,270 @@
+//===- Parser.h - MLIR Base Parser Class ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_LIB_PARSER_PARSER_H
+#define MLIR_LIB_PARSER_PARSER_H
+
+#include "ParserState.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/OpImplementation.h"
+
+namespace mlir {
+namespace detail {
+//===----------------------------------------------------------------------===//
+// Parser
+//===----------------------------------------------------------------------===//
+
+/// This class implement support for parsing global entities like attributes and
+/// types. It is intended to be subclassed by specialized subparsers that
+/// include state.
+class Parser {
+public:
+  Builder builder;
+
+  Parser(ParserState &state) : builder(state.context), state(state) {}
+
+  // Helper methods to get stuff from the parser-global state.
+  ParserState &getState() const { return state; }
+  MLIRContext *getContext() const { return state.context; }
+  const llvm::SourceMgr &getSourceMgr() { return state.lex.getSourceMgr(); }
+
+  /// Parse a comma-separated list of elements up until the specified end token.
+  ParseResult
+  parseCommaSeparatedListUntil(Token::Kind rightToken,
+                               const std::function<ParseResult()> &parseElement,
+                               bool allowEmptyList = true);
+
+  /// Parse a comma separated list of elements that must have at least one entry
+  /// in it.
+  ParseResult
+  parseCommaSeparatedList(const std::function<ParseResult()> &parseElement);
+
+  ParseResult parsePrettyDialectSymbolName(StringRef &prettyName);
+
+  // We have two forms of parsing methods - those that return a non-null
+  // pointer on success, and those that return a ParseResult to indicate whether
+  // they returned a failure.  The second class fills in by-reference arguments
+  // as the results of their action.
+
+  //===--------------------------------------------------------------------===//
+  // Error Handling
+  //===--------------------------------------------------------------------===//
+
+  /// Emit an error and return failure.
+  InFlightDiagnostic emitError(const Twine &message = {}) {
+    return emitError(state.curToken.getLoc(), message);
+  }
+  InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message = {});
+
+  /// Encode the specified source location information into an attribute for
+  /// attachment to the IR.
+  Location getEncodedSourceLocation(llvm::SMLoc loc) {
+    // If there are no active nested parsers, we can get the encoded source
+    // location directly.
+    if (state.parserDepth == 0)
+      return state.lex.getEncodedSourceLocation(loc);
+    // Otherwise, we need to re-encode it to point to the top level buffer.
+    return state.symbols.topLevelLexer->getEncodedSourceLocation(
+        remapLocationToTopLevelBuffer(loc));
+  }
+
+  /// Remaps the given SMLoc to the top level lexer of the parser. This is used
+  /// to adjust locations of potentially nested parsers to ensure that they can
+  /// be emitted properly as diagnostics.
+  llvm::SMLoc remapLocationToTopLevelBuffer(llvm::SMLoc loc) {
+    // If there are no active nested parsers, we can return location directly.
+    SymbolState &symbols = state.symbols;
+    if (state.parserDepth == 0)
+      return loc;
+    assert(symbols.topLevelLexer && "expected valid top-level lexer");
+
+    // Otherwise, we need to remap the location to the main parser. This is
+    // simply offseting the location onto the location of the last nested
+    // parser.
+    size_t offset = loc.getPointer() - state.lex.getBufferBegin();
+    auto *rawLoc =
+        symbols.nestedParserLocs[state.parserDepth - 1].getPointer() + offset;
+    return llvm::SMLoc::getFromPointer(rawLoc);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Token Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Return the current token the parser is inspecting.
+  const Token &getToken() const { return state.curToken; }
+  StringRef getTokenSpelling() const { return state.curToken.getSpelling(); }
+
+  /// If the current token has the specified kind, consume it and return true.
+  /// If not, return false.
+  bool consumeIf(Token::Kind kind) {
+    if (state.curToken.isNot(kind))
+      return false;
+    consumeToken(kind);
+    return true;
+  }
+
+  /// Advance the current lexer onto the next token.
+  void consumeToken() {
+    assert(state.curToken.isNot(Token::eof, Token::error) &&
+           "shouldn't advance past EOF or errors");
+    state.curToken = state.lex.lexToken();
+  }
+
+  /// Advance the current lexer onto the next token, asserting what the expected
+  /// current token is.  This is preferred to the above method because it leads
+  /// to more self-documenting code with better checking.
+  void consumeToken(Token::Kind kind) {
+    assert(state.curToken.is(kind) && "consumed an unexpected token");
+    consumeToken();
+  }
+
+  /// Consume the specified token if present and return success.  On failure,
+  /// output a diagnostic and return failure.
+  ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
+
+  //===--------------------------------------------------------------------===//
+  // Type Parsing
+  //===--------------------------------------------------------------------===//
+
+  ParseResult parseFunctionResultTypes(SmallVectorImpl<Type> &elements);
+  ParseResult parseTypeListNoParens(SmallVectorImpl<Type> &elements);
+  ParseResult parseTypeListParens(SmallVectorImpl<Type> &elements);
+
+  /// Optionally parse a type.
+  OptionalParseResult parseOptionalType(Type &type);
+
+  /// Parse an arbitrary type.
+  Type parseType();
+
+  /// Parse a complex type.
+  Type parseComplexType();
+
+  /// Parse an extended type.
+  Type parseExtendedType();
+
+  /// Parse a function type.
+  Type parseFunctionType();
+
+  /// Parse a memref type.
+  Type parseMemRefType();
+
+  /// Parse a non function type.
+  Type parseNonFunctionType();
+
+  /// Parse a tensor type.
+  Type parseTensorType();
+
+  /// Parse a tuple type.
+  Type parseTupleType();
+
+  /// Parse a vector type.
+  VectorType parseVectorType();
+  ParseResult parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
+                                       bool allowDynamic = true);
+  ParseResult parseXInDimensionList();
+
+  /// Parse strided layout specification.
+  ParseResult parseStridedLayout(int64_t &offset,
+                                 SmallVectorImpl<int64_t> &strides);
+
+  // Parse a brace-delimiter list of comma-separated integers with `?` as an
+  // unknown marker.
+  ParseResult parseStrideList(SmallVectorImpl<int64_t> &dimensions);
+
+  //===--------------------------------------------------------------------===//
+  // Attribute Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse an arbitrary attribute with an optional type.
+  Attribute parseAttribute(Type type = {});
+
+  /// Parse an attribute dictionary.
+  ParseResult parseAttributeDict(NamedAttrList &attributes);
+
+  /// Parse an extended attribute.
+  Attribute parseExtendedAttr(Type type);
+
+  /// Parse a float attribute.
+  Attribute parseFloatAttr(Type type, bool isNegative);
+
+  /// Parse a decimal or a hexadecimal literal, which can be either an integer
+  /// or a float attribute.
+  Attribute parseDecOrHexAttr(Type type, bool isNegative);
+
+  /// Parse an opaque elements attribute.
+  Attribute parseOpaqueElementsAttr(Type attrType);
+
+  /// Parse a dense elements attribute.
+  Attribute parseDenseElementsAttr(Type attrType);
+  ShapedType parseElementsLiteralType(Type type);
+
+  /// Parse a sparse elements attribute.
+  Attribute parseSparseElementsAttr(Type attrType);
+
+  //===--------------------------------------------------------------------===//
+  // Location Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse an inline location.
+  ParseResult parseLocation(LocationAttr &loc);
+
+  /// Parse a raw location instance.
+  ParseResult parseLocationInstance(LocationAttr &loc);
+
+  /// Parse a callsite location instance.
+  ParseResult parseCallSiteLocation(LocationAttr &loc);
+
+  /// Parse a fused location instance.
+  ParseResult parseFusedLocation(LocationAttr &loc);
+
+  /// Parse a name or FileLineCol location instance.
+  ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
+
+  /// Parse an optional trailing location.
+  ///
+  ///   trailing-location     ::= (`loc` `(` location `)`)?
+  ///
+  ParseResult parseOptionalTrailingLocation(Location &loc) {
+    // If there is a 'loc' we parse a trailing location.
+    if (!getToken().is(Token::kw_loc))
+      return success();
+
+    // Parse the location.
+    LocationAttr directLoc;
+    if (parseLocation(directLoc))
+      return failure();
+    loc = directLoc;
+    return success();
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Affine Parsing
+  //===--------------------------------------------------------------------===//
+
+  /// Parse a reference to either an affine map, or an integer set.
+  ParseResult parseAffineMapOrIntegerSetReference(AffineMap &map,
+                                                  IntegerSet &set);
+  ParseResult parseAffineMapReference(AffineMap &map);
+  ParseResult parseIntegerSetReference(IntegerSet &set);
+
+  /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
+  ParseResult
+  parseAffineMapOfSSAIds(AffineMap &map,
+                         function_ref<ParseResult(bool)> parseElement,
+                         OpAsmParser::Delimiter delimiter);
+
+private:
+  /// The Parser is subclassed and reinstantiated.  Do not add additional
+  /// non-trivial state here, add it to the ParserState class.
+  ParserState &state;
+};
+} // end namespace detail
+} // end namespace mlir
+
+#endif // MLIR_LIB_PARSER_PARSER_H

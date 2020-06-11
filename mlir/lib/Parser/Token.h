@@ -91,6 +91,10 @@ public:
   /// removing the quote characters and unescaping the contents of the string.
   std::string getStringValue() const;
 
+  /// Given a token containing a symbol reference, return the unescaped string
+  /// value.
+  std::string getSymbolReference() const;
+
   // Location processing.
   llvm::SMLoc getLoc() const;
   llvm::SMLoc getEndLoc() const;
