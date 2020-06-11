@@ -87,22 +87,31 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   const NamedDecl *Decl = DRE->getDecl();
   if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
-    // C++ [dcl.fct.default]p9
-    //   Default arguments are evaluated each time the function is
-    //   called. The order of evaluation of function arguments is
-    //   unspecified. Consequently, parameters of a function shall not
-    //   be used in default argument expressions, even if they are not
-    //   evaluated. Parameters of a function declared before a default
-    //   argument expression are in scope and can hide namespace and
-    //   class member names.
-    return S.Diag(DRE->getBeginLoc(),
-                  diag::err_param_default_argument_references_param)
-           << Param->getDeclName() << DefaultArg->getSourceRange();
+    // C++ [dcl.fct.default]p9:
+    //   [...] parameters of a function shall not be used in default
+    //   argument expressions, even if they are not evaluated. [...]
+    //
+    // C++17 [dcl.fct.default]p9 (by CWG 2082):
+    //   [...] A parameter shall not appear as a potentially-evaluated
+    //   expression in a default argument. [...]
+    //
+    if (DRE->isNonOdrUse() != NOUR_Unevaluated)
+      return S.Diag(DRE->getBeginLoc(),
+                    diag::err_param_default_argument_references_param)
+             << Param->getDeclName() << DefaultArg->getSourceRange();
   } else if (const auto *VDecl = dyn_cast<VarDecl>(Decl)) {
-    // C++ [dcl.fct.default]p7
+    // C++ [dcl.fct.default]p7:
     //   Local variables shall not be used in default argument
     //   expressions.
-    if (VDecl->isLocalVarDecl())
+    //
+    // C++17 [dcl.fct.default]p7 (by CWG 2082):
+    //   A local variable shall not appear as a potentially-evaluated
+    //   expression in a default argument.
+    //
+    // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
+    //   Note: A local variable cannot be odr-used (6.3) in a default argument.
+    //
+    if (VDecl->isLocalVarDecl() && !DRE->isNonOdrUse())
       return S.Diag(DRE->getBeginLoc(),
                     diag::err_param_default_argument_references_local)
              << VDecl->getDeclName() << DefaultArg->getSourceRange();
