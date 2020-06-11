@@ -387,7 +387,7 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
       if (log)
         log->Printf("demangle swift: %s", mangled_name);
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
-          mangled_name, false, sc));
+          mangled_name, SwiftLanguageRuntime::eTypeName, sc));
       // Don't cache the demangled name the function isn't available yet.
       if (!sc || !sc->function)
         return ConstString(demangled);
@@ -433,7 +433,8 @@ ConstString Mangled::GetDisplayDemangledName(
 
           std::string demangled_std =
               SwiftLanguageRuntime::DemangleSymbolAsString(
-                  m_mangled.GetStringRef(), true, sc);
+                  m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified,
+                  sc);
           if (!demangled_std.empty()) {
             demangled.SetCString(demangled_std.c_str());
             display_cache->Insert(mangled, demangled);
