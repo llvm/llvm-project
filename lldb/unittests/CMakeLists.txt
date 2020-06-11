@@ -84,6 +84,7 @@ add_subdirectory(Target)
 add_subdirectory(tools)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
+add_subdirectory(Thread)
 
 if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD AND NOT LLDB_USE_SYSTEM_DEBUGSERVER)
   add_subdirectory(debugserver)
