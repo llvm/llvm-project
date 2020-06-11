@@ -123,3 +123,27 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 //       CHECK:       %[[inc:.*]] = mulf %[[va]], %[[vb]] : f32
 //       CHECK:       %[[res:.*]] = addf %[[vc]], %[[inc]] : f32
 //       CHECK:       affine.store %[[res]], %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
+
+// CHECK-LABEL: func @pooling_max_min
+func @pooling_max_min(%arg0: memref<?x?xf32>,
+                      %arg1: memref<?x?xi32>,
+                      %arg2: memref<?x?xf32>) {
+  linalg.pooling_max(%arg0, %arg1, %arg2) { strides = [2, 1] }:
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  linalg.pooling_min(%arg0, %arg1, %arg2) { strides = [2, 1] }:
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// This is a basic check to make sure the right load/stores are used. loops.mlir
+// checks for the rest.
+// CHECK:      affine.load
+// CHECK-NEXT: affine.load
+// CHECK-NEXT: cmpf
+// CHECK-NEXT: select
+// CHECK-NEXT: affine.store
+// The min pooling body.
+// CHECK:      affine.load
+// CHECK-NEXT: affine.load
+// CHECK-NEXT: cmpf
+// CHECK-NEXT: select
+// CHECK-NEXT: affine.store
