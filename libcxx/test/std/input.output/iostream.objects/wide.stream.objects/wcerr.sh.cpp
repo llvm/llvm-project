@@ -10,7 +10,6 @@
 
 // istream wcerr;
 
-// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build}
 // RUN: %{exec} %t.exe 2> %t.err
 // RUN: grep -e 'Hello World!' %t.err

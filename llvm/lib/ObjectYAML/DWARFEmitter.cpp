@@ -106,7 +106,10 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     } else
       writeInteger((uint32_t)Range.Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
-    writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    if (Range.Format == dwarf::DWARF64)
+      writeInteger((uint64_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    else
+      writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
 
@@ -131,15 +134,15 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   uint64_t EntryIndex = 0;
   for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
-    if ((uint64_t)DebugRanges.Offset < CurrOffset)
+    if (DebugRanges.Offset && (uint64_t)*DebugRanges.Offset < CurrOffset)
       return createStringError(errc::invalid_argument,
                                "'Offset' for 'debug_ranges' with index " +
                                    Twine(EntryIndex) +
                                    " must be greater than or equal to the "
                                    "number of bytes written already (0x" +
                                    Twine::utohexstr(CurrOffset) + ")");
-    if (DebugRanges.Offset > CurrOffset)
-      ZeroFillBytes(OS, DebugRanges.Offset - CurrOffset);
+    if (DebugRanges.Offset)
+      ZeroFillBytes(OS, *DebugRanges.Offset - CurrOffset);
     for (auto Entry : DebugRanges.Entries) {
       writeVariableSizedInteger(Entry.LowOffset, DebugRanges.AddrSize, OS,
                                 DI.IsLittleEndian);
