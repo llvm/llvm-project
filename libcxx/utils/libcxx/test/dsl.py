@@ -70,9 +70,9 @@ def sourceBuilds(config, source):
       "mkdir -p %T",
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
     ]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
-    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])
+    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'])
     _executeScriptInternal(test, cleanup)
     return exitCode == 0
 
@@ -85,7 +85,7 @@ def hasCompileFlag(config, flag):
   """
   with _makeConfigTest(config) as test:
     commands = ["%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=[])
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
     return exitCode == 0
 
@@ -111,9 +111,9 @@ def hasLocale(config, locale):
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
       "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
     ]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
-    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])
+    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'])
     _executeScriptInternal(test, cleanup)
     return exitCode == 0
 
@@ -129,7 +129,7 @@ def compilerMacros(config, flags=''):
   """
   with _makeConfigTest(config) as test:
     commands = ["%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=[])
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
     unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
