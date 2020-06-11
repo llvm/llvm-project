@@ -254,14 +254,12 @@ void Sema::ImplicitExceptionSpecification::CalledStmt(Stmt *S) {
     ComputedEST = EST_None;
 }
 
-bool
-Sema::SetParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
-                              SourceLocation EqualLoc) {
+ExprResult Sema::ConvertParamDefaultArgument(const ParmVarDecl *Param,
+                                             Expr *Arg,
+                                             SourceLocation EqualLoc) {
   if (RequireCompleteType(Param->getLocation(), Param->getType(),
-                          diag::err_typecheck_decl_incomplete_type)) {
-    Param->setInvalidDecl();
+                          diag::err_typecheck_decl_incomplete_type))
     return true;
-  }
 
   // C++ [dcl.fct.default]p5
   //   A default argument expression is implicitly converted (clause
@@ -282,7 +280,12 @@ Sema::SetParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
   CheckCompletedExpr(Arg, EqualLoc);
   Arg = MaybeCreateExprWithCleanups(Arg);
 
-  // Okay: add the default argument to the parameter
+  return Arg;
+}
+
+void Sema::SetParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
+                                   SourceLocation EqualLoc) {
+  // Add the default argument to the parameter
   Param->setDefaultArg(Arg);
 
   // We have already instantiated this parameter; provide each of the
@@ -296,8 +299,6 @@ Sema::SetParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
     // We're done tracking this parameter's instantiations.
     UnparsedDefaultArgInstantiations.erase(InstPos);
   }
-
-  return false;
 }
 
 /// ActOnParamDefaultArgument - Check whether the default argument
@@ -341,13 +342,18 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
     return;
   }
 
+  ExprResult Result = ConvertParamDefaultArgument(Param, DefaultArg, EqualLoc);
+  if (Result.isInvalid())
+    return Fail();
+
+  DefaultArg = Result.getAs<Expr>();
+
   // Check that the default argument is well-formed
   CheckDefaultArgumentVisitor DefaultArgChecker(*this, DefaultArg);
   if (DefaultArgChecker.Visit(DefaultArg))
     return Fail();
 
-  if (SetParamDefaultArgument(Param, DefaultArg, EqualLoc))
-    return Fail();
+  SetParamDefaultArgument(Param, DefaultArg, EqualLoc);
 }
 
 /// ActOnParamUnparsedDefaultArgument - We've seen a default
