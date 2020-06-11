@@ -529,6 +529,13 @@ private:
   unsigned approx_func : 1;
 };
 
+inline bool operator==(FPOptions LHS, FPOptions RHS) {
+  return LHS.getAsOpaqueInt() == RHS.getAsOpaqueInt();
+}
+inline bool operator!=(FPOptions LHS, FPOptions RHS) {
+  return LHS.getAsOpaqueInt() != RHS.getAsOpaqueInt();
+}
+
 /// Describes the kind of translation unit being processed.
 enum TranslationUnitKind {
   /// The translation unit is a complete translation unit.
