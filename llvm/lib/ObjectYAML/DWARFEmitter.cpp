@@ -106,7 +106,10 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     } else
       writeInteger((uint32_t)Range.Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
-    writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    if (Range.Format == dwarf::DWARF64)
+      writeInteger((uint64_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    else
+      writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
 
