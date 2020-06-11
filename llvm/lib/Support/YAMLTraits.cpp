@@ -166,6 +166,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
   if (!MN) {
     if (Required || !isa<EmptyHNode>(CurrentNode))
       setError(CurrentNode, "not a mapping");
+    else
+      UseDefault = true;
     return false;
   }
   MN->ValidKeys.push_back(Key);
