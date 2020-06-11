@@ -8,7 +8,7 @@
  */
 #ifndef __CLANG__CUDA_MATH_FORWARD_DECLARES_H__
 #define __CLANG__CUDA_MATH_FORWARD_DECLARES_H__
-#if !__CUDA__ && !__HIP__
+#if !defined(__CUDA__) && !__HIP__
 #error "This file is for CUDA/HIP compilation only."
 #endif
 
