@@ -29,6 +29,7 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86Subtarget.h"
+#include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -57,23 +58,6 @@ static const char LVIThunkNamePrefix[] = "__llvm_lvi_thunk_";
 static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 
 namespace {
-template <typename Derived> class ThunkInserter {
-  Derived &getDerived() { return *static_cast<Derived *>(this); }
-
-protected:
-  bool InsertedThunks;
-  void doInitialization(Module &M) {}
-  void createThunkFunction(MachineModuleInfo &MMI, StringRef Name);
-
-public:
-  void init(Module &M) {
-    InsertedThunks = false;
-    getDerived().doInitialization(M);
-  }
-  // return `true` if `MMI` or `MF` was modified
-  bool run(MachineModuleInfo &MMI, MachineFunction &MF);
-};
-
 struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   const char *getThunkPrefix() { return RetpolineNamePrefix; }
   bool mayUseThunk(const MachineFunction &MF) {
@@ -278,73 +262,6 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
 
   CallTarget->back().setPreInstrSymbol(MF, TargetSym);
   BuildMI(CallTarget, DebugLoc(), TII->get(RetOpc));
-}
-
-template <typename Derived>
-void ThunkInserter<Derived>::createThunkFunction(MachineModuleInfo &MMI,
-                                                 StringRef Name) {
-  assert(Name.startswith(getDerived().getThunkPrefix()) &&
-         "Created a thunk with an unexpected prefix!");
-
-  Module &M = const_cast<Module &>(*MMI.getModule());
-  LLVMContext &Ctx = M.getContext();
-  auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  Function *F =
-      Function::Create(Type, GlobalValue::LinkOnceODRLinkage, Name, &M);
-  F->setVisibility(GlobalValue::HiddenVisibility);
-  F->setComdat(M.getOrInsertComdat(Name));
-
-  // Add Attributes so that we don't create a frame, unwind information, or
-  // inline.
-  AttrBuilder B;
-  B.addAttribute(llvm::Attribute::NoUnwind);
-  B.addAttribute(llvm::Attribute::Naked);
-  F->addAttributes(llvm::AttributeList::FunctionIndex, B);
-
-  // Populate our function a bit so that we can verify.
-  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
-  IRBuilder<> Builder(Entry);
-
-  Builder.CreateRetVoid();
-
-  // MachineFunctions/MachineBasicBlocks aren't created automatically for the
-  // IR-level constructs we already made. Create them and insert them into the
-  // module.
-  MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
-  MachineBasicBlock *EntryMBB = MF.CreateMachineBasicBlock(Entry);
-
-  // Insert EntryMBB into MF. It's not in the module until we do this.
-  MF.insert(MF.end(), EntryMBB);
-  // Set MF properties. We never use vregs...
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
-}
-
-template <typename Derived>
-bool ThunkInserter<Derived>::run(MachineModuleInfo &MMI, MachineFunction &MF) {
-  // If MF is not a thunk, check to see if we need to insert a thunk.
-  if (!MF.getName().startswith(getDerived().getThunkPrefix())) {
-    // If we've already inserted a thunk, nothing else to do.
-    if (InsertedThunks)
-      return false;
-
-    // Only add a thunk if one of the functions has the corresponding feature
-    // enabled in its subtarget, and doesn't enable external thunks.
-    // FIXME: Conditionalize on indirect calls so we don't emit a thunk when
-    // nothing will end up calling it.
-    // FIXME: It's a little silly to look at every function just to enumerate
-    // the subtargets, but eventually we'll want to look at them for indirect
-    // calls, so maybe this is OK.
-    if (!getDerived().mayUseThunk(MF))
-      return false;
-
-    getDerived().insertThunks(MMI);
-    InsertedThunks = true;
-    return true;
-  }
-
-  // If this *is* a thunk function, we need to populate it with the correct MI.
-  getDerived().populateThunk(MF);
-  return true;
 }
 
 FunctionPass *llvm::createX86IndirectThunksPass() {
