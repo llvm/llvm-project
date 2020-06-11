@@ -129,14 +129,15 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
 
   // If it doesn't have a debug directory, fail.
   llvm::StringRef pdb_file;
-  auto ec = obj->getDebugPDBInfo(pdb_info, pdb_file);
-  if (ec)
+  if (llvm::Error e = obj->getDebugPDBInfo(pdb_info, pdb_file)) {
+    consumeError(std::move(e));
     return nullptr;
+  }
 
   // if the file doesn't exist, is not a pdb, or doesn't have a matching guid,
   // fail.
   llvm::file_magic magic;
-  ec = llvm::identify_magic(pdb_file, magic);
+  auto ec = llvm::identify_magic(pdb_file, magic);
   if (ec || magic != llvm::file_magic::pdb)
     return nullptr;
   std::unique_ptr<PDBFile> pdb = loadPDBFile(std::string(pdb_file), allocator);

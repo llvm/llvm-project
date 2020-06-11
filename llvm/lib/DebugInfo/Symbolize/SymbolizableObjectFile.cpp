@@ -35,7 +35,7 @@ using namespace llvm;
 using namespace object;
 using namespace symbolize;
 
-ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
+Expected<std::unique_ptr<SymbolizableObjectFile>>
 SymbolizableObjectFile::create(const object::ObjectFile *Obj,
                                std::unique_ptr<DIContext> DICtx,
                                bool UntagAddresses) {
@@ -50,12 +50,12 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
     for (section_iterator Section : Obj->sections()) {
       Expected<StringRef> NameOrErr = Section->getName();
       if (!NameOrErr)
-        return errorToErrorCode(NameOrErr.takeError());
+        return NameOrErr.takeError();
 
       if (*NameOrErr == ".opd") {
         Expected<StringRef> E = Section->getContents();
         if (!E)
-          return errorToErrorCode(E.takeError());
+          return E.takeError();
         OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian(),
                                              Obj->getBytesInAddress()));
         OpdAddress = Section->getAddress();
@@ -66,14 +66,16 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
   std::vector<std::pair<SymbolRef, uint64_t>> Symbols =
       computeSymbolSizes(*Obj);
   for (auto &P : Symbols)
-    res->addSymbol(P.first, P.second, OpdExtractor.get(), OpdAddress);
+    if (Error E =
+            res->addSymbol(P.first, P.second, OpdExtractor.get(), OpdAddress))
+      return std::move(E);
 
   // If this is a COFF object and we didn't find any symbols, try the export
   // table.
   if (Symbols.empty()) {
     if (auto *CoffObj = dyn_cast<COFFObjectFile>(Obj))
-      if (auto EC = res->addCoffExportSymbols(CoffObj))
-        return EC;
+      if (Error E = res->addCoffExportSymbols(CoffObj))
+        return std::move(E);
   }
 
   std::vector<std::pair<SymbolDesc, StringRef>> &Fs = res->Functions,
@@ -117,7 +119,7 @@ struct OffsetNamePair {
 
 } // end anonymous namespace
 
-std::error_code SymbolizableObjectFile::addCoffExportSymbols(
+Error SymbolizableObjectFile::addCoffExportSymbols(
     const COFFObjectFile *CoffObj) {
   // Get all export names and offsets.
   std::vector<OffsetNamePair> ExportSyms;
@@ -131,7 +133,7 @@ std::error_code SymbolizableObjectFile::addCoffExportSymbols(
     ExportSyms.push_back(OffsetNamePair{Offset, Name});
   }
   if (ExportSyms.empty())
-    return std::error_code();
+    return Error::success();
 
   // Sort by ascending offset.
   array_pod_sort(ExportSyms.begin(), ExportSyms.end());
@@ -148,27 +150,27 @@ std::error_code SymbolizableObjectFile::addCoffExportSymbols(
     SymbolDesc SD = {SymbolStart, SymbolSize};
     Functions.emplace_back(SD, Export.Name);
   }
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
-                                                  uint64_t SymbolSize,
-                                                  DataExtractor *OpdExtractor,
-                                                  uint64_t OpdAddress) {
+Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
+                                        uint64_t SymbolSize,
+                                        DataExtractor *OpdExtractor,
+                                        uint64_t OpdAddress) {
   // Avoid adding symbols from an unknown/undefined section.
   const ObjectFile *Obj = Symbol.getObject();
   Expected<section_iterator> Sec = Symbol.getSection();
   if (!Sec || (Obj && Obj->section_end() == *Sec))
-    return std::error_code();
+    return Error::success();
   Expected<SymbolRef::Type> SymbolTypeOrErr = Symbol.getType();
   if (!SymbolTypeOrErr)
-    return errorToErrorCode(SymbolTypeOrErr.takeError());
+    return SymbolTypeOrErr.takeError();
   SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (SymbolType != SymbolRef::ST_Function && SymbolType != SymbolRef::ST_Data)
-    return std::error_code();
+    return Error::success();
   Expected<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
   if (!SymbolAddressOrErr)
-    return errorToErrorCode(SymbolAddressOrErr.takeError());
+    return SymbolAddressOrErr.takeError();
   uint64_t SymbolAddress = *SymbolAddressOrErr;
   if (UntagAddresses) {
     // For kernel addresses, bits 56-63 need to be set, so we sign extend bit 55
@@ -188,7 +190,7 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   }
   Expected<StringRef> SymbolNameOrErr = Symbol.getName();
   if (!SymbolNameOrErr)
-    return errorToErrorCode(SymbolNameOrErr.takeError());
+    return SymbolNameOrErr.takeError();
   StringRef SymbolName = *SymbolNameOrErr;
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
@@ -198,7 +200,7 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   auto &M = SymbolType == SymbolRef::ST_Function ? Functions : Objects;
   SymbolDesc SD = { SymbolAddress, SymbolSize };
   M.emplace_back(SD, SymbolName);
-  return std::error_code();
+  return Error::success();
 }
 
 // Return true if this is a 32-bit x86 PE COFF module.
