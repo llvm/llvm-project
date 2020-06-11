@@ -82,6 +82,11 @@ class CommandParser:
 
 
 class InlineTest(TestBase):
+    # Overrides
+
+    def getBuildDirBasename(self):
+        return self.__class__.__name__ + "." + self.testMethodName
+
     # Internal implementation
 
     def BuildMakefile(self):
