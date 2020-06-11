@@ -504,10 +504,10 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
 }
 
 static SmallVector<SmallVector<AffineExpr, 2>, 2>
-convertReassociationIndiciesToMaps(
-    OpBuilder &b, ArrayRef<ReassociationIndicies> reassociationIndicies) {
+convertReassociationIndicesToMaps(
+    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
   SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
-  for (const auto &indicies : reassociationIndicies) {
+  for (const auto &indicies : reassociationIndices) {
     SmallVector<AffineExpr, 2> reassociationMap;
     reassociationMap.reserve(indicies.size());
     for (int64_t index : indicies)
