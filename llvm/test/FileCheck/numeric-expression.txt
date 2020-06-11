@@ -49,8 +49,32 @@ INVALID-FMT-SPEC-MSG2: numeric-expression.txt:[[#@LINE-4]]:37: error: invalid fo
 INVALID-FMT-SPEC-MSG2-NEXT: {{I}}NVALID-FMT-SPEC2-NEXT: INVVAR2={{\[\[#%hhd,INVVAR2:\]\]}}
 INVALID-FMT-SPEC-MSG2-NEXT:    {{^}}                                    ^{{$}}
 
-; Numeric expressions in explicit matching format and default matching rule using
-; variables defined on other lines without spaces.
+; Numeric variable definition with precision specifier.
+DEF PREC FMT  // CHECK-LABEL: DEF PREC FMT
+00000022    // CHECK-NEXT: {{^}}[[#%.8,PADDED_UNSI:]]
+323232323   // CHECK-NEXT: {{^}}[[#%.8,PADDED_UNSI2:]]
+00000018    // CHECK-NEXT: {{^}}[[#%.8u,PADDED_UNSI3:]]
+181818181   // CHECK-NEXT: {{^}}[[#%.8u,PADDED_UNSI4:]]
+0000000f    // CHECK-NEXT: {{^}}[[#%.8x,PADDED_LHEX:]]
+fffffffff   // CHECK-NEXT: {{^}}[[#%.8x,PADDED_LHEX2:]]
+0000000E    // CHECK-NEXT: {{^}}[[#%.8X,PADDED_UHEX:]]
+EEEEEEEEE   // CHECK-NEXT: {{^}}[[#%.8X,PADDED_UHEX2:]]
+-00000055   // CHECK-NEXT: {{^}}[[#%.8d,PADDED_SIGN:]]
+-555555555  // CHECK-NEXT: {{^}}[[#%.8d,PADDED_SIGN2:]]
+
+; Numeric variable definition with precision specifier with value not padded
+; enough.
+RUN: FileCheck --check-prefix INVALID-PADDING-DEF --input-file %s %s
+
+FAIL DEF PREC FMT  // INVALID-PADDING-DEF-LABEL: FAIL DEF PREC FMT
+INVALID_PADDED_UNSI: 0000022   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UNSI: [[#%.8,INVALID_PADDED_UNSI:]]
+INVALID_PADDED_UNSI2: 0000018  // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UNSI2: [[#%.8u,INVALID_PADDED_UNSI2:]]
+INVALID_PADDED_LHEX: 000000f   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_LHEX: [[#%.8x,INVALID_PADDED_LHEX:]]
+INVALID_PADDED_UHEX: 000000E   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UHEX: [[#%.8X,INVALID_PADDED_UHEX:]]
+INVALID_PADDED_SIGN: -0000055  // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_SIGN: [[#%.8d,INVALID_PADDED_SIGN:]]
+
+; Numeric expressions with explicit matching format and default matching rule
+; using variables defined on other lines without spaces.
 USE EXPL FMT IMPL MATCH  // CHECK-LABEL: USE EXPL FMT IMPL MATCH
 11  // CHECK-NEXT: {{^}}[[#%u,UNSI]]
 12  // CHECK-NEXT: {{^}}[[#%u,UNSI+1]]
@@ -92,8 +116,8 @@ B   // CHECK-NEXT: {{^}}[[#%X,sub(UHEX,2)]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIc]]
 c   // CHECK-NEXT: {{^}}[[#%x,LHEXa]]
 
-; Numeric expressions in explicit matching format and default matching rule using
-; variables defined on other lines with different spacing.
+; Numeric expressions with explicit matching format and default matching rule
+; using variables defined on other lines with different spacing.
 USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
 11  // CHECK-NEXT: {{^}}[[#%u, UNSI]]
 11  // CHECK-NEXT: {{^}}[[# %u, UNSI]]
@@ -120,8 +144,35 @@ USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
 13  // CHECK-NEXT: {{^}}[[# %u , add (UNSI,2)]]
 104 // CHECK-NEXT: {{^}}[[# %u , UNSI + sub( add (100 , UNSI+ 1 ), 20) +1 ]]
 
-; Numeric expressions in implicit matching format and default matching rule using
-; variables defined on other lines.
+; Numeric expressions with explicit matching format, precision, and default
+; matching rule using variables defined on other lines without spaces.
+USE EXPL FMT WITH PREC IMPL MATCH  // CHECK-LABEL: USE EXPL FMT WITH PREC IMPL MATCH
+11         // CHECK-NEXT: {{^}}[[#%.1u,UNSI]]
+00000011   // CHECK-NEXT: {{^}}[[#%.8u,UNSI]]
+1c         // CHECK-NEXT: {{^}}[[#%.1x,LHEX+16]]
+0000000c   // CHECK-NEXT: {{^}}[[#%.8x,LHEX]]
+1D         // CHECK-NEXT: {{^}}[[#%.1X,UHEX+16]]
+0000000D   // CHECK-NEXT: {{^}}[[#%.8X,UHEX]]
+-30        // CHECK-NEXT: {{^}}[[#%.1d,SIGN]]
+-00000030  // CHECK-NEXT: {{^}}[[#%.8d,SIGN]]
+
+; Numeric expressions with explicit matching format, precision and wrong
+; padding, and default matching rule using variables defined on other lines
+; without spaces.
+RUN: FileCheck --check-prefixes CHECK,INVALID-PADDING-EXPL-USE --input-file %s %s
+
+FAIL USE IMPL FMT WITH PREC EXPL MATCH  // INVALID-PADDING-EXPL-USE-LABEL: FAIL USE IMPL FMT WITH PREC IMPL MATCH
+INVALID UNSI+1: 0000012     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UNSI+1: [[#%.8u,UNSI+1]]
+INVALID UNSI-1: 000000010   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UNSI-1: [[#%.8u,UNSI-1]]
+INVALID LHEX+1: 000000d     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID LHEX+1: [[#%.8x,LHEX+1]]
+INVALID LHEX-1: 00000000b   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID LHEX-1: [[#%.8x,LHEX-1]]
+INVALID UHEX+1: 000000E     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UHEX+1: [[#%.8X,UHEX+1]]
+INVALID UHEX-1: 00000000C   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UHEX-1: [[#%.8X,UHEX-1]]
+INVALID SIGN+1: -0000029    // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID SIGN+1: [[#%.8d,SIGN+1]]
+INVALID SIGN-1: -000000031  // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID SIGN-1: [[#%.8d,SIGN-1]]
+
+; Numeric expressions with implicit matching format and default matching rule
+; using variables defined on other lines.
 USE IMPL FMT IMPL MATCH  // CHECK-LABEL: USE IMPL FMT IMPL MATCH
 11  // CHECK-NEXT: {{^}}[[#UNSI]]
 12  // CHECK-NEXT: {{^}}[[#UNSI+1]]
@@ -145,6 +196,36 @@ A   // CHECK-NEXT: {{^}}[[#min(UHEX,10)]]
 -30 // CHECK-NEXT: {{^}}[[#SIGN]]
 -29 // CHECK-NEXT: {{^}}[[#SIGN+1]]
 -31 // CHECK-NEXT: {{^}}[[#SIGN-1]]
+
+; Numeric expressions with implicit matching format, precision, and default
+; matching rule using variables defined on other lines.
+USE IMPL FMT WITH PREC IMPL MATCH  // CHECK-LABEL: USE IMPL FMT WITH PREC IMPL MATCH
+00000023    // CHECK-NEXT: {{^}}[[#PADDED_UNSI+1]]
+323232324   // CHECK-NEXT: {{^}}[[#PADDED_UNSI2+1]]
+00000019    // CHECK-NEXT: {{^}}[[#PADDED_UNSI3+1]]
+181818182   // CHECK-NEXT: {{^}}[[#PADDED_UNSI4+1]]
+00000010    // CHECK-NEXT: {{^}}[[#PADDED_LHEX+1]]
+1000000000  // CHECK-NEXT: {{^}}[[#PADDED_LHEX2+1]]
+0000000F    // CHECK-NEXT: {{^}}[[#PADDED_UHEX+1]]
+EEEEEEEEF   // CHECK-NEXT: {{^}}[[#PADDED_UHEX2+1]]
+-00000054   // CHECK-NEXT: {{^}}[[#PADDED_SIGN+1]]
+-555555554  // CHECK-NEXT: {{^}}[[#PADDED_SIGN2+1]]
+
+; Numeric expression with implicit matching format, precision and wrong amount
+; of padding, and default matching rule using variables defined on other lines.
+RUN: FileCheck --check-prefixes CHECK,INVALID-PADDING-IMPL-USE --input-file %s %s
+
+FAIL USE IMPL FMT WITH PREC IMPL MATCH  // INVALID-PADDING-IMPL-USE-LABEL: FAIL USE IMPL FMT WITH PREC IMPL MATCH
+INVALID PADDED_UNSI+1: 0000023     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI+1: [[#PADDED_UNSI+1]]
+INVALID PADDED_UNSI-1: 000000021   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI-1: [[#PADDED_UNSI-1]]
+INVALID PADDED_UNSI3+1: 0000019    // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI3+1: [[#PADDED_UNSI3+1]]
+INVALID PADDED_UNSI3-1: 000000017  // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI3-1: [[#PADDED_UNSI3-1]]
+INVALID PADDED_LHEX+1: 0000010     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_LHEX+1: [[#PADDED_LHEX+1]]
+INVALID PADDED_LHEX-1: 00000000e   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_LHEX-1: [[#PADDED_LHEX-1]]
+INVALID PADDED_UHEX+1: 000000F     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UHEX+1: [[#PADDED_UHEX+1]]
+INVALID PADDED_UHEX-1: 00000000D   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UHEX-1: [[#PADDED_UHEX-1]]
+INVALID PADDED_SIGN+1: -0000054    // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_SIGN+1: [[#PADDED_SIGN+1]]
+INVALID PADDED_SIGN-1: -000000056  // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_SIGN-1: [[#PADDED_SIGN-1]]
 
 ; Numeric expressions using variables defined on other lines and an immediate
 ; interpreted as an unsigned value.
