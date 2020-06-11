@@ -544,6 +544,11 @@ public:
     return parser.parseToken(Token::equal, "expected '='");
   }
 
+  /// Parse a `=` token if present.
+  ParseResult parseOptionalEqual() override {
+    return success(parser.consumeIf(Token::equal));
+  }
+
   /// Parse a '<' token.
   ParseResult parseLess() override {
     return parser.parseToken(Token::less, "expected '<'");

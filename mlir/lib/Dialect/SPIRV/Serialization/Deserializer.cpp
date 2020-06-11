@@ -1305,7 +1305,7 @@ LogicalResult Deserializer::processStructType(ArrayRef<uint32_t> operands) {
     memberTypes.push_back(memberType);
   }
 
-  SmallVector<spirv::StructType::LayoutInfo, 0> layoutInfo;
+  SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
   if (memberDecorationMap.count(operands[0])) {
     auto &allMemberDecorations = memberDecorationMap[operands[0]];
@@ -1314,27 +1314,27 @@ LogicalResult Deserializer::processStructType(ArrayRef<uint32_t> operands) {
         for (auto &memberDecoration : allMemberDecorations[memberIndex]) {
           // Check for offset.
           if (memberDecoration.first == spirv::Decoration::Offset) {
-            // If layoutInfo is empty, resize to the number of members;
-            if (layoutInfo.empty()) {
-              layoutInfo.resize(memberTypes.size());
+            // If offset info is empty, resize to the number of members;
+            if (offsetInfo.empty()) {
+              offsetInfo.resize(memberTypes.size());
             }
-            layoutInfo[memberIndex] = memberDecoration.second[0];
+            offsetInfo[memberIndex] = memberDecoration.second[0];
           } else {
             if (!memberDecoration.second.empty()) {
-              return emitError(unknownLoc,
-                               "unhandled OpMemberDecoration with decoration ")
-                     << stringifyDecoration(memberDecoration.first)
-                     << " which has additional operands";
+              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/1,
+                                                 memberDecoration.first,
+                                                 memberDecoration.second[0]);
+            } else {
+              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/0,
+                                                 memberDecoration.first, 0);
             }
-            memberDecorationsInfo.emplace_back(memberIndex,
-                                               memberDecoration.first);
           }
         }
       }
     }
   }
   typeMap[operands[0]] =
-      spirv::StructType::get(memberTypes, layoutInfo, memberDecorationsInfo);
+      spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
   // TODO(ravishankarm): Update StructType to have member name as attribute as
   // well.
   return success();
