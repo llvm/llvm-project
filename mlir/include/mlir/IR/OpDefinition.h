@@ -260,6 +260,12 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 };
 
+/// Allow printing to a stream.
+inline raw_ostream &operator<<(raw_ostream &os, OpState &op) {
+  op.print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
 /// This template defines the foldHook as used by AbstractOperation.
 ///
 /// The default implementation uses a general fold method that can be defined on
