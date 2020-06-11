@@ -111,6 +111,14 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // This gets lowered to an instruction sequence which takes 16 bytes
     NumBytes = 16;
     break;
+  case AArch64::SpeculationBarrierISBDSBEndBB:
+    // This gets lowered to 2 4-byte instructions.
+    NumBytes = 8;
+    break;
+  case AArch64::SpeculationBarrierSBEndBB:
+    // This gets lowered to 1 4-byte instructions.
+    NumBytes = 4;
+    break;
   case AArch64::JumpTableDest32:
   case AArch64::JumpTableDest16:
   case AArch64::JumpTableDest8:
@@ -229,6 +237,12 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return false;
+
+  // Skip over SpeculationBarrierEndBB terminators
+  if (I->getOpcode() == AArch64::SpeculationBarrierISBDSBEndBB ||
+      I->getOpcode() == AArch64::SpeculationBarrierSBEndBB) {
+    --I;
+  }
 
   if (!isUnpredicatedTerminator(*I))
     return false;
