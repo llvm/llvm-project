@@ -953,23 +953,6 @@ ConstString SwiftASTContext::GetPluginName() {
 uint32_t SwiftASTContext::GetPluginVersion() { return 1; }
 
 namespace {
-enum SDKType : int {
-  MacOSX = 0,
-  iPhoneSimulator,
-  iPhoneOS,
-  AppleTVSimulator,
-  AppleTVOS,
-  WatchSimulator,
-  watchOS,
-  Linux,
-  numSDKTypes,
-  unknown = -1
-};
-
-const char *const sdk_strings[] = {
-    "macosx",    "iphonesimulator", "iphoneos", "appletvsimulator",
-    "appletvos", "watchsimulator",  "watchos",  "linux"};
-
 struct SDKTypeMinVersion {
   XcodeSDK::Type sdk_type;
   unsigned min_version_major;
