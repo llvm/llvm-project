@@ -3481,6 +3481,7 @@ private:
         llvm::any_of(PHI->incoming_values(), [](Value *In)
           { Instruction *I = dyn_cast<Instruction>(In);
             return !I || isa<GetElementPtrInst>(I) || isa<PHINode>(I) ||
+                   succ_empty(I->getParent()) ||
                    !I->getParent()->isLegalToHoistInto();
           }))
       return false;
