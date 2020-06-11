@@ -371,23 +371,23 @@ define i32 @test_sroa_gep_cast_phi_gep(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_gep_cast_phi_gep(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST:%.*]] = bitcast i32* [[A_SROA_0]] to float*
-; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST2:%.*]] = bitcast i32* [[A_SROA_0]] to float*
+; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_FLOAT_SROA_CAST:%.*]] = bitcast i32* [[A_SROA_0]] to float*
+; CHECK-NEXT:    [[A_SROA_0_0_GEP_A_CAST_TO_FLOAT_SROA_CAST2:%.*]] = bitcast i32* [[A_SROA_0]] to float*
 ; CHECK-NEXT:    [[A_SROA_0_0_GEP_SROA_CAST:%.*]] = bitcast i32* [[A_SROA_0]] to float*
 ; CHECK-NEXT:    store i32 1065353216, i32* [[A_SROA_0]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR:%.*]], label [[END:%.*]]
 ; CHECK:       for:
 ; CHECK-NEXT:    [[PHI_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I:%.*]], [[FOR]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_I32:%.*]], [[FOR]] ]
-; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_I32_SROA_GEP:%.*]], [[FOR]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_FLOAT_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_FLOAT:%.*]], [[FOR]] ]
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi float* [ [[A_SROA_0_0_GEP_SROA_CAST]], [[ENTRY]] ], [ [[GEP_FOR_CAST_TO_FLOAT_SROA_GEP:%.*]], [[FOR]] ]
 ; CHECK-NEXT:    [[I]] = add i32 [[PHI_I]], 1
 ; CHECK-NEXT:    [[GEP_FOR_CAST:%.*]] = bitcast float* [[PHI_SROA_PHI]] to i32*
-; CHECK-NEXT:    [[GEP_FOR_CAST_TO_I32]] = bitcast i32* [[GEP_FOR_CAST]] to float*
-; CHECK-NEXT:    [[GEP_FOR_CAST_TO_I32_SROA_GEP]] = getelementptr inbounds float, float* [[GEP_FOR_CAST_TO_I32]], i32 0
+; CHECK-NEXT:    [[GEP_FOR_CAST_TO_FLOAT]] = bitcast i32* [[GEP_FOR_CAST]] to float*
+; CHECK-NEXT:    [[GEP_FOR_CAST_TO_FLOAT_SROA_GEP]] = getelementptr inbounds float, float* [[GEP_FOR_CAST_TO_FLOAT]], i32 0
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[I]], 10
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[FOR]], label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_END:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_I32_SROA_CAST2]], [[ENTRY]] ], [ [[PHI]], [[FOR]] ]
+; CHECK-NEXT:    [[PHI_END:%.*]] = phi float* [ [[A_SROA_0_0_GEP_A_CAST_TO_FLOAT_SROA_CAST2]], [[ENTRY]] ], [ [[PHI]], [[FOR]] ]
 ; CHECK-NEXT:    [[PHI_END_1:%.*]] = bitcast float* [[PHI_END]] to i32*
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[PHI_END_1]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
