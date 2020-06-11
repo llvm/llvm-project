@@ -1730,7 +1730,13 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
     // executed in reverse order.
     OMPBeforeScanBlock = createBasicBlock("omp.before.scan.bb");
     OMPAfterScanBlock = createBasicBlock("omp.after.scan.bb");
-    OMPScanExitBlock = createBasicBlock("omp.exit.inscan.bb");
+    // No need to allocate inscan exit block, in simd mode it is selected in the
+    // codegen for the scan directive.
+    if (D.getDirectiveKind() != OMPD_simd &&
+        (!getLangOpts().OpenMPSimd ||
+         isOpenMPSimdDirective(D.getDirectiveKind()))) {
+      OMPScanExitBlock = createBasicBlock("omp.exit.inscan.bb");
+    }
     OMPScanDispatch = createBasicBlock("omp.inscan.dispatch");
     EmitBranch(OMPScanDispatch);
     EmitBlock(OMPBeforeScanBlock);
@@ -2083,6 +2089,15 @@ void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D,
   if (const auto *C = D.getSingleClause<OMPOrderClause>())
     if (C->getKind() == OMPC_ORDER_concurrent)
       LoopStack.setParallel(/*Enable=*/true);
+  if ((D.getDirectiveKind() == OMPD_simd ||
+       (getLangOpts().OpenMPSimd &&
+        isOpenMPSimdDirective(D.getDirectiveKind()))) &&
+      llvm::any_of(D.getClausesOfKind<OMPReductionClause>(),
+                   [](const OMPReductionClause *C) {
+                     return C->getModifier() == OMPC_REDUCTION_inscan;
+                   }))
+    // Disable parallel access in case of prefix sum.
+    LoopStack.setParallel(/*Enable=*/false);
 }
 
 void CodeGenFunction::EmitOMPSimdFinal(
@@ -2278,6 +2293,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
 }
 
 void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
+  ParentLoopDirectiveForScanRegion ScanRegion(*this, S);
+  OMPFirstScanLoop = true;
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
   };
@@ -4199,14 +4216,15 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
-  // Do not emit code for non-simd directives in simd-only mode.
-  if (getLangOpts().OpenMPSimd && !OMPParentLoopDirectiveForScan)
+  if (!OMPParentLoopDirectiveForScan)
     return;
   const OMPExecutableDirective &ParentDir = *OMPParentLoopDirectiveForScan;
+  bool IsInclusive = S.hasClausesOfKind<OMPInclusiveClause>();
   SmallVector<const Expr *, 4> Shareds;
   SmallVector<const Expr *, 4> Privates;
   SmallVector<const Expr *, 4> LHSs;
   SmallVector<const Expr *, 4> RHSs;
+  SmallVector<const Expr *, 4> ReductionOps;
   SmallVector<const Expr *, 4> CopyOps;
   SmallVector<const Expr *, 4> CopyArrayTemps;
   SmallVector<const Expr *, 4> CopyArrayElems;
@@ -4217,13 +4235,109 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
     Privates.append(C->privates().begin(), C->privates().end());
     LHSs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
     RHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
+    ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
     CopyOps.append(C->copy_ops().begin(), C->copy_ops().end());
     CopyArrayTemps.append(C->copy_array_temps().begin(),
                           C->copy_array_temps().end());
     CopyArrayElems.append(C->copy_array_elems().begin(),
                           C->copy_array_elems().end());
   }
-  bool IsInclusive = S.hasClausesOfKind<OMPInclusiveClause>();
+  if (ParentDir.getDirectiveKind() == OMPD_simd ||
+      (getLangOpts().OpenMPSimd &&
+       isOpenMPSimdDirective(ParentDir.getDirectiveKind()))) {
+    // For simd directive and simd-based directives in simd only mode, use the
+    // following codegen:
+    // int x = 0;
+    // #pragma omp simd reduction(inscan, +: x)
+    // for (..) {
+    //   <first part>
+    //   #pragma omp scan inclusive(x)
+    //   <second part>
+    //  }
+    // is transformed to:
+    // int x = 0;
+    // for (..) {
+    //   int x_priv = 0;
+    //   <first part>
+    //   x = x_priv + x;
+    //   x_priv = x;
+    //   <second part>
+    // }
+    // and
+    // int x = 0;
+    // #pragma omp simd reduction(inscan, +: x)
+    // for (..) {
+    //   <first part>
+    //   #pragma omp scan exclusive(x)
+    //   <second part>
+    // }
+    // to
+    // int x = 0;
+    // for (..) {
+    //   int x_priv = 0;
+    //   <second part>
+    //   int temp = x;
+    //   x = x_priv + x;
+    //   x_priv = temp;
+    //   <first part>
+    // }
+    llvm::BasicBlock *OMPScanReduce = createBasicBlock("omp.inscan.reduce");
+    EmitBranch(IsInclusive
+                   ? OMPScanReduce
+                   : BreakContinueStack.back().ContinueBlock.getBlock());
+    EmitBlock(OMPScanDispatch);
+    {
+      // New scope for correct construction/destruction of temp variables for
+      // exclusive scan.
+      LexicalScope Scope(*this, S.getSourceRange());
+      EmitBranch(IsInclusive ? OMPBeforeScanBlock : OMPAfterScanBlock);
+      EmitBlock(OMPScanReduce);
+      if (!IsInclusive) {
+        // Create temp var and copy LHS value to this temp value.
+        // TMP = LHS;
+        for (unsigned I = 0, E = CopyArrayElems.size(); I < E; ++I) {
+          const Expr *PrivateExpr = Privates[I];
+          const Expr *TempExpr = CopyArrayTemps[I];
+          EmitAutoVarDecl(
+              *cast<VarDecl>(cast<DeclRefExpr>(TempExpr)->getDecl()));
+          LValue DestLVal = EmitLValue(TempExpr);
+          LValue SrcLVal = EmitLValue(LHSs[I]);
+          EmitOMPCopy(PrivateExpr->getType(), DestLVal.getAddress(*this),
+                      SrcLVal.getAddress(*this),
+                      cast<VarDecl>(cast<DeclRefExpr>(LHSs[I])->getDecl()),
+                      cast<VarDecl>(cast<DeclRefExpr>(RHSs[I])->getDecl()),
+                      CopyOps[I]);
+        }
+      }
+      CGM.getOpenMPRuntime().emitReduction(
+          *this, ParentDir.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
+          {/*WithNowait=*/true, /*SimpleReduction=*/true, OMPD_simd});
+      for (unsigned I = 0, E = CopyArrayElems.size(); I < E; ++I) {
+        const Expr *PrivateExpr = Privates[I];
+        LValue DestLVal;
+        LValue SrcLVal;
+        if (IsInclusive) {
+          DestLVal = EmitLValue(RHSs[I]);
+          SrcLVal = EmitLValue(LHSs[I]);
+        } else {
+          const Expr *TempExpr = CopyArrayTemps[I];
+          DestLVal = EmitLValue(RHSs[I]);
+          SrcLVal = EmitLValue(TempExpr);
+        }
+        EmitOMPCopy(PrivateExpr->getType(), DestLVal.getAddress(*this),
+                    SrcLVal.getAddress(*this),
+                    cast<VarDecl>(cast<DeclRefExpr>(LHSs[I])->getDecl()),
+                    cast<VarDecl>(cast<DeclRefExpr>(RHSs[I])->getDecl()),
+                    CopyOps[I]);
+      }
+    }
+    EmitBranch(IsInclusive ? OMPAfterScanBlock : OMPBeforeScanBlock);
+    OMPScanExitBlock = IsInclusive
+                           ? BreakContinueStack.back().ContinueBlock.getBlock()
+                           : OMPScanReduce;
+    EmitBlock(OMPAfterScanBlock);
+    return;
+  }
   if (!IsInclusive) {
     EmitBranch(BreakContinueStack.back().ContinueBlock.getBlock());
     EmitBlock(OMPScanExitBlock);
@@ -6377,6 +6491,7 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     }
     if (isOpenMPSimdDirective(D.getDirectiveKind())) {
       (void)GlobalsScope.Privatize();
+      ParentLoopDirectiveForScanRegion ScanRegion(CGF, D);
       emitOMPSimdRegion(CGF, cast<OMPLoopDirective>(D), Action);
     } else {
       if (const auto *LD = dyn_cast<OMPLoopDirective>(&D)) {
