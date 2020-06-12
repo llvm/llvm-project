@@ -5744,6 +5744,35 @@ static bool parseTexFail(SDValue TexFailCtrl, SelectionDAG &DAG, SDValue *TFE,
   return Value == 0;
 }
 
+static void packImageA16AddressToDwords(SelectionDAG &DAG, SDValue Op,
+                                        MVT PackVectorVT,
+                                        SmallVectorImpl<SDValue> &PackedAddrs,
+                                        unsigned DimIdx, unsigned EndIdx,
+                                        unsigned NumGradients) {
+  SDLoc DL(Op);
+  for (unsigned I = DimIdx; I < EndIdx; I++) {
+    SDValue Addr = Op.getOperand(I);
+
+    // Gradients are packed with undef for each coordinate.
+    // In <hi 16 bit>,<lo 16 bit> notation, the registers look like this:
+    // 1D: undef,dx/dh; undef,dx/dv
+    // 2D: dy/dh,dx/dh; dy/dv,dx/dv
+    // 3D: dy/dh,dx/dh; undef,dz/dh; dy/dv,dx/dv; undef,dz/dv
+    if (((I + 1) >= EndIdx) ||
+        ((NumGradients / 2) % 2 == 1 && (I == DimIdx + (NumGradients / 2) - 1 ||
+                                         I == DimIdx + NumGradients - 1))) {
+      if (Addr.getValueType() != MVT::i16)
+        Addr = DAG.getBitcast(MVT::i16, Addr);
+      Addr = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Addr);
+    } else {
+      Addr = DAG.getBuildVector(PackVectorVT, DL, {Addr, Op.getOperand(I + 1)});
+      I++;
+    }
+    Addr = DAG.getBitcast(MVT::f32, Addr);
+    PackedAddrs.push_back(Addr);
+  }
+}
+
 SDValue SITargetLowering::lowerImage(SDValue Op,
                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                      SelectionDAG &DAG) const {
@@ -5763,6 +5792,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SmallVector<EVT, 3> ResultTypes(Op->value_begin(), Op->value_end());
   SmallVector<EVT, 3> OrigResultTypes(Op->value_begin(), Op->value_end());
   bool IsD16 = false;
+  bool IsG16 = false;
   bool IsA16 = false;
   SDValue VData;
   int NumVDataDwords;
@@ -5869,45 +5899,67 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
-  // Check for 16 bit addresses and pack if true.
-  unsigned DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
-  MVT VAddrVT = Op.getOperand(DimIdx).getSimpleValueType();
-  const MVT VAddrScalarVT = VAddrVT.getScalarType();
-  if (((VAddrScalarVT == MVT::f16) || (VAddrScalarVT == MVT::i16))) {
-    // Illegal to use a16 images
-    if (!ST->hasFeature(AMDGPU::FeatureR128A16) && !ST->hasFeature(AMDGPU::FeatureGFX10A16))
-      return Op;
+  // Push back extra arguments.
+  for (unsigned I = 0; I < BaseOpcode->NumExtraArgs; I++)
+    VAddrs.push_back(Op.getOperand(AddrIdx + I));
 
-    IsA16 = true;
-    const MVT VectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
-    for (unsigned i = AddrIdx; i < (AddrIdx + NumMIVAddrs); ++i) {
-      SDValue AddrLo;
-      // Push back extra arguments.
-      if (i < DimIdx) {
-        AddrLo = Op.getOperand(i);
-      } else {
-        // Dz/dh, dz/dv and the last odd coord are packed with undef. Also,
-        // in 1D, derivatives dx/dh and dx/dv are packed with undef.
-        if (((i + 1) >= (AddrIdx + NumMIVAddrs)) ||
-            ((NumGradients / 2) % 2 == 1 &&
-            (i == DimIdx + (NumGradients / 2) - 1 ||
-             i == DimIdx + NumGradients - 1))) {
-          AddrLo = Op.getOperand(i);
-          if (AddrLo.getValueType() != MVT::i16)
-            AddrLo = DAG.getBitcast(MVT::i16, Op.getOperand(i));
-          AddrLo = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, AddrLo);
-        } else {
-          AddrLo = DAG.getBuildVector(VectorVT, DL,
-                                      {Op.getOperand(i), Op.getOperand(i + 1)});
-          i++;
-        }
-        AddrLo = DAG.getBitcast(MVT::f32, AddrLo);
+  // Check for 16 bit addresses or derivatives and pack if true.
+  unsigned DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
+  unsigned CoordIdx = DimIdx + NumGradients;
+  unsigned CoordsEnd = AddrIdx + NumMIVAddrs;
+
+  MVT VAddrVT = Op.getOperand(DimIdx).getSimpleValueType();
+  MVT VAddrScalarVT = VAddrVT.getScalarType();
+  MVT PackVectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
+  IsG16 = VAddrScalarVT == MVT::f16 || VAddrScalarVT == MVT::i16;
+
+  VAddrVT = Op.getOperand(CoordIdx).getSimpleValueType();
+  VAddrScalarVT = VAddrVT.getScalarType();
+  IsA16 = VAddrScalarVT == MVT::f16 || VAddrScalarVT == MVT::i16;
+  if (IsA16 || IsG16) {
+    if (IsA16) {
+      if (!ST->hasA16()) {
+        LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
+                             "support 16 bit addresses\n");
+        return Op;
       }
-      VAddrs.push_back(AddrLo);
+      if (!IsG16) {
+        LLVM_DEBUG(
+            dbgs() << "Failed to lower image intrinsic: 16 bit addresses "
+                      "need 16 bit derivatives but got 32 bit derivatives\n");
+        return Op;
+      }
+    } else if (!ST->hasG16()) {
+      LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
+                           "support 16 bit derivatives\n");
+      return Op;
+    }
+
+    if (BaseOpcode->Gradients && !IsA16) {
+      if (!ST->hasG16()) {
+        LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
+                             "support 16 bit derivatives\n");
+        return Op;
+      }
+      // Activate g16
+      const AMDGPU::MIMGG16MappingInfo *G16MappingInfo =
+          AMDGPU::getMIMGG16MappingInfo(Intr->BaseOpcode);
+      IntrOpcode = G16MappingInfo->G16; // set new opcode to variant with _g16
+    }
+
+    // Don't compress addresses for G16
+    const int PackEndIdx = IsA16 ? CoordsEnd : CoordIdx;
+    packImageA16AddressToDwords(DAG, Op, PackVectorVT, VAddrs, DimIdx,
+                                PackEndIdx, NumGradients);
+
+    if (!IsA16) {
+      // Add uncompressed address
+      for (unsigned I = CoordIdx; I < CoordsEnd; I++)
+        VAddrs.push_back(Op.getOperand(I));
     }
   } else {
-    for (unsigned i = 0; i < NumMIVAddrs; ++i)
-      VAddrs.push_back(Op.getOperand(AddrIdx + i));
+    for (unsigned I = DimIdx; I < CoordsEnd; I++)
+      VAddrs.push_back(Op.getOperand(I));
   }
 
   // If the register allocator cannot place the address registers contiguously
