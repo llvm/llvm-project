@@ -59,12 +59,12 @@ private:
   bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
   bool processMemSet(MemSetInst *SI, BasicBlock::iterator &BBI);
   bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI);
-  bool processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI);
+  bool processMemMove(MemMoveInst *M);
   bool performCallSlotOptzn(Instruction *cpy, Value *cpyDst, Value *cpySrc,
                             uint64_t cpyLen, Align cpyAlign, CallInst *C);
-  Instruction *processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
-  Instruction *processMemSetMemCpyDependence(MemCpyInst *M, MemSetInst *MDep);
-  Instruction *performMemCpyToMemSetOptzn(MemCpyInst *M, MemSetInst *MDep);
+  bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
+  bool processMemSetMemCpyDependence(MemCpyInst *M, MemSetInst *MDep);
+  bool performMemCpyToMemSetOptzn(MemCpyInst *M, MemSetInst *MDep);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);

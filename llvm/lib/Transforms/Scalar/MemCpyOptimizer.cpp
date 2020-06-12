@@ -501,8 +501,6 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
   return true;
 }
 
-/// If changes are made, return true and set BBI to the next instruction to
-/// visit.
 bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   if (!SI->isSimple()) return false;
 
@@ -580,6 +578,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           LI->eraseFromParent();
           ++NumMemCpyInstr;
 
+          // Make sure we do not invalidate the iterator.
           BBI = M->getIterator();
           return true;
         }
@@ -643,7 +642,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   if (Value *ByteVal = isBytewiseValue(V, DL)) {
     if (Instruction *I = tryMergingIntoMemset(SI, SI->getPointerOperand(),
                                               ByteVal)) {
-      BBI = I->getIterator();
+      BBI = I->getIterator(); // Don't invalidate iterator.
       return true;
     }
 
@@ -663,6 +662,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       SI->eraseFromParent();
       NumMemSetInfer++;
 
+      // Make sure we do not invalidate the iterator.
       BBI = M->getIterator();
       return true;
     }
@@ -671,15 +671,13 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   return false;
 }
 
-/// If changes are made, return true and set BBI to the next instruction to
-/// visit.
 bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
   // See if there is another memset or store neighboring this memset which
   // allows us to widen out the memset to do a single larger store.
   if (isa<ConstantInt>(MSI->getLength()) && !MSI->isVolatile())
     if (Instruction *I = tryMergingIntoMemset(MSI, MSI->getDest(),
                                               MSI->getValue())) {
-      BBI = I->getIterator();
+      BBI = I->getIterator(); // Don't invalidate iterator.
       return true;
     }
   return false;
@@ -888,12 +886,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
 
 /// We've found that the (upward scanning) memory dependence of memcpy 'M' is
 /// the memcpy 'MDep'. Try to simplify M to copy from MDep's input if we can.
-Instruction *MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
-                                                          MemCpyInst *MDep) {
+bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
+                                                  MemCpyInst *MDep) {
   // We can only transforms memcpy's where the dest of one is the source of the
   // other.
   if (M->getSource() != MDep->getDest() || MDep->isVolatile())
-    return nullptr;
+    return false;
 
   // If dep instruction is reading from our current input, then it is a noop
   // transfer and substituting the input won't change this instruction.  Just
@@ -901,14 +899,14 @@ Instruction *MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   //    memcpy(a <- a)
   //    memcpy(b <- a)
   if (M->getSource() == MDep->getSource())
-    return nullptr;
+    return false;
 
   // Second, the length of the memcpy's must be the same, or the preceding one
   // must be larger than the following one.
   ConstantInt *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
   ConstantInt *MLen = dyn_cast<ConstantInt>(M->getLength());
   if (!MDepLen || !MLen || MDepLen->getZExtValue() < MLen->getZExtValue())
-    return nullptr;
+    return false;
 
   AliasAnalysis &AA = LookupAliasAnalysis();
 
@@ -928,7 +926,7 @@ Instruction *MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
       MD->getPointerDependencyFrom(MemoryLocation::getForSource(MDep), false,
                                    M->getIterator(), M->getParent());
   if (!SourceDep.isClobber() || SourceDep.getInst() != MDep)
-    return nullptr;
+    return false;
 
   // If the dest of the second might alias the source of the first, then the
   // source and dest might overlap.  We still want to eliminate the intermediate
@@ -945,21 +943,20 @@ Instruction *MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // TODO: Is this worth it if we're creating a less aligned memcpy? For
   // example we could be moving from movaps -> movq on x86.
   IRBuilder<> Builder(M);
-  Instruction *MC;
   if (UseMemMove)
-    MC = Builder.CreateMemMove(M->getRawDest(), M->getDestAlign(),
-                               MDep->getRawSource(), MDep->getSourceAlign(),
-                               M->getLength(), M->isVolatile());
+    Builder.CreateMemMove(M->getRawDest(), M->getDestAlign(),
+                          MDep->getRawSource(), MDep->getSourceAlign(),
+                          M->getLength(), M->isVolatile());
   else
-    MC = Builder.CreateMemCpy(M->getRawDest(), M->getDestAlign(),
-                              MDep->getRawSource(), MDep->getSourceAlign(),
-                              M->getLength(), M->isVolatile());
+    Builder.CreateMemCpy(M->getRawDest(), M->getDestAlign(),
+                         MDep->getRawSource(), MDep->getSourceAlign(),
+                         M->getLength(), M->isVolatile());
 
   // Remove the instruction we're replacing.
   MD->removeInstruction(M);
   M->eraseFromParent();
   ++NumMemCpyInstr;
-  return MC;
+  return true;
 }
 
 /// We've found that the (upward scanning) memory dependence of \p MemCpy is
@@ -976,18 +973,18 @@ Instruction *MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 ///   memcpy(dst, src, src_size);
 ///   memset(dst + src_size, c, dst_size <= src_size ? 0 : dst_size - src_size);
 /// \endcode
-Instruction *MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
-                                                          MemSetInst *MemSet) {
+bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
+                                                  MemSetInst *MemSet) {
   // We can only transform memset/memcpy with the same destination.
   if (MemSet->getDest() != MemCpy->getDest())
-    return nullptr;
+    return false;
 
   // Check that there are no other dependencies on the memset destination.
   MemDepResult DstDepInfo =
       MD->getPointerDependencyFrom(MemoryLocation::getForDest(MemSet), false,
                                    MemCpy->getIterator(), MemCpy->getParent());
   if (DstDepInfo.getInst() != MemSet)
-    return nullptr;
+    return false;
 
   // Use the same i8* dest as the memcpy, killing the memset dest if different.
   Value *Dest = MemCpy->getRawDest();
@@ -1019,14 +1016,14 @@ Instruction *MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
-  auto *MS = Builder.CreateMemSet(
+  Builder.CreateMemSet(
       Builder.CreateGEP(Dest->getType()->getPointerElementType(), Dest,
                         SrcSize),
       MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
 
   MD->removeInstruction(MemSet);
   MemSet->eraseFromParent();
-  return MS;
+  return true;
 }
 
 /// Determine whether the instruction has undefined content for the given Size,
@@ -1058,19 +1055,19 @@ static bool hasUndefContents(Instruction *I, ConstantInt *Size) {
 /// When dst2_size <= dst1_size.
 ///
 /// The \p MemCpy must have a Constant length.
-Instruction *MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
-                                                       MemSetInst *MemSet) {
+bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
+                                               MemSetInst *MemSet) {
   AliasAnalysis &AA = LookupAliasAnalysis();
 
   // Make sure that memcpy(..., memset(...), ...), that is we are memsetting and
   // memcpying from the same address. Otherwise it is hard to reason about.
   if (!AA.isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
-    return nullptr;
+    return false;
 
   // A known memset size is required.
   ConstantInt *MemSetSize = dyn_cast<ConstantInt>(MemSet->getLength());
   if (!MemSetSize)
-    return nullptr;
+    return false;
 
   // Make sure the memcpy doesn't read any more than what the memset wrote.
   // Don't worry about sizes larger than i64.
@@ -1086,12 +1083,13 @@ Instruction *MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
     if (DepInfo.isDef() && hasUndefContents(DepInfo.getInst(), CopySize))
       CopySize = MemSetSize;
     else
-      return nullptr;
+      return false;
   }
 
   IRBuilder<> Builder(MemCpy);
-  return Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                              CopySize, MaybeAlign(MemCpy->getDestAlignment()));
+  Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1), CopySize,
+                       MaybeAlign(MemCpy->getDestAlignment()));
+  return true;
 }
 
 /// Perform simplification of memcpy's.  If we have memcpy A
@@ -1099,49 +1097,40 @@ Instruction *MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
 /// circumstances). This allows later passes to remove the first memcpy
 /// altogether.
-/// If changes are made, return true and set BBI to the next instruction to
-/// visit.
 bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // We can only optimize non-volatile memcpy's.
   if (M->isVolatile()) return false;
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
+    ++BBI;
     MD->removeInstruction(M);
     M->eraseFromParent();
     return true;
   }
 
   // If copying from a constant, try to turn the memcpy into a memset.
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(M->getSource())) {
-    if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(M->getSource()))
+    if (GV->isConstant() && GV->hasDefinitiveInitializer())
       if (Value *ByteVal = isBytewiseValue(GV->getInitializer(),
                                            M->getModule()->getDataLayout())) {
         IRBuilder<> Builder(M);
-        auto *MS =
-            Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
-                                 MaybeAlign(M->getDestAlignment()), false);
+        Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
+                             MaybeAlign(M->getDestAlignment()), false);
         MD->removeInstruction(M);
         M->eraseFromParent();
         ++NumCpyToSet;
-        BBI = MS->getIterator();
         return true;
       }
-    }
-  }
 
   MemDepResult DepInfo = MD->getDependency(M);
 
   // Try to turn a partially redundant memset + memcpy into
   // memcpy + smaller memset.  We don't need the memcpy size for this.
-  if (DepInfo.isClobber()) {
-    if (MemSetInst *MDep = dyn_cast<MemSetInst>(DepInfo.getInst())) {
-      if (auto *MS = processMemSetMemCpyDependence(M, MDep)) {
-        BBI = MS->getIterator();
+  if (DepInfo.isClobber())
+    if (MemSetInst *MDep = dyn_cast<MemSetInst>(DepInfo.getInst()))
+      if (processMemSetMemCpyDependence(M, MDep))
         return true;
-      }
-    }
-  }
 
   // The optimizations after this point require the memcpy size.
   ConstantInt *CopySize = dyn_cast<ConstantInt>(M->getLength());
@@ -1174,13 +1163,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       SrcLoc, true, M->getIterator(), M->getParent());
 
   if (SrcDepInfo.isClobber()) {
-    if (MemCpyInst *MDep = dyn_cast<MemCpyInst>(SrcDepInfo.getInst())) {
-      if (auto *MC = processMemCpyMemCpyDependence(M, MDep)) {
-        BBI = MC->getIterator();
-        return true;
-      }
-      return false;
-    }
+    if (MemCpyInst *MDep = dyn_cast<MemCpyInst>(SrcDepInfo.getInst()))
+      return processMemCpyMemCpyDependence(M, MDep);
   } else if (SrcDepInfo.isDef()) {
     if (hasUndefContents(SrcDepInfo.getInst(), CopySize)) {
       MD->removeInstruction(M);
@@ -1192,11 +1176,10 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 
   if (SrcDepInfo.isClobber())
     if (MemSetInst *MDep = dyn_cast<MemSetInst>(SrcDepInfo.getInst()))
-      if (auto *MS = performMemCpyToMemSetOptzn(M, MDep)) {
+      if (performMemCpyToMemSetOptzn(M, MDep)) {
         MD->removeInstruction(M);
         M->eraseFromParent();
         ++NumCpyToSet;
-        BBI = MS->getIterator();
         return true;
       }
 
@@ -1205,9 +1188,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 
 /// Transforms memmove calls to memcpy calls when the src/dst are guaranteed
 /// not to alias.
-/// If changes are made, return true and set BBI to the next instruction to
-/// visit.
-bool MemCpyOptPass::processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI) {
+bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
   AliasAnalysis &AA = LookupAliasAnalysis();
 
   if (!TLI->has(LibFunc_memmove))
@@ -1233,7 +1214,6 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI) {
   MD->removeInstruction(M);
 
   ++NumMoveToCpy;
-  BBI = M->getIterator();
   return true;
 }
 
@@ -1336,18 +1316,27 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
         // Avoid invalidating the iterator.
       Instruction *I = &*BI++;
 
+      bool RepeatInstruction = false;
+
       if (StoreInst *SI = dyn_cast<StoreInst>(I))
         MadeChange |= processStore(SI, BI);
       else if (MemSetInst *M = dyn_cast<MemSetInst>(I))
-        MadeChange = processMemSet(M, BI);
+        RepeatInstruction = processMemSet(M, BI);
       else if (MemCpyInst *M = dyn_cast<MemCpyInst>(I))
-        MadeChange = processMemCpy(M, BI);
+        RepeatInstruction = processMemCpy(M, BI);
       else if (MemMoveInst *M = dyn_cast<MemMoveInst>(I))
-        MadeChange = processMemMove(M, BI);
+        RepeatInstruction = processMemMove(M);
       else if (auto *CB = dyn_cast<CallBase>(I)) {
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
           if (CB->isByValArgument(i))
             MadeChange |= processByValArgument(*CB, i);
+      }
+
+      // Reprocess the instruction if desired.
+      if (RepeatInstruction) {
+        if (BI != BB.begin())
+          --BI;
+        MadeChange = true;
       }
     }
   }
