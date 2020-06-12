@@ -749,9 +749,19 @@ template <typename T> bool Equivalent(T l, T r) { return l == r; }
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   return l.GetMangledTypeName() == r.GetMangledTypeName();
 } // namespace
-/// This one is particularly taylored for GetName() and GetDisplayName().
+/// This one is particularly taylored for GetTypeName() and
+/// GetDisplayTypeName().
+///
+/// String divergences are mostly cosmetic in nature and usually
+/// TypeSystemSwiftTypeRef is returning more accurate results. They only really
+/// matter for GetTypeName() and there only if there is a data formatter
+/// matching that name.
 template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   if (l != r) {
+    // Failure. Dump it for easier debugging.
+    llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
+                 << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
+
     // For some reason the Swift type dumper doesn't attach a module
     // name to the AnyObject protocol, and only that one.
     std::string l_prime = std::regex_replace(
@@ -784,8 +794,9 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
     if (llvm::StringRef(l_prime) == r.GetStringRef())
       return true;
 
-    // Failure. Dump it for easier debugging.
-    llvm::dbgs() << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
+#ifndef STRICT_VALIDATION
+    return true;
+#endif
   }
   return l == r;
 }
