@@ -3408,7 +3408,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
               TII.get(TargetOpcode::COPY), VA.getLocReg()).addReg(ArgReg);
       OutRegs.push_back(VA.getLocReg());
     } else {
-      assert(VA.isMemLoc());
+      assert(VA.isMemLoc() && "Unknown value location!");
 
       // Don't emit stores for undef values.
       if (isa<UndefValue>(ArgVal))
