@@ -142,7 +142,7 @@ bool AArch64SLSHardening::hardenReturnsAndBRs(MachineBasicBlock &MBB) const {
 
 static const char SLSBLRNamePrefix[] = "__llvm_slsblr_thunk_";
 
-static std::array<const char *, 29> SLSBLRThunkNames{
+static std::array<const char *, 29> SLSBLRThunkNames{{
     "__llvm_slsblr_thunk_x0",  "__llvm_slsblr_thunk_x1",
     "__llvm_slsblr_thunk_x2",  "__llvm_slsblr_thunk_x3",
     "__llvm_slsblr_thunk_x4",  "__llvm_slsblr_thunk_x5",
@@ -163,14 +163,14 @@ static std::array<const char *, 29> SLSBLRThunkNames{
     // X30 is deliberately missing, for similar reasons as X16 and X17 are
     // missing.
     "__llvm_slsblr_thunk_x31",
-};
-static std::array<unsigned, 29> SLSBLRThunkRegs{
+}};
+static std::array<unsigned, 29> SLSBLRThunkRegs{{
     AArch64::X0,  AArch64::X1,  AArch64::X2,  AArch64::X3,  AArch64::X4,
     AArch64::X5,  AArch64::X6,  AArch64::X7,  AArch64::X8,  AArch64::X9,
     AArch64::X10, AArch64::X11, AArch64::X12, AArch64::X13, AArch64::X14,
     AArch64::X15, AArch64::X18, AArch64::X19, AArch64::X20, AArch64::X21,
     AArch64::X22, AArch64::X23, AArch64::X24, AArch64::X25, AArch64::X26,
-    AArch64::X27, AArch64::X28, AArch64::FP,  AArch64::XZR};
+    AArch64::X27, AArch64::X28, AArch64::FP,  AArch64::XZR}};
 
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
