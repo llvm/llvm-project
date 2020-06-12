@@ -4395,6 +4395,7 @@ LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
   auto R = MIRBuilder.buildSelect(S32, RCmp, One, Select0);
   MIRBuilder.buildAdd(Dst, V, R);
 
+  MI.eraseFromParent();
   return Legalized;
 }
 
@@ -4467,6 +4468,7 @@ LegalizerHelper::lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     auto SignNotZero = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, S,
                                             MIRBuilder.buildConstant(S64, 0));
     MIRBuilder.buildSelect(Dst, SignNotZero, RNeg, R);
+    MI.eraseFromParent();
     return Legalized;
   }
 
