@@ -341,6 +341,13 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
           return false;
         }
 
+        unsigned ArgNo = CB.getArgOperandNo(&UI);
+        if (CB.isByValArgument(ArgNo)) {
+          US.updateRange(getAccessRange(
+              UI, Ptr, DL.getTypeStoreSize(CB.getParamByValType(ArgNo))));
+          break;
+        }
+
         // FIXME: consult devirt?
         // Do not follow aliases, otherwise we could inadvertently follow
         // dso_preemptable aliases or aliases with interposable linkage.
@@ -352,8 +359,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
-        US.Calls.emplace_back(Callee, CB.getArgOperandNo(&UI),
-                              offsetFrom(UI, Ptr));
+        US.Calls.emplace_back(Callee, ArgNo, offsetFrom(UI, Ptr));
         break;
       }
 
@@ -382,7 +388,9 @@ FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
   }
 
   for (Argument &A : make_range(F.arg_begin(), F.arg_end())) {
-    if (A.getType()->isPointerTy()) {
+    // Non pointers and bypass arguments are not going to be used in any global
+    // processing.
+    if (A.getType()->isPointerTy() && !A.hasByValAttr()) {
       auto &UI = Info.Params.emplace(A.getArgNo(), PointerSize).first->second;
       analyzeAllUses(&A, UI);
     }
