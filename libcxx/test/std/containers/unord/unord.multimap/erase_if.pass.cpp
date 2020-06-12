@@ -14,6 +14,7 @@
 //   erase_if(unordered_multimap<Key, T, Hash, Pred, Allocator>& c, Predicate pred);
 
 #include <unordered_map>
+#include <algorithm>
 
 #include "test_macros.h"
 #include "test_allocator.h"
