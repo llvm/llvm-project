@@ -40,6 +40,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -2106,6 +2107,32 @@ void BuiltinBug::anchor() {}
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
 
+static bool isDependency(const CheckerRegistry &Registry,
+                         StringRef CheckerName) {
+  for (const std::pair<StringRef, StringRef> &Pair : Registry.Dependencies) {
+    if (Pair.second == CheckerName)
+      return true;
+  }
+  return false;
+}
+
+PathSensitiveBugReport::PathSensitiveBugReport(
+    const BugType &bt, StringRef shortDesc, StringRef desc,
+    const ExplodedNode *errorNode, PathDiagnosticLocation LocationToUnique,
+    const Decl *DeclToUnique)
+    : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
+      ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
+      UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(!isDependency(ErrorNode->getState()
+                           ->getAnalysisManager()
+                           .getCheckerManager()
+                           ->getCheckerRegistry(),
+                       bt.getCheckerName()) &&
+         "Some checkers depend on this one! We don't allow dependency "
+         "checkers to emit warnings, because checkers should depend on "
+         "*modeling*, not *diagnostics*.");
+}
+
 void PathSensitiveBugReport::addVisitor(
     std::unique_ptr<BugReporterVisitor> visitor) {
   if (!visitor)
@@ -2194,12 +2221,12 @@ static void insertToInterestingnessMap(
       return;
     case bugreporter::TrackingKind::Condition:
       return;
-  }
+    }
 
-  llvm_unreachable(
-      "BugReport::markInteresting currently can only handle 2 different "
-      "tracking kinds! Please define what tracking kind should this entitiy"
-      "have, if it was already marked as interesting with a different kind!");
+    llvm_unreachable(
+        "BugReport::markInteresting currently can only handle 2 different "
+        "tracking kinds! Please define what tracking kind should this entitiy"
+        "have, if it was already marked as interesting with a different kind!");
 }
 
 void PathSensitiveBugReport::markInteresting(SymbolRef sym,
