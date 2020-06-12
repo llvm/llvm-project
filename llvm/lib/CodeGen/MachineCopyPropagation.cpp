@@ -51,6 +51,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
@@ -113,7 +114,8 @@ public:
     // Since Reg might be a subreg of some registers, only invalidate Reg is not
     // enough. We have to find the COPY defines Reg or registers defined by Reg
     // and invalidate all of them.
-    DenseSet<unsigned> RegsToInvalidate{Reg};
+    SmallSet<unsigned, 8> RegsToInvalidate;
+    RegsToInvalidate.insert(Reg);
     for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI) {
       auto I = Copies.find(*RUI);
       if (I != Copies.end()) {
