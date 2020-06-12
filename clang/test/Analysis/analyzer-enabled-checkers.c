@@ -6,7 +6,6 @@
 
 // CHECK:      OVERVIEW: Clang Static Analyzer Enabled Checkers List
 // CHECK-EMPTY:
-// CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: apiModeling.StdCLibraryFunctions
 // CHECK-NEXT: apiModeling.TrustNonnull
@@ -15,6 +14,7 @@
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
 // CHECK-NEXT: core.StackAddrEscapeBase
