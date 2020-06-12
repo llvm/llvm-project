@@ -1,4 +1,4 @@
-//===- PassDetail.h - Optimizer Transforms Pass class details ---*- C++ -*-===//
+//===- PassDetail.h - Optimizer code gen Pass class details -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTMIZER_TRANSFORMS_PASSDETAIL_H_
-#define OPTMIZER_TRANSFORMS_PASSDETAIL_H_
+#ifndef OPTMIZER_CODEGEN_PASSDETAIL_H
+#define OPTMIZER_CODEGEN_PASSDETAIL_H
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -15,8 +15,8 @@
 namespace fir {
 
 #define GEN_PASS_CLASSES
-#include "flang/Optimizer/Transforms/Passes.h.inc"
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
 
 } // namespace fir
 
-#endif // OPTMIZER_TRANSFORMS_PASSDETAIL_H_
+#endif // OPTMIZER_CODEGEN_PASSDETAIL_H

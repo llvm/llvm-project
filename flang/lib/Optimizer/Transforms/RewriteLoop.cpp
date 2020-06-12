@@ -269,7 +269,7 @@ public:
     auto *context = &getContext();
     mlir::OwningRewritePatternList patterns;
     patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(context);
-    mlir::ConversionTarget target = *context;
+    mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
                            mlir::StandardOpsDialect>();
 

@@ -301,9 +301,8 @@ void BasicCSE::runOnFunction() {
     simplifyRegion(knownValues, getAnalysis<DominanceInfo>(),
                    getFunction().getBody());
   }
-  if (!leaveEffects) {
+  if (!leaveEffects)
     cleanupRegion(getFunction().getBody());
-  }
 
   // If no operations were erased, then we mark all analyses as preserved.
   if (opsToErase.empty())
