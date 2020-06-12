@@ -76,7 +76,7 @@ void ToyToAffineLoweringPass::runOnFunction() {
 
 Above, we first set the toy dialect to illegal, and then the print operation
 as legal. We could have done this the other way around.
-Individual operations always take precendence over the (more generic) dialect
+Individual operations always take precedence over the (more generic) dialect
 definitions, so the order doesn't matter. See `ConversionTarget::getOpInfo`
 for the details.
 
@@ -336,7 +336,7 @@ func @main() {
 
 Here, we can see that a redundant allocation was removed, the two loop nests
 were fused, and some unnecessary `load`s were removed. You can build `toyc-ch5`
-and try yourself: `toyc-ch5 test/Examples/Toy/Ch5/affine-lowering.mlir 
+and try yourself: `toyc-ch5 test/Examples/Toy/Ch5/affine-lowering.mlir
 -emit=mlir-affine`. We can also check our optimizations by adding `-opt`.
 
 In this chapter we explored some aspects of partial lowering, with the intent to
