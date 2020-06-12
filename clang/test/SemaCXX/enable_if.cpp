@@ -414,8 +414,8 @@ static_assert(templated<1>() == 1, "");
 
 template <int N> constexpr int callTemplated() { return templated<N>(); }
 
-constexpr int B = 10 + // the carat for the error should be pointing to the problematic call (on the next line), not here.
-    callTemplated<0>(); // expected-error{{initialized by a constant expression}} expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}}
+constexpr int B = 10 + // expected-error {{initialized by a constant expression}}
+    callTemplated<0>(); // expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}} expected-note {{in call to 'callTemplated()'}} expected-note@-3 {{subexpression not valid in a constant expression}}
 static_assert(callTemplated<1>() == 1, "");
 }
 
