@@ -112,7 +112,7 @@ bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
 }
 
 void DWARFUnitIndex::Header::dump(raw_ostream &OS) const {
-  OS << format("version = %u slots = %u\n\n", Version, NumBuckets);
+  OS << format("version = %u, units = %u, slots = %u\n\n", Version, NumUnits, NumBuckets);
 }
 
 bool DWARFUnitIndex::parse(DataExtractor IndexData) {
