@@ -1429,10 +1429,37 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         continue;
       }
 
-      // Some targets (like WebAssembly) have a special prelude at the start
-      // of each symbol.
-      DisAsm->onSymbolStart(SymbolName, Size, Bytes.slice(Start, End - Start),
-                            SectionAddr + Start, CommentStream);
+      auto Status = DisAsm->onSymbolStart(SymbolName, Size,
+                                          Bytes.slice(Start, End - Start),
+                                          SectionAddr + Start, CommentStream);
+      // To have round trippable disassembly, we fall back to decoding the
+      // remaining bytes as instructions.
+      //
+      // If there is a failure, we disassemble the failed region as bytes before
+      // falling back. The target is expected to print nothing in this case.
+      //
+      // If there is Success or SoftFail i.e no 'real' failure, we go ahead by
+      // Size bytes before falling back.
+      // So if the entire symbol is 'eaten' by the target:
+      //   Start += Size  // Now Start = End and we will never decode as
+      //                  // instructions
+      //
+      // Right now, most targets return None i.e ignore to treat a symbol
+      // separately. But WebAssembly decodes preludes for some symbols.
+      //
+      if (Status.hasValue()) {
+        if (Status.getValue() == MCDisassembler::Fail) {
+          outs() << "// Error in decoding " << SymbolName
+                 << " : Decoding failed region as bytes.\n";
+          for (uint64_t I = 0; I < Size; ++I) {
+            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                   << "\n";
+          }
+        }
+      } else {
+        Size = 0;
+      }
+
       Start += Size;
 
       Index = Start;
