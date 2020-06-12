@@ -17,11 +17,10 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/OptPasses.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
-#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -247,6 +246,7 @@ static void convertFortranSourceToMLIR(
 
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
+    pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
@@ -277,7 +277,7 @@ static void convertFortranSourceToMLIR(
 int main(int argc, char **argv) {
   fir::registerFIR();
   fir::registerFIRPasses();
-  fir::registerOptTransformPasses();
+  fir::registerOptPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
 
   mlir::registerPassManagerCLOptions();

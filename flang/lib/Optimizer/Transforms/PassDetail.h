@@ -17,6 +17,6 @@ namespace fir {
 #define GEN_PASS_CLASSES
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace fir
 
 #endif // OPTMIZER_TRANSFORMS_PASSDETAIL_H_

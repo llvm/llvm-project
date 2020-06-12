@@ -556,6 +556,17 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
   return mlir::success();
 }
 
+/// Get the dims argument to the embox op. If there was no dims argument (i.e.,
+/// the box is on a scalar), then return an null value.
+mlir::Value fir::EmboxOp::getDims() {
+  auto size = dims().size();
+  if (size > 0) {
+    assert(size == 1 && "incorrect number of dims arguments");
+    return *dims().begin();
+  }
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // GenTypeDescOp
 //===----------------------------------------------------------------------===//
@@ -1844,6 +1855,64 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
   term = elseRegion().front().getTerminator();
   if (resultNum < term->getNumOperands())
     results.push_back(term->getOperand(resultNum));
+}
+
+//===----------------------------------------------------------------------===//
+// Internal ops
+//===----------------------------------------------------------------------===//
+
+void fir::XArrayCoorOp::build(mlir::OpBuilder &builder, OperationState &result,
+                              mlir::Type ty, mlir::Value memref,
+                              mlir::ValueRange dims, mlir::ValueRange indices,
+                              llvm::ArrayRef<mlir::NamedAttribute> attr) {
+  result.addOperands(memref);
+  result.addOperands(dims);
+  result.addOperands(indices);
+  result.addTypes(ty);
+  result.addAttributes(attr);
+}
+
+mlir::Operation::operand_range fir::XArrayCoorOp::dimsOperands() {
+  auto first = std::next(getOperation()->operand_begin());
+  auto off = getAttrOfType<mlir::IntegerAttr>(dimsAttrName()).getInt();
+  return {first, first + off};
+}
+
+mlir::Operation::operand_range fir::XArrayCoorOp::indexOperands() {
+  auto off = getAttrOfType<mlir::IntegerAttr>(dimsAttrName()).getInt();
+  auto first = std::next(getOperation()->operand_begin() + off);
+  return {first, getOperation()->operand_end()};
+}
+
+unsigned fir::XArrayCoorOp::getRank() {
+  return getAttrOfType<mlir::IntegerAttr>(rankAttrName()).getInt();
+}
+
+void fir::XEmboxOp::build(mlir::OpBuilder &builder, OperationState &result,
+                          mlir::Type ty, mlir::Value memref,
+                          mlir::ValueRange lenParams, mlir::ValueRange dims,
+                          llvm::ArrayRef<mlir::NamedAttribute> attr) {
+  result.addOperands(memref);
+  result.addOperands(lenParams);
+  result.addOperands(dims);
+  result.addTypes(ty);
+  result.addAttributes(attr);
+}
+
+mlir::Operation::operand_range fir::XEmboxOp::lenParamOperands() {
+  auto first = std::next(getOperation()->operand_begin());
+  auto off = getAttrOfType<mlir::IntegerAttr>(lenParamAttrName()).getInt();
+  return {first, first + off};
+}
+
+mlir::Operation::operand_range fir::XEmboxOp::dimsOperands() {
+  auto off = getAttrOfType<mlir::IntegerAttr>(lenParamAttrName()).getInt();
+  auto first = std::next(getOperation()->operand_begin() + off);
+  return {first, getOperation()->operand_end()};
+}
+
+unsigned fir::XEmboxOp::getRank() {
+  return getAttrOfType<mlir::IntegerAttr>(rankAttrName()).getInt();
 }
 
 //===----------------------------------------------------------------------===//
