@@ -180,7 +180,7 @@ static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
     return false;
 
   for (size_t i = 0, e = FromVersionArray.size(); i != e; ++i) {
-    if (!(FromVersionArray[i] == ToVersionArray[i]))
+    if (FromVersionArray[i] != ToVersionArray[i])
       return false;
   }
 
