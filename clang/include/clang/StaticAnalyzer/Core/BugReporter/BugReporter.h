@@ -19,7 +19,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -136,7 +135,7 @@ protected:
   SmallVector<FixItHint, 4> Fixits;
 
   BugReport(Kind kind, const BugType &bt, StringRef desc)
-      : BugReport(kind, bt, "", desc) {}
+      : K(kind), BT(bt), Description(desc) {}
 
   BugReport(Kind K, const BugType &BT, StringRef ShortDescription,
             StringRef Description)
@@ -370,13 +369,16 @@ protected:
 public:
   PathSensitiveBugReport(const BugType &bt, StringRef desc,
                          const ExplodedNode *errorNode)
-      : PathSensitiveBugReport(bt, desc, desc, errorNode) {}
+      : BugReport(Kind::PathSensitive, bt, desc), ErrorNode(errorNode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
   PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
                          const ExplodedNode *errorNode)
-      : PathSensitiveBugReport(bt, shortDesc, desc, errorNode,
-                               /*LocationToUnique*/ {},
-                               /*DeclToUnique*/ nullptr) {}
+      : BugReport(Kind::PathSensitive, bt, shortDesc, desc),
+        ErrorNode(errorNode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange()
+                                 : SourceRange()) {}
 
   /// Create a PathSensitiveBugReport with a custom uniqueing location.
   ///
@@ -389,13 +391,11 @@ public:
                          const ExplodedNode *errorNode,
                          PathDiagnosticLocation LocationToUnique,
                          const Decl *DeclToUnique)
-      : PathSensitiveBugReport(bt, desc, desc, errorNode, LocationToUnique,
-                               DeclToUnique) {}
-
-  PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
-                         const ExplodedNode *errorNode,
-                         PathDiagnosticLocation LocationToUnique,
-                         const Decl *DeclToUnique);
+      : BugReport(Kind::PathSensitive, bt, desc), ErrorNode(errorNode),
+        ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
+        UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+    assert(errorNode);
+  }
 
   static bool classof(const BugReport *R) {
     return R->getKind() == Kind::PathSensitive;

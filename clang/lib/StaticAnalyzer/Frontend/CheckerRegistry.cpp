@@ -94,10 +94,6 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &Checker,
 // Methods of CmdLineOption, PackageInfo and CheckerInfo.
 //===----------------------------------------------------------------------===//
 
-LLVM_DUMP_METHOD void CheckerRegistry::CmdLineOption::dump() const {
-  dumpToStream(llvm::errs());
-}
-
 LLVM_DUMP_METHOD void
 CheckerRegistry::CmdLineOption::dumpToStream(llvm::raw_ostream &Out) const {
   // The description can be just checked in Checkers.inc, the point here is to
@@ -117,10 +113,6 @@ static StringRef toString(CheckerRegistry::StateFromCmdLine Kind) {
     return "Unspecified";
   }
   llvm_unreachable("Unhandled CheckerRegistry::StateFromCmdLine enum");
-}
-
-LLVM_DUMP_METHOD void CheckerRegistry::CheckerInfo::dump() const {
-  dumpToStream(llvm::errs());
 }
 
 LLVM_DUMP_METHOD void
@@ -143,10 +135,6 @@ CheckerRegistry::CheckerInfo::dumpToStream(llvm::raw_ostream &Out) const {
   for (const CheckerInfo *Dependency : WeakDependencies) {
     Out << "    " << Dependency->FullName << '\n';
   }
-}
-
-LLVM_DUMP_METHOD void CheckerRegistry::PackageInfo::dump() const {
-  dumpToStream(llvm::errs());
 }
 
 LLVM_DUMP_METHOD void
