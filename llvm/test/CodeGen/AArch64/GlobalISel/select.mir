@@ -10,10 +10,6 @@
     ret void
   }
 
-  define i8* @ptr_add(i8* %in) { ret i8* undef }
-  define i8* @ptr_add_no_constant(i8* %in) { ret i8* undef }
-  define i8* @ptr_add_bad_imm(i8* %in) { ret i8* undef }
-
   define i8* @ptr_mask(i8* %in) { ret i8* undef }
 
   @var_local = global i8 0
@@ -53,70 +49,6 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: ptr_add
-name:            ptr_add
-legalized:       true
-regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-
-# CHECK:  body:
-# CHECK: %{{[0-9]+}}:gpr64sp = ADDXri %{{[0-9]+}}, 42, 0
-body:             |
-  bb.0:
-      liveins: $x0
-    %0(p0) = COPY $x0
-    %1(s64) = G_CONSTANT i64 42
-    %2(p0) = G_PTR_ADD %0, %1(s64)
-    $x0 = COPY %2(p0)
-...
-
----
-# CHECK-LABEL: name: ptr_add_no_constant
-name:            ptr_add_no_constant
-legalized:       true
-regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-
-# CHECK:  body:
-# CHECK: %{{[0-9]+}}:gpr64 = ADDXrr %{{[0-9]+}}, %{{[0-9]+}}
-body:             |
-  bb.0:
-      liveins: $x0, $x1
-    %0(p0) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(p0) = G_PTR_ADD %0, %1(s64)
-    $x0 = COPY %2(p0)
-...
-
----
-# CHECK-LABEL: name: ptr_add_bad_imm
-name:            ptr_add_bad_imm
-legalized:       true
-regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-
-# CHECK:  body:
-# CHECK: %0:gpr64 = COPY $x0
-# CHECK: %4:gpr32 = MOVi32imm 10000
-# CHECK: %1:gpr64 = SUBREG_TO_REG 0, %4, %subreg.sub_32
-# CHECK: %{{[0-9]+}}:gpr64 = ADDXrr %0, %1
-body:             |
-  bb.0:
-      liveins: $x0, $x1
-    %0(p0) = COPY $x0
-    %1(s64) = G_CONSTANT i64 10000
-    %2(p0) = G_PTR_ADD %0, %1(s64)
-    $x0 = COPY %2(p0)
-...
 
 ---
 # CHECK-LABEL: name: ptr_mask

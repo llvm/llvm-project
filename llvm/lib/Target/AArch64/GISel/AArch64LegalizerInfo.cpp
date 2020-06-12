@@ -108,7 +108,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .legalFor({{p0, s64}})
+      .legalFor({{p0, s64}, {v2p0, v2s64}})
       .clampScalar(1, s64, s64);
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
