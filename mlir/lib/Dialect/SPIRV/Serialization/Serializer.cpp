@@ -227,9 +227,9 @@ private:
   }
 
   /// Process member decoration
-  LogicalResult processMemberDecoration(
-      uint32_t structID,
-      const spirv::StructType::MemberDecorationInfo &memberDecorationInfo);
+  LogicalResult processMemberDecoration(uint32_t structID, uint32_t memberIndex,
+                                        spirv::Decoration decorationType,
+                                        ArrayRef<uint32_t> values = {});
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -736,14 +736,14 @@ LogicalResult Serializer::processTypeDecoration<spirv::RuntimeArrayType>(
   return success();
 }
 
-LogicalResult Serializer::processMemberDecoration(
-    uint32_t structID,
-    const spirv::StructType::MemberDecorationInfo &memberDecoration) {
+LogicalResult
+Serializer::processMemberDecoration(uint32_t structID, uint32_t memberIndex,
+                                    spirv::Decoration decorationType,
+                                    ArrayRef<uint32_t> values) {
   SmallVector<uint32_t, 4> args(
-      {structID, memberDecoration.memberIndex,
-       static_cast<uint32_t>(memberDecoration.decoration)});
-  if (memberDecoration.hasValue) {
-    args.push_back(memberDecoration.decorationValue);
+      {structID, memberIndex, static_cast<uint32_t>(decorationType)});
+  if (!values.empty()) {
+    args.append(values.begin(), values.end());
   }
   return encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate,
                                args);
@@ -1070,7 +1070,7 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
   }
 
   if (auto structType = type.dyn_cast<spirv::StructType>()) {
-    bool hasOffset = structType.hasOffset();
+    bool hasLayout = structType.hasLayout();
     for (auto elementIndex :
          llvm::seq<uint32_t>(0, structType.getNumElements())) {
       uint32_t elementTypeID = 0;
@@ -1079,12 +1079,11 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
         return failure();
       }
       operands.push_back(elementTypeID);
-      if (hasOffset) {
+      if (hasLayout) {
         // Decorate each struct member with an offset
-        spirv::StructType::MemberDecorationInfo offsetDecoration{
-            elementIndex, /*hasValue=*/1, spirv::Decoration::Offset,
-            static_cast<uint32_t>(structType.getMemberOffset(elementIndex))};
-        if (failed(processMemberDecoration(resultID, offsetDecoration))) {
+        if (failed(processMemberDecoration(
+                resultID, elementIndex, spirv::Decoration::Offset,
+                static_cast<uint32_t>(structType.getOffset(elementIndex))))) {
           return emitError(loc, "cannot decorate ")
                  << elementIndex << "-th member of " << structType
                  << " with its offset";
@@ -1094,11 +1093,11 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
     SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
     structType.getMemberDecorations(memberDecorations);
     for (auto &memberDecoration : memberDecorations) {
-      if (failed(processMemberDecoration(resultID, memberDecoration))) {
+      if (failed(processMemberDecoration(resultID, memberDecoration.first,
+                                         memberDecoration.second))) {
         return emitError(loc, "cannot decorate ")
-               << static_cast<uint32_t>(memberDecoration.memberIndex)
-               << "-th member of " << structType << " with "
-               << stringifyDecoration(memberDecoration.decoration);
+               << memberDecoration.first << "-th member of " << structType
+               << " with " << stringifyDecoration(memberDecoration.second);
       }
     }
     typeEnum = spirv::Opcode::OpTypeStruct;
