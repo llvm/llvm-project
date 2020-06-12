@@ -84,8 +84,3 @@ include $(LEVEL)/Makefile.rules
 
         self.expect('run', substrs=['return x + y - z'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

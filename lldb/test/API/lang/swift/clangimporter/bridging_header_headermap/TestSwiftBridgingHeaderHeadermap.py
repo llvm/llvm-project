@@ -55,9 +55,3 @@ class TestSwiftBridgingHeaderHeadermap(TestBase):
                     substrs=['(dylib.C<a.Wrapper>.Something)', "hello"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

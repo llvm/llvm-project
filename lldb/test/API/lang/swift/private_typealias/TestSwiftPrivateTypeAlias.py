@@ -62,8 +62,3 @@ class TestSwiftPrivateTypeAlias(TestBase):
         lldbutil.check_variable(self, child_0, False, '"hello"')
         lldbutil.check_variable(self, child_1, False, value='234')
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

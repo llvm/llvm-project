@@ -349,9 +349,3 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.dbg.HandleCommand(
             "settings clear target.process.thread.step-avoid-libraries")
         super(TestSwiftStepping, self).tearDown()
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

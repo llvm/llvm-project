@@ -62,8 +62,3 @@ class TestSwiftCoreGraphicsTypes(TestBase):
                 'height : 0.0'])
 
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

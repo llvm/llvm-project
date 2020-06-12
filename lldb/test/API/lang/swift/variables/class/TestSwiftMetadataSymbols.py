@@ -49,8 +49,3 @@ class TestSwiftMetadataSymbols(TestBase):
                     patterns=['Metadata.*type metadata for'])
 
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lambda: lldb.SBDebugger.Terminate())
-    unittest2.main()

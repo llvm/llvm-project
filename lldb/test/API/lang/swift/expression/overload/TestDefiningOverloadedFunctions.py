@@ -65,8 +65,3 @@ class TestDefiningOverloadedFunctions(TestBase):
         self.check_expression('$overload(10)', '1', False)
         self.check_expression('$overload("some string")', '2', False)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

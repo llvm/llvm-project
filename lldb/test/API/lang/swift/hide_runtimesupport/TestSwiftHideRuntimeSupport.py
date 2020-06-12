@@ -89,10 +89,3 @@ class TestSwiftHideRuntimeSupport(TestBase):
             'frame variable -d run',
             substrs=['_0_0'],
             matching=False)
-
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

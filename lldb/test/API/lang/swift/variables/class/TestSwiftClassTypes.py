@@ -68,8 +68,3 @@ class TestSwiftClassTypes(TestBase):
                              '(Int) x = 12',
                              '(Float) y = 2.25'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

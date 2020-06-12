@@ -87,8 +87,3 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertTrue(var_a_c.IsValid(), "make sure a.c does exist")
         lldbutil.check_variable(self, var_a_c, False, value='12.125')
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

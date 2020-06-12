@@ -80,8 +80,3 @@ class TestSwiftPrivateDeclName(TestBase):
         lldbutil.check_variable(self, child_b, False, '"goodbye"')
         lldbutil.check_variable(self, child_c, False, value='1.25')
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

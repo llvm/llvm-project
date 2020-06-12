@@ -100,8 +100,3 @@ class TestExclusivitySuppression(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
