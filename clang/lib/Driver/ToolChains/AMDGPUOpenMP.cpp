@@ -495,8 +495,10 @@ AMDGPUOpenMPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   const OptTable &Opts = getDriver().getOpts();
 
-  for (Arg *A : Args) {
-    DAL->append(A);
+  if (DeviceOffloadKind != Action::OFK_OpenMP) {
+    for (Arg *A : Args) {
+      DAL->append(A);
+    }
   }
 
   if (!BoundArch.empty()) {
