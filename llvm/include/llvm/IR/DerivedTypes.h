@@ -537,8 +537,6 @@ public:
   }
 };
 
-bool Type::isVectorTy() const { return isa<VectorType>(this); }
-
 /// Class to represent fixed width SIMD vectors
 class FixedVectorType : public VectorType {
 protected:
@@ -703,12 +701,6 @@ Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
 
 unsigned Type::getPointerAddressSpace() const {
   return cast<PointerType>(getScalarType())->getAddressSpace();
-}
-
-Type *Type::getScalarType() const {
-  if (isVectorTy())
-    return cast<VectorType>(this)->getElementType();
-  return const_cast<Type *>(this);
 }
 
 } // end namespace llvm

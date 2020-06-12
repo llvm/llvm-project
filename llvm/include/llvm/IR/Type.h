@@ -228,7 +228,9 @@ public:
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
   /// True if this is an instance of VectorType.
-  inline bool isVectorTy() const;
+  inline bool isVectorTy() const {
+    return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
+  }
 
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
@@ -304,7 +306,11 @@ public:
 
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
-  inline Type *getScalarType() const;
+  inline Type *getScalarType() const {
+    if (isVectorTy())
+      return getContainedType(0);
+    return const_cast<Type *>(this);
+  }
 
   //===--------------------------------------------------------------------===//
   // Type Iteration support.
