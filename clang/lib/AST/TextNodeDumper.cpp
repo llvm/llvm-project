@@ -252,7 +252,7 @@ void TextNodeDumper::Visit(const Decl *D) {
              const_cast<NamedDecl *>(ND)))
       AddChild([=] { OS << "also in " << M->getFullModuleName(); });
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-    if (ND->isHidden())
+    if (!ND->isUnconditionallyVisible())
       OS << " hidden";
   if (D->isImplicit())
     OS << " implicit";
