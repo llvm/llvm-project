@@ -21,11 +21,11 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
        } : tensor<?x1x?xf32> -> tensor<?x1x?x1x?xf32>
   return %0 : tensor<?x1x?x1x?xf32>
 }
-//   CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
-//   CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d1, 0, d2)>
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+//   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d1, 0, d2)>
 // CHECK-LABEL: func @drop_one_trip_loops
 //       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
+//  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP1]]]
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"]
 
 // -----
@@ -48,10 +48,10 @@ func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
        } : tensor<1x1xf32> -> tensor<1x1xf32>
   return %0 : tensor<1x1xf32>
 }
-//   CHECK-DAG: #[[MAP0:.*]] = affine_map<() -> (0, 0)>
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> (0, 0)>
 // CHECK-LABEL: func @drop_all_loops
 //       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP0]]]
+//  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //  CHECK-SAME:     iterator_types = []
 
 // -----
@@ -74,10 +74,10 @@ func @drop_all_loops(%arg0 : memref<1x1xf32>, %arg1 : memref<1x1xf32>)
     } : memref<1x1xf32>, memref<1x1xf32>
   return
 }
-//   CHECK-DAG: #[[MAP0:.*]] = affine_map<() -> (0, 0)>
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> (0, 0)>
 // CHECK-LABEL: func @drop_all_loops
 //       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP0]]]
+//  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //  CHECK-SAME:     iterator_types = []
 
 // -----
@@ -102,9 +102,9 @@ func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>) -> tensor<5xf32> {
   }  : tensor<1x5xf32> -> tensor<5xf32>
   return %0 : tensor<5xf32>
 }
-//   CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0) -> (0, d0)>
-//   CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0) -> (d0)>
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (0, d0)>
+//   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @leading_dim_1_canonicalization
 //       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
+//  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP1]]]
 //  CHECK-SAME:     iterator_types = ["parallel"]

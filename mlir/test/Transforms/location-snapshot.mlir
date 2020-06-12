@@ -1,12 +1,12 @@
 // RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t' -mlir-print-debuginfo %s | FileCheck %s -DFILE=%/t
 // RUN: mlir-opt -allow-unregistered-dialect -snapshot-op-locations='filename=%/t tag='tagged'' -mlir-print-debuginfo %s | FileCheck %s --check-prefix=TAG -DFILE=%/t
 
-// CHECK-LABEL: func @function
+// CHECK: func @function(
 // CHECK-NEXT: loc("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})
 // CHECK-NEXT: loc("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})
 // CHECK-NEXT: } loc("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})
 
-// TAG-LABEL: func @function
+// TAG: func @function(
 // TAG-NEXT: loc(fused["original", "tagged"("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})])
 // TAG-NEXT: loc(fused["original", "tagged"("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})])
 // TAG-NEXT: } loc(fused["original", "tagged"("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})])

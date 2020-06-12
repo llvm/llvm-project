@@ -316,8 +316,19 @@ func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // -----
 
 // CHECK-LABEL: func @static_store
+// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm<"float*">
+// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 // BAREPTR-LABEL: func @static_store
 // BAREPTR-SAME: %[[A:.*]]: !llvm<"float*">
+// BAREPTR-SAME:         %[[I:[a-zA-Z0-9]*]]: !llvm.i64
+// BAREPTR-SAME:         %[[J:[a-zA-Z0-9]*]]: !llvm.i64
 func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f32) {
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
 //  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64

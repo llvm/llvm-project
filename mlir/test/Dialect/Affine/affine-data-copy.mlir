@@ -18,8 +18,8 @@
 #ub = affine_map<(d0) -> (d0 + 128)>
 
 // Map used to index the buffer while computing.
-// CHECK-DAG: [[MAP_IDENTITY:map[0-9]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: [[MAP_PLUS_128:map[0-9]+]] = affine_map<(d0) -> (d0 + 128)>
+// CHECK-DAG: [[$MAP_IDENTITY:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[$MAP_PLUS_128:map[0-9]+]] = affine_map<(d0) -> (d0 + 128)>
 
 // CHECK-LABEL: func @matmul
 // FILTER-LABEL: func @matmul
@@ -52,8 +52,8 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:     [[BUFC:%[0-9]+]] = alloc() : memref<128x128xf32>
 // The result matrix's copy gets hoisted out.
 // Result matrix copy-in.
-// CHECK:     affine.for %[[II:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:       affine.for %[[JJ:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
+// CHECK:     affine.for %[[II:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:       affine.for %[[JJ:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:         affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
 // CHECK:         affine.store %{{.*}}, [[BUFC]][-%[[I]] + %[[II]], -%[[J]] + %[[JJ]]] : memref<128x128xf32>
 // CHECK:       }
@@ -62,8 +62,8 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // LHS matrix copy-in.
 // CHECK:     affine.for %[[K:.*]] = 0 to 4096 step 128 {
 // CHECK:      [[BUFA:%[0-9]+]] = alloc() : memref<128x128xf32>
-// CHECK:       affine.for %[[II:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:         affine.for %[[KK:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
+// CHECK:       affine.for %[[II:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:         affine.for %[[KK:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:           affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
 // CHECK:           affine.store %{{.*}}, [[BUFA]][-%[[I]] + %[[II]], -%[[K]] + %[[KK]]] : memref<128x128xf32>
 // CHECK:         }
@@ -71,17 +71,17 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 
 // RHS matrix copy-in.
 // CHECK:       [[BUFB:%[0-9]+]] = alloc() : memref<128x128xf32>
-// CHECK:       affine.for %[[KK:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:         affine.for %[[JJ:.*]] = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
+// CHECK:       affine.for %[[KK:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:         affine.for %[[JJ:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:           affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
 // CHECK:           affine.store %{{.*}}, [[BUFB]][-%[[K]] + %[[KK]], -%[[J]] + %[[JJ]]] : memref<128x128xf32>
 // CHECK:         }
 // CHECK:       }
 
 // Computation on the fast buffers.
-// CHECK:       affine.for %{{.*}} = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:         affine.for %{{.*}} = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:           affine.for %{{.*}} = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
+// CHECK:       affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:         affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:           affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:             affine.load [[BUFA]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:             affine.load [[BUFB]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:             affine.load [[BUFC]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
@@ -96,8 +96,8 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:     }
 
 // Result matrix copy out.
-// CHECK:     affine.for %{{.*}} = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
-// CHECK:       affine.for %{{.*}} = #[[MAP_IDENTITY]](%{{.*}}) to #[[MAP_PLUS_128]](%{{.*}}) {
+// CHECK:     affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
+// CHECK:       affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:         affine.load [[BUFC]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
 // CHECK:         store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
 // CHECK:       }
@@ -200,9 +200,9 @@ func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf
 
 #map_ub = affine_map<(d0) -> (4096, d0 + 100)>
 
-// CHECK-DAG: [[MAP_IDENTITY:map[0-9]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: [[MAP_MIN_UB1:map[0-9]+]] = affine_map<(d0) -> (d0 + 100, 4096)>
-// CHECK-DAG: [[MAP_MIN_UB2:map[0-9]+]] = affine_map<(d0) -> (4096, d0 + 100)>
+// CHECK-DAG: [[$MAP_IDENTITY:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[$MAP_MIN_UB1:map[0-9]+]] = affine_map<(d0) -> (d0 + 100, 4096)>
+// CHECK-DAG: [[$MAP_MIN_UB2:map[0-9]+]] = affine_map<(d0) -> (4096, d0 + 100)>
 
 // CHECK-LABEL: func @min_upper_bound
 func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
@@ -217,16 +217,16 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 }
 // CHECK:      affine.for %[[IV1:.*]] = 0 to 4096 step 100
 // CHECK:        %[[BUF:.*]] = alloc() : memref<100xf32>
-// CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[MAP_IDENTITY]](%[[IV1]]) to min #[[MAP_MIN_UB1]](%[[IV1]]) {
+// CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB1]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %{{.*}}[%[[IV2]]] : memref<4096xf32>
 // CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:   }
-// CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[MAP_IDENTITY]](%[[IV1]]) to min #[[MAP_MIN_UB2]](%[[IV1]]) {
+// CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB2]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:     mulf
 // CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:   }
-// CHECK:        affine.for %[[IV2:.*]] = #[[MAP_IDENTITY]](%[[IV1]]) to min #[[MAP_MIN_UB1]](%[[IV1]]) {
+// CHECK:        affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB1]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:     affine.store %{{.*}}, %{{.*}}[%[[IV2]]] : memref<4096xf32>
 // CHECK-NEXT:   }
@@ -242,8 +242,8 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 #lb = affine_map<()[s0, s1] -> (s0 * 512, s1 * 6)>
 #ub = affine_map<()[s0, s1] -> (s0 * 512 + 512, s1 * 6 + 6)>
 
-// CHECK-DAG: #[[LB:.*]] = affine_map<()[s0, s1] -> (s0 * 512, s1 * 6)>
-// CHECK-DAG: #[[UB:.*]] = affine_map<()[s0, s1] -> (s0 * 512 + 512, s1 * 6 + 6)>
+// CHECK-DAG: #[[$LB:.*]] = affine_map<()[s0, s1] -> (s0 * 512, s1 * 6)>
+// CHECK-DAG: #[[$UB:.*]] = affine_map<()[s0, s1] -> (s0 * 512 + 512, s1 * 6 + 6)>
 
 // CHECK-LABEL: max_lower_bound(%{{.*}}: memref<2048x516xf64>,
 // CHECK-SAME: [[i:arg[0-9]+]]
@@ -257,15 +257,15 @@ func @max_lower_bound(%M: memref<2048x516xf64>, %i : index, %j : index) {
   return
 }
 
-// CHECK:      %[[BUF=.*]] = alloc() : memref<2048x6xf64>
+// CHECK:      %[[BUF:.*]] = alloc() : memref<2048x6xf64>
 // CHECK-NEXT: affine.for %[[ii:.*]] = 0 to 2048 {
-// CHECK-NEXT:   affine.for %[[jj:.*]] = max #[[LB]]()[%[[i]], %[[j]]] to min #[[UB]]()[%[[i]], %[[j]]] {
+// CHECK-NEXT:   affine.for %[[jj:.*]] = max #[[$LB]]()[%[[i]], %[[j]]] to min #[[$UB]]()[%[[i]], %[[j]]] {
 // CHECK-NEXT:      affine.load %{{.*}}[%[[ii]], %[[jj]]] : memref<2048x516xf64>
 // CHECK-NEXT:      affine.store %{{.*}}, %[[BUF]][%[[ii]], %[[jj]] - symbol(%[[j]]) * 6] : memref<2048x6xf64>
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: affine.for %[[ii_:.*]] = 0 to 2048 {
-// CHECK-NEXT:   affine.for %[[jj_:.*]] = max #[[LB]]()[%{{.*}}, %{{.*}}] to min #[[UB]]()[%{{.*}}, %{{.*}}] {
+// CHECK-NEXT:   affine.for %[[jj_:.*]] = max #[[$LB]]()[%{{.*}}, %{{.*}}] to min #[[$UB]]()[%{{.*}}, %{{.*}}] {
 // CHECK-NEXT:     affine.load %[[BUF]][%[[ii_]], %[[jj_]] - symbol(%[[j]]) * 6] : memref<2048x6xf64>
 // CHECK-NEXT:    }
 // CHECK-NEXT: }

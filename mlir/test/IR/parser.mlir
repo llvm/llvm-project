@@ -42,7 +42,7 @@
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0) : (d0 - 1 == 0)>
 #set2 = affine_set<(d0) : (d0 - 1 == 0)>
 
-// CHECK-DAG: [[SET_TRUE:#set[0-9]+]] = affine_set<() : (0 == 0)>
+// CHECK-DAG: [[$SET_TRUE:#set[0-9]+]] = affine_set<() : (0 == 0)>
 
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
 
@@ -826,7 +826,7 @@ func @type_alias() -> !i32_type_alias {
 
 // CHECK-LABEL: func @no_integer_set_constraints(
 func @no_integer_set_constraints() {
-  // CHECK: affine.if [[SET_TRUE]]() {
+  // CHECK: affine.if [[$SET_TRUE]]() {
   affine.if affine_set<() : ()> () {
   }
   return
