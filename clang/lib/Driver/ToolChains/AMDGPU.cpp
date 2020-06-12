@@ -122,6 +122,10 @@ RocmInstallationDetector::RocmInstallationDetector(
       Candidates.emplace_back(llvm::sys::path::parent_path(ParentDir).str(),
                               /*StrictChecking=*/true);
     }
+    if (ParentName.startswith("aomp")) {
+      // Some versions of the aomp package install to /opt/rocm/aomp/bin
+      Candidates.emplace_back(ParentDir.str());
+    }
 
     Candidates.emplace_back(D.SysRoot + "/opt/rocm");
   }

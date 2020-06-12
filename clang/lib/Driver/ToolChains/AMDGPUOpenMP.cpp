@@ -442,6 +442,10 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
     // Add compiler path libdevice last as lowest priority search
     LibraryPaths.push_back(
+        DriverArgs.MakeArgString(getDriver().Dir + "/../amdgcn/bitcode"));
+    LibraryPaths.push_back(
+        DriverArgs.MakeArgString(getDriver().Dir + "/../../amdgcn/bitcode"));
+    LibraryPaths.push_back(
         DriverArgs.MakeArgString(getDriver().Dir + "/../lib/libdevice"));
     LibraryPaths.push_back(
         DriverArgs.MakeArgString(getDriver().Dir + "/../lib"));
