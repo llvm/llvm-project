@@ -29,7 +29,7 @@ namespace Fortran::parser {
 // and then skip over the end of the line here.
 TYPE_PARSER(construct<Program>(
     extension<LanguageFeature::EmptySourceFile>(skipStuffBeforeStatement >>
-        !nextCh >> defaulted(cut >> some(Parser<ProgramUnit>{}))) ||
+        !nextCh >> pure<std::list<ProgramUnit>>()) ||
     some(StartNewSubprogram{} >> Parser<ProgramUnit>{} / skipMany(";"_tok) /
             space / recovery(endOfLine, SkipPast<'\n'>{})) /
         skipStuffBeforeStatement))
@@ -509,8 +509,8 @@ TYPE_PARSER(
     construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
         parenthesized(optionalList(dummyArg)), maybe(languageBindingSpec)) ||
     construct<SubroutineStmt>(many(prefixSpec), "SUBROUTINE" >> name,
-        defaulted(cut >> many(dummyArg)),
-        defaulted(cut >> maybe(languageBindingSpec))))
+        pure<std::list<DummyArg>>(),
+        pure<std::optional<LanguageBindingSpec>>()))
 
 // R1536 dummy-arg -> dummy-arg-name | *
 TYPE_PARSER(construct<DummyArg>(name) || construct<DummyArg>(star))
