@@ -1,4 +1,4 @@
-add_lldb_unittest(ThreadTest
+add_lldb_unittest(ThreadTests
   ThreadTest.cpp
 
   LINK_LIBS
