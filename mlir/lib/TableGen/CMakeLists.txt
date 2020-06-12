@@ -33,3 +33,5 @@ llvm_add_library(MLIRTableGen STATIC
 )
 
 mlir_check_all_link_libraries(MLIRTableGen)
+
+add_mlir_library_install(MLIRTableGen)
