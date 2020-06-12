@@ -1323,18 +1323,13 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
       type_system_helper->DeclMap(); // result can be NULL
 
   if (decl_map) {
-    Target *target = exe_ctx.GetTargetPtr();
-    auto &error_stream = target->GetDebugger().GetErrorStream();
+    StreamString error_stream;
     IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
                               *execution_unit_sp, error_stream,
                               function_name.AsCString());
 
-    bool ir_can_run =
-        ir_for_target.runOnModule(*execution_unit_sp->GetModule());
-
-    if (!ir_can_run) {
-      err.SetErrorString(
-          "The expression could not be prepared to run in the target");
+    if (!ir_for_target.runOnModule(*execution_unit_sp->GetModule())) {
+      err.SetErrorString(error_stream.GetString());
       return err;
     }
 
