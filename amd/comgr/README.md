@@ -93,10 +93,31 @@ build or install tree can be supplied to CMake via `CMAKE_PREFIX_PATH`:
 
     cmake -DCMAKE_PREFIX_PATH=path/to/comgr/build/or/install
 
-Debugging the Code Object Manager
----------------------------------
+Environment Variables
+---------------------
 
-Comgr supports some environment variables to aid in debugging. These include:
+Comgr lazily evaluates certain environment variables when their value is first
+required. If the value is used, it is read once at the time it is needed, and
+then cached. The exact behavior when changing these values during the execution
+of a process after Comgr APIs have been invoked is undefined.
+
+Comgr supports some environment variables to locate parts of the ROCm stack.
+These include:
+
+* `ROCM_PATH`: If this is set it is used as an absolute path to the root of the
+  ROCm installation, which is used when determining the default values for
+  `HIP_PATH` and `LLVM_PATH` (see below). If this is not set, it has a default
+  value of "/opt/rocm".
+* `HIP_PATH`: If this is set it is used as an absolute path to the root of the
+  HIP installation. If this is not set, it has a default value of
+  "${ROCM_PATH}/hip".
+* `LLVM_PATH`: If this is set it is used as an absolute path to the root of the
+  LLVM installation, which is currently used for HIP compilation to locate
+  certain runtime headers. If this is not set, it has a default value of
+  "${ROCM_PATH}/llvm".
+
+Comgr also supports some environment variables to aid in debugging. These
+include:
 
 * `AMD_COMGR_SAVE_TEMPS`: If this is set, and is not "0", Comgr does not delete
   temporary files generated during compilation. These files do not appear in
