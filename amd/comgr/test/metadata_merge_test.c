@@ -13,7 +13,7 @@ typedef struct test_meta_data_s {
   amd_comgr_metadata_node_t root;
 } test_meta_data_t;
 
-int read_metadata(test_meta_data_t *meta_data, const char *file,
+void read_metadata(test_meta_data_t *meta_data, const char *file,
                   bool error_expected, bool display) {
   long size;
   amd_comgr_status_t status;
@@ -39,8 +39,12 @@ int read_metadata(test_meta_data_t *meta_data, const char *file,
     printf("Get metadata from %s\n", file);
 
   status = amd_comgr_get_data_metadata(meta_data->data, &meta_data->root);
-  if (error_expected)
-    return 0;
+  if (!error_expected && status) {
+    printf("Unexpected error from amd_comgr_get_data_metadata\n");
+    exit(1);
+  } else {
+    return;
+  }
 
   checkError(status, "amd_comgr_get_data_metadata");
 
@@ -61,11 +65,9 @@ int read_metadata(test_meta_data_t *meta_data, const char *file,
     checkError(status, "amd_comgr_iterate_map_metadata");
     printf("Metadata for file %s : end\n\n", file);
   }
-
-  return 0;
 }
 
-int lookup_meta_data(test_meta_data_t *meta_data, const char *key,
+void lookup_meta_data(test_meta_data_t *meta_data, const char *key,
                      amd_comgr_metadata_kind_t kind, void *data,
                      bool error_expected) {
   amd_comgr_status_t status;
@@ -76,8 +78,14 @@ int lookup_meta_data(test_meta_data_t *meta_data, const char *key,
   checkError(status, "amd_comgr_metadata_lookup");
 
   status = amd_comgr_get_metadata_kind(lookup_node, &lookup_kind);
-  if (error_expected)
-    return 0;
+  if (!error_expected && status) {
+    printf("Unexpected error from amd_comgr_get_metadata_kind\n");
+    exit(1);
+  } else {
+    status = amd_comgr_destroy_metadata(lookup_node);
+    checkError(status, "amd_comgr_destroy_metadata");
+    return;
+  }
 
   checkError(status, "amd_comgr_get_metadata_kind");
   if (lookup_kind != kind) {
@@ -105,11 +113,9 @@ int lookup_meta_data(test_meta_data_t *meta_data, const char *key,
 
   status = amd_comgr_destroy_metadata(lookup_node);
   checkError(status, "amd_comgr_destroy_metadata");
-
-  return 0;
 }
 
-int close_meta_data(test_meta_data_t *meta_data) {
+void close_meta_data(test_meta_data_t *meta_data) {
   amd_comgr_status_t status;
 
   status = amd_comgr_destroy_metadata(meta_data->root);
@@ -120,8 +126,6 @@ int close_meta_data(test_meta_data_t *meta_data) {
   free(meta_data->buf);
 
   memset(meta_data, 0, sizeof(test_meta_data_t));
-
-  return 0;
 }
 
 int main(int argc, char *argv[]) {
