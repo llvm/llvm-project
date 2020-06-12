@@ -616,7 +616,7 @@ func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32> {
 
 // CHECK-LABEL: func @broadcast_stretch_at_end
 // CHECK-SAME: %[[A:.*0]]: vector<4x1xf32>
-// CHECK:      %[[C:.*]] = constant dense<0.000000e+00> : vector<4x3xf32>
+// CHECK:      %[[C0:.*]] = constant dense<0.000000e+00> : vector<4x3xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<4x1xf32>
 // CHECK:      %[[T1:.*]] = vector.extract %[[T0]][0] : vector<1xf32>
 // CHECK:      %[[T2:.*]] = splat %[[T1]] : vector<3xf32>
@@ -678,10 +678,10 @@ func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2xf32>
 // CHECK-LABEL: func @genbool_1d
 // CHECK: %[[TT:.*]] = constant true
 // CHECK: %[[C1:.*]] = constant dense<false> : vector<8xi1>
-// CHECK: %[[T0.*]] = vector.insert %[[TT]], %[[C1]] [0] : i1 into vector<8xi1>
-// CHECK: %[[T1.*]] = vector.insert %[[TT]], %[[T0]] [1] : i1 into vector<8xi1>
-// CHECK: %[[T2.*]] = vector.insert %[[TT]], %[[T1]] [2] : i1 into vector<8xi1>
-// CHECK: %[[T3.*]] = vector.insert %[[TT]], %[[T2]] [3] : i1 into vector<8xi1>
+// CHECK: %[[T0:.*]] = vector.insert %[[TT]], %[[C1]] [0] : i1 into vector<8xi1>
+// CHECK: %[[T1:.*]] = vector.insert %[[TT]], %[[T0]] [1] : i1 into vector<8xi1>
+// CHECK: %[[T2:.*]] = vector.insert %[[TT]], %[[T1]] [2] : i1 into vector<8xi1>
+// CHECK: %[[T3:.*]] = vector.insert %[[TT]], %[[T2]] [3] : i1 into vector<8xi1>
 // CHECK: return %[[T3]] : vector<8xi1>
 
 func @genbool_1d() -> vector<8xi1> {
@@ -705,7 +705,7 @@ func @genbool_2d() -> vector<4x4xi1> {
 }
 
 // CHECK-LABEL: func @genbool_3d
-// CHECK: %[[Tt:.*]] = constant true
+// CHECK: %[[TT:.*]] = constant true
 // CHECK: %[[C1:.*]] = constant dense<false> : vector<4xi1>
 // CHECK: %[[C2:.*]] = constant dense<false> : vector<3x4xi1>
 // CHECK: %[[C3:.*]] = constant dense<false> : vector<2x3x4xi1>

@@ -3,11 +3,11 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
-// CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
+// CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
-// CHECK-DAG: #[[stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
+// CHECK-DAG: #[[$stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 
-// CHECK-DAG: #[[clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
+// CHECK-DAG: #[[$clampMinMap:.*]] = affine_map<(d0) -> (d0, 0)>
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
@@ -42,18 +42,18 @@ func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 }
 
 // CHECK-LABEL: func @conv_view3(
-//  CHECK: %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[strided3D]]>) {
-//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[Q:.*]] = dim %arg0, %c1 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[K:.*]] = dim %arg0, %c2 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[B:.*]] = dim %arg1, %c0 : memref<?x?x?xf32, #[[strided3D]]>
-//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?xf32, #[[strided3D]]>
+//  CHECK: %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>) {
+//       CHECK:   %[[Z0:.*]] = dim %arg0, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[Q:.*]] = dim %arg0, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[K:.*]] = dim %arg0, %c2 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[B:.*]] = dim %arg1, %c0 : memref<?x?x?xf32, #[[$strided3D]]>
+//       CHECK:   %[[X0:.*]] = dim %arg2, %c1 : memref<?x?x?xf32, #[[$strided3D]]>
 //       CHECK:   affine.for %{{.*}} = 0 to %[[B]] {
 //       CHECK:     affine.for %{{.*}} = 0 to %[[X0]] {
 //       CHECK:       affine.for %{{.*}} = 0 to %[[K]] {
 //       CHECK:         affine.for %{{.*}} = 0 to %[[Q]] {
 //       CHECK:           affine.for %{{.*}} = 0 to %[[Z0]] {
-//       CHECK:            %[[SUM:.*]] = affine.apply #[[stride2Dilation1]](%{{.*}}, %{{.*}})
+//       CHECK:            %[[SUM:.*]] = affine.apply #[[$stride2Dilation1]](%{{.*}}, %{{.*}})
 //       No padding needed here; only affine loads.
 //       CHECK-NEXT:       affine.load
 //       CHECK-NEXT:       affine.load
@@ -86,8 +86,8 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 //       CHECK:               affine.for %{{.*}} = 0 to %[[Z1]] {
 //       CHECK:                 %[[SUM0:.*]] = affine.apply #{{.*}}(%{{.*}}, %{{.*}})
 //       CHECK:                 %[[SUM1:.*]] = affine.apply #{{.*}}(%{{.*}}, %{{.*}})
-//       CHECK:                 %[[IDX:.*]] = affine.max #[[clampMinMap]](%[[SUM0]])
-//       CHECK:                 %[[IDY:.*]] = affine.max #[[clampMinMap]](%[[SUM1]])
+//       CHECK:                 %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[SUM0]])
+//       CHECK:                 %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[SUM1]])
 // Padded conv involves an affine.max in the memory access and this is not
 // allowed by affine.load. Use std.load in such cases.
 //       CHECK:                 %{{.*}} = load %{{.*}}[%{{.*}}, %[[IDX]], %[[IDY]], %{{.*}}] : memref<?x?x?x?xf32>

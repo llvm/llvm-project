@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -affine-super-vectorizer-test -normalize-maps |  FileCheck %s
 
-// CHECK-DAG: #[[ZERO:[a-zA-Z0-9]+]] = affine_map<() -> (0)>
-// CHECK-DAG: #[[ID1:[a-zA-Z0-9]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: #[[D0TIMES2:[a-zA-Z0-9]+]] = affine_map<(d0) -> (d0 * 2)>
-// CHECK-DAG: #[[D0PLUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK-DAG: #[[MINSD0PLUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (-d0 + d1)>
-// CHECK-DAG: #[[D0MINUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (d0 - d1)>
+// CHECK-DAG: #[[$ZERO:[a-zA-Z0-9]+]] = affine_map<() -> (0)>
+// CHECK-DAG: #[[$ID1:[a-zA-Z0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$D0TIMES2:[a-zA-Z0-9]+]] = affine_map<(d0) -> (d0 * 2)>
+// CHECK-DAG: #[[$D0PLUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-DAG: #[[$MINSD0PLUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (-d0 + d1)>
+// CHECK-DAG: #[[$D0MINUSD1:[a-zA-Z0-9]+]] = affine_map<(d0, d1) -> (d0 - d1)>
 
 // CHECK-LABEL: func @simple()
 func @simple() {
@@ -16,9 +16,9 @@ func @simple() {
     %3 = affine.apply affine_map<(d0, d1) -> (d0 - d1)> (%0, %0)
   }
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 7
-  // CHECK-NEXT:   {{.*}} affine.apply #[[ID1]](%{{.*}})
-  // CHECK-NEXT:   {{.*}} affine.apply #[[D0TIMES2]](%{{.*}})
-  // CHECK-NEXT:   {{.*}} affine.apply #[[ZERO]]()
+  // CHECK-NEXT:   {{.*}} affine.apply #[[$ID1]](%{{.*}})
+  // CHECK-NEXT:   {{.*}} affine.apply #[[$D0TIMES2]](%{{.*}})
+  // CHECK-NEXT:   {{.*}} affine.apply #[[$ZERO]]()
 
   affine.for %i1 = 0 to 7 {
     affine.for %i2 = 0 to 42 {
@@ -31,9 +31,9 @@ func @simple() {
   }
   //      CHECK: affine.for %{{.*}} = 0 to 7
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 42
-  // CHECK-NEXT:     {{.*}} affine.apply #[[D0PLUSD1]](%{{.*}}, %{{.*}})
-  // CHECK-NEXT:     {{.*}} affine.apply #[[MINSD0PLUSD1]](%{{.*}}, %{{.*}})
-  // CHECK-NEXT:     {{.*}} affine.apply #[[D0MINUSD1]](%{{.*}}, %{{.*}})
+  // CHECK-NEXT:     {{.*}} affine.apply #[[$D0PLUSD1]](%{{.*}}, %{{.*}})
+  // CHECK-NEXT:     {{.*}} affine.apply #[[$MINSD0PLUSD1]](%{{.*}}, %{{.*}})
+  // CHECK-NEXT:     {{.*}} affine.apply #[[$D0MINUSD1]](%{{.*}}, %{{.*}})
 
   affine.for %i3 = 0 to 16 {
     affine.for %i4 = 0 to 47 step 2 {
@@ -50,9 +50,9 @@ func @simple() {
   // CHECK:      affine.for %{{.*}} = 0 to 16
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 47 step 2
   // CHECK-NEXT:     affine.for %{{.*}} = 0 to 78 step 16
-  // CHECK-NEXT:       {{.*}} affine.apply #[[ID1]](%{{.*}})
-  // CHECK-NEXT:       {{.*}} affine.apply #[[ID1]](%{{.*}})
-  // CHECK-NEXT:       {{.*}} affine.apply #[[ID1]](%{{.*}})
+  // CHECK-NEXT:       {{.*}} affine.apply #[[$ID1]](%{{.*}})
+  // CHECK-NEXT:       {{.*}} affine.apply #[[$ID1]](%{{.*}})
+  // CHECK-NEXT:       {{.*}} affine.apply #[[$ID1]](%{{.*}})
 
   return
 }

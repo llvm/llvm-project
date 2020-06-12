@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-func-set-type -split-input-file | FileCheck %s --dump-input=fail
+// RUN: mlir-opt %s -test-func-set-type -split-input-file | FileCheck %s
 
 // It's currently not possible to have an attribute with a function type due to
 // parser ambiguity. So instead we reference a function declaration to take the
