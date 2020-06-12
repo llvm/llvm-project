@@ -34,6 +34,7 @@ class FileSystem;
 namespace clang {
 class CompilerInstance;
 class CompilerInvocation;
+class Decl;
 class DeclGroupRef;
 class PCHContainerOperations;
 
@@ -293,6 +294,10 @@ public:
   virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
   /// The returned CommentHandler will be added to the preprocessor if not null.
   virtual CommentHandler *getCommentHandler();
+  /// Determines which function bodies are parsed, by default skips everything.
+  /// Only used if FrontendOpts::SkipFunctionBodies is true.
+  /// See ASTConsumer::shouldSkipFunctionBody.
+  virtual bool shouldSkipFunctionBody(Decl *D) { return true; }
 };
 
 enum class BuildPreambleError {
