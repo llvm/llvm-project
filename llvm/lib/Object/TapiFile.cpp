@@ -40,7 +40,7 @@ static uint32_t getFlags(const Symbol *Sym) {
 
 TapiFile::TapiFile(MemoryBufferRef Source, const InterfaceFile &interface,
                    Architecture Arch)
-    : SymbolicFile(ID_TapiFile, Source) {
+    : SymbolicFile(ID_TapiFile, Source), Arch(Arch) {
   for (const auto *Symbol : interface.symbols()) {
     if (!Symbol->getArchitectures().has(Arch))
       continue;
