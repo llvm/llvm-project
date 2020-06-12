@@ -780,18 +780,19 @@ public:
   /// all declarations in a global module fragment are unowned.
   Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
 
-  /// Determine whether this declaration might be hidden from name
-  /// lookup. Note that the declaration might be visible even if this returns
-  /// \c false, if the owning module is visible within the query context.
-  // FIXME: Rename this to make it clearer what it does.
-  bool isHidden() const {
-    return (int)getModuleOwnershipKind() > (int)ModuleOwnershipKind::Visible;
+  /// Determine whether this declaration is definitely visible to name lookup,
+  /// independent of whether the owning module is visible.
+  /// Note: The declaration may be visible even if this returns \c false if the
+  /// owning module is visible within the query context. This is a low-level
+  /// helper function; most code should be calling Sema::isVisible() instead.
+  bool isUnconditionallyVisible() const {
+    return (int)getModuleOwnershipKind() <= (int)ModuleOwnershipKind::Visible;
   }
 
   /// Set that this declaration is globally visible, even if it came from a
   /// module that is not visible.
   void setVisibleDespiteOwningModule() {
-    if (isHidden())
+    if (!isUnconditionallyVisible())
       setModuleOwnershipKind(ModuleOwnershipKind::Visible);
   }
 

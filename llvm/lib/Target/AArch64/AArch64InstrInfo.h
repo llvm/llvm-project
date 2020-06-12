@@ -397,6 +397,9 @@ static inline bool isIndirectBranchOpcode(int Opc) {
   return false;
 }
 
+/// Return opcode to be used for indirect calls.
+unsigned getBLRCallOpcode(const MachineFunction &MF);
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bit

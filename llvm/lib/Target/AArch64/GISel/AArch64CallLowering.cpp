@@ -773,17 +773,17 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   return true;
 }
 
-static unsigned getCallOpcode(const Function &CallerF, bool IsIndirect,
+static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
   if (!IsTailCall)
-    return IsIndirect ? AArch64::BLR : AArch64::BL;
+    return IsIndirect ? getBLRCallOpcode(CallerF) : AArch64::BL;
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
   // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
   // x16 or x17.
-  if (CallerF.hasFnAttribute("branch-target-enforcement"))
+  if (CallerF.getFunction().hasFnAttribute("branch-target-enforcement"))
     return AArch64::TCRETURNriBTI;
 
   return AArch64::TCRETURNri;
@@ -819,7 +819,7 @@ bool AArch64CallLowering::lowerTailCall(
   if (!IsSibCall)
     CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 
-  unsigned Opc = getCallOpcode(F, Info.Callee.isReg(), true);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
 
@@ -979,7 +979,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
-  unsigned Opc = getCallOpcode(F, Info.Callee.isReg(), false);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);

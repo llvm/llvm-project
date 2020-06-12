@@ -111,7 +111,7 @@ void JSONNodeDumper::Visit(const Decl *D) {
     JOS.attribute("isReferenced", true);
 
   if (const auto *ND = dyn_cast<NamedDecl>(D))
-    attributeOnlyIfTrue("isHidden", ND->isHidden());
+    attributeOnlyIfTrue("isHidden", !ND->isUnconditionallyVisible());
 
   if (D->getLexicalDeclContext() != D->getDeclContext()) {
     // Because of multiple inheritance, a DeclContext pointer does not produce

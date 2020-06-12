@@ -39,6 +39,7 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoPass();
 FunctionPass *createAArch64SLSHardeningPass();
+FunctionPass *createAArch64IndirectThunks();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptimizationPass();
 FunctionPass *createAArch64SIMDInstrOptPass();

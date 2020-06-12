@@ -1126,7 +1126,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
             .setMIFlag(MachineInstr::FrameSetup);
       }
 
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::BLR))
+      BuildMI(MBB, MBBI, DL, TII->get(getBLRCallOpcode(MF)))
           .addReg(AArch64::X16, RegState::Kill)
           .addReg(AArch64::X15, RegState::Implicit | RegState::Define)
           .addReg(AArch64::X16, RegState::Implicit | RegState::Define | RegState::Dead)
