@@ -5259,15 +5259,6 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   }
 
   const Stmt *CS = S.getInnermostCapturedStmt()->IgnoreContainers();
-  if (const auto *FE = dyn_cast<FullExpr>(CS))
-    enterFullExpression(FE);
-  // Processing for statements under 'atomic capture'.
-  if (const auto *Compound = dyn_cast<CompoundStmt>(CS)) {
-    for (const Stmt *C : Compound->body()) {
-      if (const auto *FE = dyn_cast<FullExpr>(C))
-        enterFullExpression(FE);
-    }
-  }
 
   auto &&CodeGen = [&S, Kind, AO, CS](CodeGenFunction &CGF,
                                             PrePostActionTy &) {

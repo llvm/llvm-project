@@ -1330,7 +1330,6 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
 
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(E);
-    enterFullExpression(cleanups);
     RunCleanupsScope Scope(*this);
     LValue LV = EmitLValue(cleanups->getSubExpr());
     if (LV.isSimple()) {

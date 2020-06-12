@@ -156,10 +156,10 @@ namespace test5 {
   // CHECK-NEXT: [[B:%.*]] = alloca void ()*, align 8
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align 8
   // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
+  // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca [[A]]*, align 8
   // CHECK-NEXT: [[T0:%.*]] = zext i1
   // CHECK-NEXT: store i8 [[T0]], i8* [[COND]], align 1
   // CHECK-NEXT: call void @_ZN5test51AC1Ev([[A]]* [[X]])
-  // CHECK-NEXT: [[CLEANUP_ADDR:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = load i8, i8* [[COND]], align 1
   // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
   // CHECK-NEXT: store i1 false, i1* [[CLEANUP_ACTIVE]]
@@ -169,6 +169,7 @@ namespace test5 {
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
+  // CHECK-NEXT: store [[A]]* [[CAPTURE]], [[A]]** [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
   // CHECK-NEXT: br label
   // CHECK:      br label
@@ -178,7 +179,8 @@ namespace test5 {
   // CHECK-NEXT: call void @_ZN5test511doWithBlockEU13block_pointerFvvE(
   // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T0]]
-  // CHECK:      call void @_ZN5test51AD1Ev([[A]]* [[CLEANUP_ADDR]])
+  // CHECK:      [[T3:%.*]] = load [[A]]*, [[A]]** [[COND_CLEANUP_SAVE]], align 8
+  // CHECK-NEXT: call void @_ZN5test51AD1Ev([[A]]* [[T3]])
   // CHECK-NEXT: br label
   // CHECK:      call void @_ZN5test51AD1Ev([[A]]* [[X]])
   // CHECK-NEXT: ret void

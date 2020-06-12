@@ -79,12 +79,6 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
 CodeGenFunction::~CodeGenFunction() {
   assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
 
-  // If there are any unclaimed block infos, go ahead and destroy them
-  // now.  This can happen if IR-gen gets clever and skips evaluating
-  // something.
-  if (FirstBlockInfo)
-    destroyBlockInfos(FirstBlockInfo);
-
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
 
