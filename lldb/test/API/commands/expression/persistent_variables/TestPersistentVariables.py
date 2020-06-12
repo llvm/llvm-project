@@ -28,3 +28,16 @@ class PersistentVariablesTestCase(TestBase):
         self.expect_expr("$4", result_type="int", result_value="-2")
         self.expect_expr("$4 > (int)31", result_type="bool", result_value="false")
         self.expect_expr("(long)$4", result_type="long", result_value="-2")
+
+        # Try assigning an existing persistent veriable with a numeric name.
+        self.expect("expr int $2 = 1234", error=True,
+            substrs=["Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names"])
+        # $2 should still have its original value.
+        self.expect_expr("$2", result_type="int", result_value="8")
+
+        # Try assigning an non-existing persistent veriable with a numeric name.
+        self.expect("expr int $200 = 3", error=True,
+            substrs=["Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names"])
+        # Test that $200 wasn't created by the previous expression.
+        self.expect("expr $200", error=True,
+            substrs=["use of undeclared identifier '$200'"])
