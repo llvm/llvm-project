@@ -12,6 +12,7 @@
 
 #include "lldb/Symbol/SwiftASTContext.h"
 
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
@@ -385,13 +386,15 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
                    GetClangImporterFn get_clangimporter,
                    swift::Demangle::Demangler &Dem,
                    swift::Demangle::NodePointer node,
+                   bool resolve_objc_module,
                    bool desugar = true) {
   if (!node)
     return node;
   using namespace swift::Demangle;
   auto getNodeForPrinting = [&](NodePointer node) -> NodePointer {
     return GetNodeForPrinting(m_description, M, get_apinotes_manager,
-                              get_clangimporter, Dem, node, desugar);
+                              get_clangimporter, Dem, node, resolve_objc_module,
+                              desugar);
   };
 
   NodePointer canonical = nullptr;
@@ -415,13 +418,17 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
     llvm::SmallVector<CompilerContext, 4> DeclCtx;
     clang_type->GetDeclContext(DeclCtx);
     StringRef toplevel_module;
-    for (auto &Context : DeclCtx)
-      if (Context.kind == CompilerContextKind::Module) {
-        toplevel_module = Context.name.GetStringRef();
+    if (resolve_objc_module) {
+      for (auto &Context : DeclCtx)
+        if (Context.kind == CompilerContextKind::Module) {
+          toplevel_module = Context.name.GetStringRef();
+          break;
+        }
+      if (toplevel_module.empty())
         break;
-      }
-    if (toplevel_module.empty())
-      break;
+    } else {
+      toplevel_module = swift::MANGLING_MODULE_OBJC;
+    }
 
     // Create a new node with the Clang module instead of "__C".
     NodePointer renamed = Dem.createNode(kind);
@@ -630,13 +637,13 @@ static swift::Demangle::NodePointer GetDemangleTreeForPrinting(
     const std::string &m_description, lldb_private::Module *Module,
     GetAPINotesManagerFn get_apinotes_manager,
     GetClangImporterFn get_clangimporter, swift::Demangle::Demangler &Dem,
-    const char *mangled_name) {
+    const char *mangled_name, bool resolve_objc_module) {
   NodePointer node = Dem.demangleSymbol(mangled_name);
   if (!Module)
     return node;
   NodePointer canonical =
       GetNodeForPrinting(m_description, *Module, get_apinotes_manager,
-                         get_clangimporter, Dem, node);
+                         get_clangimporter, Dem, node, resolve_objc_module);
   return canonical;
 }
 
@@ -742,9 +749,19 @@ template <typename T> bool Equivalent(T l, T r) { return l == r; }
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   return l.GetMangledTypeName() == r.GetMangledTypeName();
 } // namespace
-// This one is particularly taylored for GetName().
+/// This one is particularly taylored for GetTypeName() and
+/// GetDisplayTypeName().
+///
+/// String divergences are mostly cosmetic in nature and usually
+/// TypeSystemSwiftTypeRef is returning more accurate results. They only really
+/// matter for GetTypeName() and there only if there is a data formatter
+/// matching that name.
 template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   if (l != r) {
+    // Failure. Dump it for easier debugging.
+    llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
+                 << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
+
     // For some reason the Swift type dumper doesn't attach a module
     // name to the AnyObject protocol, and only that one.
     std::string l_prime = std::regex_replace(
@@ -757,8 +774,29 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
         r.GetStringRef().contains("__ObjC.") || r.GetStringRef().contains(" -> ()"))
       return true;
 
-    // Failure. Dump it for easier debugging.
-    llvm::dbgs() << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
+    std::string r_prime =
+        std::regex_replace(r.GetStringRef().str(), std::regex("NS"), "");
+    if (l.GetStringRef() == llvm::StringRef(r_prime))
+      return true;
+
+    // The way it is currently configured, ASTPrinter's always-qualify
+    // mode is turned off. In this mode,
+    // TypePrinter::shouldPrintFullyQualified() insists on never
+    // printing qualifiers for types that come from Clang modules, but
+    // the way this is implemented this rule also fires for types from
+    // SDK overlays, which are technically Swift modules. Detecting
+    // this in TypeSystemSwiftTypeRef is so complicated that it just
+    // isn't worth the effort and we accept over-qualified types
+    // instead. It would be best to just always qualify types not from
+    // the current module.
+    l_prime = std::regex_replace(
+        l.GetStringRef().str(), std::regex("(CoreGraphics|Foundation|)\\."), "");
+    if (llvm::StringRef(l_prime) == r.GetStringRef())
+      return true;
+
+#ifndef STRICT_VALIDATION
+    return true;
+#endif
   }
   return l == r;
 }
@@ -1040,11 +1078,10 @@ ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
           return GetAPINotesManager(source, id);
         },
         [&]() { return m_swift_ast_context->GetClangImporter(); }, Dem,
-        AsMangledName(type));
+        AsMangledName(type), true);
     std::string remangled = mangleNode(print_node);
-    bool simplified = false;
-    return ConstString(
-        SwiftLanguageRuntime::DemangleSymbolAsString(remangled, simplified));
+    return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
+        remangled, SwiftLanguageRuntime::eTypeName));
   };
   VALIDATE_AND_RETURN(impl,
                       m_swift_ast_context->GetTypeName(ReconstructType(type)));
@@ -1052,7 +1089,22 @@ ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
 ConstString
 TypeSystemSwiftTypeRef::GetDisplayTypeName(opaque_compiler_type_t type,
                                            const SymbolContext *sc) {
-  return m_swift_ast_context->GetDisplayTypeName(ReconstructType(type), sc);
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer print_node = GetDemangleTreeForPrinting(
+        m_description, GetModule(),
+        [&](ClangExternalASTSourceCallbacks *source, unsigned id) {
+          return GetAPINotesManager(source, id);
+        },
+        [&]() { return m_swift_ast_context->GetClangImporter(); }, Dem,
+        AsMangledName(type), false);
+    std::string remangled = mangleNode(print_node);
+    return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
+        remangled, SwiftLanguageRuntime::eDisplayTypeName, sc));
+  };
+  VALIDATE_AND_RETURN(
+      impl, m_swift_ast_context->GetDisplayTypeName(ReconstructType(type), sc));
 }
 uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     opaque_compiler_type_t type, CompilerType *pointee_or_element_clang_type) {

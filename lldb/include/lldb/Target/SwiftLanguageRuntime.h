@@ -132,8 +132,9 @@ public:
   /// since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(const char *name);
 
+  enum DemangleMode { eSimplified, eTypeName, eDisplayTypeName };
   static std::string DemangleSymbolAsString(llvm::StringRef symbol,
-                                            bool simplified = false,
+                                            DemangleMode mode,
                                             const SymbolContext *sc = nullptr);
 
   class MethodName {
