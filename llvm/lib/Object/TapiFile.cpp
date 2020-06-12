@@ -75,30 +75,28 @@ TapiFile::TapiFile(MemoryBufferRef Source, const InterfaceFile &interface,
 
 TapiFile::~TapiFile() = default;
 
-void TapiFile::moveSymbolNext(DataRefImpl &DRI) const {
-  const auto *Sym = reinterpret_cast<const Symbol *>(DRI.p);
-  DRI.p = reinterpret_cast<uintptr_t>(++Sym);
-}
+void TapiFile::moveSymbolNext(DataRefImpl &DRI) const { DRI.d.a++; }
 
 Error TapiFile::printSymbolName(raw_ostream &OS, DataRefImpl DRI) const {
-  const auto *Sym = reinterpret_cast<const Symbol *>(DRI.p);
-  OS << Sym->Prefix << Sym->Name;
+  assert(DRI.d.a < Symbols.size() && "Attempt to access symbol out of bounds");
+  const Symbol &Sym = Symbols[DRI.d.a];
+  OS << Sym.Prefix << Sym.Name;
   return Error::success();
 }
 
 Expected<uint32_t> TapiFile::getSymbolFlags(DataRefImpl DRI) const {
-  const auto *Sym = reinterpret_cast<const Symbol *>(DRI.p);
-  return Sym->Flags;
+  assert(DRI.d.a < Symbols.size() && "Attempt to access symbol out of bounds");
+  return Symbols[DRI.d.a].Flags;
 }
 
 basic_symbol_iterator TapiFile::symbol_begin() const {
   DataRefImpl DRI;
-  DRI.p = reinterpret_cast<uintptr_t>(&*Symbols.begin());
+  DRI.d.a = 0;
   return BasicSymbolRef{DRI, this};
 }
 
 basic_symbol_iterator TapiFile::symbol_end() const {
   DataRefImpl DRI;
-  DRI.p = reinterpret_cast<uintptr_t>(&*Symbols.end());
+  DRI.d.a = Symbols.size();
   return BasicSymbolRef{DRI, this};
 }
