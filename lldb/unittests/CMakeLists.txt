@@ -33,6 +33,10 @@ function(add_lldb_unittest test_name)
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
 
+  if (NOT ${test_name} MATCHES "Tests$")
+    message(FATAL_ERROR "Unit test name must end with 'Tests' for lit to find it.")
+  endif()
+
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
 
   add_unittest(LLDBUnitTests
