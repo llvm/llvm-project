@@ -7640,6 +7640,10 @@ static bool processLoopInVPlanNativePath(
     OptimizationRemarkEmitter *ORE, BlockFrequencyInfo *BFI,
     ProfileSummaryInfo *PSI, LoopVectorizeHints &Hints) {
 
+  if (PSE.getBackedgeTakenCount() == PSE.getSE()->getCouldNotCompute()) {
+    LLVM_DEBUG(dbgs() << "LV: cannot compute the outer-loop trip count\n");
+    return false;
+  }
   assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
   Function *F = L->getHeader()->getParent();
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
