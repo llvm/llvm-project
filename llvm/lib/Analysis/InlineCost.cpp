@@ -853,10 +853,22 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   if (I.isArrayAllocation()) {
     Constant *Size = SimplifiedValues.lookup(I.getArraySize());
     if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
+      // Sometimes a dynamic alloca could be converted into a static alloca
+      // after this constant prop, and become a huge static alloca on an
+      // unconditional CFG path. Avoid inlining if this is going to happen above
+      // a threshold.
+      // FIXME: If the threshold is removed or lowered too much, we could end up
+      // being too pessimistic and prevent inlining non-problematic code. This
+      // could result in unintended perf regressions. A better overall strategy
+      // is needed to track stack usage during inlining.
       Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(), DL.getTypeAllocSize(Ty).getFixedSize(),
           AllocatedSize);
+      if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline) {
+        HasDynamicAlloca = true;
+        return false;
+      }
       return Base::visitAlloca(I);
     }
   }
