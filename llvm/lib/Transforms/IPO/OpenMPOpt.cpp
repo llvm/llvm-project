@@ -39,6 +39,8 @@ static cl::opt<bool> DisableOpenMPOptimizations(
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
+STATISTIC(NumOpenMPParallelRegionsDeleted,
+          "Number of OpenMP parallel regions deleted");
 STATISTIC(NumOpenMPRuntimeFunctionsIdentified,
           "Number of OpenMP runtime functions identified");
 STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
@@ -194,6 +196,7 @@ private:
       CGUpdater.removeCallSite(*CI);
       CI->eraseFromParent();
       Changed = true;
+      ++NumOpenMPParallelRegionsDeleted;
       return true;
     };
 
