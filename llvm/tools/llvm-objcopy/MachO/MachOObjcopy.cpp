@@ -87,7 +87,7 @@ static LoadCommand buildRPathLoadCommand(StringRef Path) {
   MachO::rpath_command RPathLC;
   RPathLC.cmd = MachO::LC_RPATH;
   RPathLC.path = sizeof(MachO::rpath_command);
-  RPathLC.cmdsize = alignTo(sizeof(MachO::rpath_command) + Path.size(), 8);
+  RPathLC.cmdsize = alignTo(sizeof(MachO::rpath_command) + Path.size() + 1, 8);
   LC.MachOLoadCommand.rpath_command_data = RPathLC;
   LC.Payload.assign(RPathLC.cmdsize - sizeof(MachO::rpath_command), 0);
   std::copy(Path.begin(), Path.end(), LC.Payload.begin());

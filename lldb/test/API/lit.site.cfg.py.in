@@ -18,6 +18,7 @@ config.shared_libs = @LLVM_ENABLE_SHARED_LIBS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
+config.lldb_reproducer_directory = os.path.join("@LLDB_TEST_BUILD_DIRECTORY@", "reproducers")
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.dotest_path = "@LLDB_SOURCE_DIR@/test/API/dotest.py"
 config.dotest_args_str = "@LLDB_DOTEST_ARGS@"

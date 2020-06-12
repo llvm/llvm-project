@@ -28,6 +28,8 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/TapiFile.h"
+#include "llvm/Object/TapiUniversal.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -210,6 +212,11 @@ cl::opt<bool> NoLLVMBitcode("no-llvm-bc",
                             cl::desc("Disable LLVM bitcode reader"),
                             cl::cat(NMCat));
 
+cl::opt<bool> AddInlinedInfo("add-inlinedinfo",
+                             cl::desc("Add symbols from the inlined libraries, "
+                                      "TBD(Mach-O) only"),
+                             cl::cat(NMCat));
+
 cl::extrahelp HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
 bool PrintAddress = true;
@@ -340,6 +347,8 @@ static char isSymbolList64Bit(SymbolicFile &Obj) {
     return false;
   if (isa<WasmObjectFile>(Obj))
     return false;
+  if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
+    return Tapi->is64Bit();
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
     return MachO->is64Bit();
   return cast<ELFObjectFileBase>(Obj).getBytesInAddress() == 8;
@@ -1046,6 +1055,10 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(TapiFile &Obj, basic_symbol_iterator I) {
+  return 's';
+}
+
 static char getSymbolNMTypeChar(WasmObjectFile &Obj, basic_symbol_iterator I) {
   uint32_t Flags = cantFail(I->getFlags());
   if (Flags & SymbolRef::SF_Executable)
@@ -1139,6 +1152,8 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*MachO, I);
   else if (WasmObjectFile *Wasm = dyn_cast<WasmObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*Wasm, I);
+  else if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
+    Ret = getSymbolNMTypeChar(*Tapi, I);
   else if (ELFObjectFileBase *ELF = dyn_cast<ELFObjectFileBase>(&Obj)) {
     if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
       return 'i';
@@ -2081,6 +2096,31 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     }
     return;
   }
+
+  if (TapiUniversal *TU = dyn_cast<TapiUniversal>(&Bin)) {
+    for (const TapiUniversal::ObjectForArch &I : TU->objects()) {
+      StringRef ArchName = I.getArchFlagName();
+      const bool ShowArch =
+          ArchFlags.empty() ||
+          any_of(ArchFlags, [&](StringRef Name) { return Name == ArchName; });
+      if (!ShowArch)
+        continue;
+      if (!AddInlinedInfo && !I.isTopLevelLib())
+        continue;
+      if (auto ObjOrErr = I.getAsObjectFile()) {
+        outs() << "\n"
+               << I.getInstallName() << " (for architecture " << ArchName << ")"
+               << ":\n";
+        dumpSymbolNamesFromObject(*ObjOrErr.get(), false, {}, ArchName);
+      } else if (Error E =
+                     isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
+        error(std::move(E), Filename, ArchName);
+      }
+    }
+
+    return;
+  }
+
   if (SymbolicFile *O = dyn_cast<SymbolicFile>(&Bin)) {
     if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
       WithColor::warning(errs(), ToolName)
