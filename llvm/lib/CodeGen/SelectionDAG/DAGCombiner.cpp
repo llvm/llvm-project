@@ -2079,12 +2079,11 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
 
   // We need a constant operand for the add/sub, and the other operand is a
   // logical shift right: add (srl), C or sub C, (srl).
-  // TODO - support non-uniform vector amounts.
   bool IsAdd = N->getOpcode() == ISD::ADD;
   SDValue ConstantOp = IsAdd ? N->getOperand(1) : N->getOperand(0);
   SDValue ShiftOp = IsAdd ? N->getOperand(0) : N->getOperand(1);
-  ConstantSDNode *C = isConstOrConstSplat(ConstantOp);
-  if (!C || ShiftOp.getOpcode() != ISD::SRL)
+  if (!DAG.isConstantIntBuildVectorOrConstantInt(ConstantOp) ||
+      ShiftOp.getOpcode() != ISD::SRL)
     return SDValue();
 
   // The shift must be of a 'not' value.
@@ -2105,8 +2104,11 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   auto ShOpcode = IsAdd ? ISD::SRA : ISD::SRL;
   SDValue NewShift = DAG.getNode(ShOpcode, DL, VT, Not.getOperand(0), ShAmt);
-  APInt NewC = IsAdd ? C->getAPIntValue() + 1 : C->getAPIntValue() - 1;
-  return DAG.getNode(ISD::ADD, DL, VT, NewShift, DAG.getConstant(NewC, DL, VT));
+  if (SDValue NewC =
+          DAG.FoldConstantArithmetic(IsAdd ? ISD::ADD : ISD::SUB, DL, VT,
+                                     {ConstantOp, DAG.getConstant(1, DL, VT)}))
+    return DAG.getNode(ISD::ADD, DL, VT, NewShift, NewC);
+  return SDValue();
 }
 
 /// Try to fold a node that behaves like an ADD (note that N isn't necessarily
