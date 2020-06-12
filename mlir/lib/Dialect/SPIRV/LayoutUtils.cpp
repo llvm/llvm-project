@@ -32,7 +32,7 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
   }
 
   SmallVector<Type, 4> memberTypes;
-  SmallVector<spirv::StructType::OffsetInfo, 4> offsetInfo;
+  SmallVector<Size, 4> layoutInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
 
   Size structMemberOffset = 0;
@@ -46,8 +46,7 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
         decorateType(structType.getElementType(i), memberSize, memberAlignment);
     structMemberOffset = llvm::alignTo(structMemberOffset, memberAlignment);
     memberTypes.push_back(memberType);
-    offsetInfo.push_back(
-        static_cast<spirv::StructType::OffsetInfo>(structMemberOffset));
+    layoutInfo.push_back(structMemberOffset);
     // If the member's size is the max value, it must be the last member and it
     // must be a runtime array.
     assert(memberSize != std::numeric_limits<Size>().max() ||
@@ -67,7 +66,7 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
   size = llvm::alignTo(structMemberOffset, maxMemberAlignment);
   alignment = maxMemberAlignment;
   structType.getMemberDecorations(memberDecorations);
-  return spirv::StructType::get(memberTypes, offsetInfo, memberDecorations);
+  return spirv::StructType::get(memberTypes, layoutInfo, memberDecorations);
 }
 
 Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
@@ -169,7 +168,7 @@ bool VulkanLayoutUtils::isLegalType(Type type) {
   case spirv::StorageClass::StorageBuffer:
   case spirv::StorageClass::PushConstant:
   case spirv::StorageClass::PhysicalStorageBuffer:
-    return structType.hasOffset() || !structType.getNumElements();
+    return structType.hasLayout() || !structType.getNumElements();
   default:
     return true;
   }

@@ -416,3 +416,47 @@ entry:
   call void @LeakAddress() ["unknown"(i32* %a)]
   ret void
 }
+
+define void @ByVal(i16* byval %p) {
+  ; CHECK-LABEL: @ByVal dso_preemptable{{$}}
+  ; CHECK-NEXT: args uses:
+  ; CHECK-NEXT: allocas uses:
+  ; CHECK-NOT: ]:
+entry:
+  ret void
+}
+
+define void @TestByVal() {
+; CHECK-LABEL: @TestByVal dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[2]: [0,2)
+; CHECK-NEXT: y[8]: [0,2)
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i16, align 4
+  call void @ByVal(i16* byval %x)
+
+  %y = alloca i64, align 4
+  %y1 = bitcast i64* %y to i16*
+  call void @ByVal(i16* byval %y1)
+  
+  ret void
+}
+
+declare void @ByValArray([100000 x i64]* byval %p)
+
+define void @TestByValArray() {
+; CHECK-LABEL: @TestByValArray dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: z[800000]: [500000,1300000)
+; CHECK-NOT: ]:
+entry:
+  %z = alloca [100000 x i64], align 4
+  %z1 = bitcast [100000 x i64]* %z to i8*
+  %z2 = getelementptr i8, i8* %z1, i64 500000
+  %z3 = bitcast i8* %z2 to [100000 x i64]*
+  call void @ByValArray([100000 x i64]* byval %z3)
+  ret void
+}
