@@ -332,6 +332,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->disableVerify = args.hasArg(OPT_disable_verify);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
+  config->experimentalPic = args.hasArg(OPT_experimental_pic);
   config->entry = getEntry(args);
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
@@ -467,6 +468,23 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r and -pie may not be used together");
     if (config->sharedMemory)
       error("-r and --shared-memory may not be used together");
+  }
+
+  // To begin to prepare for Module Linking-style shared libraries, start
+  // warning about uses of `-shared` and related flags outside of Experimental
+  // mode, to give anyone using them a heads-up that they will be changing.
+  //
+  // Also, warn about flags which request explicit exports.
+  if (!config->experimentalPic) {
+    // -shared will change meaning when Module Linking is implemented.
+    if (config->shared) {
+      warn("creating shared libraries, with -shared, is not yet stable");
+    }
+
+    // -pie will change meaning when Module Linking is implemented.
+    if (config->pie) {
+      warn("creating PIEs, with -pie, is not yet stable");
+    }
   }
 }
 
