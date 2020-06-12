@@ -87,6 +87,7 @@ macro(add_comgr_test name)
     ${TEST_INPUT_BINARIES})
   add_test(NAME ${test_name}
     COMMAND "${name}")
+  add_dependencies(check-comgr ${name})
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
   if (NOT(UNIX))
