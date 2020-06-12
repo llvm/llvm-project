@@ -61,33 +61,33 @@ func @affine_terminator() {
 
 // -----
 
-// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0)[s0] -> (1000, d0 + 512, s0)>
-// CHECK-DAG: #[[MAP1:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)>
-// CHECK-DAG: #[[MAP2:map[0-9]+]] = affine_map<()[s0, s1] -> (s0 - s1, 11)>
-// CHECK-DAG: #[[MAP3:map[0-9]+]] = affine_map<() -> (77, 78, 79)>
+// CHECK-DAG: #[[$MAP0:map[0-9]+]] = affine_map<(d0)[s0] -> (1000, d0 + 512, s0)>
+// CHECK-DAG: #[[$MAP1:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)>
+// CHECK-DAG: #[[$MAP2:map[0-9]+]] = affine_map<()[s0, s1] -> (s0 - s1, 11)>
+// CHECK-DAG: #[[$MAP3:map[0-9]+]] = affine_map<() -> (77, 78, 79)>
 
 // CHECK-LABEL: @affine_min
 func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
-  // CHECK: affine.min #[[MAP0]](%arg0)[%arg1]
+  // CHECK: affine.min #[[$MAP0]](%arg0)[%arg1]
   %0 = affine.min affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
-  // CHECK: affine.min #[[MAP1]](%arg0, %arg1)[%arg2]
+  // CHECK: affine.min #[[$MAP1]](%arg0, %arg1)[%arg2]
   %1 = affine.min affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)> (%arg0, %arg1)[%arg2]
-  // CHECK: affine.min #[[MAP2]]()[%arg1, %arg2]
+  // CHECK: affine.min #[[$MAP2]]()[%arg1, %arg2]
   %2 = affine.min affine_map<()[s0, s1] -> (s0 - s1, 11)> ()[%arg1, %arg2]
-  // CHECK: affine.min #[[MAP3]]()
+  // CHECK: affine.min #[[$MAP3]]()
   %3 = affine.min affine_map<()[] -> (77, 78, 79)> ()[]
   return
 }
 
 // CHECK-LABEL: @affine_max
 func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
-  // CHECK: affine.max #[[MAP0]](%arg0)[%arg1]
+  // CHECK: affine.max #[[$MAP0]](%arg0)[%arg1]
   %0 = affine.max affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
-  // CHECK: affine.max #[[MAP1]](%arg0, %arg1)[%arg2]
+  // CHECK: affine.max #[[$MAP1]](%arg0, %arg1)[%arg2]
   %1 = affine.max affine_map<(d0, d1)[s0] -> (d0 - d1, s0 + 512)> (%arg0, %arg1)[%arg2]
-  // CHECK: affine.max #[[MAP2]]()[%arg1, %arg2]
+  // CHECK: affine.max #[[$MAP2]]()[%arg1, %arg2]
   %2 = affine.max affine_map<()[s0, s1] -> (s0 - s1, 11)> ()[%arg1, %arg2]
-  // CHECK: affine.max #[[MAP3]]()
+  // CHECK: affine.max #[[$MAP3]]()
   %3 = affine.max affine_map<()[] -> (77, 78, 79)> ()[]
   return
 }
