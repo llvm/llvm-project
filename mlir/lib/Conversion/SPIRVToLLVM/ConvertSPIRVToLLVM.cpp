@@ -25,6 +25,19 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given type is an unsigned integer or vector type
+static bool isUnsignedIntegerOrVector(Type type) {
+  if (type.isUnsignedInteger())
+    return true;
+  if (auto vecType = type.dyn_cast<VectorType>())
+    return vecType.getElementType().isUnsignedInteger();
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
 
@@ -91,6 +104,48 @@ public:
     return success();
   }
 };
+
+/// Converts SPIR-V shift ops to LLVM shift ops. Since LLVM dialect
+/// puts a restriction on `Shift` and `Base` to have the same bit width,
+/// `Shift` is zero or sign extended to match this specification. Cases when
+/// `Shift` bit width > `Base` bit width are considered to be illegal.
+template <typename SPIRVOp, typename LLVMOp>
+class ShiftPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto dstType = this->typeConverter.convertType(operation.getType());
+    if (!dstType)
+      return failure();
+
+    Type op1Type = operation.operand1().getType();
+    Type op2Type = operation.operand2().getType();
+
+    if (op1Type == op2Type) {
+      rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType,
+                                                   operands);
+      return success();
+    }
+
+    Location loc = operation.getLoc();
+    Value extended;
+    if (isUnsignedIntegerOrVector(op2Type)) {
+      extended = rewriter.template create<LLVM::ZExtOp>(loc, dstType,
+                                                        operation.operand2());
+    } else {
+      extended = rewriter.template create<LLVM::SExtOp>(loc, dstType,
+                                                        operation.operand2());
+    }
+    Value result = rewriter.template create<LLVMOp>(
+        loc, dstType, operation.operand1(), extended);
+    rewriter.replaceOp(operation, result);
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -142,6 +197,11 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::UGreaterThanOp, LLVM::ICmpPredicate::ugt>,
       IComparePattern<spirv::UGreaterThanEqualOp, LLVM::ICmpPredicate::uge>,
       IComparePattern<spirv::ULessThanEqualOp, LLVM::ICmpPredicate::ule>,
-      IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>>(
-      context, typeConverter);
+      IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
+
+      // Shift ops
+      ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,
+      ShiftPattern<spirv::ShiftRightLogicalOp, LLVM::LShrOp>,
+      ShiftPattern<spirv::ShiftLeftLogicalOp, LLVM::ShlOp>>(context,
+                                                            typeConverter);
 }
