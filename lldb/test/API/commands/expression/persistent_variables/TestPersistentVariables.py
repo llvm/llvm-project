@@ -15,38 +15,16 @@ class PersistentVariablesTestCase(TestBase):
     def test_persistent_variables(self):
         """Test that lldb persistent variables works correctly."""
         self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
 
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        self.runCmd("breakpoint set --source-pattern-regexp break")
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        self.runCmd("expression int $i = i")
-
-        self.expect("expression $i == i",
-                    startstr="(bool) $0 = true")
-
-        self.expect("expression $i + 1",
-                    startstr="(int) $1 = 6")
-
-        self.expect("expression $i + 3",
-                    startstr="(int) $2 = 8")
-
-        self.expect("expression $2 + $1",
-                    startstr="(int) $3 = 14")
-
-        self.expect("expression $3",
-                    startstr="(int) $3 = 14")
-
-        self.expect("expression $2",
-                    startstr="(int) $2 = 8")
-
-        self.expect("expression (int)-2",
-                    startstr="(int) $4 = -2")
-
-        self.expect("expression $4 > (int)31",
-                    startstr="(bool) $5 = false")
-
-        self.expect("expression (long)$4",
-                    startstr="(long) $6 = -2")
+        self.runCmd("expr int $i = i")
+        self.expect_expr("$i == i", result_type="bool", result_value="true")
+        self.expect_expr("$i + 1", result_type="int", result_value="6")
+        self.expect_expr("$i + 3", result_type="int", result_value="8")
+        self.expect_expr("$1 + $2", result_type="int", result_value="14")
+        self.expect_expr("$3", result_type="int", result_value="14")
+        self.expect_expr("$2", result_type="int", result_value="8")
+        self.expect_expr("(int)-2", result_type="int", result_value="-2")
+        self.expect_expr("$4", result_type="int", result_value="-2")
+        self.expect_expr("$4 > (int)31", result_type="bool", result_value="false")
+        self.expect_expr("(long)$4", result_type="long", result_value="-2")
