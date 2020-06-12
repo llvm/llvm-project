@@ -3589,12 +3589,12 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
 /// vector with s16 typed elements.
 static void packImageA16AddressToDwords(MachineIRBuilder &B, MachineInstr &MI,
                                         SmallVectorImpl<Register> &PackedAddrs,
-                                        int AddrIdx, int DimIdx, int NumVAddrs,
+                                        int AddrIdx, int DimIdx, int EndIdx,
                                         int NumGradients) {
   const LLT S16 = LLT::scalar(16);
   const LLT V2S16 = LLT::vector(2, 16);
 
-  for (int I = AddrIdx; I < AddrIdx + NumVAddrs; ++I) {
+  for (int I = AddrIdx; I < EndIdx; ++I) {
     MachineOperand &SrcOp = MI.getOperand(I);
     if (!SrcOp.isReg())
       continue; // _L to _LZ may have eliminated this.
@@ -3607,7 +3607,7 @@ static void packImageA16AddressToDwords(MachineIRBuilder &B, MachineInstr &MI,
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
       // derivatives dx/dh and dx/dv are packed with undef.
-      if (((I + 1) >= (AddrIdx + NumVAddrs)) ||
+      if (((I + 1) >= EndIdx) ||
           ((NumGradients / 2) % 2 == 1 &&
            (I == DimIdx + (NumGradients / 2) - 1 ||
             I == DimIdx + NumGradients - 1)) ||
@@ -3698,16 +3698,18 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // Index of first address argument
   const int AddrIdx = getImageVAddrIdxBegin(BaseOpcode, NumDefs);
 
-  // Check for 16 bit addresses and pack if true.
-  int DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
-  LLT AddrTy = MRI->getType(MI.getOperand(DimIdx).getReg());
-  const bool IsA16 = AddrTy == S16;
-
   int NumVAddrs, NumGradients;
   std::tie(NumVAddrs, NumGradients) = getImageNumVAddr(ImageDimIntr, BaseOpcode);
   const int DMaskIdx = BaseOpcode->Atomic ? -1 :
     getDMaskIdx(BaseOpcode, NumDefs);
   unsigned DMask = 0;
+
+  // Check for 16 bit addresses and pack if true.
+  int DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
+  LLT GradTy = MRI->getType(MI.getOperand(DimIdx).getReg());
+  LLT AddrTy = MRI->getType(MI.getOperand(DimIdx + NumGradients).getReg());
+  const bool IsG16 = GradTy == S16;
+  const bool IsA16 = AddrTy == S16;
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
@@ -3799,30 +3801,34 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     }
   }
 
-  // If the register allocator cannot place the address registers contiguously
-  // without introducing moves, then using the non-sequential address encoding
-  // is always preferable, since it saves VALU instructions and is usually a
-  // wash in terms of code size or even better.
-  //
-  // However, we currently have no way of hinting to the register allocator
-  // that MIMG addresses should be placed contiguously when it is possible to
-  // do so, so force non-NSA for the common 2-address case as a heuristic.
-  //
-  // SIShrinkInstructions will convert NSA encodings to non-NSA after register
-  // allocation when possible.
-  const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
-
   // Rewrite the addressing register layout before doing anything else.
-  if (IsA16) {
-    // FIXME: this feature is missing from gfx10. When that is fixed, this check
-    // should be introduced.
-    if (!ST.hasR128A16() && !ST.hasGFX10A16())
+  if (IsA16 || IsG16) {
+    if (IsA16) {
+      // Target must support the feature and gradients need to be 16 bit too
+      if (!ST.hasA16() || !IsG16)
+        return false;
+    } else if (!ST.hasG16())
       return false;
 
     if (NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;
-      packImageA16AddressToDwords(B, MI, PackedRegs, AddrIdx, DimIdx, NumVAddrs,
-                                  NumGradients);
+      // Don't compress addresses for G16
+      const int PackEndIdx =
+          IsA16 ? (AddrIdx + NumVAddrs) : (DimIdx + NumGradients);
+      packImageA16AddressToDwords(B, MI, PackedRegs, AddrIdx, DimIdx,
+                                  PackEndIdx, NumGradients);
+
+      if (!IsA16) {
+        // Add uncompressed address
+        for (int I = DimIdx + NumGradients; I != AddrIdx + NumVAddrs; ++I) {
+          int AddrReg = MI.getOperand(I).getReg();
+          assert(B.getMRI()->getType(AddrReg) == LLT::scalar(32));
+          PackedRegs.push_back(AddrReg);
+        }
+      }
+
+      // See also below in the non-a16 branch
+      const bool UseNSA = PackedRegs.size() >= 3 && ST.hasNSAEncoding();
 
       if (!UseNSA && PackedRegs.size() > 1) {
         LLT PackedAddrTy = LLT::vector(2 * PackedRegs.size(), 16);
@@ -3847,10 +3853,30 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
           SrcOp.setReg(AMDGPU::NoRegister);
       }
     }
-  } else if (!UseNSA && NumVAddrs > 1) {
-    convertImageAddrToPacked(B, MI, AddrIdx, NumVAddrs);
+  } else {
+    // If the register allocator cannot place the address registers contiguously
+    // without introducing moves, then using the non-sequential address encoding
+    // is always preferable, since it saves VALU instructions and is usually a
+    // wash in terms of code size or even better.
+    //
+    // However, we currently have no way of hinting to the register allocator
+    // that MIMG addresses should be placed contiguously when it is possible to
+    // do so, so force non-NSA for the common 2-address case as a heuristic.
+    //
+    // SIShrinkInstructions will convert NSA encodings to non-NSA after register
+    // allocation when possible.
+    const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
+
+    if (!UseNSA && NumVAddrs > 1)
+      convertImageAddrToPacked(B, MI, AddrIdx, NumVAddrs);
   }
 
+  int Flags = 0;
+  if (IsA16)
+    Flags |= 1;
+  if (IsG16)
+    Flags |= 2;
+  MI.addOperand(MachineOperand::CreateImm(Flags));
 
   if (BaseOpcode->Store) { // No TFE for stores?
     // TODO: Handle dmask trim

@@ -187,13 +187,17 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                             const TargetRegisterClass *RC,
                             SmallVectorImpl<MachineInstr *> &NewMIs) const;
 
-  // If the inst has imm-form and one of its operand is produced by a LI,
-  // put the imm into the inst directly and remove the LI if possible.
+  // Replace the instruction with single LI if possible. \p DefMI must be LI or
+  // LI8.
+  bool simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
+                    unsigned OpNoForForwarding, MachineInstr **KilledDef) const;
+  // If the inst is x-form and has imm-form and one of its operand is produced
+  // by a LI, put the imm into the inst directly and remove the LI if possible.
   bool transformToImmFormFedByLI(MachineInstr &MI, const ImmInstrInfo &III,
-                                 unsigned ConstantOpNo, MachineInstr &DefMI,
-                                 int64_t Imm) const;
-  // If the inst has imm-form and one of its operand is produced by an
-  // add-immediate, try to transform it when possible.
+                                 unsigned ConstantOpNo,
+                                 MachineInstr &DefMI) const;
+  // If the inst is x-form and has imm-form and one of its operand is produced
+  // by an add-immediate, try to transform it when possible.
   bool transformToImmFormFedByAdd(MachineInstr &MI, const ImmInstrInfo &III,
                                   unsigned ConstantOpNo, MachineInstr &DefMI,
                                   bool KillDefMI) const;

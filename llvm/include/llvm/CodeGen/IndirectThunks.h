@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
