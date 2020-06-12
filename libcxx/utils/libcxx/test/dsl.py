@@ -28,6 +28,8 @@ def _executeScriptInternal(test, commands):
 
   TODO: This really should be easier to access from Lit itself
   """
+  parsedCommands = libcxx.test.newformat.parseScript(test, preamble=commands)
+
   class FakeLitConfig(object):
     def __init__(self):
       self.isWindows = platform.system() == 'Windows'
@@ -37,7 +39,7 @@ def _executeScriptInternal(test, commands):
   execDir = os.path.dirname(test.getExecPath())
   if not os.path.exists(execDir):
     os.makedirs(execDir)
-  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, commands, execDir)
+  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
   if isinstance(res, lit.Test.Result):
     res = ('', '', 127, None)
   return res
@@ -66,14 +68,11 @@ def sourceBuilds(config, source):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    commands = [
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
       "mkdir -p %T",
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
-    ]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
-    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'])
-    _executeScriptInternal(test, cleanup)
+    ])
+    _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
 def hasCompileFlag(config, flag):
@@ -84,9 +83,9 @@ def hasCompileFlag(config, flag):
   checking whether that succeeds.
   """
   with _makeConfigTest(config) as test:
-    commands = ["%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
+      "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
+    ])
     return exitCode == 0
 
 def hasLocale(config, locale):
@@ -106,15 +105,12 @@ def hasLocale(config, locale):
         else                                      return 1;
       }
       """)
-    commands = [
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
       "mkdir -p %T",
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
       "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
-    ]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
-    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'])
-    _executeScriptInternal(test, cleanup)
+    ])
+    _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
 def compilerMacros(config, flags=''):
@@ -128,9 +124,9 @@ def compilerMacros(config, flags=''):
   be added to the compiler invocation when generating the macros.
   """
   with _makeConfigTest(config) as test:
-    commands = ["%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)]
-    commands = libcxx.test.newformat.parseScript(test, preamble=commands)
-    unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
+      "%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)
+    ])
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:
