@@ -235,9 +235,7 @@ define <4 x i32> @add_lshr_not_vec_splat(<4 x i32> %x) {
 define <4 x i32> @add_lshr_not_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: add_lshr_not_vec_nonsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    psrld $31, %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -274,9 +272,7 @@ define <4 x i32> @sub_lshr_not_vec_splat(<4 x i32> %x) {
 define <4 x i32> @sub_lshr_not_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: sub_lshr_not_vec_nonsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    psrld $31, %xmm0
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
