@@ -1293,14 +1293,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10 = STI.getGeneration() >= AMDGPUSubtarget::GFX10;
 
-  const LLT S16 = LLT::scalar(16);
   const int VAddrIdx = getImageVAddrIdxBegin(BaseOpcode,
                                              MI.getNumExplicitDefs());
   int NumVAddr, NumGradients;
   std::tie(NumVAddr, NumGradients) = getImageNumVAddr(Intr, BaseOpcode);
-
-  const LLT AddrTy = MRI->getType(MI.getOperand(VAddrIdx).getReg());
-  const bool IsA16 = AddrTy.getScalarType() == S16;
 
   Register VDataIn, VDataOut;
   LLT VDataTy;
@@ -1322,6 +1318,14 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   bool LWE;
   bool IsTexFail = false;
   if (!parseTexFail(MI.getOperand(CtrlIdx).getImm(), TFE, LWE, IsTexFail))
+    return false;
+
+  const int Flags = MI.getOperand(CtrlIdx + 2).getImm();
+  const bool IsA16 = (Flags & 1) != 0;
+  const bool IsG16 = (Flags & 2) != 0;
+
+  // A16 implies 16 bit gradients
+  if (IsA16 && !IsG16)
     return false;
 
   unsigned DMask = 0;
@@ -1394,6 +1398,14 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       assert(Lod.getImm() == 0);
       IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
     }
+  }
+
+  // Set G16 opcode
+  if (IsG16 && !IsA16) {
+    const AMDGPU::MIMGG16MappingInfo *G16MappingInfo =
+        AMDGPU::getMIMGG16MappingInfo(Intr->BaseOpcode);
+    assert(G16MappingInfo);
+    IntrOpcode = G16MappingInfo->G16; // set opcode to variant with _g16
   }
 
   // TODO: Check this in verifier.
