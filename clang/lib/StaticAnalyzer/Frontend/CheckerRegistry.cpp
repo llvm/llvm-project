@@ -285,6 +285,7 @@ CheckerRegistry::CheckerRegistry(
   resolveDependencies<true>();
   resolveDependencies<false>();
 
+#ifndef NDEBUG // avoid -Wunused warnings in release build.
   for (auto &DepPair : Dependencies) {
     for (auto &WeakDepPair : WeakDependencies) {
       // Some assertions to enforce that strong dependencies are relations in
@@ -298,6 +299,7 @@ CheckerRegistry::CheckerRegistry(
              "A strong dependency mustn't be a weak dependency as well!");
     }
   }
+#endif
 
   resolveCheckerAndPackageOptions();
 
