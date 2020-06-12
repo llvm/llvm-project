@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """A script to generate FileCheck statements for mlir unit tests.
 
 This script is a utility to add FileCheck patterns to an mlir file.
