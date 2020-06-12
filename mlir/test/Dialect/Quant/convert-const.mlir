@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -quant-convert-const | FileCheck %s --dump-input=fail
+// RUN: mlir-opt %s -split-input-file -quant-convert-const | FileCheck %s
 
 // Magic numbers:
 //   7.8125e-03 = 1/128 = 2/256 : real range = [-1.0, 0.9921875] (for 8bit, zeroPoint=128)

@@ -125,37 +125,43 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-      set(export_to_mlirtargets)
-      if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-          set(export_to_mlirtargets EXPORT MLIRTargets)
-        set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
-      endif()
-
-      install(TARGETS ${name}
-        COMPONENT ${name}
-        ${export_to_mlirtargets}
-        LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        RUNTIME DESTINATION bin)
-
-      if (NOT LLVM_ENABLE_IDE)
-        add_llvm_install_targets(install-${name}
-                                 DEPENDS ${name}
-                                 COMPONENT ${name})
-      endif()
-      set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
-    endif()
-    set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
+    add_mlir_library_install(${name})
   else()
     # Add empty "phony" target
     add_custom_target(${name})
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "MLIR libraries")
 endfunction(add_mlir_library)
+
+# Adds an MLIR library target for installation.
+# This is usually done as part of add_mlir_library but is broken out for cases
+# where non-standard library builds can be installed.
+function(add_mlir_library_install name)
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  set(export_to_mlirtargets)
+  if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+      "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+      NOT LLVM_DISTRIBUTION_COMPONENTS)
+      set(export_to_mlirtargets EXPORT MLIRTargets)
+    set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
+  endif()
+
+  install(TARGETS ${name}
+    COMPONENT ${name}
+    ${export_to_mlirtargets}
+    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    RUNTIME DESTINATION bin)
+
+  if (NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-${name}
+                            DEPENDS ${name}
+                            COMPONENT ${name})
+  endif()
+  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+  endif()
+  set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
+endfunction()
 
 # Declare the library associated with a dialect.
 function(add_mlir_dialect_library name)
