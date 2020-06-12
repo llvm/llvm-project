@@ -25,6 +25,7 @@ void RocmInstallationDetector::scanLibDevicePath() {
   assert(!LibDevicePath.empty());
 
   const StringRef Suffix(".bc");
+  const StringRef Suffix2(".amdgcn.bc");
 
   std::error_code EC;
   for (llvm::vfs::directory_iterator
@@ -36,7 +37,11 @@ void RocmInstallationDetector::scanLibDevicePath() {
     if (!FileName.endswith(Suffix))
       continue;
 
-    StringRef BaseName = FileName.drop_back(Suffix.size());
+    StringRef BaseName;
+    if (FileName.endswith(Suffix2))
+      BaseName = FileName.drop_back(Suffix2.size());
+    else if (FileName.endswith(Suffix))
+      BaseName = FileName.drop_back(Suffix.size());
 
     if (BaseName == "ocml") {
       OCML = FilePath;
