@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+project(amd_comgr VERSION "1.8.0" LANGUAGES C CXX)
+set(amd_comgr_NAME "${PROJECT_NAME}")
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
@@ -13,9 +16,6 @@ if (ROCM_CCACHE_BUILD)
     message(WARNING "Unable to find ccache. Falling back to real compiler")
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
-
-project(amd_comgr VERSION "1.8.0" LANGUAGES C CXX)
-set(amd_comgr_NAME "${PROJECT_NAME}")
 
 find_package(ROCM PATHS "/opt/rocm")
 if (ROCM_FOUND)
