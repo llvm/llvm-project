@@ -321,17 +321,3 @@ DWARF:
       IncludeDirs:           []
       Files:                 []
       Opcodes:               []
-
-## h) Test that yaml2obj will not generate the .debug_line section when the "DWARF" entry
-## exists but the "debug_line" entry doesn't exist in the "DWARF" entry or the "Sections" entry.
-
-# RUN: yaml2obj --docnum=8 %s -o %t8.o
-# RUN: llvm-readelf --sections %t8.o | FileCheck /dev/null --implicit-check-not=.debug_line
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-DWARF:
