@@ -54,7 +54,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
           NodeDumper.AddChild([=] {
             NodeDumper.dumpBareDeclRef(*RI);
 
-            if ((*RI)->isHidden())
+            if (!(*RI)->isUnconditionallyVisible())
               OS << " hidden";
 
             // If requested, dump the redecl chain for this lookup.
