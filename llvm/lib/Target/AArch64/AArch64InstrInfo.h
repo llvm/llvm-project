@@ -397,6 +397,9 @@ static inline bool isIndirectBranchOpcode(int Opc) {
   return false;
 }
 
+/// Return opcode to be used for indirect calls.
+unsigned getBLRCallOpcode(const MachineFunction &MF);
+
 static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
   using namespace AArch64PACKey;
   switch (K) {

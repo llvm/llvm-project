@@ -464,6 +464,9 @@ def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
 def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
   "HardenSlsRetBr", "true",
   "Harden against straight line speculation across RET and BR instructions">;
+def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
+  "HardenSlsBlr", "true",
+  "Harden against straight line speculation across BLR instructions">;
 
 //===----------------------------------------------------------------------===//
 // AArch64 Processors supported.

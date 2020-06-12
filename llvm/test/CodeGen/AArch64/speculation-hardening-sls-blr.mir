@@ -1,0 +1,58 @@
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening \
+# RUN:     -stop-after aarch64-sls-hardening -o - %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK
+
+# Check that the BLR SLS hardening transforms a BLR into a BL with operands as
+# expected.
+--- |
+  $__llvm_slsblr_thunk_x8 = comdat any
+  @a = dso_local local_unnamed_addr global i32 (...)* null, align 8
+  @b = dso_local local_unnamed_addr global i32 0, align 4
+
+  define dso_local void @fn1() local_unnamed_addr "target-features"="+harden-sls-blr" {
+  entry:
+    %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
+    %call = tail call i32 %0() nounwind
+    store i32 %call, i32* @b, align 4
+    ret void
+  }
+
+  ; Function Attrs: naked nounwind
+  define linkonce_odr hidden void @__llvm_slsblr_thunk_x8() naked nounwind comdat {
+  entry:
+    ret void
+  }
+...
+---
+name:            fn1
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: fn1
+  bb.0.entry:
+    liveins: $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 ; :: (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    renamable $x8 = ADRP target-flags(aarch64-page) @a
+    renamable $x8 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load 8 from `i32 ()** bitcast (i32 (...)** @a to i32 ()**)`)
+    BLRNoIP killed renamable $x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+  ; CHECK:  BL <mcsymbol __llvm_slsblr_thunk_x8>, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, implicit killed $x8
+    renamable $x8 = ADRP target-flags(aarch64-page) @b
+    STRWui killed renamable $w0, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @b :: (store 4 into @b)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 ; :: (load 8 from %stack.0)
+    RET undef $lr
+
+
+...
+---
+name:            __llvm_slsblr_thunk_x8
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x8
+
+    BR $x8
+    SpeculationBarrierISBDSBEndBB
+...
