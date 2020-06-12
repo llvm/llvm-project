@@ -149,8 +149,3 @@ class TestSwiftGlobals(TestBase):
             value == 20,
             "my_large_dude value is the uninitialized one.")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

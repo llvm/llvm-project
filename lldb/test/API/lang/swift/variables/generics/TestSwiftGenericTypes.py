@@ -84,9 +84,3 @@ class TestSwiftGenericTypes(TestBase):
             substrs=[
                 '(String?) o_some = "Hello"',
                 '(String?) o_none = nil'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

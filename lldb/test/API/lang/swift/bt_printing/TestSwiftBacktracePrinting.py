@@ -58,8 +58,3 @@ class TestSwiftBacktracePrinting(TestBase):
                                    'arg1=12', 'arg2="Hello world"'])
         self.expect("breakpoint set -p other", substrs=['g<U, T>'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

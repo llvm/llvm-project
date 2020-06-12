@@ -83,8 +83,3 @@ class TestSwiftStringVariables(TestBase):
             'expression -l objc++ -- (char*)"Hello\b\b\b\b\bGoodbye"',
             substrs=['"Hello\\b\\b\\b\\b\\bGoodbye"'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

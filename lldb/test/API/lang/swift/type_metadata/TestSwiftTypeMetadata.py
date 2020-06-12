@@ -86,9 +86,3 @@ class SwiftTypeMetadataTest(TestBase):
             "frame variable -d run -- x",
             substrs=['(a.AnotherDerivedClass) x'])  # second stop on bat
         self.runCmd("continue", RUN_SUCCEEDED)
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

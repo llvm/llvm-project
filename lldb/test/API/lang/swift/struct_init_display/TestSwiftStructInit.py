@@ -43,9 +43,3 @@ class TestSwiftStructInit(TestBase):
 
         var_b = theself.GetChildMemberWithName("b")
         lldbutil.check_variable(self, var_b, False, '"Hey"')
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

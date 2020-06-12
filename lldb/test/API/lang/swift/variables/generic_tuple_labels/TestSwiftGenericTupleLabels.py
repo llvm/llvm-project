@@ -54,8 +54,3 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
         self.expect('frame variable -d run -- x.w', substrs=['72'])
         self.expect('expression -d run -- x.z', substrs=['36'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

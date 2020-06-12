@@ -49,8 +49,3 @@ class TestSwiftSplitDebug(lldbtest.TestBase):
         self.check_val("c.c_x", "12345")
         self.check_val("c.c_y", "6789")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

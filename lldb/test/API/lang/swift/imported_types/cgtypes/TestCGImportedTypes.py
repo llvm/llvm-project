@@ -46,9 +46,3 @@ class TestSwiftCGImportedTypes(TestBase):
             x_native.IsValid(),
             "Got valid native from cgrect.origin.x")
         self.assertTrue(x_native.GetValue() == "10", "Value of x is correct")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

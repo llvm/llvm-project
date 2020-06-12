@@ -48,9 +48,3 @@ class TestSwiftAtObjCIvars(TestBase):
 
         self.check_foo(foo_objc)
         self.check_foo(foo_swift)
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

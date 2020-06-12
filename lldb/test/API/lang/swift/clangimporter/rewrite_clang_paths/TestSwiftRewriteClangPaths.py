@@ -130,9 +130,3 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.assertEqual(found_ovl, 2)
         else:
             self.assertTrue(errs > 0, "expected module import error")
-        
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

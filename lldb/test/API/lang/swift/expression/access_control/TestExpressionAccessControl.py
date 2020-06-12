@@ -49,8 +49,3 @@ class TestSwiftExpressionAccessControl(TestBase):
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
         self.check_expression("foo.m_a", "3", use_summary=False)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

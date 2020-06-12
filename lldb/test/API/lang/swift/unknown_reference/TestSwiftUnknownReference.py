@@ -46,9 +46,3 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
         m_objc_ref = var_self.GetChildMemberWithName("objc_ref")
         self.check_class(m_objc_ref)
 
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
