@@ -3,9 +3,7 @@
 
 define i8 @add-shl-sdiv-scalar0(i8 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-scalar0(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[SL:%.*]] = shl i8 [[SD]], 2
-; CHECK-NEXT:    [[RZ:%.*]] = add i8 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i8 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i8 [[RZ]]
 ;
   %sd = sdiv i8 %x, -4
@@ -16,9 +14,7 @@ define i8 @add-shl-sdiv-scalar0(i8 %x) {
 
 define i8 @add-shl-sdiv-scalar1(i8 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-scalar1(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i8 [[X:%.*]], -64
-; CHECK-NEXT:    [[SL:%.*]] = shl i8 [[SD]], 6
-; CHECK-NEXT:    [[RZ:%.*]] = add i8 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i8 [[X:%.*]], 64
 ; CHECK-NEXT:    ret i8 [[RZ]]
 ;
   %sd = sdiv i8 %x, -64
@@ -29,9 +25,7 @@ define i8 @add-shl-sdiv-scalar1(i8 %x) {
 
 define i32 @add-shl-sdiv-scalar2(i32 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-scalar2(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[X:%.*]], -1073741824
-; CHECK-NEXT:    [[SL:%.*]] = shl i32 [[SD]], 30
-; CHECK-NEXT:    [[RZ:%.*]] = add i32 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i32 [[X:%.*]], 1073741824
 ; CHECK-NEXT:    ret i32 [[RZ]]
 ;
   %sd = sdiv i32 %x, -1073741824
@@ -44,9 +38,7 @@ define i32 @add-shl-sdiv-scalar2(i32 %x) {
 
 define <3 x i8> @add-shl-sdiv-splat0(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat0(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -4, i8 -4, i8 -4>
-; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], <i8 2, i8 2, i8 2>
-; CHECK-NEXT:    [[RZ:%.*]] = add <3 x i8> [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
 ;
   %sd = sdiv <3 x i8> %x, <i8 -4, i8 -4, i8 -4>
@@ -57,9 +49,7 @@ define <3 x i8> @add-shl-sdiv-splat0(<3 x i8> %x) {
 
 define <4 x i32> @add-shl-sdiv-splat1(<4 x i32> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat1(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <4 x i32> [[X:%.*]], <i32 -1073741824, i32 -1073741824, i32 -1073741824, i32 -1073741824>
-; CHECK-NEXT:    [[SL:%.*]] = shl <4 x i32> [[SD]], <i32 30, i32 30, i32 30, i32 30>
-; CHECK-NEXT:    [[RZ:%.*]] = add <4 x i32> [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem <4 x i32> [[X:%.*]], <i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>
 ; CHECK-NEXT:    ret <4 x i32> [[RZ]]
 ;
   %sd = sdiv <4 x i32> %x, <i32 -1073741824, i32 -1073741824, i32 -1073741824, i32 -1073741824>
@@ -70,9 +60,7 @@ define <4 x i32> @add-shl-sdiv-splat1(<4 x i32> %x) {
 
 define <2 x i64> @add-shl-sdiv-splat2(<2 x i64> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat2(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <2 x i64> [[X:%.*]], <i64 -32, i64 -32>
-; CHECK-NEXT:    [[SL:%.*]] = shl <2 x i64> [[SD]], <i64 5, i64 5>
-; CHECK-NEXT:    [[RZ:%.*]] = add <2 x i64> [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem <2 x i64> [[X:%.*]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[RZ]]
 ;
   %sd = sdiv <2 x i64> %x, <i64 -32, i64 -32>
@@ -87,9 +75,7 @@ declare void @use32(i32)
 define i32 @add-shl-sdiv-i32-4-use0(i32 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-i32-4-use0(
 ; CHECK-NEXT:    call void @use32(i32 [[X:%.*]])
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[X]], -16
-; CHECK-NEXT:    [[SL:%.*]] = shl i32 [[SD]], 4
-; CHECK-NEXT:    [[RZ:%.*]] = add i32 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RZ]]
 ;
   call void @use32(i32 %x)
@@ -103,8 +89,7 @@ define i32 @add-shl-sdiv-i32-use1(i32 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-i32-use1(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[X:%.*]], -16
 ; CHECK-NEXT:    call void @use32(i32 [[SD]])
-; CHECK-NEXT:    [[SL:%.*]] = shl i32 [[SD]], 4
-; CHECK-NEXT:    [[RZ:%.*]] = add i32 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RZ]]
 ;
   %sd = sdiv i32 %x, -16
@@ -119,7 +104,7 @@ define i32 @add-shl-sdiv-i32-use2(i32 %x) {
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[SL:%.*]] = shl i32 [[SD]], 4
 ; CHECK-NEXT:    call void @use32(i32 [[SL]])
-; CHECK-NEXT:    [[RZ:%.*]] = add i32 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RZ]]
 ;
   %sd = sdiv i32 %x, -16
@@ -135,7 +120,7 @@ define i32 @add-shl-sdiv-i32-use3(i32 %x) {
 ; CHECK-NEXT:    call void @use32(i32 [[SD]])
 ; CHECK-NEXT:    [[SL:%.*]] = shl i32 [[SD]], 4
 ; CHECK-NEXT:    call void @use32(i32 [[SL]])
-; CHECK-NEXT:    [[RZ:%.*]] = add i32 [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RZ]]
 ;
   %sd = sdiv i32 %x, -16
@@ -151,8 +136,7 @@ define <3 x i8> @add-shl-sdiv-use4(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-use4(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -4, i8 -4, i8 -4>
 ; CHECK-NEXT:    call void @use3xi8(<3 x i8> [[SD]])
-; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], <i8 2, i8 2, i8 2>
-; CHECK-NEXT:    [[RZ:%.*]] = add <3 x i8> [[SL]], [[X]]
+; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X]], <i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
 ;
   %sd = sdiv <3 x i8> %x, <i8 -4, i8 -4, i8 -4>
