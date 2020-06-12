@@ -297,7 +297,9 @@ CheckerRegistry::CheckerRegistry(
              "A strong dependency mustn't have weak dependencies!");
       assert(WeakDepPair.second != DepPair.second &&
              "A strong dependency mustn't be a weak dependency as well!");
+      (void)WeakDepPair;
     }
+    (void)DepPair;
   }
 #endif
 
