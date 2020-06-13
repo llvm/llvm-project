@@ -27,14 +27,22 @@
 #include "AggressiveInstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+STATISTIC(
+    NumDAGsReduced,
+    "Number of truncations eliminated by reducing bit width of expression DAG");
+STATISTIC(NumInstrsReduced,
+          "Number of instructions whose bit width was reduced");
 
 /// Given an instruction and a container, it fills all the relevant operands of
 /// that instruction, with respect to the Trunc expression dag optimizaton.
@@ -303,6 +311,7 @@ Value *TruncInstCombine::getReducedOperand(Value *V, Type *SclTy) {
 }
 
 void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
+  NumInstrsReduced += InstInfoMap.size();
   for (auto &Itr : InstInfoMap) { // Forward
     Instruction *I = Itr.first;
     TruncInstCombine::Info &NodeInfo = Itr.second;
@@ -421,6 +430,7 @@ bool TruncInstCombine::run(Function &F) {
                     "dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionDag(NewDstSclTy);
+      ++NumDAGsReduced;
       MadeIRChange = true;
     }
   }
