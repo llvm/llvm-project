@@ -837,11 +837,10 @@ def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 
 def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
 
-// A relocatable immediate is either an immediate operand or an operand that can
-// be relocated by the linker to an immediate, such as a regular symbol in
-// non-PIC code.
-def relocImm : ComplexPattern<iAny, 1, "selectRelocImm", [imm, X86Wrapper], [],
-                              0>;
+// A relocatable immediate is an operand that can be relocated by the linker to
+// an immediate, such as a regular symbol in non-PIC code.
+def relocImm : ComplexPattern<iAny, 1, "selectRelocImm",
+                              [X86Wrapper], [], 0>;
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Predicate Definitions.
@@ -1042,13 +1041,17 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
-// FIXME: Ideally we would just replace the above i*immSExt* matchers with
-// relocImm-based matchers, but then FastISel would be unable to use them.
+def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
+  return isSExtAbsoluteSymbolRef(8, N);
+}]>;
+def i32relocImmSExt8 : PatLeaf<(i32 relocImm), [{
+  return isSExtAbsoluteSymbolRef(8, N);
+}]>;
 def i64relocImmSExt8 : PatLeaf<(i64 relocImm), [{
-  return isSExtRelocImm<8>(N);
+  return isSExtAbsoluteSymbolRef(8, N);
 }]>;
 def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
-  return isSExtRelocImm<32>(N);
+  return isSExtAbsoluteSymbolRef(32, N);
 }]>;
 
 // If we have multiple users of an immediate, it's much smaller to reuse
@@ -1068,6 +1071,13 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 // Eventually, it would be nice to allow ConstantHoisting to merge constants
 // globally for potentially added savings.
 //
+def imm_su : PatLeaf<(imm), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+
 def relocImm8_su : PatLeaf<(i8 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -1078,6 +1088,19 @@ def relocImm32_su : PatLeaf<(i32 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 
+def i16relocImmSExt8_su : PatLeaf<(i16relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i32relocImmSExt8_su : PatLeaf<(i32relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64relocImmSExt8_su : PatLeaf<(i64relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64relocImmSExt32_su : PatLeaf<(i64relocImmSExt32), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+
 def i16immSExt8_su : PatLeaf<(i16immSExt8), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -1085,13 +1108,6 @@ def i32immSExt8_su : PatLeaf<(i32immSExt8), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 def i64immSExt8_su : PatLeaf<(i64immSExt8), [{
-    return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
-
-def i64relocImmSExt8_su : PatLeaf<(i64relocImmSExt8), [{
-    return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
-def i64relocImmSExt32_su : PatLeaf<(i64relocImmSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 
@@ -1559,7 +1575,7 @@ def MOV16ri : Ii16<0xB8, AddRegFrm, (outs GR16:$dst), (ins i16imm:$src),
                    [(set GR16:$dst, imm:$src)]>, OpSize16;
 def MOV32ri : Ii32<0xB8, AddRegFrm, (outs GR32:$dst), (ins i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, relocImm:$src)]>, OpSize32;
+                   [(set GR32:$dst, imm:$src)]>, OpSize32;
 def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
                        [(set GR64:$dst, i64immSExt32:$src)]>;
@@ -1567,7 +1583,7 @@ def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
 let isReMaterializable = 1, isMoveImm = 1 in {
 def MOV64ri : RIi64<0xB8, AddRegFrm, (outs GR64:$dst), (ins i64imm:$src),
                     "movabs{q}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, relocImm:$src)]>;
+                    [(set GR64:$dst, imm:$src)]>;
 }
 
 // Longer forms that use a ModR/M byte. Needed for disassembler
@@ -1587,18 +1603,30 @@ def MOV32ri_alt : Ii32<0xC7, MRM0r, (outs GR32:$dst), (ins i32imm:$src),
 let SchedRW = [WriteStore] in {
 def MOV8mi  : Ii8 <0xC6, MRM0m, (outs), (ins i8mem :$dst, i8imm :$src),
                    "mov{b}\t{$src, $dst|$dst, $src}",
-                   [(store (i8 relocImm8_su:$src), addr:$dst)]>;
+                   [(store (i8 imm_su:$src), addr:$dst)]>;
 def MOV16mi : Ii16<0xC7, MRM0m, (outs), (ins i16mem:$dst, i16imm:$src),
                    "mov{w}\t{$src, $dst|$dst, $src}",
-                   [(store (i16 relocImm16_su:$src), addr:$dst)]>, OpSize16;
+                   [(store (i16 imm_su:$src), addr:$dst)]>, OpSize16;
 def MOV32mi : Ii32<0xC7, MRM0m, (outs), (ins i32mem:$dst, i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(store (i32 relocImm32_su:$src), addr:$dst)]>, OpSize32;
+                   [(store (i32 imm_su:$src), addr:$dst)]>, OpSize32;
 def MOV64mi32 : RIi32S<0xC7, MRM0m, (outs), (ins i64mem:$dst, i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
-                       [(store i64relocImmSExt32_su:$src, addr:$dst)]>,
+                       [(store i64immSExt32_su:$src, addr:$dst)]>,
                        Requires<[In64BitMode]>;
 } // SchedRW
+
+def : Pat<(i32 relocImm:$src), (MOV32ri relocImm:$src)>;
+def : Pat<(i64 relocImm:$src), (MOV64ri relocImm:$src)>;
+
+def : Pat<(store (i8 relocImm8_su:$src), addr:$dst),
+          (MOV8mi addr:$dst, relocImm8_su:$src)>;
+def : Pat<(store (i16 relocImm16_su:$src), addr:$dst),
+          (MOV16mi addr:$dst, relocImm16_su:$src)>;
+def : Pat<(store (i32 relocImm32_su:$src), addr:$dst),
+          (MOV32mi addr:$dst, relocImm32_su:$src)>;
+def : Pat<(store (i64 i64relocImmSExt32_su:$src), addr:$dst),
+          (MOV64mi32 addr:$dst, i64immSExt32_su:$src)>;
 
 let hasSideEffects = 0 in {
 
