@@ -270,14 +270,11 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 }
 
 static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                            unsigned Brand_id,
                                             const unsigned *Features,
                                             unsigned *Type, unsigned *Subtype) {
 #define testFeature(F)                                                         \
   (Features[F / 32] & (F % 32)) != 0
 
-  if (Brand_id != 0)
-    return;
   switch (Family) {
   case 6:
     switch (Model) {
@@ -651,7 +648,7 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned EAX, EBX, ECX, EDX;
   unsigned MaxLeaf = 5;
   unsigned Vendor;
-  unsigned Model, Family, Brand_id;
+  unsigned Model, Family;
   unsigned Features[2];
 
   // This function needs to run just once.
@@ -668,7 +665,6 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   }
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
   detectX86FamilyModel(EAX, &Family, &Model);
-  Brand_id = EBX & 0xff;
 
   // Find available features.
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features[0]);
@@ -677,7 +673,7 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 
   if (Vendor == SIG_INTEL) {
     // Get CPU type.
-    getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, &Features[0],
+    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0],
                                     &(__cpu_model.__cpu_type),
                                     &(__cpu_model.__cpu_subtype));
     __cpu_model.__cpu_vendor = VENDOR_INTEL;
