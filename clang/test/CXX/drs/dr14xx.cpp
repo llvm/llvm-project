@@ -4,10 +4,6 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus < 201103L
-// expected-no-diagnostics
-#endif
-
 namespace dr1423 { // dr1423: 11
 #if __cplusplus >= 201103L
   bool b1 = nullptr; // expected-error {{cannot initialize}}
@@ -15,6 +11,13 @@ namespace dr1423 { // dr1423: 11
   bool b3 = {nullptr}; // expected-error {{cannot initialize}}
   bool b4{nullptr}; // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
 #endif
+}
+
+namespace dr1443 { // dr1443: yes
+struct A {
+  int i;
+  A() { void foo(int=i); } // expected-error {{default argument references 'this'}}
+};
 }
 
 // dr1425: na abi
