@@ -646,7 +646,7 @@ struct __processor_model {
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
-unsigned int __cpu_features2;
+unsigned int __cpu_features2 = 0;
 
 // A constructor function that is sets __cpu_model and __cpu_features2 with
 // the right values.  This needs to run only once.  This constructor is
