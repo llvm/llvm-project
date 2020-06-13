@@ -167,13 +167,12 @@ void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
     if (pos->second->WantsRawCommandString()) {
       std::string help_text(std::string(pos->second->GetHelp()));
       help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
-      m_interpreter.OutputFormattedHelpText(output_stream,
-                                            indented_command.c_str(), "--",
-                                            help_text.c_str(), max_len);
+      m_interpreter.OutputFormattedHelpText(output_stream, indented_command,
+                                            "--", help_text, max_len);
     } else
-      m_interpreter.OutputFormattedHelpText(output_stream,
-                                            indented_command.c_str(), "--",
-                                            pos->second->GetHelp(), max_len);
+      m_interpreter.OutputFormattedHelpText(output_stream, indented_command,
+                                            "--", pos->second->GetHelp(),
+                                            max_len);
   }
 
   output_stream.PutCString("\nFor more help on any particular subcommand, type "
