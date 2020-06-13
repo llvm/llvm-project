@@ -1301,11 +1301,13 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
   if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
     for (const auto &ExportEntry : COFFObj->export_directories()) {
       StringRef Name;
-      error(ExportEntry.getSymbolName(Name));
+      if (Error E = ExportEntry.getSymbolName(Name))
+        report_error(std::move(E), Obj->getFileName());
       if (Name.empty())
         continue;
       uint32_t RVA;
-      error(ExportEntry.getExportRVA(RVA));
+      if (Error E = ExportEntry.getExportRVA(RVA))
+        report_error(std::move(E), Obj->getFileName());
 
       uint64_t VA = COFFObj->getImageBase() + RVA;
       auto Sec = std::upper_bound(
