@@ -582,17 +582,11 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 static void
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                unsigned Brand_id, unsigned Features,
-                                unsigned Features2, unsigned Features3,
+                                unsigned Brand_id,
+                                const unsigned (&Features)[3],
                                 unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
-    if (F < 32)
-      return (Features & (1U << (F & 0x1f))) != 0;
-    if (F < 64)
-      return (Features2 & (1U << ((F - 32) & 0x1f))) != 0;
-    if (F < 96)
-      return (Features3 & (1U << ((F - 64) & 0x1f))) != 0;
-    llvm_unreachable("Unexpected FeatureBit");
+    return (Features[F / 32] & (1U << (F % 32))) != 0;
   };
 
   if (Brand_id != 0)
@@ -919,12 +913,10 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                          unsigned Features, unsigned *Type,
-                                          unsigned *Subtype) {
+                                          const unsigned (&Features)[3],
+                                          unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
-    if (F < 32)
-      return (Features & (1U << (F & 0x1f))) != 0;
-    llvm_unreachable("Unexpected FeatureBit");
+    return (Features[F / 32] & (1U << (F % 32))) != 0;
   };
 
   // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
@@ -1023,22 +1015,14 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
-                                 unsigned *FeaturesOut, unsigned *Features2Out,
-                                 unsigned *Features3Out) {
-  unsigned Features = 0;
-  unsigned Features2 = 0;
-  unsigned Features3 = 0;
+                                 unsigned (&Features)[3]) {
+  Features[0] = 0;
+  Features[1] = 0;
+  Features[2] = 0;
   unsigned EAX, EBX;
 
   auto setFeature = [&](unsigned F) {
-    if (F < 32)
-      Features |= 1U << (F & 0x1f);
-    else if (F < 64)
-      Features2 |= 1U << ((F - 32) & 0x1f);
-    else if (F < 96)
-      Features3 |= 1U << ((F - 64) & 0x1f);
-    else
-      llvm_unreachable("Unexpected FeatureBit");
+    Features[F / 32] |= 1U << (F % 32);
   };
 
   if ((EDX >> 15) & 1)
@@ -1162,10 +1146,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   if (HasExtLeaf1 && ((EDX >> 29) & 1))
     setFeature(X86::FEATURE_EM64T);
-
-  *FeaturesOut  = Features;
-  *Features2Out = Features2;
-  *Features3Out = Features3;
 }
 
 StringRef sys::getHostCPUName() {
@@ -1181,16 +1161,16 @@ StringRef sys::getHostCPUName() {
 
   unsigned Brand_id = EBX & 0xff;
   unsigned Family = 0, Model = 0;
-  unsigned Features = 0, Features2 = 0, Features3 = 0;
+  unsigned Features[3] = {0, 0, 0};
   detectX86FamilyModel(EAX, &Family, &Model);
-  getAvailableFeatures(ECX, EDX, MaxLeaf, &Features, &Features2, &Features3);
+  getAvailableFeatures(ECX, EDX, MaxLeaf, Features);
 
   unsigned Type = 0;
   unsigned Subtype = 0;
 
   if (Vendor == SIG_INTEL) {
     getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
-                                    Features2, Features3, &Type, &Subtype);
+                                    &Type, &Subtype);
   } else if (Vendor == SIG_AMD) {
     getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
   }
