@@ -520,8 +520,8 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAs());
-    addPass(createX86EvexToVexInsts());
   }
+  addPass(createX86EvexToVexInsts());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());
