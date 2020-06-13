@@ -938,8 +938,8 @@ private:
 
   // Load Value Injection (LVI) Mitigations for machine code
   void emitWarningForSpecialLVIInstruction(SMLoc Loc);
-  bool applyLVICFIMitigation(MCInst &Inst);
-  bool applyLVILoadHardeningMitigation(MCInst &Inst, MCStreamer &Out);
+  void applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out);
+  void applyLVILoadHardeningMitigation(MCInst &Inst, MCStreamer &Out);
 
   /// Wrapper around MCStreamer::emitInstruction(). Possibly adds
   /// instrumentation around Inst.
@@ -3178,7 +3178,7 @@ void X86AsmParser::emitWarningForSpecialLVIInstruction(SMLoc Loc) {
 /// - https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
 ///
 /// Returns `true` if a mitigation was applied or warning was emitted.
-bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
+void X86AsmParser::applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out) {
   // Information on control-flow instructions that require manual mitigation can
   // be found here:
   // https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection#specialinstructions
@@ -3188,7 +3188,23 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
   case X86::RETQ:
   case X86::RETIL:
   case X86::RETIQ:
-  case X86::RETIW:
+  case X86::RETIW: {
+    MCInst ShlInst, FenceInst;
+    bool Parse32 = is32BitMode() || Code16GCC;
+    unsigned Basereg =
+        is64BitMode() ? X86::RSP : (Parse32 ? X86::ESP : X86::SP);
+    const MCExpr *Disp = MCConstantExpr::create(0, getContext());
+    auto ShlMemOp = X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
+                                          /*BaseReg=*/Basereg, /*IndexReg=*/0,
+                                          /*Scale=*/1, SMLoc{}, SMLoc{}, 0);
+    ShlInst.setOpcode(X86::SHL64mi);
+    ShlMemOp->addMemOperands(ShlInst, 5);
+    ShlInst.addOperand(MCOperand::createImm(0));
+    FenceInst.setOpcode(X86::LFENCE);
+    Out.emitInstruction(ShlInst, getSTI());
+    Out.emitInstruction(FenceInst, getSTI());
+    return;
+  }
   case X86::JMP16m:
   case X86::JMP32m:
   case X86::JMP64m:
@@ -3196,9 +3212,8 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
   case X86::CALL32m:
   case X86::CALL64m:
     emitWarningForSpecialLVIInstruction(Inst.getLoc());
-    return true;
+    return;
   }
-  return false;
 }
 
 /// To mitigate LVI, every instruction that performs a load can be followed by
@@ -3208,7 +3223,7 @@ bool X86AsmParser::applyLVICFIMitigation(MCInst &Inst) {
 /// https://software.intel.com/security-software-guidance/insights/deep-dive-load-value-injection
 ///
 /// Returns `true` if a mitigation was applied or warning was emitted.
-bool X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
+void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
                                                    MCStreamer &Out) {
   auto Opcode = Inst.getOpcode();
   auto Flags = Inst.getFlags();
@@ -3226,38 +3241,41 @@ bool X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
     case X86::SCASL:
     case X86::SCASQ:
       emitWarningForSpecialLVIInstruction(Inst.getLoc());
-      return true;
+      return;
     }
   } else if (Opcode == X86::REP_PREFIX || Opcode == X86::REPNE_PREFIX) {
     // If a REP instruction is found on its own line, it may or may not be
     // followed by a vulnerable instruction. Emit a warning just in case.
     emitWarningForSpecialLVIInstruction(Inst.getLoc());
-    return true;
+    return;
   }
 
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  // Can't mitigate after terminators or calls. A control flow change may have
+  // already occurred.
+  if (MCID.isTerminator() || MCID.isCall())
+    return;
+
   // LFENCE has the mayLoad property, don't double fence.
   if (MCID.mayLoad() && Inst.getOpcode() != X86::LFENCE) {
     MCInst FenceInst;
     FenceInst.setOpcode(X86::LFENCE);
-    FenceInst.setLoc(Inst.getLoc());
     Out.emitInstruction(FenceInst, getSTI());
-    return true;
   }
-  return false;
 }
 
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity])
+    applyLVICFIMitigation(Inst, Out);
+
   Out.emitInstruction(Inst, getSTI());
 
-  if (LVIInlineAsmHardening) {
-    if (getSTI().getFeatureBits()[X86::FeatureLVIControlFlowIntegrity] &&
-        applyLVICFIMitigation(Inst))
-      return;
-    if (getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
-      applyLVILoadHardeningMitigation(Inst, Out);
-  }
+  if (LVIInlineAsmHardening &&
+      getSTI().getFeatureBits()[X86::FeatureLVILoadHardening])
+    applyLVILoadHardeningMitigation(Inst, Out);
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
