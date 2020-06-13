@@ -317,6 +317,9 @@ class Configuration(object):
             self.config.available_features.add('availability=%s' % name)
             self.config.available_features.add('availability=%s%s' % (name, version))
 
+        # Insert the platform name and version into the available features.
+        self.target_info.add_platform_features(self.config.available_features)
+
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
         self.long_tests = self.get_lit_bool('long_tests')
@@ -330,6 +333,7 @@ class Configuration(object):
             self.config.available_features.add('long_tests')
 
         if self.target_info.is_windows():
+            self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
                 # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
                 # initial Windows failures until they can be properly diagnosed
