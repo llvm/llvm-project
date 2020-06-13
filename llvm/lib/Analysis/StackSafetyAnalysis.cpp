@@ -98,6 +98,13 @@ bool isUnsafe(const ConstantRange &R) {
   return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
 }
 
+ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
+  if (L.signedAddMayOverflow(R) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return ConstantRange(L.getBitWidth(), true);
+  return L.add(R);
+}
+
 /// Calculate the allocation size of a given alloca. Returns empty range
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
@@ -237,10 +244,7 @@ StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
   if (isUnsafe(Offsets))
     return UnknownRange;
 
-  if (Offsets.signedAddMayOverflow(SizeRange) !=
-      ConstantRange::OverflowResult::NeverOverflows)
-    return UnknownRange;
-  Offsets = Offsets.add(SizeRange);
+  Offsets = addOverflowNever(Offsets, SizeRange);
   if (isUnsafe(Offsets))
     return UnknownRange;
   return Offsets;
@@ -453,10 +457,7 @@ ConstantRange StackSafetyDataFlowAnalysis<CalleeTy>::getArgumentAccessRange(
     return Access;
   if (Access.isFullSet())
     return UnknownRange;
-  if (Offsets.signedAddMayOverflow(Access) !=
-      ConstantRange::OverflowResult::NeverOverflows)
-    return UnknownRange;
-  return Access.add(Offsets);
+  return addOverflowNever(Access, Offsets);
 }
 
 template <typename CalleeTy>
