@@ -175,7 +175,6 @@ void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
 
 void MappingTraits<DWARFYAML::LineTable>::mapping(
     IO &IO, DWARFYAML::LineTable &LineTable) {
-  IO.mapOptional("Format", LineTable.Format, dwarf::DWARF32);
   IO.mapRequired("Length", LineTable.Length);
   IO.mapRequired("Version", LineTable.Version);
   IO.mapRequired("PrologueLength", LineTable.PrologueLength);
