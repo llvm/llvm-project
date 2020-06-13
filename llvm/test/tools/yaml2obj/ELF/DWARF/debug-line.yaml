@@ -72,7 +72,8 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_line:
-    - Length:         0x70
+    - Length:
+        TotalLength:  0x70
       Version:        2
       PrologueLength: 50
       MinInstLength:  1
@@ -206,7 +207,8 @@ Sections:
     Size: 0x10
 DWARF:
   debug_line:
-    - Length:                0x70
+    - Length:
+        TotalLength:         0x70
       Version:               2
       PrologueLength:        50
       MinInstLength:         1
@@ -236,7 +238,8 @@ Sections:
     Content: "00"
 DWARF:
   debug_line:
-    - Length:                0x70
+    - Length:
+        TotalLength:         0x70
       Version:               2
       PrologueLength:        50
       MinInstLength:         1
@@ -305,7 +308,8 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_line:
-    - Length:                0x70
+    - Length:
+        TotalLength:         0x70
       Version:               2
       PrologueLength:        50
       MinInstLength:         1
