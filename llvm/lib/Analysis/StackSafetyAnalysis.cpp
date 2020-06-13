@@ -932,11 +932,11 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
   for (auto &KV : SSDFA.run()) {
     std::vector<FunctionSummary::ParamAccess> NewParams;
     NewParams.reserve(KV.second.Params.size());
-    for (auto &KV : KV.second.Params) {
+    for (auto &Param : KV.second.Params) {
       NewParams.emplace_back();
       FunctionSummary::ParamAccess &New = NewParams.back();
-      New.ParamNo = KV.first;
-      New.Use = KV.second.Range; // Only range is needed.
+      New.ParamNo = Param.first;
+      New.Use = Param.second.Range; // Only range is needed.
     }
     const_cast<FunctionSummary *>(KV.first)->setParamAccesses(
         std::move(NewParams));
