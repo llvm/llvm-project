@@ -151,6 +151,8 @@ public:
 
 bool needsParamAccessSummary(const Module &M);
 
+void generateParamAccessSummary(ModuleSummaryIndex &Index);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_STACKSAFETYANALYSIS_H
