@@ -1866,8 +1866,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
         - AbbrCode:        0x00000000
           Values:
   debug_line:
-    - Length:
-        TotalLength:     96
+    - Length:          96
       Version:         2
       PrologueLength:  46
       MinInstLength:   1
@@ -2133,8 +2132,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
         - AbbrCode:        0x00000000
           Values:          []
   debug_line:
-    - Length:
-        TotalLength:     92
+    - Length:          92
       Version:         2
       PrologueLength:  34
       MinInstLength:   1

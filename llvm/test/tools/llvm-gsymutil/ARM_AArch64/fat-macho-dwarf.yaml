@@ -475,8 +475,7 @@ Slices:
             - AbbrCode:        0x00000000
               Values:          []
       debug_line:
-        - Length:
-            TotalLength:     55
+        - Length:          55
           Version:         4
           PrologueLength:  32
           MinInstLength:   1
@@ -954,8 +953,7 @@ Slices:
             - AbbrCode:        0x00000000
               Values:          []
       debug_line:
-        - Length:
-            TotalLength:     59
+        - Length:          59
           Version:         4
           PrologueLength:  32
           MinInstLength:   1
