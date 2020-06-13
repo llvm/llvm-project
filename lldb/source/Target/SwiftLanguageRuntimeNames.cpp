@@ -393,6 +393,7 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode
     options.DisplayModuleNames = true;
     options.ShowPrivateDiscriminators = false;
     options.DisplayExtensionContexts = false;
+    options.DisplayLocalNameContexts = false;
     break;
   case eDisplayTypeName:
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
@@ -400,6 +401,7 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode
     options.DisplayObjCModule = false;
     options.QualifyEntities = true;
     options.DisplayModuleNames = true;
+    options.DisplayLocalNameContexts = false;
     break;    
   }
 
