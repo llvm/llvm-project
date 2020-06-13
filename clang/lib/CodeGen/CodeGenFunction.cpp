@@ -65,24 +65,19 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
               CGBuilderInserterTy(this)),
-      SanOpts(CGM.getLangOpts().Sanitize), DebugInfo(CGM.getModuleDebugInfo()),
-      PGO(cgm), ShouldEmitLifetimeMarkers(shouldEmitLifetimeMarkers(
-                    CGM.getCodeGenOpts(), CGM.getLangOpts())) {
+      SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
+      DebugInfo(CGM.getModuleDebugInfo()), PGO(cgm),
+      ShouldEmitLifetimeMarkers(
+          shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
 
-  SetFastMathFlags(FPOptions(CGM.getLangOpts()));
+  SetFastMathFlags(CurFPFeatures);
   SetFPModel();
 }
 
 CodeGenFunction::~CodeGenFunction() {
   assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
-
-  // If there are any unclaimed block infos, go ahead and destroy them
-  // now.  This can happen if IR-gen gets clever and skips evaluating
-  // something.
-  if (FirstBlockInfo)
-    destroyBlockInfos(FirstBlockInfo);
 
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
@@ -130,6 +125,51 @@ void CodeGenFunction::SetFastMathFlags(FPOptions FPFeatures) {
   FMF.setApproxFunc(FPFeatures.allowApproximateFunctions());
   FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement());
   Builder.setFastMathFlags(FMF);
+}
+
+CodeGenFunction::CGFPOptionsRAII::CGFPOptionsRAII(CodeGenFunction &CGF,
+                                                  FPOptions FPFeatures)
+    : CGF(CGF), OldFPFeatures(CGF.CurFPFeatures) {
+  CGF.CurFPFeatures = FPFeatures;
+
+  if (OldFPFeatures == FPFeatures)
+    return;
+
+  FMFGuard.emplace(CGF.Builder);
+
+  auto NewRoundingBehavior = FPFeatures.getRoundingMode();
+  CGF.Builder.setDefaultConstrainedRounding(NewRoundingBehavior);
+  auto NewExceptionBehavior =
+      ToConstrainedExceptMD(FPFeatures.getExceptionMode());
+  CGF.Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
+
+  CGF.SetFastMathFlags(FPFeatures);
+
+  assert((CGF.CurFuncDecl == nullptr || CGF.Builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(CGF.CurFuncDecl) ||
+          isa<CXXDestructorDecl>(CGF.CurFuncDecl) ||
+          (NewExceptionBehavior == llvm::fp::ebIgnore &&
+           NewRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
+
+  auto mergeFnAttrValue = [&](StringRef Name, bool Value) {
+    auto OldValue =
+        CGF.CurFn->getFnAttribute(Name).getValueAsString() == "true";
+    auto NewValue = OldValue & Value;
+    if (OldValue != NewValue)
+      CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));
+  };
+  mergeFnAttrValue("no-infs-fp-math", FPFeatures.noHonorInfs());
+  mergeFnAttrValue("no-nans-fp-math", FPFeatures.noHonorNaNs());
+  mergeFnAttrValue("no-signed-zeros-fp-math", FPFeatures.noSignedZeros());
+  mergeFnAttrValue(
+      "unsafe-fp-math",
+      FPFeatures.allowAssociativeMath() && FPFeatures.allowReciprocalMath() &&
+          FPFeatures.allowApproximateFunctions() && FPFeatures.noSignedZeros());
+}
+
+CodeGenFunction::CGFPOptionsRAII::~CGFPOptionsRAII() {
+  CGF.CurFPFeatures = OldFPFeatures;
 }
 
 LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {

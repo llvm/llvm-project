@@ -1116,6 +1116,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       Input.ParseInput.FSProvider->getFileSystem();
   if (Input.Preamble.StatCache)
     VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
+  if (VFS->setCurrentWorkingDirectory(
+          Input.ParseInput.CompileCommand.Directory))
+    elog("Couldn't set working directory during code completion");
   auto Clang = prepareCompilerInstance(
       std::move(CI), !CompletingInPreamble ? &Input.Preamble.Preamble : nullptr,
       std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);

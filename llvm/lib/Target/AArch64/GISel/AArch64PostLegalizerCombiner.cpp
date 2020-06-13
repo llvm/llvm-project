@@ -266,11 +266,6 @@ static bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   Register Dst = MI.getOperand(0).getReg();
-  if (MRI.getType(Dst).getScalarSizeInBits() < 32) {
-    LLVM_DEBUG(dbgs() << "Could not optimize splat pattern < 32b elts yet");
-    return false;
-  }
-
   MatchInfo =
       ShuffleVectorPseudo(AArch64::G_DUP, Dst, {InsMI->getOperand(2).getReg()});
   return true;

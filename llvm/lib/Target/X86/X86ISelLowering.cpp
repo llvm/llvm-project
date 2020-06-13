@@ -34444,6 +34444,25 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
+  // Attempt to combine to INSERTPS, but only if the inserted element has come
+  // from a scalar.
+  // TODO: Handle other insertions here as well?
+  if (!UnaryShuffle && AllowFloatDomain && RootSizeInBits == 128 &&
+      MaskEltSizeInBits == 32 && Subtarget.hasSSE41() &&
+      !isTargetShuffleEquivalent(Mask, {4, 1, 2, 3})) {
+    SDValue SrcV1 = V1, SrcV2 = V2;
+    if (matchShuffleAsInsertPS(SrcV1, SrcV2, PermuteImm, Zeroable, Mask, DAG) &&
+        SrcV2.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+      if (Depth == 0 && Root.getOpcode() == X86ISD::INSERTPS)
+        return SDValue(); // Nothing to do!
+      Res = DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32,
+                        DAG.getBitcast(MVT::v4f32, SrcV1),
+                        DAG.getBitcast(MVT::v4f32, SrcV2),
+                        DAG.getTargetConstant(PermuteImm, DL, MVT::i8));
+      return DAG.getBitcast(RootVT, Res);
+    }
+  }
+
   SDValue NewV1 = V1; // Save operands in case early exit happens.
   SDValue NewV2 = V2;
   if (matchBinaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, NewV1,

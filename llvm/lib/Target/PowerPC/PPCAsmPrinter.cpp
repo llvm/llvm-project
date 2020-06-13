@@ -1603,8 +1603,6 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   case GlobalValue::PrivateLinkage:
     return;
   case GlobalValue::InternalLinkage:
-    assert(MAI->hasDotLGloblDirective() &&
-           "Expecting .lglobl to be supported for AIX.");
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_LGlobal);
     return;
   case GlobalValue::AppendingLinkage:

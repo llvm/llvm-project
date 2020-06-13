@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize <%s | FileCheck %s --dump-input=fail
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -canonicalize <%s | FileCheck %s
 
 // CHECK-LABEL: func @f
 func @f(%arg0: tensor<2x3x4xf32>) -> !shape.shape {
@@ -89,7 +89,7 @@ func @f() -> !shape.shape {
 func @f() -> tensor<2xindex> {
   // CHECK: constant dense<[0, 1]> : tensor<2xindex>
   %cs = shape.const_shape [0, 1]
-  %0 = "shape.to_extent_tensor"(%cs) : (!shape.shape) -> tensor<2xindex>
+  %0 = shape.to_extent_tensor %cs : tensor<2xindex>
   return %0 : tensor<2xindex>
 }
 
@@ -343,7 +343,7 @@ func @f(%arg0 : !shape.shape) -> !shape.shape {
 // Folding of any with partially constant operands is not yet implemented.
 // CHECK-LABEL: func @f
 func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> !shape.shape {
-  // CHECK-NEXT: shape.any
+  // CHECK-NEXT: %[[CS:.*]] = shape.any
   // CHECK-NEXT: return %[[CS]]
   %1 = shape.any %arg0, %arg1
   return %1 : !shape.shape

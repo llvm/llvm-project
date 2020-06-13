@@ -406,15 +406,17 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
     return;
   }
 
-  // Check if OffsetInRecord is better as a single field run. When OffsetInRecord
-  // has legal integer width, and its bitfield offset is naturally aligned, it
-  // is better to make the bitfield a separate storage component so as it can be
-  // accessed directly with lower cost.
+  // Check if OffsetInRecord (the size in bits of the current run) is better
+  // as a single field run. When OffsetInRecord has legal integer width, and
+  // its bitfield offset is naturally aligned, it is better to make the
+  // bitfield a separate storage component so as it can be accessed directly
+  // with lower cost.
   auto IsBetterAsSingleFieldRun = [&](uint64_t OffsetInRecord,
                                       uint64_t StartBitOffset) {
     if (!Types.getCodeGenOpts().FineGrainedBitfieldAccesses)
       return false;
-    if (!DataLayout.isLegalInteger(OffsetInRecord))
+    if (OffsetInRecord < 8 || !llvm::isPowerOf2_64(OffsetInRecord) ||
+        !DataLayout.fitsInLegalInteger(OffsetInRecord))
       return false;
     // Make sure StartBitOffset is natually aligned if it is treated as an
     // IType integer.

@@ -678,7 +678,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   //   for the same class template shall not have equivalent
   //   parameter-declaration-clauses.
   if (isa<CXXDeductionGuideDecl>(New) &&
-      !New->isFunctionTemplateSpecialization()) {
+      !New->isFunctionTemplateSpecialization() && isVisible(Old)) {
     Diag(New->getLocation(), diag::err_deduction_guide_redeclared);
     Diag(Old->getLocation(), diag::note_previous_declaration);
   }

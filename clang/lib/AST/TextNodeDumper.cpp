@@ -252,7 +252,7 @@ void TextNodeDumper::Visit(const Decl *D) {
              const_cast<NamedDecl *>(ND)))
       AddChild([=] { OS << "also in " << M->getFullModuleName(); });
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-    if (ND->isHidden())
+    if (!ND->isUnconditionallyVisible())
       OS << " hidden";
   if (D->isImplicit())
     OS << " implicit";
@@ -947,6 +947,18 @@ void TextNodeDumper::VisitCXXDeleteExpr(const CXXDeleteExpr *Node) {
     OS << ' ';
     dumpBareDeclRef(Node->getOperatorDelete());
   }
+}
+
+void TextNodeDumper::VisitTypeTraitExpr(const TypeTraitExpr *Node) {
+  OS << " " << getTraitSpelling(Node->getTrait());
+}
+
+void TextNodeDumper::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *Node) {
+  OS << " " << getTraitSpelling(Node->getTrait());
+}
+
+void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
+  OS << " " << getTraitSpelling(Node->getTrait());
 }
 
 void TextNodeDumper::VisitMaterializeTemporaryExpr(

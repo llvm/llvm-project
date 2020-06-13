@@ -189,18 +189,22 @@ class Configuration(object):
             exec_env=self.exec_env)
 
     def configure_executor(self):
-        exec_str = self.get_lit_conf('executor', "None")
-        te = eval(exec_str)
-        if te:
-            self.lit_config.note("Using executor: %r" % exec_str)
-            if self.lit_config.useValgrind:
-                self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
-        else:
-            te = LocalExecutor()
+        if self.get_lit_conf('use_old_format'):
+            exec_str = self.get_lit_conf('executor', "None")
+            te = eval(exec_str)
+            if te:
+                self.lit_config.note("Using executor: %r" % exec_str)
+                if self.lit_config.useValgrind:
+                    self.lit_config.fatal("The libc++ test suite can't run under Valgrind with a custom executor")
+            else:
+                te = LocalExecutor()
 
-        te.target_info = self.target_info
-        self.target_info.executor = te
-        self.executor = te
+            te.target_info = self.target_info
+            self.target_info.executor = te
+            self.executor = te
+        else:
+            self.executor = self.get_lit_conf('executor')
+            self.lit_config.note("Using executor: {}".format(self.executor))
 
     def configure_target_info(self):
         self.target_info = make_target_info(self)
@@ -313,9 +317,6 @@ class Configuration(object):
             self.config.available_features.add('availability=%s' % name)
             self.config.available_features.add('availability=%s%s' % (name, version))
 
-        # Insert the platform name and version into the available features.
-        self.target_info.add_platform_features(self.config.available_features)
-
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
         self.long_tests = self.get_lit_bool('long_tests')
@@ -329,7 +330,6 @@ class Configuration(object):
             self.config.available_features.add('long_tests')
 
         if self.target_info.is_windows():
-            self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
                 # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
                 # initial Windows failures until they can be properly diagnosed
@@ -751,14 +751,8 @@ class Configuration(object):
             '--codesign_identity "{}"'.format(codesign_ident),
             '--env {}'.format(env_vars)
         ]
-        if isinstance(self.executor, SSHExecutor):
-            exec_args.append('--host {}'.format(self.executor.user_prefix + self.executor.host))
-            executor = os.path.join(self.libcxx_src_root, 'utils', 'ssh.py')
-        else:
-            executor = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
-        sub.append(('%{exec}', '{} {} {} -- '.format(pipes.quote(sys.executable),
-                                                     pipes.quote(executor),
-                                                     ' '.join(exec_args))))
+        if not self.get_lit_conf('use_old_format'):
+            sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
         if self.get_lit_conf('libcxx_gdb'):
             sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 

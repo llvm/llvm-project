@@ -356,7 +356,8 @@ DWARF:
 ## contents, if the "debug_pubnames"/"debug_pubtypes" entry doesn't exist in the
 ## "DWARF" entry.
 
-# RUN: yaml2obj --docnum=2 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
 
 #      EMPTY: Sections:
 # EMPTY-NEXT:   - sectname:        __debug_pubnames
@@ -394,7 +395,7 @@ FileHeader:
   cpusubtype: 0x00000003
   filetype:   0x0000000A
   ncmds:      1
-  sizeofcmds: 1800
+  sizeofcmds: 1772
   flags:      0x00000000
   reserved:   0x00000000
 LoadCommands:

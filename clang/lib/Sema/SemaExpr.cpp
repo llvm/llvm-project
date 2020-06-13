@@ -724,7 +724,7 @@ ExprResult Sema::CallExprUnaryConversions(Expr *E) {
   // to function type.
   if (Ty->isFunctionType()) {
     Res = ImpCastExprToType(E, Context.getPointerType(Ty),
-                            CK_FunctionToPointerDecay).get();
+                            CK_FunctionToPointerDecay);
     if (Res.isInvalid())
       return ExprError();
   }
@@ -17553,7 +17553,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
 
   // Mark that this expression does not constitute an odr-use.
   auto MarkNotOdrUsed = [&] {
-    S.MaybeODRUseExprs.erase(E);
+    S.MaybeODRUseExprs.remove(E);
     if (LambdaScopeInfo *LSI = S.getCurLambda())
       LSI->markVariableExprAsNonODRUsed(E);
   };

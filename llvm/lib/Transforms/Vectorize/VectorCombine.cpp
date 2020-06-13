@@ -35,6 +35,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
+STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarBO, "Number of scalar binops formed");
 
 static cl::opt<bool> DisableVectorCombine(
@@ -159,7 +160,7 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
 /// compares followed by extract.
 /// cmp (ext0 V0, C), (ext1 V1, C)
 static void foldExtExtCmp(Instruction *Ext0, Instruction *Ext1,
-                          Instruction &I, const TargetTransformInfo &TTI) {
+                          Instruction &I) {
   assert(isa<CmpInst>(&I) && "Expected a compare");
 
   // cmp Pred (extelt V0, C), (extelt V1, C) --> extelt (cmp Pred V0, V1), C
@@ -178,7 +179,7 @@ static void foldExtExtCmp(Instruction *Ext0, Instruction *Ext1,
 /// binops followed by extract.
 /// bo (ext0 V0, C), (ext1 V1, C)
 static void foldExtExtBinop(Instruction *Ext0, Instruction *Ext1,
-                            Instruction &I, const TargetTransformInfo &TTI) {
+                            Instruction &I) {
   assert(isa<BinaryOperator>(&I) && "Expected a binary operator");
 
   // bo (extelt V0, C), (extelt V1, C) --> extelt (bo V0, V1), C
@@ -254,9 +255,9 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
   }
 
   if (Pred != CmpInst::BAD_ICMP_PREDICATE)
-    foldExtExtCmp(Ext0, Ext1, I, TTI);
+    foldExtExtCmp(Ext0, Ext1, I);
   else
-    foldExtExtBinop(Ext0, Ext1, I, TTI);
+    foldExtExtBinop(Ext0, Ext1, I);
 
   return true;
 }
@@ -302,6 +303,7 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
       return false;
   }
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
+  ++NumShufOfBitcast;
   IRBuilder<> Builder(&I);
   Value *CastV = Builder.CreateBitCast(V, DestTy);
   Value *Shuf =

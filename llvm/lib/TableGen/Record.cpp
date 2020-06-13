@@ -2294,6 +2294,8 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
   for (Init *I : List->getValues()) {
     if (StringInit *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());
+    else if (CodeInit *CI = dyn_cast<CodeInit>(I))
+      Strings.push_back(CI->getValue());
     else
       PrintFatalError(getLoc(),
                       Twine("Record `") + getName() + "', field `" + FieldName +

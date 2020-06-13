@@ -214,9 +214,14 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
   if (!CondBr)
     return;
 
-  BranchProbability BP;
   uint64_t TrueWeight, FalseWeight;
   if (!CondBr->extractProfMetadata(TrueWeight, FalseWeight))
+    return;
+
+  if (TrueWeight + FalseWeight == 0)
+    // Zero branch_weights do not give a hint for getting branch probabilities.
+    // Technically it would result in division by zero denominator, which is
+    // TrueWeight + FalseWeight.
     return;
 
   // Returns the outgoing edge of the dominating predecessor block
@@ -253,10 +258,11 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     if (!CI || !CI->getType()->isIntegerTy(1))
       continue;
 
-    BP = (CI->isOne() ? BranchProbability::getBranchProbability(
-                            TrueWeight, TrueWeight + FalseWeight)
-                      : BranchProbability::getBranchProbability(
-                            FalseWeight, TrueWeight + FalseWeight));
+    BranchProbability BP =
+        (CI->isOne() ? BranchProbability::getBranchProbability(
+                           TrueWeight, TrueWeight + FalseWeight)
+                     : BranchProbability::getBranchProbability(
+                           FalseWeight, TrueWeight + FalseWeight));
 
     auto PredOutEdge = GetPredOutEdge(PN->getIncomingBlock(i), BB);
     if (!PredOutEdge.first)

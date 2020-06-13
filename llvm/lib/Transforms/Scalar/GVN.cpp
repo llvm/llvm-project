@@ -2506,8 +2506,11 @@ bool GVN::performPRE(Function &F) {
 /// Split the critical edge connecting the given two blocks, and return
 /// the block inserted to the critical edge.
 BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
-  BasicBlock *BB =
-      SplitCriticalEdge(Pred, Succ, CriticalEdgeSplittingOptions(DT, LI));
+  // GVN does not require loop-simplify, do not try to preserve it if it is not
+  // possible.
+  BasicBlock *BB = SplitCriticalEdge(
+      Pred, Succ,
+      CriticalEdgeSplittingOptions(DT, LI).unsetPreserveLoopSimplify());
   if (MD)
     MD->invalidateCachedPredecessors();
   InvalidBlockRPONumbers = true;
@@ -2746,7 +2749,6 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreservedID(LoopSimplifyID);
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 

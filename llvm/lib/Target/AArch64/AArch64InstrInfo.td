@@ -589,6 +589,8 @@ let RecomputePerFunction = 1 in {
   def UseBTI : Predicate<[{ MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
   def NotUseBTI : Predicate<[{ !MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
 
+  def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
+  def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   // Toggles patterns which aren't beneficial in GlobalISel when we aren't
   // optimizing. This allows us to selectively use patterns without impacting
   // SelectionDAG's behaviour.
@@ -2020,8 +2022,18 @@ def ERET : SpecialReturn<0b0100, "eret">;
 def : InstAlias<"ret", (RET LR)>;
 
 let isCall = 1, Defs = [LR], Uses = [SP] in {
-def BLR : BranchReg<0b0001, "blr", [(AArch64call GPR64:$Rn)]>;
+  def BLR : BranchReg<0b0001, "blr", []>;
+  def BLRNoIP : Pseudo<(outs), (ins GPR64noip:$Rn), []>,
+                Sched<[WriteBrReg]>,
+                PseudoInstExpansion<(BLR GPR64:$Rn)>;
 } // isCall
+
+def : Pat<(AArch64call GPR64:$Rn),
+          (BLR GPR64:$Rn)>,
+      Requires<[NoSLSBLRMitigation]>;
+def : Pat<(AArch64call GPR64noip:$Rn),
+          (BLRNoIP GPR64noip:$Rn)>,
+      Requires<[SLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;

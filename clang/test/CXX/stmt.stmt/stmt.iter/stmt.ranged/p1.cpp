@@ -21,7 +21,8 @@ namespace X {
     auto end(T &&t) -> decltype(t.end()) { return t.end(); } // expected-note {{candidate template ignored: substitution failure [with T = }}
 
   template<typename T>
-    auto begin(T &&t) -> decltype(t.alt_begin()) { return t.alt_begin(); } // expected-note 2{{candidate template ignored: substitution failure [with T = }}
+    auto begin(T &&t) -> decltype(t.alt_begin()) { return t.alt_begin(); } // expected-note {{selected 'begin' template [with T = }} \
+                                                                           // expected-note 2{{candidate template ignored: substitution failure [with T = }}
   template<typename T>
     auto end(T &&t) -> decltype(t.alt_end()) { return t.alt_end(); } // expected-note {{candidate template ignored: substitution failure [with T = }}
 
@@ -35,7 +36,7 @@ namespace X {
 
   struct A { // expected-note 2 {{candidate constructor}}
     A();
-    int *begin(); // expected-note {{selected 'begin' function with iterator type 'int *'}} expected-note {{'begin' declared here}}
+    int *begin(); // expected-note 3{{selected 'begin' function with iterator type 'int *'}} expected-note {{'begin' declared here}}
     int *end();
   };
 

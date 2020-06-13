@@ -622,11 +622,11 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     if (MSSA) {
       MSSAU->applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}},
                           *DT);
-      if (VerifyMemorySSA)
-        MSSA->verifyMemorySSA();
       SmallSetVector<BasicBlock *, 8> DeadBlockSet(L->block_begin(),
                                                    L->block_end());
       MSSAU->removeBlocks(DeadBlockSet);
+      if (VerifyMemorySSA)
+        MSSA->verifyMemorySSA();
     }
   }
 

@@ -3218,11 +3218,11 @@ def VSTMXCSR : VPSI<0xAE, MRM3m, (outs), (ins i32mem:$dst),
 let mayLoad=1, hasSideEffects=1 in
 def LDMXCSR : I<0xAE, MRM2m, (outs), (ins i32mem:$src),
               "ldmxcsr\t$src", [(int_x86_sse_ldmxcsr addr:$src)]>,
-              TB, Sched<[WriteLDMXCSR]>;
+              PS, Sched<[WriteLDMXCSR]>;
 let mayStore=1, hasSideEffects=1 in
 def STMXCSR : I<0xAE, MRM3m, (outs), (ins i32mem:$dst),
               "stmxcsr\t$dst", [(int_x86_sse_stmxcsr addr:$dst)]>,
-              TB, Sched<[WriteSTMXCSR]>;
+              PS, Sched<[WriteSTMXCSR]>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Move Aligned/Unaligned Packed Integer Instructions
@@ -6623,7 +6623,7 @@ multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
              [!if(UsesXMM0,
                   (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
                   (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
-             T8, Sched<[sched]>;
+             T8PS, Sched<[sched]>;
 
   def rm : I<Opc, MRMSrcMem, (outs VR128:$dst),
              (ins VR128:$src1, i128mem:$src2),
@@ -6634,7 +6634,7 @@ multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
                   (set VR128:$dst, (IntId VR128:$src1,
                     (memop addr:$src2), XMM0)),
                   (set VR128:$dst, (IntId VR128:$src1,
-                    (memop addr:$src2))))]>, T8,
+                    (memop addr:$src2))))]>, T8PS,
              Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
@@ -6644,7 +6644,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
                          "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                          [(set VR128:$dst,
                            (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
-                            (i8 timm:$src3)))]>, TA,
+                            (i8 timm:$src3)))]>, TAPS,
                          Sched<[SchedWriteVecIMul.XMM]>;
   def SHA1RNDS4rmi : Ii8<0xCC, MRMSrcMem, (outs VR128:$dst),
                          (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
@@ -6652,7 +6652,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
                          [(set VR128:$dst,
                            (int_x86_sha1rnds4 VR128:$src1,
                             (memop addr:$src2),
-                            (i8 timm:$src3)))]>, TA,
+                            (i8 timm:$src3)))]>, TAPS,
                          Sched<[SchedWriteVecIMul.XMM.Folded,
                                 SchedWriteVecIMul.XMM.ReadAfterFold]>;
 

@@ -1272,7 +1272,8 @@ Decl *Sema::ActOnStartProtocolInterface(
 
 static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
                                           ObjCProtocolDecl *&UndefinedProtocol) {
-  if (!PDecl->hasDefinition() || PDecl->getDefinition()->isHidden()) {
+  if (!PDecl->hasDefinition() ||
+      !PDecl->getDefinition()->isUnconditionallyVisible()) {
     UndefinedProtocol = PDecl;
     return true;
   }
@@ -3235,7 +3236,7 @@ bool Sema::MatchTwoMethodDeclarations(const ObjCMethodDecl *left,
     return false;
 
   // If either is hidden, it is not considered to match.
-  if (left->isHidden() || right->isHidden())
+  if (!left->isUnconditionallyVisible() || !right->isUnconditionallyVisible())
     return false;
 
   if (left->isDirectMethod() != right->isDirectMethod())
@@ -3494,7 +3495,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList = InstanceFirst ? Pos->second.first :
                              Pos->second.second;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3510,7 +3511,7 @@ bool Sema::CollectMultipleMethodsInGlobalPool(
   ObjCMethodList &MethList2 = InstanceFirst ? Pos->second.second :
                               Pos->second.first;
   for (ObjCMethodList *M = &MethList2; M; M = M->getNext())
-    if (M->getMethod() && !M->getMethod()->isHidden()) {
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible()) {
       if (FilterMethodsByTypeBound(M->getMethod(), TypeBound))
         Methods.push_back(M->getMethod());
     }
@@ -3557,7 +3558,7 @@ ObjCMethodDecl *Sema::LookupMethodInGlobalPool(Selector Sel, SourceRange R,
   ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
   SmallVector<ObjCMethodDecl *, 4> Methods;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext()) {
-    if (M->getMethod() && !M->getMethod()->isHidden())
+    if (M->getMethod() && M->getMethod()->isUnconditionallyVisible())
       return M->getMethod();
   }
   return nullptr;
