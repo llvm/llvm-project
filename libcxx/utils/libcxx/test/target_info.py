@@ -21,16 +21,22 @@ class DefaultTargetInfo(object):
         self.full_config = full_config
         self.executor = None
 
+    def platform(self):
+        return sys.platform.lower().strip()
+
     def is_windows(self):
-        return sys.platform.lower().strip() == 'win32'
+        return self.platform() == 'win32'
 
     def is_darwin(self):
-        return sys.platform.lower().strip() == 'darwin'
+        return self.platform() == 'darwin'
 
     def add_cxx_compile_flags(self, flags): pass
     def add_cxx_link_flags(self, flags): pass
     def allow_cxxabi_link(self): return True
     def use_lit_shell_default(self): return False
+
+    def add_platform_features(self, features):
+        features.add(self.platform())
 
     def add_path(self, dest_env, new_path):
         if not new_path:
@@ -136,6 +142,44 @@ class NetBSDLocalTI(DefaultTargetInfo):
 class LinuxLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(LinuxLocalTI, self).__init__(full_config)
+
+    def platform(self):
+        return 'linux'
+
+    def _distribution(self):
+        try:
+            # linux_distribution is not available since Python 3.8
+            # However, this function is only used to detect SLES 11,
+            # which is quite an old distribution that doesn't have
+            # Python 3.8.
+            return platform.linux_distribution()
+        except AttributeError:
+            return '', '', ''
+
+    def platform_name(self):
+        name, _, _ = self._distribution()
+        # Some distros have spaces, e.g. 'SUSE Linux Enterprise Server'
+        # lit features can't have spaces
+        name = name.lower().strip().replace(' ', '-')
+        return name # Permitted to be None
+
+    def platform_ver(self):
+        _, ver, _ = self._distribution()
+        ver = ver.lower().strip().replace(' ', '-')
+        return ver # Permitted to be None.
+
+    def add_platform_features(self, features):
+        super(LinuxLocalTI, self).add_platform_features(features)
+
+        # Some linux distributions have different locale data than others.
+        # Insert the distributions name and name-version into the available
+        # features to allow tests to XFAIL on them.
+        name = self.platform_name()
+        ver = self.platform_ver()
+        if name:
+            features.add(name)
+        if name and ver:
+            features.add('%s-%s' % (name, ver))
 
     def add_cxx_compile_flags(self, flags):
         flags += ['-D__STDC_FORMAT_MACROS',
