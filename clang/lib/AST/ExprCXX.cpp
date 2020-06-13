@@ -1093,13 +1093,16 @@ LambdaExpr::LambdaExpr(QualType T, SourceRange IntroducerRange,
                        bool ContainsUnexpandedParameterPack)
     : Expr(LambdaExprClass, T, VK_RValue, OK_Ordinary),
       IntroducerRange(IntroducerRange), CaptureDefaultLoc(CaptureDefaultLoc),
-      NumCaptures(CaptureInits.size()), CaptureDefault(CaptureDefault),
-      ExplicitParams(ExplicitParams), ExplicitResultType(ExplicitResultType),
       ClosingBrace(ClosingBrace) {
+  LambdaExprBits.NumCaptures = CaptureInits.size();
+  LambdaExprBits.CaptureDefault = CaptureDefault;
+  LambdaExprBits.ExplicitParams = ExplicitParams;
+  LambdaExprBits.ExplicitResultType = ExplicitResultType;
+
   CXXRecordDecl *Class = getLambdaClass();
   (void)Class;
-  assert(NumCaptures == Class->capture_size() && "Wrong number of captures");
-  assert(CaptureDefault == Class->getLambdaCaptureDefault());
+  assert(capture_size() == Class->capture_size() && "Wrong number of captures");
+  assert(getCaptureDefault() == Class->getLambdaCaptureDefault());
 
   // Copy initialization expressions for the non-static data members.
   Stmt **Stored = getStoredStmts();
@@ -1110,6 +1113,20 @@ LambdaExpr::LambdaExpr(QualType T, SourceRange IntroducerRange,
   *Stored++ = getCallOperator()->getBody();
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
+}
+
+LambdaExpr::LambdaExpr(EmptyShell Empty, unsigned NumCaptures)
+    : Expr(LambdaExprClass, Empty) {
+  LambdaExprBits.NumCaptures = NumCaptures;
+
+  // FIXME: There is no need to do this since these members should be
+  // initialized during deserialization.
+  LambdaExprBits.CaptureDefault = LCD_None;
+  LambdaExprBits.ExplicitParams = false;
+  LambdaExprBits.ExplicitResultType = false;
+
+  // FIXME: Remove once the bug in LambdaExpr::getBody is fixed.
+  getStoredStmts()[capture_size()] = nullptr;
 }
 
 LambdaExpr *LambdaExpr::Create(const ASTContext &Context, CXXRecordDecl *Class,
@@ -1149,7 +1166,7 @@ LambdaExpr::capture_iterator LambdaExpr::capture_begin() const {
 }
 
 LambdaExpr::capture_iterator LambdaExpr::capture_end() const {
-  return capture_begin() + NumCaptures;
+  return capture_begin() + capture_size();
 }
 
 LambdaExpr::capture_range LambdaExpr::captures() const {
@@ -1210,16 +1227,14 @@ CompoundStmt *LambdaExpr::getBody() const {
   // FIXME: this mutation in getBody is bogus. It should be
   // initialized in ASTStmtReader::VisitLambdaExpr, but for reasons I
   // don't understand, that doesn't work.
-  if (!getStoredStmts()[NumCaptures])
-    *const_cast<Stmt **>(&getStoredStmts()[NumCaptures]) =
+  if (!getStoredStmts()[capture_size()])
+    *const_cast<Stmt **>(&getStoredStmts()[capture_size()]) =
         getCallOperator()->getBody();
 
-  return static_cast<CompoundStmt *>(getStoredStmts()[NumCaptures]);
+  return static_cast<CompoundStmt *>(getStoredStmts()[capture_size()]);
 }
 
-bool LambdaExpr::isMutable() const {
-  return !getCallOperator()->isConst();
-}
+bool LambdaExpr::isMutable() const { return !getCallOperator()->isConst(); }
 
 ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
                                    bool CleanupsHaveSideEffects,
