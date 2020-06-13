@@ -1,7 +1,7 @@
 struct IntPair {
   var original: Int
   var opposite: Int
-  
+
   init(_ value: Int) {
     self.original = value
     self.opposite = -value
@@ -28,9 +28,8 @@ struct Plane: Flyable {
 }
 
 class Number<T:Numeric> {
-  
   var number_value : T
-  
+
   init (number value : T) {
     number_value = value
   }
@@ -50,7 +49,7 @@ func main() {
     //%            '\[2\] = \(original = 3, opposite = -3\)',
     //%            ])
   }
-  
+
   // UnsafeMutableBufferPointer
   var enumArray = [ Toggle.Off ]
   enumArray.withUnsafeMutableBufferPointer {
@@ -69,9 +68,9 @@ func main() {
     //%              '\[0\] = On',
     //%            ])
   }
-  
+
   let colors = [ColorCode.RGB(155,219,255), ColorCode.Hex(0x4545ff)]
-  
+
   colors.withUnsafeBufferPointer {
     let buf = $0
     //% self.expect("frame variable -d run-target buf",
@@ -82,9 +81,9 @@ func main() {
     //%            '\[1\] = Hex \(Hex = 4539903\)',
     //%            ])
   }
-  
+
   var flyingObjects : [Flyable] = [ Bird(), Plane() ]
-  
+
   flyingObjects.withUnsafeMutableBufferPointer {
     let mutbuf = $0
     //% self.expect("frame variable -d run-target mutbuf",
@@ -96,7 +95,7 @@ func main() {
     struct UFO: Flyable {
       var fly: String = "🛸"
     }
-    
+
     mutbuf[1] = UFO()
     //% self.expect("frame variable -d run-target mutbuf",
     //%            patterns=[
@@ -105,9 +104,9 @@ func main() {
     //%              '\[1\] = \(fly = "🛸"\)',
     //%            ])
   }
-  
+
   let numbers = [ Number(number: 42), Number(number: 3.14)]
-  
+
   numbers.withUnsafeBufferPointer {
     let buf = $0
     //% self.expect("frame variable -d run-target buf",
@@ -117,7 +116,59 @@ func main() {
     //%            '\[1\] = 0[xX][0-9a-fA-F]+ \(number_value = 3.14[0-9]*\)',
     //%            ])
   }
-  
+
+  // UnsafeRawBufferPointer
+  let bytes = [UInt8](0...255)
+
+  bytes.withUnsafeBufferPointer {
+    let buf = $0
+    let rawbuf = UnsafeRawBufferPointer(buf)
+    //% self.expect("frame variable -d run-target rawbuf",
+    //%            patterns=[
+    //%            '\(UnsafeRawBufferPointer\) rawbuf = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[([0-9]+)\] = (\\1)'
+    //%            ])
+    typealias ByteBuffer = UnsafeRawBufferPointer;
+    let alias = rawbuf as ByteBuffer
+    //% self.expect("frame variable -d run-target alias",
+    //%            patterns=[
+    //%            '\((.*)\.ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[([0-9]+)\] = (\\1)'
+    //%            ])
+    typealias ByteBufferAlias = ByteBuffer
+    let secondAlias = alias as ByteBufferAlias
+    //% self.expect("frame variable -d run-target secondAlias",
+    //%            patterns=[
+    //%            '\((.*)\.ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[([0-9]+)\] = (\\1)'
+    //%            ])
+  }
+
+  // UnsafeMutableRawBufferPointer
+  var bits : [UInt8] = [0,1]
+
+  bits.withUnsafeMutableBufferPointer {
+    var mutbuf = $0
+
+    let mutrawbuf = UnsafeMutableRawBufferPointer(mutbuf)
+    //% self.expect("frame variable -d run-target mutrawbuf",
+    //%            patterns=[
+    //%            '\(UnsafeMutableRawBufferPointer\) mutrawbuf = 2 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[0\] = 0',
+    //%            '\[1\] = 1',
+    //%            ])
+
+    mutrawbuf.swapAt(0, 1)
+    //% self.expect("frame variable -d run-target mutrawbuf",
+    //%            patterns=[
+    //%            '\(UnsafeMutableRawBufferPointer\) mutrawbuf = 2 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[0\] = 1',
+    //%            '\[1\] = 0',
+    //%            ])
+    //% self.expect("frame variable -d run-target mutrawbuf[0]",
+    //%            substrs=['(UInt8) [0] = 1'])
+  }
+
 }
 
 main()
