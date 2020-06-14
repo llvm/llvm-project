@@ -16287,8 +16287,7 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
   SDLoc Loc(N);
 
   // TODO: QPX subtarget is deprecated. No transformation here.
-  if (Subtarget.hasQPX() || !isOperationLegal(ISD::FMA, VT) ||
-      (VT.isVector() && !Subtarget.hasVSX()))
+  if (Subtarget.hasQPX() || !isOperationLegal(ISD::FMA, VT))
     return SDValue();
 
   // Allowing transformation to FNMSUB may change sign of zeroes when ab-c=0
