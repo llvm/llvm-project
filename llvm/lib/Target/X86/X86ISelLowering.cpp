@@ -21346,13 +21346,14 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
   return true;
 }
 
-// Check whether an OR'd tree is PTEST-able.
+// Check whether an OR'd tree is PTEST-able, or if we can fallback to
+// CMP(MOVMSK(PCMPEQB(X,0))).
 static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
                                       const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG, SDValue &X86CC) {
   assert(Op.getOpcode() == ISD::OR && "Only check OR'd tree.");
 
-  if (!Subtarget.hasSSE41() || !Op->hasOneUse())
+  if (!Subtarget.hasSSE2() || !Op->hasOneUse())
     return SDValue();
 
   SmallVector<SDValue, 8> VecIns;
@@ -21365,9 +21366,11 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     return SDValue();
 
   SDLoc DL(Op);
-  MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+  bool UsePTEST = Subtarget.hasSSE41();
+  MVT TestVT =
+      VT.is128BitVector() ? (UsePTEST ? MVT::v2i64 : MVT::v16i8) : MVT::v4i64;
 
-  // Cast all vectors into TestVT for PTEST.
+  // Cast all vectors into TestVT for PTEST/PCMPEQ.
   for (unsigned i = 0, e = VecIns.size(); i < e; ++i)
     VecIns[i] = DAG.getBitcast(TestVT, VecIns[i]);
 
@@ -21382,7 +21385,16 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
 
   X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE,
                                 DL, MVT::i8);
-  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(), VecIns.back());
+
+  if (UsePTEST)
+    return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(),
+                       VecIns.back());
+
+  SDValue Result = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, VecIns.back(),
+                               getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
+  Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
+  return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
+                     DAG.getConstant(0xFFFF, DL, MVT::i32));
 }
 
 /// return true if \c Op has a use that doesn't just read flags.
@@ -22530,12 +22542,12 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
       return BT;
   }
 
-  // Try to use PTEST for a tree ORs equality compared with 0.
+  // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
   // TODO: We could do AND tree with all 1s as well by using the C flag.
   if (Op0.getOpcode() == ISD::OR && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue PTEST = LowerVectorAllZeroTest(Op0, CC, Subtarget, DAG, X86CC))
-      return PTEST;
+    if (SDValue CmpZ = LowerVectorAllZeroTest(Op0, CC, Subtarget, DAG, X86CC))
+      return CmpZ;
   }
 
   // Try to lower using KORTEST or KTEST.
