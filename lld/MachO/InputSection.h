@@ -25,6 +25,7 @@ class Symbol;
 struct Reloc {
   uint8_t type;
   bool pcrel;
+  uint8_t length;
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset;
