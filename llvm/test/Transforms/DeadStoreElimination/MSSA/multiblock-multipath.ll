@@ -580,3 +580,65 @@ bb2:
 bb5:
   ret void
 }
+
+%struct.blam.4 = type { %struct.bar.5, [4 x i8] }
+%struct.bar.5 = type <{ i64, i64*, i32, i64 }>
+
+; Make sure we do not eliminate the store in %bb.
+define void @alloca_5(i1 %c) {
+; CHECK-LABEL: @alloca_5(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BLAM_4:%.*]], align 8
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 1
+; CHECK-NEXT:    [[TMP37:%.*]] = bitcast i64** [[TMP36]] to i8*
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 3
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i64* [[TMP38]] to i64*
+; CHECK-NEXT:    store i64 0, i64* [[TMP39]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB46:%.*]], label [[BB47:%.*]]
+; CHECK:       bb46:
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[TMP37]], i8 0, i64 26, i1 false)
+; CHECK-NEXT:    ret void
+; CHECK:       bb47:
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_BLAM_4]], %struct.blam.4* [[TMP]], i64 0, i32 0, i32 2
+; CHECK-NEXT:    store i32 20, i32* [[TMP48]], align 8
+; CHECK-NEXT:    br label [[BB52:%.*]]
+; CHECK:       bb52:
+; CHECK-NEXT:    br i1 [[C]], label [[BB68:%.*]], label [[BB59:%.*]]
+; CHECK:       bb59:
+; CHECK-NEXT:    call void @use.2(%struct.blam.4* [[TMP]])
+; CHECK-NEXT:    ret void
+; CHECK:       bb68:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = alloca %struct.blam.4, align 8
+  %tmp36 = getelementptr inbounds %struct.blam.4, %struct.blam.4* %tmp, i64 0, i32 0, i32 1
+  %tmp37 = bitcast i64** %tmp36 to i8*
+  %tmp38 = getelementptr inbounds %struct.blam.4, %struct.blam.4* %tmp, i64 0, i32 0, i32 3
+  %tmp39 = bitcast i64* %tmp38 to i64*
+  store i64 0, i64* %tmp39, align 4
+  br i1 %c, label %bb46, label %bb47
+
+bb46:                                             ; preds = %bb12
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(20) %tmp37, i8 0, i64 26, i1 false)
+  ret void
+
+bb47:                                             ; preds = %bb12
+  %tmp48 = getelementptr inbounds %struct.blam.4, %struct.blam.4* %tmp, i64 0, i32 0, i32 2
+  store i32 20, i32* %tmp48, align 8
+  br label %bb52
+
+bb52:                                             ; preds = %bb47
+  br i1 %c, label %bb68, label %bb59
+
+bb59:                                             ; preds = %bb52
+  call void @use.2(%struct.blam.4* %tmp)
+  ret void
+
+bb68:                                             ; preds = %bb52
+  ret void
+}
+
+declare void @use.2(%struct.blam.4*)
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)

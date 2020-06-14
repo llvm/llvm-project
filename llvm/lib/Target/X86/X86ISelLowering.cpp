@@ -37668,14 +37668,26 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   // movmskb even with avx512. This will be better than truncating to vXi1 and
   // using a kmov. This can especially help KNL if the input is a v16i8/v32i8
   // vpcmpeqb/vpcmpgtb.
-  bool IsTruncated = Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse() &&
-                     (Src.getOperand(0).getValueType() == MVT::v16i8 ||
-                      Src.getOperand(0).getValueType() == MVT::v32i8 ||
-                      Src.getOperand(0).getValueType() == MVT::v64i8);
+  bool PreferMovMsk = Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse() &&
+                      (Src.getOperand(0).getValueType() == MVT::v16i8 ||
+                       Src.getOperand(0).getValueType() == MVT::v32i8 ||
+                       Src.getOperand(0).getValueType() == MVT::v64i8);
+
+  // Prefer movmsk for AVX512 for (bitcast (setlt X, 0)) which can be handled
+  // directly with vpmovmskb/vmovmskps/vmovmskpd.
+  if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse() &&
+      cast<CondCodeSDNode>(Src.getOperand(2))->get() == ISD::SETLT &&
+      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
+    EVT CmpVT = Src.getOperand(0).getValueType();
+    EVT EltVT = CmpVT.getVectorElementType();
+    if (CmpVT.getSizeInBits() <= 256 &&
+        (EltVT == MVT::i8 || EltVT == MVT::i32 || EltVT == MVT::i64))
+      PreferMovMsk = true;
+  }
 
   // With AVX512 vxi1 types are legal and we prefer using k-regs.
   // MOVMSK is supported in SSE2 or later.
-  if (!Subtarget.hasSSE2() || (Subtarget.hasAVX512() && !IsTruncated))
+  if (!Subtarget.hasSSE2() || (Subtarget.hasAVX512() && !PreferMovMsk))
     return SDValue();
 
   // There are MOVMSK flavors for types v16i8, v32i8, v4f32, v8f32, v4f64 and
@@ -38167,6 +38179,47 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       return DAG.getConstant(1, SDLoc(N0), VT);
     if (C->isNullValue())
       return DAG.getConstant(0, SDLoc(N0), VT);
+  }
+
+  // Look for MOVMSK that is maybe truncated and then bitcasted to vXi1.
+  // Turn it into a sign bit compare that produces a k-register. This avoids
+  // a trip through a GPR.
+  if (Subtarget.hasAVX512() && SrcVT.isScalarInteger() &&
+      VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
+      isPowerOf2_32(VT.getVectorNumElements())) {
+    unsigned NumElts = VT.getVectorNumElements();
+    SDValue Src = N0;
+
+    // Peek through truncate.
+    if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse())
+      Src = N0.getOperand(0);
+
+    if (Src.getOpcode() == X86ISD::MOVMSK && Src.hasOneUse()) {
+      SDValue MovmskIn = Src.getOperand(0);
+      MVT MovmskVT = MovmskIn.getSimpleValueType();
+      unsigned MovMskElts = MovmskVT.getVectorNumElements();
+
+      // We allow extra bits of the movmsk to be used since they are known zero.
+      // We can't convert a VPMOVMSKB without avx512bw.
+      if (MovMskElts <= NumElts &&
+          (Subtarget.hasBWI() || MovmskVT.getVectorElementType() != MVT::i8)) {
+        EVT IntVT = EVT(MovmskVT).changeVectorElementTypeToInteger();
+        MovmskIn = DAG.getBitcast(IntVT, MovmskIn);
+        SDLoc dl(N);
+        MVT CmpVT = MVT::getVectorVT(MVT::i1, MovMskElts);
+        SDValue Cmp = DAG.getSetCC(dl, CmpVT, MovmskIn,
+                                   DAG.getConstant(0, dl, IntVT), ISD::SETLT);
+        if (EVT(CmpVT) == VT)
+          return Cmp;
+
+        // Pad with zeroes up to original VT to replace the zeroes that were
+        // being used from the MOVMSK.
+        unsigned NumConcats = NumElts / MovMskElts;
+        SmallVector<SDValue, 4> Ops(NumConcats, DAG.getConstant(0, dl, CmpVT));
+        Ops[0] = Cmp;
+        return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Ops);
+      }
+    }
   }
 
   // Try to remove bitcasts from input and output of mask arithmetic to
