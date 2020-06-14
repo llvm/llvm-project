@@ -38,34 +38,10 @@ public:
                     const char *LinkingOutput) const override;
 
 private:
-  /// \return llvm-link output file name.
-  const char *constructLLVMLinkCommand(Compilation &C, const JobAction &JA,
-                                       const InputInfoList &Inputs,
-                                       const llvm::opt::ArgList &Args,
-                                       llvm::StringRef SubArchName,
-                                       llvm::StringRef OutputFilePrefix) const;
-
-  /// \return opt output file name.
-  const char *constructOptCommand(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::StringRef SubArchName,
-                                  llvm::StringRef OutputFilePrefix,
-                                  const char *InputFileName) const;
-
-  /// \return llc output file name.
-  const char *constructLlcCommand(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::StringRef SubArchName,
-                                  llvm::StringRef OutputFilePrefix,
-                                  const char *InputFileName,
-                                  bool OutputIsAsm = false) const;
 
   void constructLldCommand(Compilation &C, const JobAction &JA,
                            const InputInfoList &Inputs, const InputInfo &Output,
-                           const llvm::opt::ArgList &Args,
-                           const char *InputFileName) const;
+                           const llvm::opt::ArgList &Args) const;
 };
 
 } // end namespace AMDGCN

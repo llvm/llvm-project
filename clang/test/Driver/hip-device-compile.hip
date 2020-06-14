@@ -31,9 +31,10 @@
 // BC-SAME: "-emit-llvm-bc"
 // LL-SAME: "-emit-llvm"
 // ASM-NOT: "-emit-llvm"
-// CHECK-SAME: "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: {{".*lib1.bc"}}
+// CHECK-SAME: "-target-cpu" "gfx900"
 // BC-SAME: "-o" "a.bc"
 // LL-SAME: "-o" "a.ll"
 // ASM-SAME: "-o" "a.s"

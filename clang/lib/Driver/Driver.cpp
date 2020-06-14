@@ -2784,11 +2784,9 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      if (!Relocatable || CurPhase < phases::Backend || CompileDeviceOnly) {
-        for (Action *&A : CudaDeviceActions)
-          A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
-                                                 AssociatedOffloadKind);
-      }
+      for (Action *&A : CudaDeviceActions)
+        A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
+                                               AssociatedOffloadKind);
 
       return (CompileDeviceOnly && CurPhase == FinalPhase) ? ABRT_Ignore_Host
                                                            : ABRT_Success;
