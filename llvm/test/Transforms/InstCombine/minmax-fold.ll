@@ -1448,3 +1448,18 @@ define i8 @PR14613_smax(i8 %x) {
   %r = trunc i32 %u7 to i8
   ret i8 %r
 }
+
+define i8 @PR46271(<2 x i8> %x) {
+; CHECK-LABEL: @PR46271(
+; CHECK-NEXT:    [[A:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[A]], <2 x i8> [[X]], <2 x i8> <i8 undef, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[B]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = icmp sgt <2 x i8> %x, <i8 -1, i8 -1>
+  %b = select <2 x i1> %a, <2 x i8> %x, <2 x i8> <i8 undef, i8 -1>
+  %not = xor <2 x i8> %b, <i8 undef, i8 -1>
+  %r = extractelement <2 x i8> %not, i32 1
+  ret i8 %r
+}
