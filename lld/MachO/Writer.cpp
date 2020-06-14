@@ -255,8 +255,8 @@ void Writer::scanRelocations() {
         if (isa<Undefined>(s))
           error("undefined symbol " + s->getName() + ", referenced from " +
                 sys::path::filename(isec->file->getName()));
-        else if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
-          target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
+        else
+          target->prepareSymbolRelocation(*s, r.type);
       }
     }
   }
