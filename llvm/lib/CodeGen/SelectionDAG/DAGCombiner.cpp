@@ -13032,7 +13032,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   //       that only minsize should restrict this.
   bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
   const SDNodeFlags Flags = N->getFlags();
-  if (!UnsafeMath && !Flags.hasAllowReciprocal())
+  if (LegalDAG || (!UnsafeMath && !Flags.hasAllowReciprocal()))
     return SDValue();
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
@@ -13186,8 +13186,9 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     }
 
     // Fold into a reciprocal estimate and multiply instead of a real divide.
-    if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
-      return RV;
+    if (Options.NoInfsFPMath || Flags.hasNoInfs())
+      if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
+        return RV;
   }
 
   // (fdiv (fneg X), (fneg Y)) -> (fdiv X, Y)
