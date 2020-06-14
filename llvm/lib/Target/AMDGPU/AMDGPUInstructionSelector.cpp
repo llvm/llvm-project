@@ -2251,66 +2251,98 @@ bool AMDGPUInstructionSelector::selectG_FRAME_INDEX_GLOBAL_VALUE(
 }
 
 bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
-  Register MaskReg = I.getOperand(2).getReg();
-  Optional<int64_t> MaskVal = getConstantVRegVal(MaskReg, *MRI);
-  // TODO: Implement arbitrary cases
-  if (!MaskVal || !isShiftedMask_64(*MaskVal))
-    return false;
-
-  const uint64_t Mask = *MaskVal;
-
-  MachineBasicBlock *BB = I.getParent();
-
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
+  Register MaskReg = I.getOperand(2).getReg();
+  LLT Ty = MRI->getType(DstReg);
+  LLT MaskTy = MRI->getType(MaskReg);
 
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, *MRI, TRI);
+  const RegisterBank *MaskRB = RBI.getRegBank(MaskReg, *MRI, TRI);
   const bool IsVGPR = DstRB->getID() == AMDGPU::VGPRRegBankID;
+  if (DstRB != SrcRB) // Should only happen for hand written MIR.
+    return false;
+
   unsigned NewOpc = IsVGPR ? AMDGPU::V_AND_B32_e64 : AMDGPU::S_AND_B32;
-  unsigned MovOpc = IsVGPR ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
   const TargetRegisterClass &RegRC
     = IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
-
-  LLT Ty = MRI->getType(DstReg);
 
   const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(Ty, *DstRB,
                                                                   *MRI);
   const TargetRegisterClass *SrcRC = TRI.getRegClassForTypeOnBank(Ty, *SrcRB,
                                                                   *MRI);
+  const TargetRegisterClass *MaskRC =
+      TRI.getRegClassForTypeOnBank(MaskTy, *MaskRB, *MRI);
+
   if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
-      !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+      !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
+      !RBI.constrainGenericRegister(MaskReg, *MaskRC, *MRI))
     return false;
 
+  MachineBasicBlock *BB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  Register ImmReg = MRI->createVirtualRegister(&RegRC);
-  BuildMI(*BB, &I, DL, TII.get(MovOpc), ImmReg)
-    .addImm(Mask);
-
   if (Ty.getSizeInBits() == 32) {
+    assert(MaskTy.getSizeInBits() == 32 &&
+           "ptrmask should have been narrowed during legalize");
+
     BuildMI(*BB, &I, DL, TII.get(NewOpc), DstReg)
       .addReg(SrcReg)
-      .addReg(ImmReg);
+      .addReg(MaskReg);
     I.eraseFromParent();
     return true;
   }
 
   Register HiReg = MRI->createVirtualRegister(&RegRC);
   Register LoReg = MRI->createVirtualRegister(&RegRC);
-  Register MaskLo = MRI->createVirtualRegister(&RegRC);
 
+  // Extract the subregisters from the source pointer.
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), LoReg)
     .addReg(SrcReg, 0, AMDGPU::sub0);
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), HiReg)
     .addReg(SrcReg, 0, AMDGPU::sub1);
 
-  BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskLo)
-    .addReg(LoReg)
-    .addReg(ImmReg);
+  Register MaskedLo, MaskedHi;
+
+  // Try to avoid emitting a bit operation when we only need to touch half of
+  // the 64-bit pointer.
+  APInt MaskOnes = KnownBits->getKnownOnes(MaskReg).zextOrSelf(64);
+
+  const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
+  const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
+  if ((MaskOnes & MaskLo32) == MaskLo32) {
+    // If all the bits in the low half are 1, we only need a copy for it.
+    MaskedLo = LoReg;
+  } else {
+    // Extract the mask subregister and apply the and.
+    Register MaskLo = MRI->createVirtualRegister(&RegRC);
+    MaskedLo = MRI->createVirtualRegister(&RegRC);
+
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskLo)
+      .addReg(MaskReg, 0, AMDGPU::sub0);
+    BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedLo)
+      .addReg(LoReg)
+      .addReg(MaskLo);
+  }
+
+  if ((MaskOnes & MaskHi32) == MaskHi32) {
+    // If all the bits in the high half are 1, we only need a copy for it.
+    MaskedHi = HiReg;
+  } else {
+    Register MaskHi = MRI->createVirtualRegister(&RegRC);
+    MaskedHi = MRI->createVirtualRegister(&RegRC);
+
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskHi)
+      .addReg(MaskReg, 0, AMDGPU::sub1);
+    BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedHi)
+      .addReg(HiReg)
+      .addReg(MaskHi);
+  }
+
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-    .addReg(MaskLo)
+    .addReg(MaskedLo)
     .addImm(AMDGPU::sub0)
-    .addReg(HiReg)
+    .addReg(MaskedHi)
     .addImm(AMDGPU::sub1);
   I.eraseFromParent();
   return true;
