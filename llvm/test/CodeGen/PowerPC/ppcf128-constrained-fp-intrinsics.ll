@@ -1070,12 +1070,12 @@ entry:
 define float @test_fptrunc_ppc_fp128_f32(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_fptrunc_ppc_fp128_f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    frsp 1, 1
+; PC64LE-NEXT:    xsrsp 1, 1
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: test_fptrunc_ppc_fp128_f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    frsp 1, 1
+; PC64LE9-NEXT:    xsrsp 1, 1
 ; PC64LE9-NEXT:    blr
 ;
 ; PC64-LABEL: test_fptrunc_ppc_fp128_f32:
@@ -1368,7 +1368,7 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE-NEXT:    stfd 30, 32(30)
 ; PC64LE-NEXT:    bl __powitf2
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    frsp 0, 1
+; PC64LE-NEXT:    xsrsp 0, 1
 ; PC64LE-NEXT:    stfsx 0, 0, 29
 ; PC64LE-NEXT:    stfd 1, -16(30)
 ; PC64LE-NEXT:    stfd 2, -8(30)
@@ -1406,8 +1406,8 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    fmr 3, 1
 ; PC64LE9-NEXT:    fmr 4, 2
-; PC64LE9-NEXT:    fmr 30, 2
-; PC64LE9-NEXT:    fmr 29, 1
+; PC64LE9-NEXT:    fmr 30, 1
+; PC64LE9-NEXT:    fmr 29, 2
 ; PC64LE9-NEXT:    stfd 2, 24(30)
 ; PC64LE9-NEXT:    stfd 1, 16(30)
 ; PC64LE9-NEXT:    bl __gcc_qmul
@@ -1415,11 +1415,11 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    xxlxor 2, 2, 2
 ; PC64LE9-NEXT:    li 5, 2
-; PC64LE9-NEXT:    stfd 30, 40(30)
-; PC64LE9-NEXT:    stfd 29, 32(30)
+; PC64LE9-NEXT:    stfd 29, 40(30)
+; PC64LE9-NEXT:    stfd 30, 32(30)
 ; PC64LE9-NEXT:    bl __powitf2
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    frsp 0, 1
+; PC64LE9-NEXT:    xsrsp 0, 1
 ; PC64LE9-NEXT:    stfs 0, 0(29)
 ; PC64LE9-NEXT:    stfd 1, -16(30)
 ; PC64LE9-NEXT:    stfd 2, -8(30)
