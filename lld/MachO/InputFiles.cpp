@@ -137,7 +137,8 @@ void InputFile::parseSections(ArrayRef<section_64> sections) {
     isec->file = this;
     isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
     isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
-    isec->data = {buf + sec.offset, static_cast<size_t>(sec.size)};
+    isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
+                  static_cast<size_t>(sec.size)};
     if (sec.align >= 32)
       error("alignment " + std::to_string(sec.align) + " of section " +
             isec->name + " is too large");
