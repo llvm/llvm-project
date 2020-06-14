@@ -1272,18 +1272,17 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 // store the elements rather than the aggregate to be more friendly to
 // fast-isel.
 // FIXME: Do we need to recurse here?
-static void BuildAggStore(CodeGenFunction &CGF, llvm::Value *Val,
-                          Address Dest, bool DestIsVolatile) {
+void CodeGenFunction::EmitAggregateStore(llvm::Value *Val, Address Dest,
+                                         bool DestIsVolatile) {
   // Prefer scalar stores to first-class aggregate stores.
-  if (llvm::StructType *STy =
-        dyn_cast<llvm::StructType>(Val->getType())) {
+  if (llvm::StructType *STy = dyn_cast<llvm::StructType>(Val->getType())) {
     for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-      Address EltPtr = CGF.Builder.CreateStructGEP(Dest, i);
-      llvm::Value *Elt = CGF.Builder.CreateExtractValue(Val, i);
-      CGF.Builder.CreateStore(Elt, EltPtr, DestIsVolatile);
+      Address EltPtr = Builder.CreateStructGEP(Dest, i);
+      llvm::Value *Elt = Builder.CreateExtractValue(Val, i);
+      Builder.CreateStore(Elt, EltPtr, DestIsVolatile);
     }
   } else {
-    CGF.Builder.CreateStore(Val, Dest, DestIsVolatile);
+    Builder.CreateStore(Val, Dest, DestIsVolatile);
   }
 }
 
@@ -1334,7 +1333,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   // If store is legal, just bitcast the src pointer.
   if (SrcSize <= DstSize) {
     Dst = CGF.Builder.CreateElementBitCast(Dst, SrcTy);
-    BuildAggStore(CGF, Src, Dst, DstIsVolatile);
+    CGF.EmitAggregateStore(Src, Dst, DstIsVolatile);
   } else {
     // Otherwise do coercion through memory. This is stupid, but
     // simple.
@@ -5070,7 +5069,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             DestPtr = CreateMemTemp(RetTy, "agg.tmp");
             DestIsVolatile = false;
           }
-          BuildAggStore(*this, CI, DestPtr, DestIsVolatile);
+          EmitAggregateStore(CI, DestPtr, DestIsVolatile);
           return RValue::getAggregate(DestPtr);
         }
         case TEK_Scalar: {
