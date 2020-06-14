@@ -40,6 +40,15 @@ public:
   GISelKnownBits(MachineFunction &MF, unsigned MaxDepth = 6);
   virtual ~GISelKnownBits() = default;
   void setMF(MachineFunction &MF);
+
+  const MachineFunction &getMachineFunction() const {
+    return MF;
+  }
+
+  const DataLayout &getDataLayout() const {
+    return DL;
+  }
+
   virtual void computeKnownBitsImpl(Register R, KnownBits &Known,
                                     const APInt &DemandedElts,
                                     unsigned Depth = 0);
