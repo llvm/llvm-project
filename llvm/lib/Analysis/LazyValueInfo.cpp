@@ -365,6 +365,10 @@ namespace {
     AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
     const DataLayout &DL; ///< A mandatory DataLayout
 
+    /// Declaration of the llvm.experimental.guard() intrinsic,
+    /// if it exists in the module.
+    Function *GuardDecl;
+
   Optional<ValueLatticeElement> getBlockValue(Value *Val, BasicBlock *BB);
   Optional<ValueLatticeElement> getEdgeValue(Value *V, BasicBlock *F,
                                 BasicBlock *T, Instruction *CxtI = nullptr);
@@ -442,8 +446,9 @@ namespace {
     /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
     void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL)
-        : AC(AC), DL(DL) {}
+    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
+                      Function *GuardDecl)
+        : AC(AC), DL(DL), GuardDecl(GuardDecl) {}
   };
 } // end anonymous namespace
 
@@ -767,8 +772,6 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 
   // If guards are not used in the module, don't spend time looking for them
-  auto *GuardDecl = BBI->getModule()->getFunction(
-          Intrinsic::getName(Intrinsic::experimental_guard));
   if (!GuardDecl || GuardDecl->use_empty())
     return;
 
@@ -1495,21 +1498,23 @@ void LazyValueInfoImpl::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 
 /// This lazily constructs the LazyValueInfoImpl.
 static LazyValueInfoImpl &getImpl(void *&PImpl, AssumptionCache *AC,
-                                  const DataLayout *DL) {
+                                  const Module *M) {
   if (!PImpl) {
-    assert(DL && "getCache() called with a null DataLayout");
-    PImpl = new LazyValueInfoImpl(AC, *DL);
+    assert(M && "getCache() called with a null Module");
+    const DataLayout &DL = M->getDataLayout();
+    Function *GuardDecl = M->getFunction(
+        Intrinsic::getName(Intrinsic::experimental_guard));
+    PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
   }
   return *static_cast<LazyValueInfoImpl*>(PImpl);
 }
 
 bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   Info.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  const DataLayout &DL = F.getParent()->getDataLayout();
   Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   if (Info.PImpl)
-    getImpl(Info.PImpl, Info.AC, &DL).clear();
+    getImpl(Info.PImpl, Info.AC, F.getParent()).clear();
 
   // Fully lazy.
   return false;
@@ -1574,9 +1579,8 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   if (isKnownNonConstant(V))
     return nullptr;
 
-  const DataLayout &DL = BB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1593,9 +1597,8 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
                                               bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
   unsigned Width = V->getType()->getIntegerBitWidth();
-  const DataLayout &DL = BB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange(UndefAllowed))
@@ -1612,9 +1615,9 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
 Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
                                            BasicBlock *ToBB,
                                            Instruction *CxtI) {
-  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  Module *M = FromBB->getModule();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, M).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1631,9 +1634,9 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
                                                     BasicBlock *ToBB,
                                                     Instruction *CxtI) {
   unsigned Width = V->getType()->getIntegerBitWidth();
-  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  Module *M = FromBB->getModule();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, M).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
@@ -1717,11 +1720,11 @@ LazyValueInfo::Tristate
 LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
                                   BasicBlock *FromBB, BasicBlock *ToBB,
                                   Instruction *CxtI) {
-  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  Module *M = FromBB->getModule();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, M).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
-  return getPredicateResult(Pred, C, Result, DL, TLI);
+  return getPredicateResult(Pred, C, Result, M->getDataLayout(), TLI);
 }
 
 LazyValueInfo::Tristate
@@ -1731,7 +1734,8 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
-  const DataLayout &DL = CxtI->getModule()->getDataLayout();
+  Module *M = CxtI->getModule();
+  const DataLayout &DL = M->getDataLayout();
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     if (Pred == ICmpInst::ICMP_EQ)
@@ -1739,7 +1743,7 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  ValueLatticeElement Result = getImpl(PImpl, AC, &DL).getValueAt(V, CxtI);
+  ValueLatticeElement Result = getImpl(PImpl, AC, M).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;
@@ -1828,22 +1832,21 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
 void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                BasicBlock *NewSucc) {
   if (PImpl) {
-    const DataLayout &DL = PredBB->getModule()->getDataLayout();
-    getImpl(PImpl, AC, &DL).threadEdge(PredBB, OldSucc, NewSucc);
+    getImpl(PImpl, AC, PredBB->getModule())
+        .threadEdge(PredBB, OldSucc, NewSucc);
   }
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   if (PImpl) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
-    getImpl(PImpl, AC, &DL).eraseBlock(BB);
+    getImpl(PImpl, AC, BB->getModule()).eraseBlock(BB);
   }
 }
 
 
 void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (PImpl) {
-    getImpl(PImpl, AC, DL).printLVI(F, DTree, OS);
+    getImpl(PImpl, AC, F.getParent()).printLVI(F, DTree, OS);
   }
 }
 
