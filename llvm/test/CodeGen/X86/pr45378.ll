@@ -57,10 +57,10 @@ define i1 @parseHeaders2_scalar_or(i64 * %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders2_scalar_or:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    orq %rax, %rcx
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;

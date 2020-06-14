@@ -45,9 +45,15 @@ using ::testing::UnorderedElementsAre;
   return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
 }
 
-template <typename... NoteMatcherTypes>
-::testing::Matcher<const Diag &> WithNote(NoteMatcherTypes... NoteMatcher) {
-  return Field(&Diag::Notes, ElementsAre(NoteMatcher...));
+::testing::Matcher<const Diag &>
+WithNote(::testing::Matcher<Note> NoteMatcher) {
+  return Field(&Diag::Notes, ElementsAre(NoteMatcher));
+}
+
+::testing::Matcher<const Diag &>
+WithNote(::testing::Matcher<Note> NoteMatcher1,
+         ::testing::Matcher<Note> NoteMatcher2) {
+  return Field(&Diag::Notes, UnorderedElementsAre(NoteMatcher1, NoteMatcher2));
 }
 
 MATCHER_P2(Diag, Range, Message,

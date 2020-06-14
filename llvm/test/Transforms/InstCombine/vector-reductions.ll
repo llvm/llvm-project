@@ -7,9 +7,9 @@ declare void @use_f32(float)
 
 define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4f32(
-; CHECK-NEXT:    [[R0:%.*]] = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float [[A0:%.*]], <4 x float> [[V0:%.*]])
-; CHECK-NEXT:    [[R1:%.*]] = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float [[A1:%.*]], <4 x float> [[V1:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[R0]], [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz <4 x float> [[V0:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nsz float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float [[A0:%.*]], <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[TMP2]], [[A1:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r0 = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %a0, <4 x float> %v0)
@@ -17,6 +17,8 @@ define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x flo
   %r = fsub reassoc nsz float %r0, %r1
   ret float %r
 }
+
+; negative test - fsub must allow reassociation
 
 define float @diff_of_sums_v4f32_fmf(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4f32_fmf(
@@ -30,6 +32,8 @@ define float @diff_of_sums_v4f32_fmf(float %a0, <4 x float> %v0, float %a1, <4 x
   %r = fsub ninf nnan nsz float %r0, %r1
   ret float %r
 }
+
+; negative test - extra uses could create extra instructions
 
 define float @diff_of_sums_extra_use1(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_extra_use1(
@@ -46,6 +50,8 @@ define float @diff_of_sums_extra_use1(float %a0, <4 x float> %v0, float %a1, <4 
   ret float %r
 }
 
+; negative test - extra uses could create extra instructions
+
 define float @diff_of_sums_extra_use2(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_extra_use2(
 ; CHECK-NEXT:    [[R0:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float [[A0:%.*]], <4 x float> [[V0:%.*]])
@@ -60,6 +66,8 @@ define float @diff_of_sums_extra_use2(float %a0, <4 x float> %v0, float %a1, <4 
   %r = fsub fast float %r0, %r1
   ret float %r
 }
+
+; negative test - can't reassociate different vector types
 
 define float @diff_of_sums_type_mismatch(float %a0, <4 x float> %v0, float %a1, <8 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_type_mismatch(

@@ -236,7 +236,7 @@ define <4 x double> @foo2_fmf(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfmadd 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = fdiv arcp reassoc nsz <4 x double> %a, %b
+  %r = fdiv arcp reassoc nsz ninf <4 x double> %a, %b
   ret <4 x double> %r
 }
 
@@ -272,7 +272,7 @@ define <4 x float> @goo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    qvfmadds 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = fdiv arcp reassoc <4 x float> %a, %b
+  %r = fdiv arcp reassoc ninf <4 x float> %a, %b
   ret <4 x float> %r
 }
 
