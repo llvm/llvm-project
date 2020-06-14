@@ -84,8 +84,7 @@ DWARF:
           HighOffset: 0x00000010
         - LowOffset:  0x00000000
           HighOffset: 0x00000000
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000010
           HighOffset: 0x0000000000000020
         - LowOffset:  0x0000000000000030
@@ -207,8 +206,7 @@ Sections:
     Size: 0x10
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
@@ -229,8 +227,7 @@ Sections:
     Content: "00"
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
@@ -290,8 +287,7 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
@@ -345,17 +341,14 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x21  ## There are 0x20 bytes before this entry.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x41  ## There are 0x41 bytes before this entry.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
@@ -375,12 +368,10 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x1F ## Must be greater than or equal to 0x20.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02

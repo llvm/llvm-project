@@ -148,13 +148,19 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
                                    Twine::utohexstr(CurrOffset) + ")");
     if (DebugRanges.Offset)
       ZeroFillBytes(OS, *DebugRanges.Offset - CurrOffset);
+
+    uint8_t AddrSize;
+    if (DebugRanges.AddrSize)
+      AddrSize = *DebugRanges.AddrSize;
+    else
+      AddrSize = DI.Is64bit ? 8 : 4;
     for (auto Entry : DebugRanges.Entries) {
-      writeVariableSizedInteger(Entry.LowOffset, DebugRanges.AddrSize, OS,
+      writeVariableSizedInteger(Entry.LowOffset, AddrSize, OS,
                                 DI.IsLittleEndian);
-      writeVariableSizedInteger(Entry.HighOffset, DebugRanges.AddrSize, OS,
+      writeVariableSizedInteger(Entry.HighOffset, AddrSize, OS,
                                 DI.IsLittleEndian);
     }
-    ZeroFillBytes(OS, DebugRanges.AddrSize * 2);
+    ZeroFillBytes(OS, AddrSize * 2);
     ++EntryIndex;
   }
 

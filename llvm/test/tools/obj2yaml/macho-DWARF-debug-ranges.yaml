@@ -203,7 +203,6 @@ DWARF:
           Form:            DW_FORM_addr
   debug_ranges:
     - Offset:          0x00000000
-      AddrSize:        0x08
       Entries:
         - LowOffset:       0x0000000000000000
           HighOffset:      0x0000000000000020
