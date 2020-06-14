@@ -2539,7 +2539,7 @@ def FTDIV: XForm_17<63, 128, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
 def FTSQRT: XForm_17a<63, 160, (outs crrc:$crD), (ins f8rc:$fB),
                       "ftsqrt $crD, $fB", IIC_FPCompare>;
 
-let Uses = [RM] in {
+let Uses = [RM], mayRaiseFPException = 1 in {
   let hasSideEffects = 0 in {
   defm FCTIW  : XForm_26r<63, 14, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fctiw", "$frD, $frB", IIC_FPGeneral,
@@ -2553,39 +2553,39 @@ let Uses = [RM] in {
 
   defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
                           "frsp", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fpround f64:$frB))]>;
+                          [(set f32:$frD, (any_fpround f64:$frB))]>;
 
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIND  : XForm_26r<63, 392, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (fround f64:$frB))]>;
+                          [(set f64:$frD, (any_fround f64:$frB))]>;
   defm FRINS  : XForm_26r<63, 392, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fround f32:$frB))]>;
+                          [(set f32:$frD, (any_fround f32:$frB))]>;
   }
 
   let hasSideEffects = 0 in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIPD  : XForm_26r<63, 456, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frip", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (fceil f64:$frB))]>;
+                          [(set f64:$frD, (any_fceil f64:$frB))]>;
   defm FRIPS  : XForm_26r<63, 456, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frip", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fceil f32:$frB))]>;
+                          [(set f32:$frD, (any_fceil f32:$frB))]>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIZD  : XForm_26r<63, 424, (outs f8rc:$frD), (ins f8rc:$frB),
                           "friz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (ftrunc f64:$frB))]>;
+                          [(set f64:$frD, (any_ftrunc f64:$frB))]>;
   defm FRIZS  : XForm_26r<63, 424, (outs f4rc:$frD), (ins f4rc:$frB),
                           "friz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (ftrunc f32:$frB))]>;
+                          [(set f32:$frD, (any_ftrunc f32:$frB))]>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIMD  : XForm_26r<63, 488, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frim", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (ffloor f64:$frB))]>;
+                          [(set f64:$frD, (any_ffloor f64:$frB))]>;
   defm FRIMS  : XForm_26r<63, 488, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frim", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (ffloor f32:$frB))]>;
+                          [(set f32:$frD, (any_ffloor f32:$frB))]>;
 
   defm FSQRT  : XForm_26r<63, 22, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fsqrt", "$frD, $frB", IIC_FPSqrtD,
