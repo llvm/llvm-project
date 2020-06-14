@@ -24,3 +24,7 @@ public struct FromInterface {}
 public struct OtherType {}
 
 public let testValue = FromInterface()
+
+extension StringProtocol {
+  public func foo() -> Bool { true }
+}
