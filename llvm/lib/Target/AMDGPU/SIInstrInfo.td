@@ -788,7 +788,7 @@ def NegSubInlineConst32 : ImmLeaf<i32, [{
   return Imm < -16 && Imm >= -64;
 }], NegateImm>;
 
-def NegSubInlineConst16 : ImmLeaf<i16, [{
+def NegSubInlineIntConst16 : ImmLeaf<i16, [{
   return Imm < -16 && Imm >= -64;
 }], NegateImm>;
 

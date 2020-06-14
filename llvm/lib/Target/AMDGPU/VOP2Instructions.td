@@ -791,16 +791,16 @@ let Predicates = [Has16BitInsts] in {
 // an inline immediate than -c.
 // TODO: Also do for 64-bit.
 def : GCNPat<
-  (add i16:$src0, (i16 NegSubInlineConst16:$src1)),
-  (V_SUB_U16_e64 VSrc_b16:$src0, NegSubInlineConst16:$src1)
+  (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
+  (V_SUB_U16_e64 VSrc_b16:$src0, NegSubInlineIntConst16:$src1)
 >;
 
 
 let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
 
 def : GCNPat<
-  (i32 (zext (add i16:$src0, (i16 NegSubInlineConst16:$src1)))),
-  (V_SUB_U16_e64 VSrc_b16:$src0, NegSubInlineConst16:$src1)
+  (i32 (zext (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)))),
+  (V_SUB_U16_e64 VSrc_b16:$src0, NegSubInlineIntConst16:$src1)
 >;
 
 defm : Arithmetic_i16_0Hi_Pats<add, V_ADD_U16_e64>;

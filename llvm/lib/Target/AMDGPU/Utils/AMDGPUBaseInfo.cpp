@@ -1194,10 +1194,6 @@ unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 
-bool isInlinableIntLiteral(int64_t Literal) {
-  return Literal >= -16 && Literal <= 64;
-}
-
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
   if (isInlinableIntLiteral(Literal))
     return true;
@@ -1273,6 +1269,17 @@ bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   int16_t Lo16 = static_cast<int16_t>(Literal);
   int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
   return Lo16 == Hi16 && isInlinableLiteral16(Lo16, HasInv2Pi);
+}
+
+bool isInlinableIntLiteralV216(int32_t Literal) {
+  int16_t Lo16 = static_cast<int16_t>(Literal);
+  if (isInt<16>(Literal) || isUInt<16>(Literal))
+    return isInlinableIntLiteral(Lo16);
+
+  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
+  if (!(Literal & 0xffff))
+    return isInlinableIntLiteral(Hi16);
+  return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
 }
 
 bool isArgPassedInSGPR(const Argument *A) {
