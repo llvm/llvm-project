@@ -679,12 +679,9 @@ define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltisw 4, -1
 ; CHECK-P7-NEXT:    vrefp 5, 3
-; CHECK-P7-NEXT:    vspltisb 0, -1
-; CHECK-P7-NEXT:    vslw 0, 0, 0
 ; CHECK-P7-NEXT:    vslw 4, 4, 4
-; CHECK-P7-NEXT:    vsubfp 3, 0, 3
 ; CHECK-P7-NEXT:    vmaddfp 4, 2, 5, 4
-; CHECK-P7-NEXT:    vmaddfp 2, 3, 4, 2
+; CHECK-P7-NEXT:    vnmsubfp 2, 3, 4, 2
 ; CHECK-P7-NEXT:    vmaddfp 2, 5, 2, 4
 ; CHECK-P7-NEXT:    blr
 ;
