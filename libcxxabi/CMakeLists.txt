@@ -126,13 +126,11 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
-set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include")
-
 set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
-    "Specify path to libc++ source." FORCE)
+    "Specify path to libc++ source.")
 set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
-    "Specify path to libc++ includes." FORCE)
+    "Specify path to libc++ includes.")
+message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
