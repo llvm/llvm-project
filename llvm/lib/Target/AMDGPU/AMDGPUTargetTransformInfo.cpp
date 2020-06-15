@@ -992,13 +992,6 @@ GCNTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
 
   // Estimate different operations to be optimized out
   switch (I->getOpcode()) {
-  case Instruction::ExtractElement: {
-    ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
-    unsigned Idx = -1;
-    if (CI)
-      Idx = CI->getZExtValue();
-    return getVectorInstrCost(I->getOpcode(), I->getOperand(0)->getType(), Idx);
-  }
   case Instruction::FNeg:
     return getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
                                   TTI::OK_AnyValue, TTI::OK_AnyValue,
