@@ -252,7 +252,7 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
                      function ? &function->signature : nullptr),
       function(function) {}
 
-uint32_t DefinedData::getVirtualAddress() const {
+uint64_t DefinedData::getVirtualAddress() const {
   LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   if (segment) {
     // For thread local data, the symbol location is relative to the start of
@@ -265,18 +265,18 @@ uint32_t DefinedData::getVirtualAddress() const {
   return offset;
 }
 
-void DefinedData::setVirtualAddress(uint32_t value) {
+void DefinedData::setVirtualAddress(uint64_t value) {
   LLVM_DEBUG(dbgs() << "setVirtualAddress " << name << " -> " << value << "\n");
   assert(!segment);
   offset = value;
 }
 
-uint32_t DefinedData::getOutputSegmentOffset() const {
+uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
   return segment->outputSegmentOffset + offset;
 }
 
-uint32_t DefinedData::getOutputSegmentIndex() const {
+uint64_t DefinedData::getOutputSegmentIndex() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
   return segment->outputSeg->index;
 }

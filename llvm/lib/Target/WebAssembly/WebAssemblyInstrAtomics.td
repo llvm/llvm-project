@@ -14,9 +14,10 @@
 let UseNamedOperandTable = 1 in
 multiclass ATOMIC_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                     list<dag> pattern_r, string asmstr_r,
-                    string asmstr_s, bits<32> atomic_op> {
+                    string asmstr_s, bits<32> atomic_op,
+                    string is64 = "false"> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
-              !or(0xfe00, !and(0xff, atomic_op))>,
+              !or(0xfe00, !and(0xff, atomic_op)), is64>,
             Requires<[HasAtomics]>;
 }
 
@@ -37,13 +38,13 @@ defm ATOMIC_NOTIFY_A32 :
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I32:$count),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            "atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
-           "atomic.notify \t${off}${p2align}", 0x00>;
+           "atomic.notify \t${off}${p2align}", 0x00, "false">;
 defm ATOMIC_NOTIFY_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I32:$count),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
            "atomic.notify \t$dst, ${off}(${addr})${p2align}, $count",
-           "atomic.notify \t${off}${p2align}", 0x00>;
+           "atomic.notify \t${off}${p2align}", 0x00, "true">;
 let mayLoad = 1 in {
 defm ATOMIC_WAIT_I32_A32 :
   ATOMIC_I<(outs I32:$dst),
@@ -51,28 +52,28 @@ defm ATOMIC_WAIT_I32_A32 :
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            "i32.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i32.atomic.wait \t${off}${p2align}", 0x01>;
+           "i32.atomic.wait \t${off}${p2align}", 0x01, "false">;
 defm ATOMIC_WAIT_I32_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I32:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
            "i32.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i32.atomic.wait \t${off}${p2align}", 0x01>;
+           "i32.atomic.wait \t${off}${p2align}", 0x01, "true">;
 defm ATOMIC_WAIT_I64_A32 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr, I64:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            "i64.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i64.atomic.wait \t${off}${p2align}", 0x02>;
+           "i64.atomic.wait \t${off}${p2align}", 0x02, "false">;
 defm ATOMIC_WAIT_I64_A64 :
   ATOMIC_I<(outs I32:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr, I64:$exp,
                 I64:$timeout),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
            "i64.atomic.wait \t$dst, ${off}(${addr})${p2align}, $exp, $timeout",
-           "i64.atomic.wait \t${off}${p2align}", 0x02>;
+           "i64.atomic.wait \t${off}${p2align}", 0x02, "true">;
 } // mayLoad = 1
 } // hasSideEffects = 1
 
@@ -350,8 +351,8 @@ defm : LoadPatGlobalAddrOffOnly<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 //===----------------------------------------------------------------------===//
 
 multiclass AtomicStore<WebAssemblyRegClass rc, string name, int atomic_op> {
-  defm "" : WebAssemblyStore<rc, name, !or(0xfe00, !and(0xff, atomic_op))>,
-            Requires<[HasAtomics]>;
+  defm "" : WebAssemblyStore<rc, name, !or(0xfe00, !and(0xff, atomic_op)),
+                             [HasAtomics]>;
 }
 
 defm ATOMIC_STORE_I32 : AtomicStore<I32, "i32.atomic.store", 0x17>;
@@ -486,13 +487,13 @@ multiclass WebAssemblyBinRMW<WebAssemblyRegClass rc, string name,
              (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
              (outs), (ins P2Align:$p2align, offset32_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $val"),
-             !strconcat(name, "\t${off}${p2align}"), atomic_op>;
+             !strconcat(name, "\t${off}${p2align}"), atomic_op, "false">;
   defm "_A64" :
     ATOMIC_I<(outs rc:$dst),
              (ins P2Align:$p2align, offset64_op:$off, I64:$addr, rc:$val),
              (outs), (ins P2Align:$p2align, offset64_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $val"),
-             !strconcat(name, "\t${off}${p2align}"), atomic_op>;
+             !strconcat(name, "\t${off}${p2align}"), atomic_op, "true">;
 }
 
 defm ATOMIC_RMW_ADD_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.add", 0x1e>;
@@ -797,14 +798,14 @@ multiclass WebAssemblyTerRMW<WebAssemblyRegClass rc, string name,
                   rc:$new_),
              (outs), (ins P2Align:$p2align, offset32_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $exp, $new_"),
-             !strconcat(name, "\t${off}${p2align}"), atomic_op>;
+             !strconcat(name, "\t${off}${p2align}"), atomic_op, "false">;
   defm "_A64" :
     ATOMIC_I<(outs rc:$dst),
              (ins P2Align:$p2align, offset64_op:$off, I64:$addr, rc:$exp,
                   rc:$new_),
              (outs), (ins P2Align:$p2align, offset64_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}, $exp, $new_"),
-             !strconcat(name, "\t${off}${p2align}"), atomic_op>;
+             !strconcat(name, "\t${off}${p2align}"), atomic_op, "true">;
 }
 
 defm ATOMIC_RMW_CMPXCHG_I32 :

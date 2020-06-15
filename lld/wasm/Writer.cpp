@@ -224,6 +224,7 @@ void Writer::layoutMemory() {
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
     auto *sp = cast<DefinedGlobal>(WasmSym::stackPointer);
+    assert(sp->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
     sp->global->global.InitExpr.Value.Int32 = memoryPtr;
     log("mem: stack top   = " + Twine(memoryPtr));
   };
@@ -256,10 +257,13 @@ void Writer::layoutMemory() {
 
     if (WasmSym::tlsSize && seg->name == ".tdata") {
       auto *tlsSize = cast<DefinedGlobal>(WasmSym::tlsSize);
+      assert(tlsSize->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
       tlsSize->global->global.InitExpr.Value.Int32 = seg->size;
 
       auto *tlsAlign = cast<DefinedGlobal>(WasmSym::tlsAlign);
-      tlsAlign->global->global.InitExpr.Value.Int32 = 1U << seg->alignment;
+      assert(tlsAlign->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
+      tlsAlign->global->global.InitExpr.Value.Int32 = int64_t{1}
+                                                      << seg->alignment;
     }
   }
 
