@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s

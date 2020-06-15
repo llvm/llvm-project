@@ -220,7 +220,7 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
 // Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
 void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-  if (Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+  if (!Info || Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
     return;
 
   MachineFunction *MF = MI.getParent()->getParent();
