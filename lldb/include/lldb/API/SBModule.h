@@ -290,6 +290,9 @@ public:
 
   lldb::SBError IsTypeSystemCompatible(lldb::LanguageType language);
 
+  /// Get the number of global modules.
+  static uint32_t GetNumberAllocatedModules();
+
 private:
   friend class SBAddress;
   friend class SBFrame;
