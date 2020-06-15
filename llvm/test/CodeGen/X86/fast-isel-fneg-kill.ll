@@ -11,7 +11,7 @@ define void @goo(double* %x, double* %y) nounwind {
 ; CHECK-NEXT: %[[REG10:.*]]:fr64 = MOVSDrm_alt %[[REG1]], 1, $noreg, 0, $noreg :: (load 8 from %ir.x)
 ; CHECK-NEXT: %[[REG6:.*]]:gr64 = MOVSDto64rr killed %[[REG10]]
 ; CHECK-NEXT: %[[REG7:.*]]:gr64 = MOV64ri -9223372036854775808
-; CHECK-NEXT: %[[REG8:.*]]:gr64 = XOR64rr killed %[[REG6]], killed %[[REG7]], implicit-def $eflags
+; CHECK-NEXT: %[[REG8:.*]]:gr64 = XOR64rr killed %[[REG6]], %[[REG7]], implicit-def $eflags
 ; CHECK-NEXT: %[[REG9:.*]]:fr64 = MOV64toSDrr killed %[[REG8]]
 ; CHECK-NEXT: MOVSDmr %[[REG3]], 1, $noreg, 0, $noreg, killed %[[REG9]] :: (store 8 into %ir.y)
 ; CHECK-NEXT: RETQ
