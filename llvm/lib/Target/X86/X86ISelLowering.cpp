@@ -21366,9 +21366,9 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
                       }) &&
          "Reduction source vector mismatch");
 
-  // Quit if not 128/256-bit vector.
+  // Quit if less than 128-bits or not splittable to 128/256-bit vector.
   EVT VT = VecIns[0].getValueType();
-  if (!VT.is128BitVector() && !VT.is256BitVector())
+  if (VT.getSizeInBits() < 128 || !isPowerOf2_32(VT.getSizeInBits()))
     return SDValue();
 
   SDLoc DL(Op);
@@ -21382,18 +21382,28 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
   }
 
+  SDValue V = VecIns.back();
+
+  // Split down to 128/256-bit vector.
+  unsigned TestSize = Subtarget.hasAVX()? 256 : 128;
+  while (VT.getSizeInBits() > TestSize) {
+    auto Split = DAG.SplitVector(V, DL);
+    VT = Split.first.getValueType();
+    V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+  }
+
   X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE,
                                 DL, MVT::i8);
 
   bool UsePTEST = Subtarget.hasSSE41();
   if (UsePTEST) {
     MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
-    SDValue V = DAG.getBitcast(TestVT, VecIns.back());
+    V = DAG.getBitcast(TestVT, V);
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
 
   SDValue Result = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8,
-                               DAG.getBitcast(MVT::v16i8, VecIns.back()),
+                               DAG.getBitcast(MVT::v16i8, V),
                                getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
   Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
   return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
