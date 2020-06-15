@@ -498,7 +498,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   DIBuilder DIB(*F.getParent());
 
   StackColoring SSC(F, StaticAllocas);
-  static const StackColoring::LiveRange NoColoringRange = {BitVector{1, true}};
+  static const StackColoring::LiveRange NoColoringRange(1, true);
   if (ClColoring)
     SSC.run();
   SSC.removeAllMarkers();

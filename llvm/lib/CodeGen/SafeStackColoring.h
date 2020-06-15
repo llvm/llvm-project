@@ -59,17 +59,20 @@ class StackColoring {
 public:
   /// This class represents a set of interesting instructions where an alloca is
   /// live.
-  struct LiveRange {
-    BitVector bv;
+  class LiveRange {
+    BitVector Bits;
+    friend raw_ostream &operator<<(raw_ostream &OS,
+                                   const StackColoring::LiveRange &R);
 
-    void SetMaximum(int size) { bv.resize(size); }
-    void AddRange(unsigned start, unsigned end) { bv.set(start, end); }
+  public:
+    LiveRange(unsigned Size, bool Set = false) : Bits(Size, Set) {}
+    void AddRange(unsigned Start, unsigned End) { Bits.set(Start, End); }
 
     bool Overlaps(const LiveRange &Other) const {
-      return bv.anyCommon(Other.bv);
+      return Bits.anyCommon(Other.Bits);
     }
 
-    void Join(const LiveRange &Other) { bv |= Other.bv; }
+    void Join(const LiveRange &Other) { Bits |= Other.Bits; }
   };
 
 private:
@@ -133,10 +136,7 @@ public:
   /// entire function.
   LiveRange getFullLiveRange() const {
     assert(NumInst >= 0);
-    LiveRange R;
-    R.SetMaximum(NumInst);
-    R.AddRange(0, NumInst);
-    return R;
+    return LiveRange(NumInst, true);
   }
 };
 
@@ -156,9 +156,9 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
   return OS;
 }
 
-static inline raw_ostream &operator<<(raw_ostream &OS,
-                                      const StackColoring::LiveRange &R) {
-  return OS << R.bv;
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const StackColoring::LiveRange &R) {
+  return OS << R.Bits;
 }
 
 } // end namespace safestack
