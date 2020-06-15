@@ -4537,8 +4537,20 @@ def : InstAlias<"mtmsr $RS", (MTMSR gprc:$RS, 0)>;
 def : InstAlias<"mtxer $Rx", (MTSPR 1, gprc:$Rx)>;
 def : InstAlias<"mfxer $Rx", (MFSPR gprc:$Rx, 1)>;
 
+def : InstAlias<"mtudscr $Rx", (MTSPR 3, gprc:$Rx)>;
+def : InstAlias<"mfudscr $Rx", (MFSPR gprc:$Rx, 3)>;
+
 def : InstAlias<"mfrtcu $Rx", (MFSPR gprc:$Rx, 4)>;
 def : InstAlias<"mfrtcl $Rx", (MFSPR gprc:$Rx, 5)>;
+
+def : InstAlias<"mtlr $Rx", (MTSPR 8, gprc:$Rx)>;
+def : InstAlias<"mflr $Rx", (MFSPR gprc:$Rx, 8)>;
+
+def : InstAlias<"mtctr $Rx", (MTSPR 9, gprc:$Rx)>;
+def : InstAlias<"mfctr $Rx", (MFSPR gprc:$Rx, 9)>;
+
+def : InstAlias<"mtuamr $Rx", (MTSPR 13, gprc:$Rx)>;
+def : InstAlias<"mfuamr $Rx", (MFSPR gprc:$Rx, 13)>;
 
 def : InstAlias<"mtdscr $Rx", (MTSPR 17, gprc:$Rx)>;
 def : InstAlias<"mfdscr $Rx", (MFSPR gprc:$Rx, 17)>;
@@ -4625,6 +4637,9 @@ foreach BATR = 0-3 in {
                     (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 529)))>,
                     Requires<[IsPPC6xx]>;
 }
+
+def : InstAlias<"mtppr $RT", (MTSPR 896, gprc:$RT)>;
+def : InstAlias<"mfppr $RT", (MFSPR gprc:$RT, 896)>;
 
 def : InstAlias<"mtesr $Rx", (MTSPR 980, gprc:$Rx)>, Requires<[IsPPC4xx]>;
 def : InstAlias<"mfesr $Rx", (MFSPR gprc:$Rx, 980)>, Requires<[IsPPC4xx]>;
