@@ -1612,7 +1612,7 @@ belonged to the preceeding condition, or the ``else``.
   // so it shouldn't have braces.  The if also only contains a single statement (the
   // for loop), so it also should omit braces.
   if (isa<FunctionDecl>(D))
-    for(auto *A : D.attrs())
+    for (auto *A : D.attrs())
       handleAttr(A);
 
 
