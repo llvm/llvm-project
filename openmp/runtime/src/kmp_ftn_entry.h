@@ -912,6 +912,61 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_TEAMS)(void) {
 #endif
 }
 
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_WARP_ID)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern int omp_ext_get_warp_id();
+  return omp_ext_get_warp_id();
+#endif
+}
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_LANE_ID)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern int omp_ext_get_lane_id();
+  return omp_ext_get_lane_id();
+#endif
+}
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_SMID)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern int omp_ext_get_smid();
+  return omp_ext_get_smid();
+#endif
+}
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_SPMD_MODE)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern int omp_ext_is_spmd_mode();
+  return omp_ext_is_spmd_mode();
+#endif
+}
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MASTER_THREAD_ID)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern int omp_ext_get_master_thread_id();
+  return omp_ext_get_master_thread_id();
+#endif
+}
+
+unsigned long long FTN_STDCALL
+KMP_EXPAND_NAME(FTN_GET_ACTIVE_THREAD_MASK)(void) {
+#ifdef KMP_STUB
+  return 0;
+#else
+  extern unsigned long long omp_ext_get_active_threads_mask();
+  return omp_ext_get_active_threads_mask();
+#endif
+}
+
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_TEAM_NUM)(void) {
 #ifdef KMP_STUB
   return 0;
@@ -1471,6 +1526,13 @@ KMP_VERSION_SYMBOL(FTN_GET_PLACE_NUM, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_PARTITION_NUM_PLACES, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
 // KMP_VERSION_SYMBOL(FTN_GET_INITIAL_DEVICE, 45, "OMP_4.5");
+// moving these to OMP_5.0 seems to fail to build
+KMP_VERSION_SYMBOL(FTN_GET_WARP_ID, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_LANE_ID, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_SMID, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_IS_SPMD_MODE, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_MASTER_THREAD_ID, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_ACTIVE_THREAD_MASK, 45, "OMP_4.5");
 
 // OMP_5.0 versioned symbols
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");

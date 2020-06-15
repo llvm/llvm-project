@@ -54,9 +54,13 @@ get_filename_component(devicertl_base_directory
   ${CMAKE_CURRENT_SOURCE_DIR}
   DIRECTORY)
 
-set(cuda_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_smid.hip
+set(hip_sources
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_access_dimensions.hip
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_libcall.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_locks.hip
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_smid.hip
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_sync.hip
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_threadfence.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.hip
   ${devicertl_base_directory}/common/src/cancel.cu
   ${devicertl_base_directory}/common/src/critical.cu
@@ -71,6 +75,9 @@ set(cuda_sources
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu)
 
+set(llvm_sources
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/atomic_inc.ll)
+  
 set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hip_atomics.h
@@ -92,15 +99,18 @@ else()
 endif()
 
 # create libraries
-set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900)
+set(mcpus gfx803 gfx900 gfx902 gfx906 gfx908)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
+message("======> list of AMDGCN GPUs to build for :${mcpus}")
 
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
     -std=c++14
     -fcuda-rdc
+    -c
+    -D_OPENMP # FIXME This gets around ~./clang/lib/Headers/__clang_hip_runtime_wrapper.h
     -fvisibility=default
     --cuda-device-only
     -Wno-unused-value
@@ -110,6 +120,10 @@ macro(add_cuda_bc_library)
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory})
+
+  if(NOT ${AOMP_STANDALONE_BUILD})
+    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/lib/bitcode")
+  endif(NOT ${AOMP_STANDALONE_BUILD})
 
   set(bc1_files)
 
@@ -137,7 +151,8 @@ set(libname "omptarget-amdgcn")
 
 foreach(mcpu ${mcpus})
   set(bc_files)
-  add_cuda_bc_library(${cuda_sources})
+  add_cuda_bc_library(${hip_sources})
+  list(APPEND bc_files ${llvm_sources})
 
   set(bc_libname lib${libname}-${mcpu}.bc)
   add_custom_command(

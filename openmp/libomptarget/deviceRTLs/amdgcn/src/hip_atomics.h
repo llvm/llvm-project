@@ -11,10 +11,11 @@
 
 #include "target_impl.h"
 
-// inc requires an amdgcn specific intrinsic which is not yet available
-DEVICE unsigned atomicInc(unsigned *address);
-DEVICE unsigned atomicInc(unsigned *address, unsigned max);
-DEVICE int atomicInc(int *address);
+// Only implemented for i32 as that's the only call site
+EXTERN uint32_t __amdgcn_atomic_inc_i32(uint32_t *, uint32_t);
+INLINE uint32_t atomicInc(uint32_t *address, uint32_t val) {
+  return __amdgcn_atomic_inc_i32(address, val);
+}
 
 namespace {
 

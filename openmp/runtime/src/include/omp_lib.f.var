@@ -304,6 +304,11 @@
             integer (kind=omp_integer_kind) omp_get_num_devices
           end function omp_get_num_devices
 
+          function omp_get_device_num()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_device_num
+          end function omp_get_device_num
+
           function omp_get_num_teams()
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_num_teams
@@ -313,6 +318,36 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_team_num
           end function omp_get_team_num
+
+          function omp_ext_get_warp_id()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_warp_id
+          end function omp_ext_get_warp_id
+
+          function omp_ext_get_lane_id()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_lane_id
+          end function omp_ext_get_lane_id
+
+          function omp_ext_get_smid()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_smid
+          end function omp_ext_get_smid
+
+          function omp_ext_is_spmd_mode()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_is_spmd_mode
+          end function omp_ext_is_spmd_mode
+
+          function omp_ext_get_master_thread_id()
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_master_thread_id
+          end function omp_ext_get_master_thread_id
+
+          function omp_ext_get_active_threads_mask()
+            use omp_lib_kinds
+            integer (kind=8) omp_ext_get_active_threads_mask
+          end function omp_ext_get_active_threads_mask
 
           function omp_get_cancellation()
             use omp_lib_kinds
@@ -706,8 +741,15 @@
 !dec$ attributes alias:'OMP_GET_DEFAULT_DEVICE' :: omp_get_default_device
 !dec$ attributes alias:'OMP_SET_DEFAULT_DEVICE' :: omp_set_default_device
 !dec$ attributes alias:'OMP_GET_NUM_DEVICES' :: omp_get_num_devices
+!dec$ attributes alias:'OMP_GET_DEVICE_NUM' :: omp_get_device_num
 !dec$ attributes alias:'OMP_GET_NUM_TEAMS' :: omp_get_num_teams
 !dec$ attributes alias:'OMP_GET_TEAM_NUM' :: omp_get_team_num
+!dec$ attributes alias:'OMP_EXT_GET_WARP_ID' :: omp_ext_get_warp_id
+!dec$ attributes alias:'OMP_EXT_GET_LANE_ID' :: omp_ext_get_lane_id
+!dec$ attributes alias:'OMP_EXT_GET_SMID' :: omp_ext_get_smid
+!dec$ attributes alias:'OMP_EXT_IS_SPMD_MODE' :: omp_ext_is_spmd_mode
+!dec$ attributes alias:'OMP_EXT_GET_MASTER_THREAD_ID' :: omp_ext_get_master_thread_id
+!dec$ attributes alias:'OMP_EXT_GET_ACTIVE_THREADS_MASK' :: omp_ext_get_active_threads_mask
 !dec$ attributes alias:'OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'OMP_GET_INITIAL_DEVICE' :: omp_get_initial_device
@@ -798,8 +840,15 @@
 !dec$ attributes alias:'_OMP_GET_DEFAULT_DEVICE' :: omp_get_default_device
 !dec$ attributes alias:'_OMP_SET_DEFAULT_DEVICE' :: omp_set_default_device
 !dec$ attributes alias:'_OMP_GET_NUM_DEVICES' :: omp_get_num_devices
+!dec$ attributes alias:'_OMP_GET_DEVICE_NUM' :: omp_get_device_num
 !dec$ attributes alias:'_OMP_GET_NUM_TEAMS' :: omp_get_num_teams
 !dec$ attributes alias:'_OMP_GET_TEAM_NUM' :: omp_get_team_num
+!dec$ attributes alias:'_OMP_EXT_GET_WARP_ID' :: omp_ext_get_warp_id
+!dec$ attributes alias:'_OMP_EXT_GET_LANE_ID' :: omp_ext_get_lane_id
+!dec$ attributes alias:'_OMP_EXT_GET_SMID' :: omp_ext_get_smid
+!dec$ attributes alias:'_OMP_EXT_IS_SPMD_MODE' :: omp_ext_is_spmd_mode
+!dec$ attributes alias:'_OMP_EXT_GET_MASTER_THREAD_ID' :: omp_ext_get_master_thread_id
+!dec$ attributes alias:'_OMP_EXT_GET_ACTIVE_THREADS_MASK' :: omp_ext_get_active_threads_mask
 !dec$ attributes alias:'_OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'_OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'_OMP_GET_INITIAL_DEVICE' :: omp_get_initial_device
@@ -893,8 +942,15 @@
 !dec$ attributes alias:'omp_get_default_device_'::omp_get_default_device
 !dec$ attributes alias:'omp_set_default_device_'::omp_set_default_device
 !dec$ attributes alias:'omp_get_num_devices_'::omp_get_num_devices
+!dec$ attributes alias:'omp_get_device_nums_'::omp_get_device_num
 !dec$ attributes alias:'omp_get_num_teams_'::omp_get_num_teams
 !dec$ attributes alias:'omp_get_team_num_'::omp_get_team_num
+!dec$ attributes alias:'omp_ext_get_warp_id_'::omp_ext_get_warp_id
+!dec$ attributes alias:'omp_ext_get_lane_id_'::omp_ext_get_lane_id
+!dec$ attributes alias:'omp_ext_get_smid_'::omp_ext_get_smid
+!dec$ attributes alias:'omp_ext_is_spmd_mode_'::omp_ext_is_spmd_mode
+!dec$ attributes alias:'omp_ext_get_master_thread_id'::omp_ext_get_master_thread_id
+!dec$ attributes alias:'omp_ext_get_active_threads_mask_' :: omp_ext_get_active_threads_mask
 !dec$ attributes alias:'omp_get_cancellation_'::omp_get_cancellation
 !dec$ attributes alias:'omp_is_initial_device_'::omp_is_initial_device
 !dec$ attributes alias:'omp_get_initial_device_'::omp_get_initial_device
@@ -989,6 +1045,12 @@
 !dec$ attributes alias:'_omp_get_num_devices_'::omp_get_num_devices
 !dec$ attributes alias:'_omp_get_num_teams_'::omp_get_num_teams
 !dec$ attributes alias:'_omp_get_team_num_'::omp_get_team_num
+!dec$ attributes alias:'_omp_ext_get_warp_id_'::omp_ext_get_warp_id
+!dec$ attributes alias:'_omp_ext_get_lane_id_'::omp_ext_get_lane_id
+!dec$ attributes alias:'_omp_ext_get_smid_'::omp_ext_get_smid
+!dec$ attributes alias:'_omp_ext_is_spmd_mode_'::omp_ext_is_spmd_mode
+!dec$ attributes alias:'_omp_ext_get_master_thread_id_'::omp_ext_get_master_thread_id
+!dec$ attributes alias:'_omp_ext_get_active_threads_mask_' :: omp_ext_get_active_threads_mask
 !dec$ attributes alias:'_omp_get_cancellation_'::omp_get_cancellation
 !dec$ attributes alias:'_omp_is_initial_device_'::omp_is_initial_device
 !dec$ attributes alias:'_omp_get_initial_device_'::omp_get_initial_device

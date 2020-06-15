@@ -12,6 +12,13 @@
 #include "common/omptarget.h"
 #include "target_impl.h"
 
+// Set the print format for active threads
+#ifdef __AMDGCN__
+#define _PFT_ % 08x
+#else
+#define _PFT_ % 16lx
+#endif
+
 // Return true if this is the master thread.
 INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
   return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
@@ -66,7 +73,8 @@ __kmpc_initialize_data_sharing_environment(__kmpc_data_sharing_slot *rootS,
 
   // We don't need to initialize the frame and active threads.
 
-  DSPRINT(DSFLAG_INIT, "Initial data size: %08x \n", (unsigned)InitialDataSize);
+  DSPRINT(DSFLAG_INIT, "Initial data size: _PFT_ \n",
+          (unsigned)InitialDataSize);
   DSPRINT(DSFLAG_INIT, "Root slot at: %016llx \n", (unsigned long long)RootS);
   DSPRINT(DSFLAG_INIT, "Root slot data-end at: %016llx \n",
           (unsigned long long)RootS->DataEnd);
@@ -116,7 +124,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
   DSPRINT(DSFLAG, "Saved slot ptr at: %016llx \n", (unsigned long long)SlotP);
   DSPRINT(DSFLAG, "Saved stack ptr at: %016llx \n", (unsigned long long)StackP);
   DSPRINT(DSFLAG, "Saved frame ptr at: %016llx \n", (long long)FrameP);
-  DSPRINT(DSFLAG, "Active threads: %08x \n", (unsigned)ActiveT);
+  DSPRINT(DSFLAG, "Active threads: _PFT_ \n", (unsigned)ActiveT);
 
   // Only the warp active master needs to grow the stack.
   if (__kmpc_impl_is_first_active_thread()) {
@@ -143,7 +151,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
             (unsigned long long)CurrentEndAddress);
     DSPRINT(DSFLAG, "Required End Address %016llx\n",
             (unsigned long long)RequiredEndAddress);
-    DSPRINT(DSFLAG, "Active Threads %08x\n", (unsigned)ActiveT);
+    DSPRINT(DSFLAG, "Active Threads _PFT_\n", (unsigned)ActiveT);
 
     // If we require a new slot, allocate it and initialize it (or attempt to
     // reuse one). Also, set the shared stack and slot pointers to the new
@@ -254,7 +262,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
     // have other threads that will return after the current ones.
     ActiveT &= ~CurActive;
 
-    DSPRINT(DSFLAG, "Active threads: %08x; New mask: %08x\n",
+    DSPRINT(DSFLAG, "Active threads: _PFT_ ; New mask: _PFT_ \n",
             (unsigned)CurActive, (unsigned)ActiveT);
 
     if (!ActiveT) {
@@ -275,7 +283,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
               (unsigned long long)StackP);
       DSPRINT(DSFLAG, "Restored frame ptr at: %016llx \n",
               (unsigned long long)FrameP);
-      DSPRINT(DSFLAG, "Active threads: %08x \n", (unsigned)ActiveT);
+      DSPRINT(DSFLAG, "Active threads: _PFT_ \n", (unsigned)ActiveT);
     }
   }
 
@@ -317,7 +325,7 @@ INLINE static void data_sharing_init_stack_common() {
   omptarget_nvptx_TeamDescr *teamDescr =
       &omptarget_nvptx_threadPrivateContext->TeamContext();
 
-  for (int WID = 0; WID < WARPSIZE; WID++) {
+  for (int WID = 0; WID < DS_Max_Warp_Number; WID++) {
     __kmpc_data_sharing_slot *RootS = teamDescr->GetPreallocatedSlotAddr(WID);
     DataSharingState.SlotPtr[WID] = RootS;
     DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];

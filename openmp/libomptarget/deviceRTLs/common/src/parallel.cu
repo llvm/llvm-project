@@ -376,18 +376,39 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // get current task
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   currTaskDescr->SaveLoopData();
-
+  int ParLev = currTaskDescr->ParLev();
   // allocate new task descriptor and copy value from current one, set prev to
   // it
+
+#ifdef __AMDGCN__
+  // Each kernel has a precalculated call stack per thread.
+  // NumberTeams * NumberThreads * NumParallelLevels
+  // we calculate the max number of elements here
+  // Note that ParLev is the current parallel depth.
+  extern DEVICE void *omptarget_nest_par_call_stack;
+  long CSIdx =
+      GetNumberOfThreadsInBlock() * GetNumberOfBlocksInKernel() * ParLev;
+  // Now we compute this threads location in the above array.
+  CSIdx +=
+      GetBlockIdInKernel() * GetNumberOfThreadsInBlock() + GetThreadIdInBlock();
+  CSIdx *= sizeof(omptarget_nvptx_TaskDescr);
+
+  omptarget_nvptx_TaskDescr *V =
+      (omptarget_nvptx_TaskDescr *)((char *)omptarget_nest_par_call_stack +
+                                    CSIdx);
+  omptarget_nvptx_TaskDescr *newTaskDescr = V;
+#else
   omptarget_nvptx_TaskDescr *newTaskDescr =
       (omptarget_nvptx_TaskDescr *)SafeMalloc(sizeof(omptarget_nvptx_TaskDescr),
                                               "new seq parallel task");
+#endif
   newTaskDescr->CopyParent(currTaskDescr);
 
   // tweak values for serialized parallel case:
   // - each thread becomes ID 0 in its serialized parallel, and
   // - there is only one thread per team
   newTaskDescr->ThreadId() = 0;
+  newTaskDescr->ParLev() = ParLev + 1;
 
   // set new task descriptor as top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
@@ -412,8 +433,10 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   // set new top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
+#ifndef __AMDGCN__
   // free
   SafeFree(currTaskDescr, "new seq parallel task");
+#endif
   currTaskDescr = getMyTopTaskDescriptor(threadId);
   currTaskDescr->RestoreLoopData();
 }

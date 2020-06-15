@@ -535,6 +535,13 @@ kmp_set_disp_num_buffers                    890
     omp_fulfill_event                       759
     omp_display_env                         733
 
+    omp_ext_get_warp_id                     810
+    omp_ext_get_lane_id                     811
+    omp_ext_get_active_threads_mask         812
+    omp_ext_get_master_thread_id            813
+    omp_ext_get_smid                        814
+    omp_ext_is_spmd_mode                    815
+
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA
     omp_large_cap_mem_alloc                DATA
@@ -553,7 +560,7 @@ kmp_set_disp_num_buffers                    890
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
-
+    # well, we seem to have crossed the 900 limit, so ... how about 950 to 999
     # Ordinals between 1000 and 1999 are reserved
     # for user-callable uppercase Fortran entries.
 

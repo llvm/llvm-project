@@ -401,6 +401,11 @@
           integer (kind=omp_integer_kind) omp_get_num_devices
         end function omp_get_num_devices
 
+        function omp_get_device_num() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_device_num
+        end function omp_get_device_num
+
         function omp_get_num_teams() bind(c)
           import
           integer (kind=omp_integer_kind) omp_get_num_teams
@@ -410,6 +415,36 @@
           import
           integer (kind=omp_integer_kind) omp_get_team_num
         end function omp_get_team_num
+
+        function omp_ext_get_warp_id() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_ext_get_warp_id
+        end function omp_ext_get_warp_id
+
+        function omp_ext_get_lane_id() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_ext_get_lane_id
+        end function omp_ext_get_lane_id
+
+        function omp_ext_get_smid() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_ext_get_smid
+        end function omp_ext_get_smid
+
+        function omp_ext_is_spmd_mode() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_ext_is_spmd_mode
+        end function omp_ext_is_spmd_mode
+
+          function omp_ext_get_master_thread_id() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_master_thread_id
+          end function omp_ext_get_master_thread_id
+
+        function omp_ext_get_active_threads_mask() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_ext_get_active_threads_mask
+        end function ompgetActiveThreadsMask
 
         function omp_is_initial_device() bind(c)
           import
@@ -793,6 +828,12 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_fulfill_event
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_get_warp_id
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_get_lane_id
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_get_smid
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_is_spmd_mode
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_get_master_thread_id
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_ext_get_active_threads_mask
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_destroy_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_lock
@@ -876,6 +917,12 @@
 !$omp declare target(omp_fulfill_event)
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
+!$omp declare target(omp_ext_get_warp_id )
+!$omp declare target(omp_ext_get_lane_id )
+!$omp declare target(omp_ext_get_smid )
+!$omp declare target(omp_ext_is_spmd_mode )
+!$omp declare target(omp_ext_get_master_thread_id )
+!$omp declare target(omp_ext_get_active_threads_mask )
 !$omp declare target(omp_init_lock )
 !$omp declare target(omp_destroy_lock )
 !$omp declare target(omp_set_lock )

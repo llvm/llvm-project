@@ -319,6 +319,11 @@
             integer (kind=omp_integer_kind) omp_get_num_devices
           end function omp_get_num_devices
 
+          function omp_get_device_num() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_device_num
+          end function omp_get_device_num
+
           function omp_get_num_teams() bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_num_teams
@@ -328,6 +333,36 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_team_num
           end function omp_get_team_num
+
+          function omp_ext_get_warp_id() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_warp_id
+          end function omp_ext_get_warp_id
+
+          function omp_ext_get_lane_id() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_lane_id
+          end function omp_ext_get_lane_id
+
+          function omp_ext_get_smid() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_smid
+          end function omp_ext_get_smid
+
+          function omp_ext_is_spmd_mode() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_is_spmd_mode
+          end function omp_ext_is_spmd_mode
+
+          function omp_ext_get_master_thread_id() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_ext_get_master_thread_id
+          end function omp_ext_get_master_thread_id
+
+          function omp_ext_get_active_threads_mask() bind(c)
+            use omp_lib_kinds
+            integer (kind=8) omp_ext_get_active_threads_mask
+          end function omp_ext_get_active_threads_mask
 
           function omp_get_cancellation() bind(c)
             use omp_lib_kinds

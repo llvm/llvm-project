@@ -133,7 +133,7 @@ EXTERN void __kmpc_end_single(kmp_Ident *loc, int32_t global_tid) {
 
 EXTERN void __kmpc_flush(kmp_Ident *loc) {
   PRINT0(LD_IO, "call kmpc_flush\n");
-  __kmpc_impl_threadfence();
+  __kmpc_impl_threadfence_system();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

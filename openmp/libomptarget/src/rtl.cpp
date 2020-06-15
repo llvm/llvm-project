@@ -18,8 +18,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
+
+#include <linux/limits.h>
+
 #include <mutex>
 #include <string>
+// It's strange we do not have llvm tools for openmp runtime, so we use stat
+#include <sys/stat.h>
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
@@ -27,7 +32,23 @@ static const char *RTLNames[] = {
     /* PowerPC target */ "libomptarget.rtl.ppc64.so",
     /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
     /* CUDA target    */ "libomptarget.rtl.cuda.so",
+    /* HSA target     */ "libomptarget.rtl.hsa.so",
     /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+
+// Define the platform quick check files.
+// At least one must be found to attempt to load plugin for that platform.
+#define MAX_PLATFORM_CHECK_FILES 2
+// FIXME The current review says we should merge this static structure with RTLNames above
+// This will avoid need for  MAX_PLATFORM_CHECK_FILES  in loop below
+static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
+    /* ppc64 has multiple quick check files */
+    /* SX-Aurora VE target         */ {"fixme.so"},
+    {"/sys/firmware/devicetree/base/ibm,firmware-versions/open-power",
+     "/sys/firmware/devicetree/base/cpus/ibm,powerpc-cpu-features"},
+    /* acpi is unique to x86       */ {"/sys/firmware/acpi"},
+    /* nvidia0 is unique with cuda */ {"/dev/nvidia0"},
+    /* kfd is unique to amdgcn     */ {"/dev/kfd"},
+    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"}};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;
@@ -65,27 +86,61 @@ void RTLsTy::LoadRTLs() {
   }
 #endif // OMPTARGET_DEBUG
 
+  // FIXME this is amdgcn specific.
+  // Propogate HIP_VISIBLE_DEVICES if set to ROCR_VISIBLE_DEVICES.
+  if (char *hipVisDevs = getenv("HIP_VISIBLE_DEVICES")) {
+    if (char *rocrVisDevs = getenv("ROCR_VISIBLE_DEVICES")) {
+      if (strcmp(hipVisDevs, rocrVisDevs) != 0)
+        fprintf(stderr,
+                "Warning both HIP_VISIBLE_DEVICES %s "
+                "and ROCR_VISIBLE_DEVICES %s set\n", hipVisDevs, rocrVisDevs);
+    }
+  }
+
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
   TargetOffloadPolicy = (kmp_target_offload_kind_t) __kmpc_get_target_offload();
   if (TargetOffloadPolicy == tgt_disabled) {
     return;
   }
 
+  // Plugins should be loaded from same directory as libomptarget.so
+  void *handle = dlopen("libomptarget.so", RTLD_NOW);
+  if (!handle)
+    DP("dlopen() failed: %s\n", dlerror());
+  char *libomptarget_dir_name = new char[PATH_MAX];
+  if (dlinfo(handle, RTLD_DI_ORIGIN, libomptarget_dir_name) == -1)
+    DP("RTLD_DI_ORIGIN failed: %s\n", dlerror());
+  struct stat stat_buffer;
+  int platform_num = 0;
+
   DP("Loading RTLs...\n");
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
   for (auto *Name : RTLNames) {
-    DP("Loading library '%s'...\n", Name);
-    void *dynlib_handle = dlopen(Name, RTLD_NOW);
+    // Only one quick check file required to attempt to load platform plugin
+    std::string full_plugin_name;
+    bool found = false;
+    for (auto *QuickCheckName : RTLQuickCheckFiles[platform_num++]) {
+      if (QuickCheckName) {
+        if (!strcmp(QuickCheckName, "") ||
+            (stat(QuickCheckName, &stat_buffer) == 0))
+          found = true;
+      }
+    }
+    if (!found) // Not finding quick check files is a faster fail than dlopen
+      continue;
+    full_plugin_name.assign(libomptarget_dir_name).append("/").append(Name);
+    DP("Loading library '%s'...\n", full_plugin_name.c_str());
+    void *dynlib_handle = dlopen(full_plugin_name.c_str(), RTLD_NOW);
 
     if (!dynlib_handle) {
       // Library does not exist or cannot be found.
-      DP("Unable to load library '%s': %s!\n", Name, dlerror());
+      DP("Unable to load '%s': %s!\n", full_plugin_name.c_str(), dlerror());
       continue;
     }
 
-    DP("Successfully loaded library '%s'!\n", Name);
+    DP("Successfully loaded library '%s'!\n", full_plugin_name.c_str());
 
     // Retrieve the RTL information from the runtime library.
     RTLInfoTy R;
@@ -159,7 +214,7 @@ void RTLsTy::LoadRTLs() {
     // The RTL is valid! Will save the information in the RTLs list.
     AllRTLs.push_back(R);
   }
-
+  delete libomptarget_dir_name;
   DP("RTLs loaded!\n");
 
   return;

@@ -105,6 +105,7 @@
 #define FTN_GET_MAX_TASK_PRIORITY omp_get_max_task_priority
 #define FTN_GET_NUM_PLACES omp_get_num_places
 #define FTN_GET_PLACE_NUM_PROCS omp_get_place_num_procs
+#define FTN_GET_DEVICE_NUM omp_get_device_num
 #define FTN_GET_PLACE_PROC_IDS omp_get_place_proc_ids
 #define FTN_GET_PLACE_NUM omp_get_place_num
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places
@@ -120,6 +121,12 @@
 #define FTN_TARGET_DISASSOCIATE_PTR omp_target_disassociate_ptr
 #endif
 
+#define FTN_GET_WARP_ID omp_ext_get_warp_id
+#define FTN_GET_LANE_ID omp_ext_get_lane_id
+#define FTN_GET_SMID omp_ext_get_smid
+#define FTN_IS_SPMD_MODE omp_ext_is_spmd_mode
+#define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id
+#define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask
 #define FTN_CONTROL_TOOL omp_control_tool
 #define FTN_INIT_ALLOCATOR omp_init_allocator
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator
@@ -229,6 +236,7 @@
 #define FTN_GET_PLACE_NUM_PROCS omp_get_place_num_procs_
 #define FTN_GET_PLACE_PROC_IDS omp_get_place_proc_ids_
 #define FTN_GET_PLACE_NUM omp_get_place_num_
+#define FTN_GET_DEVICE_NUM omp_get_device_num_
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places_
 #define FTN_GET_PARTITION_PLACE_NUMS omp_get_partition_place_nums_
 #define FTN_GET_INITIAL_DEVICE omp_get_initial_device_
@@ -242,6 +250,12 @@
 #define FTN_TARGET_DISASSOCIATE_PTR omp_target_disassociate_ptr_
 #endif
 
+#define FTN_GET_WARP_ID omp_ext_get_warp_id_
+#define FTN_GET_LANE_ID omp_ext_get_lane_id_
+#define FTN_GET_SMID omp_getSMID_
+#define FTN_IS_SPMD_MODE omp_ext_is_spmd_mode_
+#define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id_
+#define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask_
 #define FTN_CONTROL_TOOL omp_control_tool_
 #define FTN_INIT_ALLOCATOR omp_init_allocator_
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator_
@@ -366,6 +380,12 @@
 #define FTN_TARGET_DISASSOCIATE_PTR OMP_TARGET_DISASSOCIATE_PTR
 #endif
 
+#define FTN_GET_WARP_ID OMP_EXT_GET_WARP_ID
+#define FTN_GET_LANE_ID OMP_EXT_GET_LANE_ID
+#define FTN_GET_SMID OMP_EXT_GET_SMID
+#define FTN_IS_SPMD_MODE OMP_EXT_IS_SPMD_MODE
+#define FTN_GET_MASTER_THREAD_ID OMP_EXT_GET_MASTER_THREAD_ID
+#define FTN_GET_ACTIVE_THREAD_MASK OMP_GETACTIVETHREADMASK
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
 #define FTN_INIT_ALLOCATOR OMP_INIT_ALLOCATOR
 #define FTN_DESTROY_ALLOCATOR OMP_DESTROY_ALLOCATOR

@@ -48,7 +48,7 @@
 
 // Maximum number of preallocated arguments to an outlined parallel/simd
 // function. Anything more requires dynamic memory allocation.
-#define MAX_SHARED_ARGS 20
+#define MAX_SHARED_ARGS 40
 
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
@@ -120,9 +120,9 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   __builtin_amdgcn_s_barrier();
 }
 
-DEVICE void __kmpc_impl_threadfence(void);
-DEVICE void __kmpc_impl_threadfence_block(void);
-DEVICE void __kmpc_impl_threadfence_system(void);
+EXTERN void __kmpc_impl_threadfence(void);
+EXTERN void __kmpc_impl_threadfence_block(void);
+EXTERN void __kmpc_impl_threadfence_system(void);
 
 // Calls to the AMDGCN layer (assuming 1D layout)
 INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }

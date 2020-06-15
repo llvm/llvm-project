@@ -15,9 +15,14 @@
 
 #include "target_impl.h"
 
+// See D70971 for discussion of sharing device_environment.h between devices
+#ifdef __AMDGCN__
+#include "../../../src/device_env_struct.h"
+#else
 struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
+#endif
 
 extern DEVICE omptarget_device_environmentTy omptarget_device_environment;
 

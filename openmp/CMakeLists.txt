@@ -41,6 +41,11 @@ else()
   endif()
 endif()
 
+if((CMAKE_BUILD_TYPE MATCHES Debug) AND (${LIBOMPTARGET_NVPTX_DEBUG}))
+  set(OPENMP_LIBDIR_SUFFIX "-debug")
+  set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
+endif()
+
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)

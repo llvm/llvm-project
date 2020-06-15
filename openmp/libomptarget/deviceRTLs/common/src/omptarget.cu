@@ -70,6 +70,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
   nThreads = GetNumberOfThreadsInBlock();
   threadLimit = ThreadLimit;
+  omptarget_nvptx_workFn = 0; // Initialized to zero in case there is no work
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {

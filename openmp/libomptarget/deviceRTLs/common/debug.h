@@ -73,7 +73,7 @@
 #ifndef OMPTARGET_NVPTX_DEBUG
 #define OMPTARGET_NVPTX_DEBUG LD_SET_NONE
 #elif OMPTARGET_NVPTX_DEBUG
-#warning debug is used, not good for measurements
+//#warning debug is used, not good for measurements
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,9 +117,10 @@
 // set the desired flags
 
 #if OMPTARGET_NVPTX_DEBUG
-#define OMPTARGET_NVPTX_WARNING (LW_SET_NONE)
+#define OMPTARGET_NVPTX_WARNING (LT_SET_SAFETY)
 #else
-#define OMPTARGET_NVPTX_WARNING (LW_SET_FUSSY)
+#undef OMPTARGET_NVPTX_WARNING
+#undef OMPTARGET_NVPTX_TEST
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
