@@ -1085,6 +1085,8 @@ def G_BRINDIRECT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
 }
 
 // Generic branch to jump table entry
@@ -1094,6 +1096,8 @@ def G_BRJT : GenericInstruction {
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
+  let isBarrier = 1;
+  let isIndirectBranch = 1;
 }
 
 def G_READ_REGISTER : GenericInstruction {
