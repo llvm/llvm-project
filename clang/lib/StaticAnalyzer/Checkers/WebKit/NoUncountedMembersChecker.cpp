@@ -145,11 +145,11 @@ public:
 };
 } // namespace
 
-void ento::registerWebKitNoUncountedMemberChecker(CheckerManager &Mgr) {
+void ento::registerNoUncountedMemberChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NoUncountedMemberChecker>();
 }
 
-bool ento::shouldRegisterWebKitNoUncountedMemberChecker(
+bool ento::shouldRegisterNoUncountedMemberChecker(
     const CheckerManager &Mgr) {
   return true;
 }
