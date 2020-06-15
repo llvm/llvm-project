@@ -114,6 +114,56 @@ class TestSourceBuilds(SetupConfigs):
                     int main(int, char**) { this_isnt_defined_anywhere(); }"""
         self.assertFalse(dsl.sourceBuilds(self.config, source))
 
+class TestProgramOutput(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.programOutput
+    """
+    def test_valid_program_returns_output(self):
+        source = """
+        #include <cstdio>
+        int main(int, char**) { std::printf("FOOBAR"); }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR")
+
+    def test_valid_program_returns_output_newline_handling(self):
+        source = """
+        #include <cstdio>
+        int main(int, char**) { std::printf("FOOBAR\\n"); }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR\n")
+
+    def test_valid_program_returns_no_output(self):
+        source = """
+        int main(int, char**) { }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "")
+
+    def test_invalid_program_returns_None_1(self):
+        # The program compiles, but exits with an error
+        source = """
+        int main(int, char**) { return 1; }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), None)
+
+    def test_invalid_program_returns_None_2(self):
+        # The program doesn't compile
+        source = """
+        int main(int, char**) { this doesnt compile }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), None)
+
+    def test_pass_arguments_to_program(self):
+        source = """
+        #include <cassert>
+        #include <string>
+        int main(int argc, char** argv) {
+            assert(argc == 3);
+            assert(argv[1] == std::string("first-argument"));
+            assert(argv[2] == std::string("second-argument"));
+        }
+        """
+        args = ["first-argument", "second-argument"]
+        self.assertEqual(dsl.programOutput(self.config, source, args=args), "")
 
 class TestHasLocale(SetupConfigs):
     """

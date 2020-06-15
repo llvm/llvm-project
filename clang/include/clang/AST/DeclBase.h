@@ -518,7 +518,7 @@ public:
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    Vec.erase(std::remove_if(Vec.begin(), Vec.end(), isa<T, Attr*>), Vec.end());
+    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
 
     if (Vec.empty())
       HasAttrs = false;

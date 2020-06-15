@@ -1,6 +1,5 @@
 add_mlir_dialect_library(MLIRStandardOpsTransforms
   ExpandAtomic.cpp
-  ExpandTanh.cpp
   FuncConversions.cpp
 
   ADDITIONAL_HEADER_DIRS

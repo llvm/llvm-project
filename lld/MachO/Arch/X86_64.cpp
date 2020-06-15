@@ -122,7 +122,7 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t val) const {
   case X86_64_RELOC_GOT_LOAD:
     // These types are only used for pc-relative relocations, so offset by 4
     // since the RIP has advanced by 4 at this point. This is only valid when
-    // r_length = 0, which is enforced by validateLength().
+    // r_length = 2, which is enforced by validateLength().
     val -= 4;
     break;
   case X86_64_RELOC_UNSIGNED:
