@@ -434,9 +434,12 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
         // GetExternalSymbolSymbol does, since if there's no code that
         // refers to this symbol, we have to set it here.
         SPSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-        // FIXME: need to check subtarget to see if its wasm64, but we
-        // can't cast to WebAssemblySubtarget here.
-        SPSym->setGlobalType(wasm::WasmGlobalType{wasm::WASM_TYPE_I32, true});
+        SPSym->setGlobalType(wasm::WasmGlobalType{
+            uint8_t(Asm->getSubtargetInfo().getTargetTriple().getArch() ==
+                            Triple::wasm64
+                        ? wasm::WASM_TYPE_I64
+                        : wasm::WASM_TYPE_I32),
+            true});
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_WASM_location);
         addSInt(*Loc, dwarf::DW_FORM_sdata, FrameBase.Location.WasmLoc.Kind);
