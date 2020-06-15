@@ -936,6 +936,11 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
   // Extend the byte value to the larger type, and then multiply by a magic
   // value 0x010101... in order to replicate it across every byte.
+  // Unless it's zero, in which case just emit a larger G_CONSTANT 0.
+  if (ValVRegAndVal && ValVRegAndVal->Value == 0) {
+    return MIB.buildConstant(Ty, 0).getReg(0);
+  }
+
   LLT ExtType = Ty.getScalarType();
   auto ZExt = MIB.buildZExtOrTrunc(ExtType, Val);
   if (NumBits > 8) {
