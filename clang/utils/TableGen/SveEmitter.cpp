@@ -490,6 +490,15 @@ void SVEType::applyTypespec() {
 
 void SVEType::applyModifier(char Mod) {
   switch (Mod) {
+  case '2':
+    NumVectors = 2;
+    break;
+  case '3':
+    NumVectors = 3;
+    break;
+  case '4':
+    NumVectors = 4;
+    break;
   case 'v':
     Void = true;
     break;
@@ -801,18 +810,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
-  std::string S;
-
-  SVEType RetT = getReturnType();
-  // Since the return value must be one type, return a vector type of the
-  // appropriate width which we will bitcast.  An exception is made for
-  // returning structs of 2, 3, or 4 vectors which are returned in a sret-like
-  // fashion, storing them to a pointer arg.
-  if (RetT.getNumVectors() > 1) {
-    S += "vv*"; // void result with void* first argument
-  } else
-    S += RetT.builtin_str();
-
+  std::string S = getReturnType().builtin_str();
   for (unsigned I = 0; I < getNumParams(); ++I)
     S += getParamType(I).builtin_str();
 
@@ -1071,6 +1069,39 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVFloat16_t svfloat16_t;\n";
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
+  OS << "typedef __SVInt8x2_t svint8x2_t;\n";
+  OS << "typedef __SVInt16x2_t svint16x2_t;\n";
+  OS << "typedef __SVInt32x2_t svint32x2_t;\n";
+  OS << "typedef __SVInt64x2_t svint64x2_t;\n";
+  OS << "typedef __SVUint8x2_t svuint8x2_t;\n";
+  OS << "typedef __SVUint16x2_t svuint16x2_t;\n";
+  OS << "typedef __SVUint32x2_t svuint32x2_t;\n";
+  OS << "typedef __SVUint64x2_t svuint64x2_t;\n";
+  OS << "typedef __SVFloat16x2_t svfloat16x2_t;\n";
+  OS << "typedef __SVFloat32x2_t svfloat32x2_t;\n";
+  OS << "typedef __SVFloat64x2_t svfloat64x2_t;\n";
+  OS << "typedef __SVInt8x3_t svint8x3_t;\n";
+  OS << "typedef __SVInt16x3_t svint16x3_t;\n";
+  OS << "typedef __SVInt32x3_t svint32x3_t;\n";
+  OS << "typedef __SVInt64x3_t svint64x3_t;\n";
+  OS << "typedef __SVUint8x3_t svuint8x3_t;\n";
+  OS << "typedef __SVUint16x3_t svuint16x3_t;\n";
+  OS << "typedef __SVUint32x3_t svuint32x3_t;\n";
+  OS << "typedef __SVUint64x3_t svuint64x3_t;\n";
+  OS << "typedef __SVFloat16x3_t svfloat16x3_t;\n";
+  OS << "typedef __SVFloat32x3_t svfloat32x3_t;\n";
+  OS << "typedef __SVFloat64x3_t svfloat64x3_t;\n";
+  OS << "typedef __SVInt8x4_t svint8x4_t;\n";
+  OS << "typedef __SVInt16x4_t svint16x4_t;\n";
+  OS << "typedef __SVInt32x4_t svint32x4_t;\n";
+  OS << "typedef __SVInt64x4_t svint64x4_t;\n";
+  OS << "typedef __SVUint8x4_t svuint8x4_t;\n";
+  OS << "typedef __SVUint16x4_t svuint16x4_t;\n";
+  OS << "typedef __SVUint32x4_t svuint32x4_t;\n";
+  OS << "typedef __SVUint64x4_t svuint64x4_t;\n";
+  OS << "typedef __SVFloat16x4_t svfloat16x4_t;\n";
+  OS << "typedef __SVFloat32x4_t svfloat32x4_t;\n";
+  OS << "typedef __SVFloat64x4_t svfloat64x4_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
 
   OS << "typedef enum\n";
