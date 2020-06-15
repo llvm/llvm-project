@@ -2228,6 +2228,23 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
       return BinaryOperator::CreateFSubFMF(XZ, YW, &I);
     }
 
+    auto m_FaddRdx = [](Value *&Sum, Value *&Vec) {
+      return m_OneUse(
+          m_Intrinsic<Intrinsic::experimental_vector_reduce_v2_fadd>(
+              m_Value(Sum), m_Value(Vec)));
+    };
+    Value *A0, *A1, *V0, *V1;
+    if (match(Op0, m_FaddRdx(A0, V0)) && match(Op1, m_FaddRdx(A1, V1)) &&
+        V0->getType() == V1->getType()) {
+      // Difference of sums is sum of differences:
+      // add_rdx(A0, V0) - add_rdx(A1, V1) --> add_rdx(A0, V0 - V1) - A1
+      Value *Sub = Builder.CreateFSubFMF(V0, V1, &I);
+      Value *Rdx = Builder.CreateIntrinsic(
+          Intrinsic::experimental_vector_reduce_v2_fadd,
+          {A0->getType(), Sub->getType()}, {A0, Sub}, &I);
+      return BinaryOperator::CreateFSubFMF(Rdx, A1, &I);
+    }
+
     if (Instruction *F = factorizeFAddFSub(I, Builder))
       return F;
 
