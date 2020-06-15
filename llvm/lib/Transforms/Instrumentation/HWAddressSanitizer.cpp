@@ -1121,19 +1121,22 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   initializeCallbacks(*F.getParent());
 
+  bool Changed = false;
+
   if (!LandingPadVec.empty())
-    instrumentLandingPads(LandingPadVec);
+    Changed |= instrumentLandingPads(LandingPadVec);
 
   if (AllocasToInstrument.empty() && F.hasPersonalityFn() &&
       F.getPersonalityFn()->getName() == kHwasanPersonalityThunkName) {
     // __hwasan_personality_thunk is a no-op for functions without an
     // instrumented stack, so we can drop it.
     F.setPersonalityFn(nullptr);
+    Changed = true;
   }
 
   if (AllocasToInstrument.empty() && OperandsToInstrument.empty() &&
       IntrinToInstrument.empty())
-    return false;
+    return Changed;
 
   assert(!LocalDynamicShadow);
 
@@ -1143,14 +1146,11 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
                /*WithFrameRecord*/ ClRecordStackHistory &&
                    !AllocasToInstrument.empty());
 
-  bool Changed = false;
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    Changed |= instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec,
-                               StackTag);
+    instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec, StackTag);
   }
-
   // Pad and align each of the allocas that we instrumented to stop small
   // uninteresting allocas from hiding in instrumented alloca's padding and so
   // that we have enough space to store real tags for short granules.
@@ -1211,18 +1211,17 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   }
 
   for (auto &Operand : OperandsToInstrument)
-    Changed |= instrumentMemAccess(Operand);
+    instrumentMemAccess(Operand);
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
     for (auto Inst : IntrinToInstrument)
       instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
-    Changed = true;
   }
 
   LocalDynamicShadow = nullptr;
   StackBaseTag = nullptr;
 
-  return Changed;
+  return true;
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
