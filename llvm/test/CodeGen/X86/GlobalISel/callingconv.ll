@@ -18,7 +18,7 @@ define i32 @test_ret_i32() {
 define i64 @test_ret_i64() {
 ; X32-LABEL: test_ret_i64:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl $-1, %eax
+; X32-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; X32-NEXT:    movl $15, %edx
 ; X32-NEXT:    retl
 ;
