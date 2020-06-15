@@ -148,24 +148,9 @@ define i32 @veccond512(<16 x i32> %input) {
 ;
 ; AVX512-LABEL: veccond512:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovq %xmm1, %rax
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vmovq %xmm2, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    orq %rcx, %rax
-; AVX512-NEXT:    vmovq %xmm0, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    orq %rdx, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
-; AVX512-NEXT:    orq %rcx, %rdx
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptest %ymm0, %ymm0
 ; AVX512-NEXT:    je .LBB2_2
 ; AVX512-NEXT:  # %bb.1: # %if-true-block
 ; AVX512-NEXT:    xorl %eax, %eax
@@ -283,25 +268,10 @@ define i32 @vectest512(<16 x i32> %input) {
 ;
 ; AVX512-LABEL: vectest512:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovq %xmm1, %rax
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vmovq %xmm2, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    orq %rcx, %rax
-; AVX512-NEXT:    vmovq %xmm0, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    orq %rdx, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    orq %rcx, %rdx
+; AVX512-NEXT:    vptest %ymm0, %ymm0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -410,24 +380,9 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; AVX512-LABEL: vecsel512:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movl %edi, %eax
-; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovq %xmm1, %rcx
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vmovq %xmm2, %rdx
-; AVX512-NEXT:    orq %rcx, %rdx
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rcx
-; AVX512-NEXT:    orq %rdx, %rcx
-; AVX512-NEXT:    vmovq %xmm0, %rdx
-; AVX512-NEXT:    orq %rcx, %rdx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    orq %rcx, %rdi
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX512-NEXT:    orq %rdi, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rdi
-; AVX512-NEXT:    orq %rcx, %rdi
-; AVX512-NEXT:    orq %rdx, %rdi
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptest %ymm0, %ymm0
 ; AVX512-NEXT:    cmovel %esi, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
