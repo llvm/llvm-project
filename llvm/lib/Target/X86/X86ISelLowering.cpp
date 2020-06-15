@@ -21360,19 +21360,18 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
   if (!matchScalarReduction(Op, ISD::OR, VecIns))
     return SDValue();
 
+  assert(llvm::all_of(VecIns,
+                      [VecIns](SDValue V) {
+                        return VecIns[0].getValueType() == V.getValueType();
+                      }) &&
+         "Reduction source vector mismatch");
+
   // Quit if not 128/256-bit vector.
   EVT VT = VecIns[0].getValueType();
   if (!VT.is128BitVector() && !VT.is256BitVector())
     return SDValue();
 
   SDLoc DL(Op);
-  bool UsePTEST = Subtarget.hasSSE41();
-  MVT TestVT =
-      VT.is128BitVector() ? (UsePTEST ? MVT::v2i64 : MVT::v16i8) : MVT::v4i64;
-
-  // Cast all vectors into TestVT for PTEST/PCMPEQ.
-  for (unsigned i = 0, e = VecIns.size(); i < e; ++i)
-    VecIns[i] = DAG.getBitcast(TestVT, VecIns[i]);
 
   // If more than one full vector is evaluated, OR them first before PTEST.
   for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1; Slot += 2, e += 1) {
@@ -21380,17 +21379,21 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     // 1 node left, i.e. the final OR'd value of all vectors.
     SDValue LHS = VecIns[Slot];
     SDValue RHS = VecIns[Slot + 1];
-    VecIns.push_back(DAG.getNode(ISD::OR, DL, TestVT, LHS, RHS));
+    VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
   }
 
   X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE,
                                 DL, MVT::i8);
 
-  if (UsePTEST)
-    return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(),
-                       VecIns.back());
+  bool UsePTEST = Subtarget.hasSSE41();
+  if (UsePTEST) {
+    MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+    SDValue V = DAG.getBitcast(TestVT, VecIns.back());
+    return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
+  }
 
-  SDValue Result = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, VecIns.back(),
+  SDValue Result = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8,
+                               DAG.getBitcast(MVT::v16i8, VecIns.back()),
                                getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
   Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
   return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
