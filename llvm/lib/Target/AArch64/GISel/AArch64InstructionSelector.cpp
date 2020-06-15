@@ -144,8 +144,9 @@ private:
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
-  unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
-  MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
+  unsigned emitConstantPoolEntry(const Constant *CPVal,
+                                 MachineFunction &MF) const;
+  MachineInstr *emitLoadFromConstantPool(const Constant *CPVal,
                                          MachineIRBuilder &MIRBuilder) const;
 
   // Emit a vector concat operation.
@@ -2046,6 +2047,20 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (emitFMovForFConstant(I, MRI))
         return true;
 
+      // For 64b values, emit a constant pool load instead.
+      if (DefSize == 64) {
+        auto *FPImm = I.getOperand(1).getFPImm();
+        MachineIRBuilder MIB(I);
+        auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
+        if (!LoadMI) {
+          LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
+          return false;
+        }
+        MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
+        I.eraseFromParent();
+        return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
+      }
+
       // Nope. Emit a copy and use a normal mov instead.
       const Register DefGPRReg = MRI.createVirtualRegister(&GPRRC);
       MachineOperand &RegOp = I.getOperand(0);
@@ -3572,7 +3587,7 @@ bool AArch64InstructionSelector::selectConcatVectors(
 }
 
 unsigned
-AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
+AArch64InstructionSelector::emitConstantPoolEntry(const Constant *CPVal,
                                                   MachineFunction &MF) const {
   Type *CPTy = CPVal->getType();
   Align Alignment = MF.getDataLayout().getPrefTypeAlign(CPTy);
@@ -3582,7 +3597,7 @@ AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
 }
 
 MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
-    Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
+    const Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
   unsigned CPIdx = emitConstantPoolEntry(CPVal, MIRBuilder.getMF());
 
   auto Adrp =
