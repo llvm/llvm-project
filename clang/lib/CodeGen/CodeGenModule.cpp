@@ -3336,6 +3336,8 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
                                                  bool ForVTable,
                                                  bool DontDefer,
                                               ForDefinition_t IsForDefinition) {
+  assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
+         "consteval function should never be emitted");
   // If there was no specific requested type, just convert it now.
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
@@ -5329,6 +5331,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   // Ignore dependent declarations.
   if (D->isTemplated())
     return;
+
+  // Consteval function shouldn't be emitted.
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->isConsteval())
+      return;
 
   switch (D->getKind()) {
   case Decl::CXXConversion:

@@ -193,8 +193,8 @@ ProgramStateRef bindInt(uint64_t Value, ProgramStateRef State,
   return State;
 }
 
-class StreamChecker
-    : public Checker<check::PreCall, eval::Call, check::DeadSymbols> {
+class StreamChecker : public Checker<check::PreCall, eval::Call,
+                                     check::DeadSymbols, check::PointerEscape> {
   BuiltinBug BT_FileNull{this, "NULL stream pointer",
                          "Stream pointer might be NULL."};
   BuiltinBug BT_UseAfterClose{
@@ -223,6 +223,10 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
+  ProgramStateRef checkPointerEscape(ProgramStateRef State,
+                                     const InvalidatedSymbols &Escaped,
+                                     const CallEvent *Call,
+                                     PointerEscapeKind Kind) const;
 
   /// If true, evaluate special testing stream functions.
   bool TestMode = false;
@@ -448,8 +452,12 @@ void StreamChecker::evalFreopen(const FnDescription *Desc,
 
   SymbolRef StreamSym = StreamVal->getAsSymbol();
   // Do not care about concrete values for stream ("(FILE *)0x12345"?).
-  // FIXME: Are stdin, stdout, stderr such values?
+  // FIXME: Can be stdin, stdout, stderr such values?
   if (!StreamSym)
+    return;
+
+  // Do not handle untracked stream. It is probably escaped.
+  if (!State->get<StreamMap>(StreamSym))
     return;
 
   // Generate state for non-failed case.
@@ -916,6 +924,28 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     C.emitReport(std::make_unique<PathSensitiveBugReport>(
         BT_ResourceLeak, BT_ResourceLeak.getDescription(), N));
   }
+}
+
+ProgramStateRef StreamChecker::checkPointerEscape(
+    ProgramStateRef State, const InvalidatedSymbols &Escaped,
+    const CallEvent *Call, PointerEscapeKind Kind) const {
+  // Check for file-handling system call that is not handled by the checker.
+  // FIXME: The checker should be updated to handle all system calls that take
+  // 'FILE*' argument. These are now ignored.
+  if (Kind == PSK_DirectEscapeOnCall && Call->isInSystemHeader())
+    return State;
+
+  for (SymbolRef Sym : Escaped) {
+    // The symbol escaped.
+    // From now the stream can be manipulated in unknown way to the checker,
+    // it is not possible to handle it any more.
+    // Optimistically, assume that the corresponding file handle will be closed
+    // somewhere else.
+    // Remove symbol from state so the following stream calls on this symbol are
+    // not handled by the checker.
+    State = State->remove<StreamMap>(Sym);
+  }
+  return State;
 }
 
 void ento::registerStreamChecker(CheckerManager &Mgr) {

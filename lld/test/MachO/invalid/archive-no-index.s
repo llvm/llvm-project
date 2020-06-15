@@ -8,7 +8,7 @@
 # RUN: rm -f %t/test.a
 # RUN: llvm-ar rcS %t/test.a %t/2.o %t/3.o %t/4.o
 
-# RUN: not lld -flavor darwinnew %t/test.o %t/test.a -o /dev/null 2>&1 | FileCheck %s
+# RUN: not lld -flavor darwinnew -arch x86_64 %t/test.o %t/test.a -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: {{.*}}.a: archive has no index; run ranlib to add one
 
 .global _main

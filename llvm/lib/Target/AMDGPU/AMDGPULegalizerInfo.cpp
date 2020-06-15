@@ -36,6 +36,15 @@ using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
 
+// Hack until load/store selection patterns support any tuple of legal types.
+static cl::opt<bool> EnableNewLegality(
+  "amdgpu-global-isel-new-legality",
+  cl::desc("Use GlobalISel desired legality, rather than try to use"
+           "rules compatible with selection patterns"),
+  cl::init(false),
+  cl::ReallyHidden);
+
+
 // Round the number of elements to the next power of two elements
 static LLT getPow2VectorType(LLT Ty) {
   unsigned NElts = Ty.getNumElements();
@@ -285,10 +294,27 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   return true;
 }
 
+// The current selector can't handle <6 x s16>, <8 x s16>, s96, s128 etc, so
+// workaround this. Eventually it should ignore the type for loads and only care
+// about the size. Return true in cases where we will workaround this for now by
+// bitcasting.
+static bool loadStoreBitcastWorkaround(const LLT Ty) {
+  if (EnableNewLegality)
+    return false;
+
+  const unsigned Size = Ty.getSizeInBits();
+  if (Size <= 64)
+    return false;
+  if (!Ty.isVector())
+    return true;
+  return Ty.getElementType().getSizeInBits() == 16;
+}
+
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query,
                              unsigned Opcode) {
   const LLT Ty = Query.Types[0];
-  return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query, Opcode);
+  return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query, Opcode) &&
+         !loadStoreBitcastWorkaround(Ty);
 }
 
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
@@ -951,9 +977,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // 16-bit vector parts.
     Actions.bitcastIf(
       [=](const LegalityQuery &Query) -> bool {
-        LLT Ty = Query.Types[0];
-        return Ty.isVector() &&
-               isRegisterSize(Ty.getSizeInBits()) &&
+        const LLT Ty = Query.Types[0];
+
+        // Do not cast an extload/truncstore.
+        if (Ty.getSizeInBits() != Query.MMODescrs[0].SizeInBits)
+          return false;
+
+        if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
+          return true;
+        const unsigned Size = Ty.getSizeInBits();
+        return Ty.isVector() && isRegisterSize(Size) &&
                !isRegisterVectorElementType(Ty.getElementType());
       }, bitcastToRegisterType(0));
 

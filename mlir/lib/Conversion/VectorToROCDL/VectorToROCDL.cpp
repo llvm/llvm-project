@@ -27,16 +27,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-static TransferReadOpOperandAdaptor
-getTransferOpAdapter(TransferReadOp xferOp, ArrayRef<Value> operands) {
-  return OperandAdaptor<TransferReadOp>(operands);
-}
-
-static TransferWriteOpOperandAdaptor
-getTransferOpAdapter(TransferWriteOp xferOp, ArrayRef<Value> operands) {
-  return OperandAdaptor<TransferWriteOp>(operands);
-}
-
 static LogicalResult replaceTransferOpWithMubuf(
     ConversionPatternRewriter &rewriter, ArrayRef<Value> operands,
     LLVMTypeConverter &typeConverter, Location loc, TransferReadOp xferOp,
@@ -52,7 +42,7 @@ static LogicalResult replaceTransferOpWithMubuf(
     LLVMTypeConverter &typeConverter, Location loc, TransferWriteOp xferOp,
     LLVM::LLVMType &vecTy, Value &dwordConfig, Value &vindex,
     Value &offsetSizeInBytes, Value &glc, Value &slc) {
-  auto adaptor = TransferWriteOpOperandAdaptor(operands);
+  auto adaptor = TransferWriteOpAdaptor(operands);
   rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.vector(),
                                                    dwordConfig, vindex,
                                                    offsetSizeInBytes, glc, slc);
@@ -76,7 +66,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto xferOp = cast<ConcreteOp>(op);
-    auto adaptor = getTransferOpAdapter(xferOp, operands);
+    typename ConcreteOp::Adaptor adaptor(operands);
 
     if (xferOp.getVectorType().getRank() > 1 ||
         llvm::size(xferOp.indices()) == 0)

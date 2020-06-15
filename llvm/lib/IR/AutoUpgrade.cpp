@@ -21,6 +21,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -4163,6 +4164,42 @@ void llvm::UpgradeSectionAttributes(Module &M) {
     // __DATA, __objc_catlist, regular, no_dead_strip
     // __DATA,__objc_catlist,regular,no_dead_strip
     GV.setSection(TrimSpaces(Section));
+  }
+}
+
+
+// Prior to LLVM 10.0, the strictfp attribute could be used on individual
+// callsites within a function that did not also have the strictfp attribute.
+// Since 10.0, if strict FP semantics are needed within a function, the
+// function must have the strictfp attribute and all calls within the function
+// must also have the strictfp attribute. This latter restriction is
+// necessary to prevent unwanted libcall simplification when a function is
+// being cloned (such as for inlining).
+//
+// The "dangling" strictfp attribute usage was only used to prevent constant
+// folding and other libcall simplification. The nobuiltin attribute on the
+// callsite has the same effect.
+struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
+  StrictFPUpgradeVisitor() {}
+
+  void visitCallBase(CallBase &Call) {
+    if (!Call.isStrictFP())
+      return;
+    if (dyn_cast<ConstrainedFPIntrinsic>(&Call))
+      return;
+    // If we get here, the caller doesn't have the strictfp attribute
+    // but this callsite does. Replace the strictfp attribute with nobuiltin.
+    Call.removeAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
+    Call.addAttribute(AttributeList::FunctionIndex, Attribute::NoBuiltin);
+  }
+};
+
+void llvm::UpgradeFunctionAttributes(Function &F) {
+  // If a function definition doesn't have the strictfp attribute,
+  // convert any callsite strictfp attributes to nobuiltin.
+  if (!F.isDeclaration() && !F.hasFnAttribute(Attribute::StrictFP)) {
+    StrictFPUpgradeVisitor SFPV;
+    SFPV.visit(F);
   }
 }
 
