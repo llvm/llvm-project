@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: yaml2obj %s -o %t.o
-# RUN: not lld -flavor darwinnew -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
+# RUN: not lld -flavor darwinnew -arch x86_64 -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
 #
 # CHECK: error: invalid relocation at offset 1 of __TEXT,__text in [[FILE]]: relocations of type 0 must not be pcrel
 
