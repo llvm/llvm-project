@@ -53,7 +53,7 @@ void StackColoring::removeAllMarkers() {
 
 void StackColoring::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
-  DenseMap<BasicBlock *, SmallDenseMap<Instruction *, Marker>> BBMarkerSet;
+  DenseMap<BasicBlock *, SmallDenseMap<IntrinsicInst *, Marker>> BBMarkerSet;
 
   // Compute the set of start/end markers per basic block.
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo) {
@@ -67,7 +67,7 @@ void StackColoring::collectMarkers() {
           WorkList.push_back(BI);
           continue;
         }
-        auto *UI = dyn_cast<Instruction>(U);
+        auto *UI = dyn_cast<IntrinsicInst>(U);
         if (!UI)
           continue;
         bool IsStart;
@@ -107,7 +107,7 @@ void StackColoring::collectMarkers() {
       continue;
     }
 
-    auto ProcessMarker = [&](Instruction *I, const Marker &M) {
+    auto ProcessMarker = [&](IntrinsicInst *I, const Marker &M) {
       LLVM_DEBUG(dbgs() << "  " << InstNo << ":  "
                         << (M.IsStart ? "start " : "end   ") << M.AllocaNo
                         << ", " << *I << "\n");
@@ -133,10 +133,13 @@ void StackColoring::collectMarkers() {
     } else {
       // Scan the BB to determine the marker order.
       for (Instruction &I : *BB) {
-        auto It = BlockMarkerSet.find(&I);
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+        if (!II)
+          continue;
+        auto It = BlockMarkerSet.find(II);
         if (It == BlockMarkerSet.end())
           continue;
-        ProcessMarker(&I, It->getSecond());
+        ProcessMarker(II, It->getSecond());
       }
     }
 
