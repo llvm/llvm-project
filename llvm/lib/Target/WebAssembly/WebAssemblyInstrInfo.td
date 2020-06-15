@@ -166,6 +166,9 @@ def function32_op : Operand<i32>;
 let OperandType = "OPERAND_OFFSET32" in
 def offset32_op : Operand<i32>;
 
+let OperandType = "OPERAND_OFFSET64" in
+def offset64_op : Operand<i64>;
+
 let OperandType = "OPERAND_P2ALIGN" in {
 def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
