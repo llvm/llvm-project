@@ -45940,11 +45940,10 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
     // If all bytes match (bitmask is 0x(FFFF)FFFF), that's equality.
     // setcc i128 X, Y, eq --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, eq
     // setcc i128 X, Y, ne --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, ne
-    // setcc i256 X, Y, eq --> setcc (vpmovmskb (vpcmpeqb X, Y)), 0xFFFFFFFF, eq
-    // setcc i256 X, Y, ne --> setcc (vpmovmskb (vpcmpeqb X, Y)), 0xFFFFFFFF, ne
+    assert(Cmp.getValueType() == MVT::v16i8 &&
+           "Non 128-bit vector on pre-SSE41 target");
     SDValue MovMsk = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Cmp);
-    SDValue FFFFs = DAG.getConstant(OpSize == 128 ? 0xFFFF : 0xFFFFFFFF, DL,
-                                    MVT::i32);
+    SDValue FFFFs = DAG.getConstant(0xFFFF, DL, MVT::i32);
     return DAG.getSetCC(DL, VT, MovMsk, FFFFs, CC);
   }
 
