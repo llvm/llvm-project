@@ -1102,28 +1102,86 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
   MI.getOperand(OpIdx).setReg(SGPR);
 }
 
-bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
+/// Split \p Ty into 2 pieces. The first will have \p FirstSize bits, and the
+/// rest will be in the remainder.
+static std::pair<LLT, LLT> splitUnequalType(LLT Ty, unsigned FirstSize) {
+  unsigned TotalSize = Ty.getSizeInBits();
+  if (!Ty.isVector())
+    return {LLT::scalar(FirstSize), LLT::scalar(TotalSize - FirstSize)};
+
+  LLT EltTy = Ty.getElementType();
+  unsigned EltSize = EltTy.getSizeInBits();
+  assert(FirstSize % EltSize == 0);
+
+  unsigned FirstPartNumElts = FirstSize / EltSize;
+  unsigned RemainderElts = (TotalSize - FirstSize) / EltSize;
+
+  return {LLT::scalarOrVector(FirstPartNumElts, EltTy),
+          LLT::scalarOrVector(RemainderElts, EltTy)};
+}
+
+static LLT widen96To128(LLT Ty) {
+  if (!Ty.isVector())
+    return LLT::scalar(128);
+
+  LLT EltTy = Ty.getElementType();
+  assert(128 % EltTy.getSizeInBits() == 0);
+  return LLT::vector(128 / EltTy.getSizeInBits(), EltTy);
+}
+
+bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
                         const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
                                               MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
-  const LLT LoadTy =  MRI.getType(DstReg);
+  const LLT LoadTy = MRI.getType(DstReg);
   unsigned LoadSize = LoadTy.getSizeInBits();
   const unsigned MaxNonSmrdLoadSize = 128;
+
+  const RegisterBank *PtrBank =
+    OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+  if (PtrBank == &AMDGPU::SGPRRegBank) {
+    // If the pointer is an SGPR, we ordinarily have nothing to do.
+    if (LoadSize != 96)
+      return false;
+
+    MachineMemOperand *MMO = *MI.memoperands_begin();
+    Register PtrReg = MI.getOperand(1).getReg();
+    // 96-bit loads are only available for vector loads. We need to split this
+    // into a 64-bit part, and 32 (unless we can widen to a 128-bit load).
+
+    MachineIRBuilder B(MI);
+    ApplyRegBankMapping O(*this, MRI, &AMDGPU::SGPRRegBank);
+    GISelObserverWrapper Observer(&O);
+    B.setChangeObserver(Observer);
+
+    if (MMO->getAlign() < Align(16)) {
+      LLT Part64, Part32;
+      std::tie(Part64, Part32) = splitUnequalType(LoadTy, 64);
+      auto Load0 = B.buildLoadFromOffset(Part64, PtrReg, *MMO, 0);
+      auto Load1 = B.buildLoadFromOffset(Part32, PtrReg, *MMO, 8);
+
+      auto Undef = B.buildUndef(LoadTy);
+      auto Ins0 = B.buildInsert(LoadTy, Undef, Load0, 0);
+      B.buildInsert(MI.getOperand(0), Ins0, Load1, 64);
+    } else {
+      LLT WiderTy = widen96To128(LoadTy);
+      auto WideLoad = B.buildLoadFromOffset(WiderTy, PtrReg, *MMO, 0);
+      B.buildExtract(MI.getOperand(0), WideLoad, 0);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
+
   // 128-bit loads are supported for all instruction types.
   if (LoadSize <= MaxNonSmrdLoadSize)
     return false;
 
-  SmallVector<unsigned, 16> DefRegs(OpdMapper.getVRegs(0));
-  SmallVector<unsigned, 1> SrcRegs(OpdMapper.getVRegs(1));
+  SmallVector<Register, 16> DefRegs(OpdMapper.getVRegs(0));
+  SmallVector<Register, 1> SrcRegs(OpdMapper.getVRegs(1));
 
-  // If the pointer is an SGPR, we have nothing to do.
-  if (SrcRegs.empty()) {
-    const RegisterBank *PtrBank =
-      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-    if (PtrBank == &AMDGPU::SGPRRegBank)
-      return false;
+  if (SrcRegs.empty())
     SrcRegs.push_back(MI.getOperand(1).getReg());
-  }
 
   assert(LoadSize % MaxNonSmrdLoadSize == 0);
 
@@ -3035,7 +3093,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_LOAD:
   case AMDGPU::G_ZEXTLOAD:
   case AMDGPU::G_SEXTLOAD: {
-    if (applyMappingWideLoad(MI, OpdMapper, MRI))
+    if (applyMappingLoad(MI, OpdMapper, MRI))
       return;
     break;
   }
