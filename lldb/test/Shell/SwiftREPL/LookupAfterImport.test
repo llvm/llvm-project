@@ -1,0 +1,15 @@
+// Make sure we properly load in new extension members after an import.
+// rdar://64040436
+
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: %target-swiftc -emit-library %S/Inputs/A.swift -module-name A -emit-module-path %t/A.swiftmodule -o %t/libA%target-shared-library-suffix
+// RUN: %lldb --repl="-I%t -L%t -lA" < %s 2>&1 | FileCheck %s
+
+"".foo()
+// CHECK: error: value of type 'String' has no member 'foo'
+
+import A
+
+"".foo()
+// CHECK: $R0: Bool = true
