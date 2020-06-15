@@ -24,6 +24,79 @@
 using namespace clang;
 using namespace ento;
 
+// This class can be extended with other tables which will help to reason
+// about ranges more precisely.
+class OperatorRelationsTable {
+  static_assert(BO_LT < BO_GT && BO_GT < BO_LE && BO_LE < BO_GE &&
+                    BO_GE < BO_EQ && BO_EQ < BO_NE,
+                "This class relies on operators order. Rework it otherwise.");
+
+public:
+  enum TriStateKind {
+    False = 0,
+    True,
+    Unknown,
+  };
+
+private:
+  // CmpOpTable holds states which represent the corresponding range for
+  // branching an exploded graph. We can reason about the branch if there is
+  // a previously known fact of the existence of a comparison expression with
+  // operands used in the current expression.
+  // E.g. assuming (x < y) is true that means (x != y) is surely true.
+  // if (x previous_operation y)  // <    | !=      | >
+  //   if (x operation y)         // !=   | >       | <
+  //     tristate                 // True | Unknown | False
+  //
+  // CmpOpTable represents next:
+  // __|< |> |<=|>=|==|!=|UnknownX2|
+  // < |1 |0 |* |0 |0 |* |1        |
+  // > |0 |1 |0 |* |0 |* |1        |
+  // <=|1 |0 |1 |* |1 |* |0        |
+  // >=|0 |1 |* |1 |1 |* |0        |
+  // ==|0 |0 |* |* |1 |0 |1        |
+  // !=|1 |1 |* |* |0 |1 |0        |
+  //
+  // Columns stands for a previous operator.
+  // Rows stands for a current operator.
+  // Each row has exactly two `Unknown` cases.
+  // UnknownX2 means that both `Unknown` previous operators are met in code,
+  // and there is a special column for that, for example:
+  // if (x >= y)
+  //   if (x != y)
+  //     if (x <= y)
+  //       False only
+  static constexpr size_t CmpOpCount = BO_NE - BO_LT + 1;
+  const TriStateKind CmpOpTable[CmpOpCount][CmpOpCount + 1] = {
+      // <      >      <=     >=     ==     !=    UnknownX2
+      {True, False, Unknown, False, False, Unknown, True}, // <
+      {False, True, False, Unknown, False, Unknown, True}, // >
+      {True, False, True, Unknown, True, Unknown, False},  // <=
+      {False, True, Unknown, True, True, Unknown, False},  // >=
+      {False, False, Unknown, Unknown, True, False, True}, // ==
+      {True, True, Unknown, Unknown, False, True, False},  // !=
+  };
+
+  static size_t getIndexFromOp(BinaryOperatorKind OP) {
+    return static_cast<size_t>(OP - BO_LT);
+  }
+
+public:
+  constexpr size_t getCmpOpCount() const { return CmpOpCount; }
+
+  static BinaryOperatorKind getOpFromIndex(size_t Index) {
+    return static_cast<BinaryOperatorKind>(Index + BO_LT);
+  }
+
+  TriStateKind getCmpOpState(BinaryOperatorKind CurrentOP,
+                         BinaryOperatorKind QueriedOP) const {
+    return CmpOpTable[getIndexFromOp(CurrentOP)][getIndexFromOp(QueriedOP)];
+  }
+
+  TriStateKind getCmpOpStateForUnknownX2(BinaryOperatorKind CurrentOP) const {
+    return CmpOpTable[getIndexFromOp(CurrentOP)][CmpOpCount];
+  }
+};
 //===----------------------------------------------------------------------===//
 //                           RangeSet implementation
 //===----------------------------------------------------------------------===//
@@ -390,6 +463,13 @@ private:
     if (RangeAssociatedWithNegatedSym)
       return RangeAssociatedWithNegatedSym->Negate(ValueFactory, RangeFactory);
 
+    // If Sym is a comparison expression (except <=>),
+    // find any other comparisons with the same operands.
+    // See function description.
+    const RangeSet CmpRangeSet = getRangeForComparisonSymbol(State, Sym);
+    if (!CmpRangeSet.isEmpty())
+      return CmpRangeSet;
+
     return Visit(Sym);
   }
 
@@ -567,6 +647,96 @@ private:
       }
     }
     return nullptr;
+  }
+
+  // Returns ranges only for binary comparison operators (except <=>)
+  // when left and right operands are symbolic values.
+  // Finds any other comparisons with the same operands.
+  // Then do logical calculations and refuse impossible branches.
+  // E.g. (x < y) and (x > y) at the same time are impossible.
+  // E.g. (x >= y) and (x != y) at the same time makes (x > y) true only.
+  // E.g. (x == y) and (y == x) are just reversed but the same.
+  // It covers all possible combinations (see CmpOpTable description).
+  // Note that `x` and `y` can also stand for subexpressions,
+  // not only for actual symbols.
+  RangeSet getRangeForComparisonSymbol(ProgramStateRef State, SymbolRef Sym) {
+    const RangeSet EmptyRangeSet = RangeFactory.getEmptySet();
+
+    auto SSE = dyn_cast<SymSymExpr>(Sym);
+    if (!SSE)
+      return EmptyRangeSet;
+
+    BinaryOperatorKind CurrentOP = SSE->getOpcode();
+
+    // We currently do not support <=> (C++20).
+    if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
+      return EmptyRangeSet;
+
+    static const OperatorRelationsTable CmpOpTable;
+
+    const SymExpr *LHS = SSE->getLHS();
+    const SymExpr *RHS = SSE->getRHS();
+    QualType T = SSE->getType();
+
+    SymbolManager &SymMgr = State->getSymbolManager();
+    const llvm::APSInt &Zero = ValueFactory.getValue(0, T);
+    const llvm::APSInt &One = ValueFactory.getValue(1, T);
+    const RangeSet TrueRangeSet(RangeFactory, One, One);
+    const RangeSet FalseRangeSet(RangeFactory, Zero, Zero);
+
+    int UnknownStates = 0;
+
+    // Loop goes through all of the columns exept the last one ('UnknownX2').
+    // We treat `UnknownX2` column separately at the end of the loop body.
+    for (size_t i = 0; i < CmpOpTable.getCmpOpCount(); ++i) {
+
+      // Let's find an expression e.g. (x < y).
+      BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
+      const SymSymExpr *SymSym = SymMgr.getSymSymExpr(LHS, QueriedOP, RHS, T);
+      const RangeSet *QueriedRangeSet = State->get<ConstraintRange>(SymSym);
+
+      // If ranges were not previously found,
+      // try to find a reversed expression (y > x).
+      if (!QueriedRangeSet) {
+        const BinaryOperatorKind ROP =
+            BinaryOperator::reverseComparisonOp(QueriedOP);
+        SymSym = SymMgr.getSymSymExpr(RHS, ROP, LHS, T);
+        QueriedRangeSet = State->get<ConstraintRange>(SymSym);
+      }
+
+      if (!QueriedRangeSet || QueriedRangeSet->isEmpty())
+        continue;
+
+      const llvm::APSInt *ConcreteValue = QueriedRangeSet->getConcreteValue();
+      const bool isInFalseBranch =
+          ConcreteValue ? (*ConcreteValue == 0) : false;
+
+      // If it is a false branch, we shall be guided by opposite operator,
+      // because the table is made assuming we are in the true branch.
+      // E.g. when (x <= y) is false, then (x > y) is true.
+      if (isInFalseBranch)
+        QueriedOP = BinaryOperator::negateComparisonOp(QueriedOP);
+
+      OperatorRelationsTable::TriStateKind BranchState =
+          CmpOpTable.getCmpOpState(CurrentOP, QueriedOP);
+
+      if (BranchState == OperatorRelationsTable::Unknown) {
+        if (++UnknownStates == 2)
+          // If we met both Unknown states.
+          // if (x <= y)    // assume true
+          //   if (x != y)  // assume true
+          //     if (x < y) // would be also true
+          // Get a state from `UnknownX2` column.
+          BranchState = CmpOpTable.getCmpOpStateForUnknownX2(CurrentOP);
+        else
+          continue;
+      }
+
+      return (BranchState == OperatorRelationsTable::True) ? TrueRangeSet
+                                                           : FalseRangeSet;
+    }
+
+    return EmptyRangeSet;
   }
 
   BasicValueFactory &ValueFactory;
