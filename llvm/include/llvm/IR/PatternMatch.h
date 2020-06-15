@@ -333,6 +333,10 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
         if (const auto *CF = dyn_cast_or_null<ConstantFP>(C->getSplatValue()))
           return this->isValue(CF->getValueAPF());
 
+        // Number of elements of a scalable vector unknown at compile time
+        if (isa<ScalableVectorType>(V->getType()))
+          return false;
+
         // Non-splat vector constant: check each element for a match.
         unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
