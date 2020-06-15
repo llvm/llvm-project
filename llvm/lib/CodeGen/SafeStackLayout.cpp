@@ -75,7 +75,7 @@ void StackLayout::layoutObject(StackObject &Obj) {
       LLVM_DEBUG(dbgs() << "  Does not intersect, skip.\n");
       continue;
     }
-    if (Obj.Range.Overlaps(R.Range)) {
+    if (Obj.Range.overlaps(R.Range)) {
       // Find the next appropriate location.
       Start = AdjustStackOffset(R.End, Obj.Size, Obj.Alignment);
       End = Start + Obj.Size;
@@ -124,7 +124,7 @@ void StackLayout::layoutObject(StackObject &Obj) {
   // Update live ranges for all affected regions.
   for (StackRegion &R : Regions) {
     if (Start < R.End && End > R.Start)
-      R.Range.Join(Obj.Range);
+      R.Range.join(Obj.Range);
     if (End <= R.End)
       break;
   }
