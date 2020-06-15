@@ -174,8 +174,3 @@ class TestSwiftExpressionScopes(TestBase):
         self.check_expression("a", "\"foo\"", use_summary=True)
         self.check_expression("self.b", "5", use_summary=False)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -76,8 +76,3 @@ class TestSwiftObjCImportedTypes(TestBase):
             use_dynamic=True,
             summary='1 key/value pair')
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

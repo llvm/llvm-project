@@ -61,8 +61,3 @@ class TestSwiftNestedArray(TestBase):
             var_aCChild = var_aC.GetChildAtIndex(i)
             lldbutil.check_children(self, var_aCChild, check_for_C)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

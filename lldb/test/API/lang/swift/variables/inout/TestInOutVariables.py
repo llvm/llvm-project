@@ -214,8 +214,3 @@ class TestInOutVariables(TestBase):
         func_sc = target.ResolveSymbolContextForAddress(target.ResolveLoadAddress(func_value.GetValueAsUnsigned()), lldb.eSymbolContextFunction)
         self.assertTrue(func_sc.GetFunction().IsValid(), "We couldn't look up the function target.") 
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -103,8 +103,3 @@ class TestSwiftOptionalType(TestBase):
             use_dynamic=False,
             num_children=1)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

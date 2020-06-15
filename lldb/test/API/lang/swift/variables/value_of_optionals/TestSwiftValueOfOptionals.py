@@ -43,8 +43,3 @@ class TestSwiftValueOfOptionalType(TestBase):
         self.assertTrue(s.GetValueAsUnsigned(0) == 0, "reading value fails")
         self.assertTrue(s.GetValueAsUnsigned(1) == 1, "reading value fails")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

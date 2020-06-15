@@ -76,8 +76,3 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         self.expect("p $R6", "expected result", substrs=["23"])
         self.expect("p $R8", "expected result", substrs=["23"])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

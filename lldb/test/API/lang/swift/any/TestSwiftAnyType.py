@@ -40,9 +40,3 @@ class TestSwiftAnyType(lldbtest.TestBase):
 
         self.expect("expression -d run -- q", substrs=['12'])
         self.expect("frame variable -d run -- q", substrs=['12'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

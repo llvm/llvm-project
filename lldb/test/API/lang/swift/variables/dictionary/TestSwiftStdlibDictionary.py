@@ -121,8 +121,3 @@ class TestSwiftStdlibDictionary(TestBase):
             value_summary='"43"',
             fail_on_missing=False)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

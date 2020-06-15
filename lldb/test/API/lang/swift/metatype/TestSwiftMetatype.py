@@ -47,9 +47,3 @@ class TestSwiftMetatype(TestBase):
         lldbutil.check_variable(self, var_f, False, "(Int) -> Int")
         lldbutil.check_variable(self, var_t, False, "(Int, Int, String)")
         lldbutil.check_variable(self, var_p, False, "a.P")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

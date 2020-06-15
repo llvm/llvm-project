@@ -84,10 +84,3 @@ class SwiftDynamicTypeGenericsTest(TestBase):
             substrs=[
                 "(a.Outer<Int>.Inner) self ="
             ])
-
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

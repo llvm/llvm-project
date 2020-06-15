@@ -47,8 +47,3 @@ class TestBulkyEnumVariables(TestBase):
                 'b = (a = 100, b = 200)',
                 'a = (a = 300, b = 400)'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -88,8 +88,3 @@ class TestSwiftTupleTypes(TestBase):
                              'FPIEEE32)', 'value = 4.5',
                              'FPIEEE32)', 'value = 8.75'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
