@@ -307,7 +307,8 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
     return false;
   if (!Ty.isVector())
     return true;
-  return Ty.getElementType().getSizeInBits() == 16;
+  unsigned EltSize = Ty.getElementType().getSizeInBits();
+  return EltSize != 32 && EltSize != 64;
 }
 
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query,
