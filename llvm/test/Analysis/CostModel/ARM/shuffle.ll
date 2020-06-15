@@ -16,7 +16,7 @@ define void @broadcast() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
 ; CHECK-MVE-NEXT:  Cost Model: Unknown cost for instruction: %v18 = shufflevector <8 x half> undef, <8 x half> undef, <4 x i32> zeroinitializer
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-NEON-LABEL: 'broadcast'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> zeroinitializer
@@ -31,7 +31,7 @@ define void @broadcast() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
 ; CHECK-NEON-NEXT:  Cost Model: Unknown cost for instruction: %v18 = shufflevector <8 x half> undef, <8 x half> undef, <4 x i32> zeroinitializer
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> zeroinitializer
   %v8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -67,7 +67,7 @@ define void @reverse() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v18 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-NEON-LABEL: 'reverse'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
@@ -82,7 +82,7 @@ define void @reverse() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v18 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
   %v8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
