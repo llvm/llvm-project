@@ -381,9 +381,8 @@ def MEMziHM : Operand<iPTR> {
 
 // Branch targets have OtherVT type.
 def brtarget32 : Operand<OtherVT> {
-}
-
-def calltarget : Operand<i64> {
+  let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeSIMM32";
 }
 
 // Operand for printing out a condition code.

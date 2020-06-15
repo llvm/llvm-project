@@ -65,6 +65,9 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  uint64_t getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
   uint64_t getCCOpValue(const MCInst &MI, unsigned OpNo,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
@@ -116,6 +119,19 @@ unsigned VEMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     return Res;
 
   llvm_unreachable("Unhandled expression!");
+  return 0;
+}
+
+uint64_t
+VEMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
+
+  Fixups.push_back(
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_pc_lo32));
   return 0;
 }
 
