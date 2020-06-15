@@ -1106,7 +1106,10 @@ public:
         return ConcreteTTI->getMemcpyCost(ICA.getInst());
       // TODO: other libc intrinsics.
       }
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      // TODO: AMDGPU intrinsic costs are incorrectly all coming back as 1 with
+      // the following line uncommented. Need to understand why and
+      // fix. Temporarily removing for now to reproduce the old behaviour
+      //return BaseT::getIntrinsicInstrCost(ICA, CostKind);
     }
 
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
