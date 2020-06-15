@@ -1,3 +1,4 @@
+REQUIRES: x86
 RUN: mkdir -p %t
 
 RUN: lld -flavor darwinnew -v -L%t 2>&1 | FileCheck -DDIR=%t %s

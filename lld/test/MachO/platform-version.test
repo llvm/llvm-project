@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: not lld -flavor darwinnew -platform_version 2>&1 \
 # RUN:     | FileCheck --check-prefix=FAIL %s
 # RUN: not lld -flavor darwinnew -platform_version macos 2>&1 \

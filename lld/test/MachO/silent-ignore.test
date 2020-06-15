@@ -1,3 +1,4 @@
+REQUIRES: x86
 RUN: lld -flavor darwinnew -v \
 RUN:   -demangle \
 RUN:   -dynamic \
