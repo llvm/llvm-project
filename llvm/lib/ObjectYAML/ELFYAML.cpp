@@ -839,8 +839,19 @@ void MappingTraits<ELFYAML::SectionHeader>::mapping(
 
 void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
     IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
-  IO.mapRequired("Sections", SectionHeader.Sections);
+  IO.mapOptional("Sections", SectionHeader.Sections);
   IO.mapOptional("Excluded", SectionHeader.Excluded);
+  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders, false);
+}
+
+StringRef MappingTraits<ELFYAML::SectionHeaderTable>::validate(
+    IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable) {
+  if (SecHdrTable.NoHeaders && (SecHdrTable.Sections || SecHdrTable.Excluded))
+    return "NoHeaders can't be used together with Sections/Excluded";
+  if (!SecHdrTable.NoHeaders && !SecHdrTable.Sections && !SecHdrTable.Excluded)
+    return "SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the "
+           "section header table";
+  return StringRef();
 }
 
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
