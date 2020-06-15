@@ -42,14 +42,12 @@ static bool readMarker(const Instruction *I, bool *IsStart) {
   return true;
 }
 
-void StackColoring::removeAllMarkers() {
-  for (auto *I : Markers) {
-    auto *Op = dyn_cast<Instruction>(I->getOperand(1));
-    const_cast<IntrinsicInst *>(I)->eraseFromParent();
-    // Remove the operand bitcast, too, if it has no more uses left.
-    if (Op && Op->use_empty())
-      Op->eraseFromParent();
-  }
+std::vector<const IntrinsicInst *> StackColoring::getMarkers() const {
+  std::vector<const IntrinsicInst *> Markers;
+  for (auto &M : InstructionNumbering)
+    if (M.getFirst()->isLifetimeStartOrEnd())
+      Markers.push_back(M.getFirst());
+  return Markers;
 }
 
 void StackColoring::collectMarkers() {
@@ -78,7 +76,6 @@ void StackColoring::collectMarkers() {
         if (IsStart)
           InterestingAllocas.set(AllocaNo);
         BBMarkerSet[UI->getParent()][UI] = {AllocaNo, IsStart};
-        Markers.push_back(UI);
       }
     }
   }
