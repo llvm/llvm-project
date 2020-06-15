@@ -582,15 +582,12 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 static void
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                unsigned Brand_id,
                                 const unsigned (&Features)[3],
                                 unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
     return (Features[F / 32] & (1U << (F % 32))) != 0;
   };
 
-  if (Brand_id != 0)
-    return;
   switch (Family) {
   case 3:
     *Type = X86::INTEL_i386;
@@ -1159,7 +1156,6 @@ StringRef sys::getHostCPUName() {
     return "generic";
   getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX);
 
-  unsigned Brand_id = EBX & 0xff;
   unsigned Family = 0, Model = 0;
   unsigned Features[3] = {0, 0, 0};
   detectX86FamilyModel(EAX, &Family, &Model);
@@ -1169,8 +1165,7 @@ StringRef sys::getHostCPUName() {
   unsigned Subtype = 0;
 
   if (Vendor == SIG_INTEL) {
-    getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
-                                    &Type, &Subtype);
+    getIntelProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
   } else if (Vendor == SIG_AMD) {
     getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
   }
