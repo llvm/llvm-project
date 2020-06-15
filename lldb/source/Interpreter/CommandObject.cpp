@@ -849,12 +849,11 @@ void CommandObject::GenerateHelpText(CommandReturnObject &result) {
 
 void CommandObject::GenerateHelpText(Stream &output_strm) {
   CommandInterpreter &interpreter = GetCommandInterpreter();
+  std::string help_text(GetHelp());
   if (WantsRawCommandString()) {
-    std::string help_text(GetHelp());
     help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
-    interpreter.OutputFormattedHelpText(output_strm, "", "", help_text, 1);
-  } else
-    interpreter.OutputFormattedHelpText(output_strm, "", "", GetHelp(), 1);
+  }
+  interpreter.OutputFormattedHelpText(output_strm, "", help_text);
   output_strm << "\nSyntax: " << GetSyntax() << "\n";
   Options *options = GetOptions();
   if (options != nullptr) {
