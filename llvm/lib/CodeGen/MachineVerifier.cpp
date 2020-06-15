@@ -873,10 +873,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       }
     }
 
-    if (!HasMBB)
+    if (!HasMBB) {
       report("Branch instruction is missing a basic block operand or "
              "isIndirectBranch property",
              MI);
+    }
   }
 
   // Check types.
