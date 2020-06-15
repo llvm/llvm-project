@@ -4,9 +4,9 @@
 # RUN:   -o %t/libhello.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libgoodbye.s \
 # RUN:   -o %t/libgoodbye.o
-# RUN: lld -flavor darwinnew -arch x86_64 -dylib -install_name \
+# RUN: lld -flavor darwinnew -dylib -install_name \
 # RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
-# RUN: lld -flavor darwinnew -arch x86_64 -dylib -install_name \
+# RUN: lld -flavor darwinnew -dylib -install_name \
 # RUN:   @executable_path/libgoodbye.dylib %t/libgoodbye.o -o %t/libgoodbye.dylib
 
 ## Make sure we are using the export trie and not the symbol table when linking
@@ -18,7 +18,7 @@
 # NOSYM: no symbols
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink.o
-# RUN: lld -flavor darwinnew -arch x86_64 -o %t/dylink -Z -L%t -lhello -lgoodbye %t/dylink.o
+# RUN: lld -flavor darwinnew -o %t/dylink -Z -L%t -lhello -lgoodbye %t/dylink.o
 # RUN: llvm-objdump --bind -d %t/dylink | FileCheck %s
 
 # CHECK: movq [[#%u, HELLO_OFF:]](%rip), %rsi

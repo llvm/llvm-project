@@ -92,15 +92,17 @@ static Optional<std::string> findLibrary(StringRef name) {
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef arch = llvm::Triple(LLVM_DEFAULT_TARGET_TRIPLE).getArchName();
-  config->arch = llvm::MachO::getArchitectureFromName(
-      args.getLastArgValue(OPT_arch, arch));
+  // getArchName() returns a reference to a string owned by the triple, so
+  // we must make the triple a local instead of a temporary value.
+  Triple triple(LLVM_DEFAULT_TARGET_TRIPLE);
+  StringRef arch = args.getLastArgValue(OPT_arch, triple.getArchName());
+  config->arch = llvm::MachO::getArchitectureFromName(arch);
   switch (config->arch) {
   case llvm::MachO::AK_x86_64:
   case llvm::MachO::AK_x86_64h:
     return createX86_64TargetInfo();
   default:
-    fatal("missing or unsupported -arch " + args.getLastArgValue(OPT_arch));
+    fatal("missing or unsupported -arch " + arch);
   }
 }
 
