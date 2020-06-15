@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -95,7 +96,7 @@ private:
   /// The set of allocas that have at least one lifetime.start. All other
   /// allocas get LiveRange that corresponds to the entire function.
   BitVector InterestingAllocas;
-  SmallVector<Instruction *, 8> Markers;
+  SmallVector<IntrinsicInst *, 8> Markers;
 
   struct Marker {
     unsigned AllocaNo;
@@ -109,7 +110,7 @@ private:
   void dumpBlockLiveness();
   void dumpLiveRanges();
 
-  bool readMarker(Instruction *I, bool *IsStart);
+  bool readMarker(Instruction *II, bool *IsStart);
   void collectMarkers();
   void calculateLocalLiveness();
   void calculateLiveIntervals();
