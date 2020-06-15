@@ -273,7 +273,8 @@ LLVM_DUMP_METHOD void StackColoring::dumpLiveRanges() {
 }
 #endif
 
-void StackColoring::run() {
+StackColoring::StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas)
+    : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {
   LLVM_DEBUG(dumpAllocas());
 
   for (unsigned I = 0; I < NumAllocas; ++I)
@@ -281,7 +282,9 @@ void StackColoring::run() {
   LiveRanges.resize(NumAllocas);
 
   collectMarkers();
+}
 
+void StackColoring::run() {
   if (!ClColoring) {
     for (auto &R : LiveRanges) {
       R.SetMaximum(1);
