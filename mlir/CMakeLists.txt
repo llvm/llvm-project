@@ -48,6 +48,10 @@ option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
        ${LLVM_INCLUDE_TESTS})
 
+option(MLIR_INCLUDE_INTEGRATION_TESTS
+       "Generate build targets for the MLIR integration tests."
+       ${LLVM_INCLUDE_TESTS})
+
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
 
@@ -62,6 +66,10 @@ if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
+endif()
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  add_definitions(-DMLIR_INCLUDE_INTEGRATION_TESTS)
+  add_subdirectory(integration_test)
 endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
