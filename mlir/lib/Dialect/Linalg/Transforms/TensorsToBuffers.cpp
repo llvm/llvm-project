@@ -120,10 +120,8 @@ struct ConvertLinalgOnTensorsToBuffers
     target.addLegalDialect<StandardOpsDialect>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
-    auto isIllegalType = [&](Type type) { return !converter.isLegal(type); };
     auto isLegalOperation = [&](Operation *op) {
-      return llvm::none_of(op->getOperandTypes(), isIllegalType) &&
-             llvm::none_of(op->getResultTypes(), isIllegalType);
+      return converter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
@@ -131,7 +129,7 @@ struct ConvertLinalgOnTensorsToBuffers
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
-      return llvm::none_of(returnOp.getOperandTypes(), isIllegalType);
+      return converter.isLegal(returnOp.getOperandTypes());
     });
 
     // Mark the function operation illegal as long as an argument is tensor.
