@@ -87,12 +87,12 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
 
   switch (unsigned(Fixup.getKind())) {
   case WebAssembly::fixup_sleb128_i32:
+  case WebAssembly::fixup_sleb128_i64:
     if (SymA.isFunction())
       return wasm::R_WASM_TABLE_INDEX_SLEB;
     return wasm::R_WASM_MEMORY_ADDR_SLEB;
-  case WebAssembly::fixup_sleb128_i64:
-    llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_uleb128_i32:
+  case WebAssembly::fixup_uleb128_i64:
     if (SymA.isGlobal())
       return wasm::R_WASM_GLOBAL_INDEX_LEB;
     if (SymA.isFunction())
