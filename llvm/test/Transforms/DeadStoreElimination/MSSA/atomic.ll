@@ -42,6 +42,16 @@ define void @test5() {
   ret void
 }
 
+; DSE no-op unordered atomic store (allowed)
+define void @test6() {
+; CHECK-LABEL: test6
+; CHECK-NOT: store
+; CHECK: ret void
+  %x = load atomic i32, i32* @x unordered, align 4
+  store atomic i32 %x, i32* @x unordered, align 4
+  ret void
+}
+
 ; DSE seq_cst store (be conservative; DSE doesn't have infrastructure
 ; to reason about atomic operations).
 define void @test7() {
