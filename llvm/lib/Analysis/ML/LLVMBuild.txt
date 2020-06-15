@@ -1,4 +1,4 @@
-;===- ./lib/Passes/LLVMBuild.txt -------------------------------*- Conf -*--===;
+;===- ./lib/Analysis/ML/LLVMBuild.txt --------------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,6 @@
 
 [component_0]
 type = Library
-name = Passes
-parent = Libraries
-required_libraries = AggressiveInstCombine Analysis MLPolicies CodeGen Core Coroutines IPO InstCombine Scalar Support Target TransformUtils Vectorize Instrumentation
+name = MLPolicies
+parent = Analysis
+required_libraries = Core Support
