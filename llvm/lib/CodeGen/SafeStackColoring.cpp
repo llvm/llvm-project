@@ -94,11 +94,8 @@ void StackColoring::collectMarkers() {
     LLVM_DEBUG(dbgs() << "  " << InstNo << ": BB " << BB->getName() << "\n");
     unsigned BBStart = InstNo++;
 
-    BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
-    BlockInfo.Begin.resize(NumAllocas);
-    BlockInfo.End.resize(NumAllocas);
-    BlockInfo.LiveIn.resize(NumAllocas);
-    BlockInfo.LiveOut.resize(NumAllocas);
+    BlockLifetimeInfo &BlockInfo =
+        BlockLiveness.try_emplace(BB, NumAllocas).first->getSecond();
 
     auto &BlockMarkerSet = BBMarkerSet[BB];
     if (BlockMarkerSet.empty()) {
@@ -155,7 +152,7 @@ void StackColoring::calculateLocalLiveness() {
     changed = false;
 
     for (BasicBlock *BB : depth_first(&F)) {
-      BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
+      BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
       BitVector LocalLiveIn;
@@ -253,7 +250,7 @@ LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() {
   dbgs() << "Block liveness:\n";
   for (auto IT : BlockLiveness) {
     BasicBlock *BB = IT.getFirst();
-    BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
+    const BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
     auto BlockRange = BlockInstRange[BB];
     dbgs() << "  BB [" << BlockRange.first << ", " << BlockRange.second
            << "): begin " << BlockInfo.Begin << ", end " << BlockInfo.End
