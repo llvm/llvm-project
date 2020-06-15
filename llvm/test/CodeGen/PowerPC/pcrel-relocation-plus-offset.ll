@@ -16,7 +16,7 @@ define dso_local signext i32 @getElementLocal7() local_unnamed_addr {
 ; CHECK-S-NEXT:    plwa r3, array2@PCREL+28(0), 1
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementLocal7>:
-; CHECK-O:         00 00 10 04 1c 00 60 a4       plwa 3, 28(0), 1
+; CHECK-O:         00 00 10 04 00 00 60 a4       plwa 3, 0(0), 1
 ; CHECK-O-NEXT:    0000000000000000:  R_PPC64_PCREL34      array2+0x1c
 ; CHECK-O-NEXT:    20 00 80 4e                   blr
 entry:
@@ -30,7 +30,7 @@ define dso_local signext i32 @getElementLocalNegative() local_unnamed_addr {
 ; CHECK-S-NEXT:    plwa r3, array2@PCREL-8(0), 1
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementLocalNegative>:
-; CHECK-O:         ff ff 13 04 f8 ff 60 a4       plwa 3, -8(0), 1
+; CHECK-O:         00 00 10 04 00 00 60 a4       plwa 3, 0(0), 1
 ; CHECK-O-NEXT:    0000000000000020:  R_PPC64_PCREL34      array2-0x8
 ; CHECK-O-NEXT:    20 00 80 4e                   blr
 entry:
