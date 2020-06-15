@@ -281,11 +281,10 @@ opt<bool> CrossFileRename{
 opt<bool> RecoveryAST{
     "recovery-ast",
     cat(Features),
-    desc("Preserve expressions in AST for broken code (C++ only). Note that "
-         "this feature is experimental and may lead to crashes"),
-    init(false),
-    Hidden,
+    desc("Preserve expressions in AST for broken code (C++ only)."),
+    init(ClangdServer::Options().BuildRecoveryAST),
 };
+
 opt<bool> RecoveryASTType{
     "recovery-ast-type",
     cat(Features),
