@@ -2170,15 +2170,57 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
-  if (SrcTy.isVector() && !DstTy.isVector()) {
+  if (SrcTy.isVector()) {
+    LLT SrcEltTy = SrcTy.getElementType();
     SmallVector<Register, 8> SrcRegs;
-    getUnmergePieces(SrcRegs, MIRBuilder, Src, SrcTy.getElementType());
+
+    if (DstTy.isVector()) {
+      int NumDstElt = DstTy.getNumElements();
+      int NumSrcElt = SrcTy.getNumElements();
+
+      LLT DstEltTy = DstTy.getElementType();
+      LLT DstCastTy = DstEltTy; // Intermediate bitcast result type
+      LLT SrcPartTy = SrcEltTy; // Original unmerge result type.
+
+      // If there's an element size mismatch, insert intermediate casts to match
+      // the result element type.
+      if (NumSrcElt < NumDstElt) { // Source element type is larger.
+        // %1:_(<4 x s8>) = G_BITCAST %0:_(<2 x s16>)
+        //
+        // =>
+        //
+        // %2:_(s16), %3:_(s16) = G_UNMERGE_VALUES %0
+        // %3:_(<2 x s8>) = G_BITCAST %2
+        // %4:_(<2 x s8>) = G_BITCAST %3
+        // %1:_(<4 x s16>) = G_CONCAT_VECTORS %3, %4
+        DstCastTy = LLT::vector(NumDstElt / NumSrcElt, DstEltTy);
+        SrcPartTy = SrcEltTy;
+      } else if (NumSrcElt > NumDstElt) { // Source element type is smaller.
+        //
+        // %1:_(<2 x s16>) = G_BITCAST %0:_(<4 x s8>)
+        //
+        // =>
+        //
+        // %2:_(<2 x s8>), %3:_(<2 x s8>) = G_UNMERGE_VALUES %0
+        // %3:_(s16) = G_BITCAST %2
+        // %4:_(s16) = G_BITCAST %3
+        // %1:_(<2 x s16>) = G_BUILD_VECTOR %3, %4
+        SrcPartTy = LLT::vector(NumSrcElt / NumDstElt, SrcEltTy);
+        DstCastTy = DstEltTy;
+      }
+
+      getUnmergePieces(SrcRegs, MIRBuilder, Src, SrcPartTy);
+      for (Register &SrcReg : SrcRegs)
+        SrcReg = MIRBuilder.buildBitcast(DstCastTy, SrcReg).getReg(0);
+    } else
+      getUnmergePieces(SrcRegs, MIRBuilder, Src, SrcEltTy);
+
     MIRBuilder.buildMerge(Dst, SrcRegs);
     MI.eraseFromParent();
     return Legalized;
   }
 
-  if (DstTy.isVector() && !SrcTy.isVector()) {
+  if (DstTy.isVector()) {
     SmallVector<Register, 8> SrcRegs;
     getUnmergePieces(SrcRegs, MIRBuilder, Src, DstTy.getElementType());
     MIRBuilder.buildMerge(Dst, SrcRegs);
