@@ -1,4 +1,4 @@
-#include "llvm/Analysis/ML/InlineFeaturesAnalysis.h"
+#include "llvm/Analysis/InlineFeaturesAnalysis.h"
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
