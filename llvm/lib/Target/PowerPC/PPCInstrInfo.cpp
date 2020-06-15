@@ -280,6 +280,144 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   }
 }
 
+#define InfoArrayIdxFMAInst 0
+#define InfoArrayIdxFAddInst 1
+#define InfoArrayIdxFMULInst 2
+#define InfoArrayIdxAddOpIdx 3
+#define InfoArrayIdxMULOpIdx 4
+// Array keeps info for FMA instructions:
+// Index 0(InfoArrayIdxFMAInst): FMA instruction;
+// Index 1(InfoArrayIdxFAddInst): ADD instruction assoaicted with FMA;
+// Index 2(InfoArrayIdxFMULInst): MUL instruction assoaicted with FMA;
+// Index 3(InfoArrayIdxAddOpIdx): ADD operand index in the FMA operand list;
+// Index 4(InfoArrayIdxMULOpIdx): first MUL operand index in the FMA operand
+//                                list;
+//                                second MUL operand index is plus 1.
+static const uint16_t FMAOpIdxInfo[][5] = {
+    // FIXME: add more FMA instructions like XSNMADDADP and so on.
+    {PPC::XSMADDADP, PPC::XSADDDP, PPC::XSMULDP, 1, 2},
+    {PPC::XSMADDASP, PPC::XSADDSP, PPC::XSMULSP, 1, 2},
+    {PPC::XVMADDADP, PPC::XVADDDP, PPC::XVMULDP, 1, 2},
+    {PPC::XVMADDASP, PPC::XVADDSP, PPC::XVMULSP, 1, 2},
+    {PPC::FMADD, PPC::FADD, PPC::FMUL, 3, 1},
+    {PPC::FMADDS, PPC::FADDS, PPC::FMULS, 3, 1},
+    {PPC::QVFMADDSs, PPC::QVFADDSs, PPC::QVFMULSs, 3, 1},
+    {PPC::QVFMADD, PPC::QVFADD, PPC::QVFMUL, 3, 1}};
+
+// Check if an opcode is a FMA instruction. If it is, return the index in array
+// FMAOpIdxInfo. Otherwise, return -1.
+int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
+  for (unsigned I = 0; I < array_lengthof(FMAOpIdxInfo); I++)
+    if (FMAOpIdxInfo[I][InfoArrayIdxFMAInst] == Opcode)
+      return I;
+  return -1;
+}
+
+// Try to reassociate FMA chains like below:
+//
+// Pattern 1:
+//   A =  FADD X,  Y          (Leaf)
+//   B =  FMA  A,  M21,  M22  (Prev)
+//   C =  FMA  B,  M31,  M32  (Root)
+// -->
+//   A =  FMA  X,  M21,  M22
+//   B =  FMA  Y,  M31,  M32
+//   C =  FADD A,  B
+//
+// Pattern 2:
+//   A =  FMA  X,  M11,  M12  (Leaf)
+//   B =  FMA  A,  M21,  M22  (Prev)
+//   C =  FMA  B,  M31,  M32  (Root)
+// -->
+//   A =  FMUL M11,  M12
+//   B =  FMA  X,  M21,  M22
+//   D =  FMA  A,  M31,  M32
+//   C =  FADD B,  D
+//
+// breaking the dependency between A and B, allowing FMA to be executed in
+// parallel (or back-to-back in a pipeline) instead of depending on each other.
+bool PPCInstrInfo::getFMAPatterns(
+    MachineInstr &Root,
+    SmallVectorImpl<MachineCombinerPattern> &Patterns) const {
+  MachineBasicBlock *MBB = Root.getParent();
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+  auto IsAllOpsVirtualReg = [](const MachineInstr &Instr) {
+    for (const auto &MO : Instr.explicit_operands())
+      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
+        return false;
+    return true;
+  };
+
+  auto IsReassociable = [&](const MachineInstr &Instr, int16_t &AddOpIdx,
+                            bool IsLeaf, bool IsAdd) {
+    int16_t Idx = -1;
+    if (!IsAdd) {
+      Idx = getFMAOpIdxInfo(Instr.getOpcode());
+      if (Idx < 0)
+        return false;
+    } else if (Instr.getOpcode() !=
+               FMAOpIdxInfo[getFMAOpIdxInfo(Root.getOpcode())]
+                           [InfoArrayIdxFAddInst])
+      return false;
+
+    // Instruction can be reassociated.
+    // fast match flags may prohibit reassociation.
+    if (!(Instr.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+          Instr.getFlag(MachineInstr::MIFlag::FmNsz)))
+      return false;
+
+    // Instruction operands are virtual registers for reassociating.
+    if (!IsAllOpsVirtualReg(Instr))
+      return false;
+
+    if (IsAdd && IsLeaf)
+      return true;
+
+    AddOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxAddOpIdx];
+
+    const MachineOperand &OpAdd = Instr.getOperand(AddOpIdx);
+    MachineInstr *MIAdd = MRI.getUniqueVRegDef(OpAdd.getReg());
+    // If 'add' operand's def is not in current block, don't do ILP related opt.
+    if (!MIAdd || MIAdd->getParent() != MBB)
+      return false;
+
+    // If this is not Leaf FMA Instr, its 'add' operand should only have one use
+    // as this fma will be changed later.
+    return IsLeaf ? true : MRI.hasOneNonDBGUse(OpAdd.getReg());
+  };
+
+  int16_t AddOpIdx = -1;
+  // Root must be a valid FMA like instruction.
+  if (!IsReassociable(Root, AddOpIdx, false, false))
+    return false;
+
+  assert((AddOpIdx >= 0) && "add operand index not right!");
+
+  Register RegB = Root.getOperand(AddOpIdx).getReg();
+  MachineInstr *Prev = MRI.getUniqueVRegDef(RegB);
+
+  // Prev must be a valid FMA like instruction.
+  AddOpIdx = -1;
+  if (!IsReassociable(*Prev, AddOpIdx, false, false))
+    return false;
+
+  assert((AddOpIdx >= 0) && "add operand index not right!");
+
+  Register RegA = Prev->getOperand(AddOpIdx).getReg();
+  MachineInstr *Leaf = MRI.getUniqueVRegDef(RegA);
+  AddOpIdx = -1;
+  if (IsReassociable(*Leaf, AddOpIdx, true, false)) {
+    Patterns.push_back(MachineCombinerPattern::REASSOC_XMM_AMM_BMM);
+    return true;
+  }
+  if (IsReassociable(*Leaf, AddOpIdx, true, true)) {
+    Patterns.push_back(MachineCombinerPattern::REASSOC_XY_AMM_BMM);
+    return true;
+  }
+  return false;
+}
+
 bool PPCInstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root,
     SmallVectorImpl<MachineCombinerPattern> &Patterns) const {
@@ -288,7 +426,196 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
     return false;
 
+  if (getFMAPatterns(Root, Patterns))
+    return true;
+
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns);
+}
+
+void PPCInstrInfo::genAlternativeCodeSequence(
+    MachineInstr &Root, MachineCombinerPattern Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+  switch (Pattern) {
+  case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
+  case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
+    reassociateFMA(Root, Pattern, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    break;
+  default:
+    // Reassociate default patterns.
+    TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
+                                                DelInstrs, InstrIdxForVirtReg);
+    break;
+  }
+}
+
+// Currently, only handle two patterns REASSOC_XY_AMM_BMM and
+// REASSOC_XMM_AMM_BMM. See comments for getFMAPatterns.
+void PPCInstrInfo::reassociateFMA(
+    MachineInstr &Root, MachineCombinerPattern Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineOperand &OpC = Root.getOperand(0);
+  Register RegC = OpC.getReg();
+  const TargetRegisterClass *RC = MRI.getRegClass(RegC);
+  MRI.constrainRegClass(RegC, RC);
+
+  unsigned FmaOp = Root.getOpcode();
+  int16_t Idx = getFMAOpIdxInfo(FmaOp);
+  assert(Idx >= 0 && "Root must be a FMA instruction");
+
+  uint16_t AddOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxAddOpIdx];
+  uint16_t FirstMulOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxMULOpIdx];
+  MachineInstr *Prev = MRI.getUniqueVRegDef(Root.getOperand(AddOpIdx).getReg());
+  MachineInstr *Leaf =
+      MRI.getUniqueVRegDef(Prev->getOperand(AddOpIdx).getReg());
+  uint16_t IntersectedFlags =
+      Root.getFlags() & Prev->getFlags() & Leaf->getFlags();
+
+  auto GetOperandInfo = [&](const MachineOperand &Operand, Register &Reg,
+                            bool &KillFlag) {
+    Reg = Operand.getReg();
+    MRI.constrainRegClass(Reg, RC);
+    KillFlag = Operand.isKill();
+  };
+
+  auto GetFMAInstrInfo = [&](const MachineInstr &Instr, Register &MulOp1,
+                             Register &MulOp2, bool &MulOp1KillFlag,
+                             bool &MulOp2KillFlag) {
+    GetOperandInfo(Instr.getOperand(FirstMulOpIdx), MulOp1, MulOp1KillFlag);
+    GetOperandInfo(Instr.getOperand(FirstMulOpIdx + 1), MulOp2, MulOp2KillFlag);
+  };
+
+  Register RegM11, RegM12, RegX, RegY, RegM21, RegM22, RegM31, RegM32;
+  bool KillX = false, KillY = false, KillM11 = false, KillM12 = false,
+       KillM21 = false, KillM22 = false, KillM31 = false, KillM32 = false;
+
+  GetFMAInstrInfo(Root, RegM31, RegM32, KillM31, KillM32);
+  GetFMAInstrInfo(*Prev, RegM21, RegM22, KillM21, KillM22);
+
+  if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
+    GetFMAInstrInfo(*Leaf, RegM11, RegM12, KillM11, KillM12);
+    GetOperandInfo(Leaf->getOperand(AddOpIdx), RegX, KillX);
+  } else if (Pattern == MachineCombinerPattern::REASSOC_XY_AMM_BMM) {
+    GetOperandInfo(Leaf->getOperand(1), RegX, KillX);
+    GetOperandInfo(Leaf->getOperand(2), RegY, KillY);
+  }
+
+  // Create new virtual registers for the new results instead of
+  // recycling legacy ones because the MachineCombiner's computation of the
+  // critical path requires a new register definition rather than an existing
+  // one.
+  Register NewVRA = MRI.createVirtualRegister(RC);
+  InstrIdxForVirtReg.insert(std::make_pair(NewVRA, 0));
+
+  Register NewVRB = MRI.createVirtualRegister(RC);
+  InstrIdxForVirtReg.insert(std::make_pair(NewVRB, 1));
+
+  Register NewVRD = 0;
+  if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
+    NewVRD = MRI.createVirtualRegister(RC);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVRD, 2));
+  }
+
+  auto AdjustOperandOrder = [&](MachineInstr *MI, Register RegAdd, bool KillAdd,
+                                Register RegMul1, bool KillRegMul1,
+                                Register RegMul2, bool KillRegMul2) {
+    MI->getOperand(AddOpIdx).setReg(RegAdd);
+    MI->getOperand(AddOpIdx).setIsKill(KillAdd);
+    MI->getOperand(FirstMulOpIdx).setReg(RegMul1);
+    MI->getOperand(FirstMulOpIdx).setIsKill(KillRegMul1);
+    MI->getOperand(FirstMulOpIdx + 1).setReg(RegMul2);
+    MI->getOperand(FirstMulOpIdx + 1).setIsKill(KillRegMul2);
+  };
+
+  if (Pattern == MachineCombinerPattern::REASSOC_XY_AMM_BMM) {
+    // Create new instructions for insertion.
+    MachineInstrBuilder MINewB =
+        BuildMI(*MF, Prev->getDebugLoc(), get(FmaOp), NewVRB)
+            .addReg(RegX, getKillRegState(KillX))
+            .addReg(RegM21, getKillRegState(KillM21))
+            .addReg(RegM22, getKillRegState(KillM22));
+    MachineInstrBuilder MINewA =
+        BuildMI(*MF, Root.getDebugLoc(), get(FmaOp), NewVRA)
+            .addReg(RegY, getKillRegState(KillY))
+            .addReg(RegM31, getKillRegState(KillM31))
+            .addReg(RegM32, getKillRegState(KillM32));
+    // if AddOpIdx is not 1, adjust the order.
+    if (AddOpIdx != 1) {
+      AdjustOperandOrder(MINewB, RegX, KillX, RegM21, KillM21, RegM22, KillM22);
+      AdjustOperandOrder(MINewA, RegY, KillY, RegM31, KillM31, RegM32, KillM32);
+    }
+
+    MachineInstrBuilder MINewC =
+        BuildMI(*MF, Root.getDebugLoc(),
+                get(FMAOpIdxInfo[Idx][InfoArrayIdxFAddInst]), RegC)
+            .addReg(NewVRB, getKillRegState(true))
+            .addReg(NewVRA, getKillRegState(true));
+
+    // update flags for new created instructions.
+    setSpecialOperandAttr(*MINewA, IntersectedFlags);
+    setSpecialOperandAttr(*MINewB, IntersectedFlags);
+    setSpecialOperandAttr(*MINewC, IntersectedFlags);
+
+    // Record new instructions for insertion.
+    InsInstrs.push_back(MINewA);
+    InsInstrs.push_back(MINewB);
+    InsInstrs.push_back(MINewC);
+  } else if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
+    assert(NewVRD && "new FMA register not created!");
+    // Create new instructions for insertion.
+    MachineInstrBuilder MINewA =
+        BuildMI(*MF, Leaf->getDebugLoc(),
+                get(FMAOpIdxInfo[Idx][InfoArrayIdxFMULInst]), NewVRA)
+            .addReg(RegM11, getKillRegState(KillM11))
+            .addReg(RegM12, getKillRegState(KillM12));
+    MachineInstrBuilder MINewB =
+        BuildMI(*MF, Prev->getDebugLoc(), get(FmaOp), NewVRB)
+            .addReg(RegX, getKillRegState(KillX))
+            .addReg(RegM21, getKillRegState(KillM21))
+            .addReg(RegM22, getKillRegState(KillM22));
+    MachineInstrBuilder MINewD =
+        BuildMI(*MF, Root.getDebugLoc(), get(FmaOp), NewVRD)
+            .addReg(NewVRA, getKillRegState(true))
+            .addReg(RegM31, getKillRegState(KillM31))
+            .addReg(RegM32, getKillRegState(KillM32));
+    // If AddOpIdx is not 1, adjust the order.
+    if (AddOpIdx != 1) {
+      AdjustOperandOrder(MINewB, RegX, KillX, RegM21, KillM21, RegM22, KillM22);
+      AdjustOperandOrder(MINewD, NewVRA, true, RegM31, KillM31, RegM32,
+                         KillM32);
+    }
+
+    MachineInstrBuilder MINewC =
+        BuildMI(*MF, Root.getDebugLoc(),
+                get(FMAOpIdxInfo[Idx][InfoArrayIdxFAddInst]), RegC)
+            .addReg(NewVRB, getKillRegState(true))
+            .addReg(NewVRD, getKillRegState(true));
+
+    // update flags for new created instructions.
+    setSpecialOperandAttr(*MINewA, IntersectedFlags);
+    setSpecialOperandAttr(*MINewB, IntersectedFlags);
+    setSpecialOperandAttr(*MINewD, IntersectedFlags);
+    setSpecialOperandAttr(*MINewC, IntersectedFlags);
+
+    // Record new instructions for insertion.
+    InsInstrs.push_back(MINewA);
+    InsInstrs.push_back(MINewB);
+    InsInstrs.push_back(MINewD);
+    InsInstrs.push_back(MINewC);
+  }
+
+  assert(!InsInstrs.empty() &&
+         "Insertion instructions set should not be empty!");
+
+  // Record old instructions for deletion.
+  DelInstrs.push_back(Leaf);
+  DelInstrs.push_back(Prev);
+  DelInstrs.push_back(&Root);
 }
 
 // Detect 32 -> 64-bit extensions where we may reuse the low sub-register.
