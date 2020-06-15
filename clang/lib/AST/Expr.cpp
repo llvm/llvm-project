@@ -272,7 +272,6 @@ void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
   ConstantExprBits.ResultKind = StorageKind;
   ConstantExprBits.APValueKind = APValue::None;
   ConstantExprBits.HasCleanup = false;
-  ConstantExprBits.IsImmediateInvocation = false;
   if (StorageKind == ConstantExpr::RSK_APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
