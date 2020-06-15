@@ -49,8 +49,7 @@ option(MLIR_INCLUDE_TESTS
        ${LLVM_INCLUDE_TESTS})
 
 option(MLIR_INCLUDE_INTEGRATION_TESTS
-       "Generate build targets for the MLIR integration tests."
-       ${LLVM_INCLUDE_TESTS})
+       "Generate build targets for the MLIR integration tests.")
 
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
