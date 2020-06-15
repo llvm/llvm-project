@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -Wno-unused-value %s -verify
 
 typedef __SIZE_TYPE__ size_t;
 
