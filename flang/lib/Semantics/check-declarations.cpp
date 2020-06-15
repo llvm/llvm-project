@@ -1455,7 +1455,10 @@ void SubprogramMatchHelper::CheckDummyArg(const Symbol &symbol1,
                        "Dummy argument '%s' is a procedure; the corresponding"
                        " argument in the interface body is not"_err_en_US);
                  },
-                 [&](const auto &, const auto &) { DIE("can't happen"); },
+                 [&](const auto &, const auto &) {
+                   llvm_unreachable("Dummy arguments are not data objects or"
+                                    "procedures");
+                 },
              },
       arg1.u, arg2.u);
 }

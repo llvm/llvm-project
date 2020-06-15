@@ -185,21 +185,21 @@ raw_ostream &operator<<(raw_ostream &OS, const WasmRelocationEntry &Rel) {
 
 // Write X as an (unsigned) LEB value at offset Offset in Stream, padded
 // to allow patching.
-static void writePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
-                              uint64_t Offset) {
-  uint8_t Buffer[5];
-  unsigned SizeLen = encodeULEB128(X, Buffer, 5);
-  assert(SizeLen == 5);
+template <int W>
+void writePatchableLEB(raw_pwrite_stream &Stream, uint64_t X, uint64_t Offset) {
+  uint8_t Buffer[W];
+  unsigned SizeLen = encodeULEB128(X, Buffer, W);
+  assert(SizeLen == W);
   Stream.pwrite((char *)Buffer, SizeLen, Offset);
 }
 
 // Write X as an signed LEB value at offset Offset in Stream, padded
 // to allow patching.
-static void writePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
-                               uint64_t Offset) {
-  uint8_t Buffer[5];
-  unsigned SizeLen = encodeSLEB128(X, Buffer, 5);
-  assert(SizeLen == 5);
+template <int W>
+void writePatchableSLEB(raw_pwrite_stream &Stream, int64_t X, uint64_t Offset) {
+  uint8_t Buffer[W];
+  unsigned SizeLen = encodeSLEB128(X, Buffer, W);
+  assert(SizeLen == W);
   Stream.pwrite((char *)Buffer, SizeLen, Offset);
 }
 
@@ -207,6 +207,12 @@ static void writePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
 static void patchI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   uint8_t Buffer[4];
   support::endian::write32le(Buffer, X);
+  Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
+}
+
+static void patchI64(raw_pwrite_stream &Stream, uint64_t X, uint64_t Offset) {
+  uint8_t Buffer[8];
+  support::endian::write64le(Buffer, X);
   Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
 }
 
@@ -347,7 +353,7 @@ private:
   updateCustomSectionRelocations(const SmallVector<WasmFunction, 4> &Functions,
                                  const MCAsmLayout &Layout);
 
-  uint32_t getProvisionalValue(const WasmRelocationEntry &RelEntry);
+  uint64_t getProvisionalValue(const WasmRelocationEntry &RelEntry);
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
                         uint64_t ContentsOffset);
 
@@ -410,8 +416,8 @@ void WasmObjectWriter::endSection(SectionBookkeeping &Section) {
 
   // Write the final section size to the payload_len field, which follows
   // the section id byte.
-  writePatchableLEB(static_cast<raw_pwrite_stream &>(W.OS), Size,
-                    Section.SizeOffset);
+  writePatchableLEB<5>(static_cast<raw_pwrite_stream &>(W.OS), Size,
+                       Section.SizeOffset);
 }
 
 // Emit the Wasm header.
@@ -549,7 +555,7 @@ static const MCSymbolWasm *resolveSymbol(const MCSymbolWasm &Symbol) {
 // by RelEntry. This value isn't used by the static linker; it just serves
 // to make the object format more readable and more likely to be directly
 // useable.
-uint32_t
+uint64_t
 WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   if ((RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_LEB ||
        RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_I32) &&
@@ -587,9 +593,13 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
     return Section.getSectionOffset() + RelEntry.Addend;
   }
   case wasm::R_WASM_MEMORY_ADDR_LEB:
-  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LEB64:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB64:
   case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
-  case wasm::R_WASM_MEMORY_ADDR_SLEB: {
+  case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_MEMORY_ADDR_I64: {
     // Provisional value is address of the global
     const MCSymbolWasm *Sym = resolveSymbol(*RelEntry.Symbol);
     // For undefined symbols, use zero
@@ -666,7 +676,7 @@ void WasmObjectWriter::applyRelocations(
                       RelEntry.Offset;
 
     LLVM_DEBUG(dbgs() << "applyRelocation: " << RelEntry << "\n");
-    uint32_t Value = getProvisionalValue(RelEntry);
+    auto Value = getProvisionalValue(RelEntry);
 
     switch (RelEntry.Type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
@@ -674,7 +684,10 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_EVENT_INDEX_LEB:
-      writePatchableLEB(Stream, Value, Offset);
+      writePatchableLEB<5>(Stream, Value, Offset);
+      break;
+    case wasm::R_WASM_MEMORY_ADDR_LEB64:
+      writePatchableLEB<10>(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_I32:
     case wasm::R_WASM_MEMORY_ADDR_I32:
@@ -683,11 +696,18 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_I32:
       patchI32(Stream, Value, Offset);
       break;
+    case wasm::R_WASM_MEMORY_ADDR_I64:
+      patchI64(Stream, Value, Offset);
+      break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
-      writePatchableSLEB(Stream, Value, Offset);
+      writePatchableSLEB<5>(Stream, Value, Offset);
+      break;
+    case wasm::R_WASM_MEMORY_ADDR_SLEB64:
+    case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
+      writePatchableSLEB<10>(Stream, Value, Offset);
       break;
     default:
       llvm_unreachable("invalid relocation type");
@@ -1420,9 +1440,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       // For each data symbol, export it in the symtab as a reference to the
       // corresponding Wasm data segment.
       wasm::WasmDataReference Ref = wasm::WasmDataReference{
-          DataSection.getSegmentIndex(),
-          static_cast<uint32_t>(Layout.getSymbolOffset(WS)),
-          static_cast<uint32_t>(Size)};
+          DataSection.getSegmentIndex(), Layout.getSymbolOffset(WS),
+          static_cast<uint64_t>(Size)};
       DataLocations[&WS] = Ref;
       LLVM_DEBUG(dbgs() << "  -> segment index: " << Ref.Segment << "\n");
 

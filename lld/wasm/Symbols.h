@@ -264,7 +264,7 @@ class DefinedData : public DataSymbol {
 public:
   // Constructor for regular data symbols originating from input files.
   DefinedData(StringRef name, uint32_t flags, InputFile *f,
-              InputSegment *segment, uint32_t offset, uint32_t size)
+              InputSegment *segment, uint64_t offset, uint64_t size)
       : DataSymbol(name, DefinedDataKind, flags, f), segment(segment),
         offset(offset), size(size) {}
 
@@ -275,19 +275,19 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  uint32_t getVirtualAddress() const;
-  void setVirtualAddress(uint32_t va);
+  uint64_t getVirtualAddress() const;
+  void setVirtualAddress(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.
-  uint32_t getOutputSegmentOffset() const;
-  uint32_t getOutputSegmentIndex() const;
-  uint32_t getSize() const { return size; }
+  uint64_t getOutputSegmentOffset() const;
+  uint64_t getOutputSegmentIndex() const;
+  uint64_t getSize() const { return size; }
 
   InputSegment *segment = nullptr;
 
 protected:
-  uint32_t offset = 0;
-  uint32_t size = 0;
+  uint64_t offset = 0;
+  uint64_t size = 0;
 };
 
 class UndefinedData : public DataSymbol {

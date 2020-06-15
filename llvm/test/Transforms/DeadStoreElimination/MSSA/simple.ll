@@ -119,11 +119,27 @@ define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %
   ret void
 }
 
+; Do not delete stores that are only partially killed.
+define i32 @test8() {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1234567, i32* [[V]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %V = alloca i32
+  store i32 1234567, i32* %V
+  %V2 = bitcast i32* %V to i8*
+  store i8 0, i8* %V2
+  %X = load i32, i32* %V
+  ret i32 %X
+
+}
 
 ; va_arg has fuzzy dependence, the store shouldn't be zapped.
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*
+; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP_0:%.*]] = va_arg i8** [[X_ADDR]], double
 ; CHECK-NEXT:    ret double [[TMP_0]]
@@ -573,6 +589,21 @@ define void @test42a(i32* %P, i32* %Q) {
 ; CHECK-NEXT:    store atomic i8 3, i8* [[P2]] unordered, align 4
 ; CHECK-NEXT:    ret void
 ;
+  store atomic i32 1, i32* %P unordered, align 4
+  %P2 = bitcast i32* %P to i8*
+  store atomic i32 2, i32* %Q unordered, align 4
+  store atomic i8 3, i8* %P2 unordered, align 4
+  ret void
+}
+
+define void @test43a(i32* %P, i32* noalias %Q) {
+; CHECK-LABEL: @test43a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store atomic i32 50331649, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    store atomic i32 2, i32* [[Q:%.*]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
   store atomic i32 1, i32* %P unordered, align 4
   %P2 = bitcast i32* %P to i8*
   store atomic i32 2, i32* %Q unordered, align 4

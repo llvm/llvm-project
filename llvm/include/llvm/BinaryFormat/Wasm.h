@@ -159,8 +159,8 @@ struct WasmElemSegment {
 // the index of the segment, and the offset and size within the segment.
 struct WasmDataReference {
   uint32_t Segment;
-  uint32_t Offset;
-  uint32_t Size;
+  uint64_t Offset;
+  uint64_t Size;
 };
 
 struct WasmRelocation {

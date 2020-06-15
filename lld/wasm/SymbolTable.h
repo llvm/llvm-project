@@ -53,8 +53,8 @@ public:
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
-                         InputSegment *segment, uint32_t address,
-                         uint32_t size);
+                         InputSegment *segment, uint64_t address,
+                         uint64_t size);
   Symbol *addDefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
                            InputGlobal *g);
   Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,

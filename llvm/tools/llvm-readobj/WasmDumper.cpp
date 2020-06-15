@@ -182,6 +182,10 @@ void WasmDumper::printSectionHeaders() {
         W.printNumber("Size", static_cast<uint64_t>(Seg.Content.size()));
         if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST)
           W.printNumber("Offset", Seg.Offset.Value.Int32);
+        else if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I64_CONST)
+          W.printNumber("Offset", Seg.Offset.Value.Int64);
+        else
+          llvm_unreachable("unknown init expr opcode");
       }
       break;
     }

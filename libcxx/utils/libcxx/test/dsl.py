@@ -220,6 +220,8 @@ class Feature(object):
       config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
 
     name = self._name(config) if callable(self._name) else self._name
+    if not isinstance(name, str):
+      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
     config.available_features.add(name)
 
 
