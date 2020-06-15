@@ -47,6 +47,17 @@ static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_discarded_task"
 };
 
+static const char *ompt_dependence_type_t_values[] = {
+    NULL,
+    "ompt_dependence_type_in", // 1
+    "ompt_dependence_type_out", // 2
+    "ompt_dependence_type_inout", // 3
+    "ompt_dependence_type_mutexinoutset", // 4
+    "ompt_dependence_type_source", // 5
+    "ompt_dependence_type_sink", // 6
+    "ompt_dependence_type_inoutset" // 7
+};
+
 static void format_task_type(int type, char *buffer) {
   char *progress = buffer;
   if (type & ompt_task_initial)
@@ -971,10 +982,24 @@ on_ompt_callback_dependences(
   const ompt_dependence_t *deps,
   int ndeps)
 {
-  printf("%" PRIu64 ":" _TOOL_PREFIX
-         " ompt_event_task_dependences: task_id=%" PRIu64
-         ", deps=%p, ndeps=%d\n",
-         ompt_get_thread_data()->value, task_data->value, (void *)deps, ndeps);
+  char buffer[2048];
+  char *progress = buffer;
+  for (int i = 0; i < ndeps && progress < buffer + 2000; i++) {
+    if (deps[i].dependence_type == ompt_dependence_type_source ||
+        deps[i].dependence_type == ompt_dependence_type_sink)
+      progress +=
+          sprintf(progress, "(%ld, %s), ", deps[i].variable.value,
+                  ompt_dependence_type_t_values[deps[i].dependence_type]);
+    else
+      progress +=
+          sprintf(progress, "(%p, %s), ", deps[i].variable.ptr,
+                  ompt_dependence_type_t_values[deps[i].dependence_type]);
+  }
+  if (ndeps > 0)
+    progress[-2] = 0;
+  printf("%" PRIu64 ":" _TOOL_PREFIX " ompt_event_dependences: task_id=%" PRIu64
+         ", deps=[%s], ndeps=%d\n",
+         ompt_get_thread_data()->value, task_data->value, buffer, ndeps);
 }
 
 static void
