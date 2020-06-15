@@ -275,14 +275,12 @@ StackColoring::StackColoring(const Function &F,
 
   for (unsigned I = 0; I < NumAllocas; ++I)
     AllocaNumbering[Allocas[I]] = I;
-  LiveRanges.resize(NumAllocas);
 
   collectMarkers();
 }
 
 void StackColoring::run() {
-  for (auto &R : LiveRanges)
-    R.SetMaximum(NumInst);
+  LiveRanges.resize(NumAllocas, LiveRange(NumInst));
   for (unsigned I = 0; I < NumAllocas; ++I)
     if (!InterestingAllocas.test(I))
       LiveRanges[I] = getFullLiveRange();

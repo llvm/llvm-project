@@ -95,7 +95,7 @@ void StackLayout::layoutObject(StackObject &Obj) {
     if (Start > LastRegionEnd) {
       LLVM_DEBUG(dbgs() << "  Creating gap region: " << LastRegionEnd << " .. "
                         << Start << "\n");
-      Regions.emplace_back(LastRegionEnd, Start, StackColoring::LiveRange());
+      Regions.emplace_back(LastRegionEnd, Start, StackColoring::LiveRange(0));
       LastRegionEnd = Start;
     }
     LLVM_DEBUG(dbgs() << "  Creating new region: " << LastRegionEnd << " .. "
