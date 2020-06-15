@@ -48,6 +48,7 @@
 // f: float
 // h: half-float
 // d: double
+// b: bfloat
 
 // Typespec modifiers
 // ------------------
@@ -145,6 +146,7 @@ def EltTyBool8   : EltType<8>;
 def EltTyBool16  : EltType<9>;
 def EltTyBool32  : EltType<10>;
 def EltTyBool64  : EltType<11>;
+def EltTyBFloat16 : EltType<12>;
 
 class MemEltType<int val> {
   int Value = val;
@@ -481,6 +483,9 @@ def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch
 // Load one octoword and replicate (scalar base)
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
   def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1ro">;
+}
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64) && defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)" in {
+  def SVLD1RO_BF : SInst<"svld1ro[_{2}]", "dPc", "b", MergeNone, "aarch64_sve_ld1ro">;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Stores

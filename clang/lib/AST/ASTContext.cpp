@@ -2132,7 +2132,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // of 0 for the static length.  The alignment values are those defined
     // by the Procedure Call Standard for the Arm Architecture.
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP)                                        \
+                        IsSigned, IsFP, IsBF)                                  \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = 128;                                                               \
@@ -3642,13 +3642,17 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
   if (Target->hasAArch64SVETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP)                                        \
+                        IsSigned, IsFP, IsBF)                                  \
   if (!EltTy->isBooleanType() &&                                               \
       ((EltTy->hasIntegerRepresentation() &&                                   \
         EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && IsFP)) &&                        \
-      EltTySize == ElBits && NumElts == NumEls)                                \
-    return SingletonId;
+       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
+        IsFP && !IsBF) ||                                                      \
+       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
+        IsBF && !IsFP)) &&                                                     \
+      EltTySize == ElBits && NumElts == NumEls) {                              \
+    return SingletonId;                                                        \
+  }
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
     return SingletonId;

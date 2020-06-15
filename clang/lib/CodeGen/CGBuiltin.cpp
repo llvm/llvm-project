@@ -7639,6 +7639,9 @@ llvm::Type *CodeGenFunction::getEltType(SVETypeFlags TypeFlags) {
   case SVETypeFlags::EltTyFloat64:
     return Builder.getDoubleTy();
 
+  case SVETypeFlags::EltTyBFloat16:
+    return Builder.getBFloatTy();
+
   case SVETypeFlags::EltTyBool8:
   case SVETypeFlags::EltTyBool16:
   case SVETypeFlags::EltTyBool32:
@@ -7699,6 +7702,8 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
 
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getHalfTy(), 8);
+  case SVETypeFlags::EltTyBFloat16:
+    return llvm::ScalableVectorType::get(Builder.getBFloatTy(), 8);
   case SVETypeFlags::EltTyFloat32:
     return llvm::ScalableVectorType::get(Builder.getFloatTy(), 4);
   case SVETypeFlags::EltTyFloat64:
