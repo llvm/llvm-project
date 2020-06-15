@@ -102,7 +102,6 @@ private:
   /// The set of allocas that have at least one lifetime.start. All other
   /// allocas get LiveRange that corresponds to the entire function.
   BitVector InterestingAllocas;
-  SmallVector<const IntrinsicInst *, 8> Markers;
 
   struct Marker {
     unsigned AllocaNo;
@@ -125,7 +124,7 @@ public:
   StackColoring(const Function &F, ArrayRef<const AllocaInst *> Allocas);
 
   void run();
-  void removeAllMarkers();
+  std::vector<const IntrinsicInst *> getMarkers() const;
 
   /// Returns a set of "interesting" instructions where the given alloca is
   /// live. Not all instructions in a function are interesting: we pick a set
