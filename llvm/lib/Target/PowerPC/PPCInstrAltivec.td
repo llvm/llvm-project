@@ -1024,6 +1024,9 @@ def : Pat<(fmul v4f32:$vA, v4f32:$vB),
           (VMADDFP $vA, $vB,
              (v4i32 (VSLW (v4i32 (V_SETALLONES)), (v4i32 (V_SETALLONES)))))>; 
 
+def : Pat<(PPCfnmsub v4f32:$A, v4f32:$B, v4f32:$C),
+          (VNMSUBFP $A, $B, $C)>;
+
 def : Pat<(int_ppc_altivec_vmaddfp v4f32:$A, v4f32:$B, v4f32:$C),
           (VMADDFP $A, $B, $C)>;
 def : Pat<(int_ppc_altivec_vnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
