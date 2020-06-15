@@ -54,8 +54,3 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
         self.check_expression("m_ivar", "10", use_summary=False)
         self.check_expression("self.m_ivar == 11", "false")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

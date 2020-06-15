@@ -56,9 +56,3 @@ class TestSwiftModuleSearchPaths(TestBase):
         self.match(
             "e plusTen(10)", "error: Couldn't lookup symbols:", error=True)
 
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -75,9 +75,3 @@ class TestNonREPLPlayground(TestBase):
         self.assertTrue("a=\\'3\\'" in playground_output)
         self.assertTrue("b=\\'5\\'" in playground_output)
         self.assertTrue("=\\'8\\'" in playground_output)
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

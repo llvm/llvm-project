@@ -16,7 +16,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
-import shutil
 
 class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
@@ -56,9 +55,3 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
         process.Continue()
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.expect("p bar", "expected result", substrs=["j", "42"])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

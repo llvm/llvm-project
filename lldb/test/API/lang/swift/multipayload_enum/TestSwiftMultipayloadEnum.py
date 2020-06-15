@@ -39,9 +39,3 @@ class TestSwiftMultipayloadEnum(TestBase):
 
         self.expect("expression one", substrs=['One', '1234'])
         self.expect("expression two", substrs=['TheOther', '"some value"'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -79,8 +79,3 @@ class TestFunctionVariables(TestBase):
         # function
         self.assertEqual('a.bar() -> ()', func_ptr_function.name)
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

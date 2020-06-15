@@ -16,7 +16,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
-import shutil
 
 class TestSwiftExpressionObjCContext(TestBase):
 
@@ -29,20 +28,12 @@ class TestSwiftExpressionObjCContext(TestBase):
     @swiftTest
     def test(self):
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Register shlib so it can run on-device.
+        target,  _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec('main.m'))
         self.registerSharedLibrariesWithTarget(target, ['Foo'])
 
-        # Set the breakpoints
-        foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('main.m'))
-        process = target.LaunchSimple(None, None, os.getcwd())
         # This is expected to fail because we can't yet import ObjC
         # modules into a Swift context.
         self.expect("expr -lang Swift -- Bar()", "failure",
@@ -51,10 +42,4 @@ class TestSwiftExpressionObjCContext(TestBase):
         self.expect("expr -lang Swift -- [1, 2, 3]",
                     "context-less swift expression works",
                     substrs=["([Int])"])
-        
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

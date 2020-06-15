@@ -81,9 +81,3 @@ class TestSwiftDedupMacros(TestBase):
         self.assertTrue(space == 1)
         self.assertTrue(space_with_space == 0)
         self.assertTrue(ndebug == 1)
-        
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -54,9 +54,3 @@ class TestMultilangFormatterCategories(TestBase):
             use_dynamic=True,
             typename="Swift.Optional<Foundation.NSURL>",
             summary='"http://www.google.com"')
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lambda: lldb.SBDebugger.Terminate())
-    unittest2.main()

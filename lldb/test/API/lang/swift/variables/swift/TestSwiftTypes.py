@@ -206,8 +206,3 @@ class TestSwiftTypes(TestBase):
             'frame variable uint64_max',
             substrs=['18446744073709551615'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

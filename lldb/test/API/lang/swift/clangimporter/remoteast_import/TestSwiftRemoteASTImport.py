@@ -50,9 +50,3 @@ class TestSwiftRemoteASTImport(TestBase):
                     substrs=['(Library.LibraryProtocol) $R0'])
         self.expect("expr -d run-target -- input",
                     substrs=['(a.FromMainModule) $R2'])
-        
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

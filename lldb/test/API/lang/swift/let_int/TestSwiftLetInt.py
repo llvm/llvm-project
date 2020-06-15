@@ -49,8 +49,3 @@ class TestSwiftLetIntSupport(TestBase):
         self.assertTrue(local_vars.GetFirstValueByName("y").IsValid())
         self.assertTrue(not local_vars.GetFirstValueByName("z").IsValid())
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

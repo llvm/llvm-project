@@ -93,8 +93,3 @@ class TestFilePrivate(TestBase):
         self.check_expression("privateVariable as Int", "3", False)
         self.check_expression("privateVariable as String", "\"five\"")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lambda: lldb.SBDebugger.Terminate())
-    unittest2.main()

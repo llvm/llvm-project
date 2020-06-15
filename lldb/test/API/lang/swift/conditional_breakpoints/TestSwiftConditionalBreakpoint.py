@@ -63,8 +63,3 @@ class TestSwiftConditionalBreakpoint(TestBase):
 
         self.check_x_and_y(threads[0].frames[0], '3', '1')
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -149,8 +149,3 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.check_expression("local_var", "222", False)
 
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

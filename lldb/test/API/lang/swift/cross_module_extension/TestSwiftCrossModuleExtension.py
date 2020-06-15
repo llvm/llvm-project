@@ -60,8 +60,3 @@ class TestSwiftCrossModuleExtension(TestBase):
         lldbutil.check_variable(self, var, False, typename="moda.S.A")
         lldbutil.check_variable(self, child_v, False, value="3")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

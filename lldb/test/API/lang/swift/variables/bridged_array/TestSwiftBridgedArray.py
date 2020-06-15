@@ -70,8 +70,3 @@ class TestSwiftBridgedArray(TestBase):
             "expression -d run -- swarr",
             substrs=['Int(123456)', 'Int32(234567)', 'UInt16(45678)', 'Double(1.250000)', 'Float(2.500000)'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

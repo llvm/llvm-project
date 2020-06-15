@@ -38,9 +38,3 @@ class TestSwiftTuple(TestBase):
 
         self.expect("expression s.tup.0", substrs=['123'])
         self.expect("expression s.tup.1()", substrs=['321'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

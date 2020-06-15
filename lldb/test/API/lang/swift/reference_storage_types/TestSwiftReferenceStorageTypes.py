@@ -82,9 +82,3 @@ class TestSwiftReferenceStorageTypes(TestBase):
         sub_004_type.GetTypeClass()
         sub_005_type.GetTypeClass()
         sub_006_type.GetTypeClass()
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -113,9 +113,3 @@ class TestSwiftieFormatting(TestBase):
                 ("Int%d(1)" % IntWidth),
                 ("Int%d(2)" % IntWidth),
                 ("Int%d(3)" % IntWidth)])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

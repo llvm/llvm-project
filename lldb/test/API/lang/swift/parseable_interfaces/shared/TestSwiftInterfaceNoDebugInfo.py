@@ -194,9 +194,3 @@ def is_old(file):
     """Checks the modified time of the given file matches the timestamp set my make_old"""
     return os.stat(file).st_mtime == OLD_TIMESTAMP
 
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

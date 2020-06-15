@@ -55,9 +55,3 @@ class TestSwiftAnyObjectType(TestBase):
             use_dynamic=False,
             value='12',
             typename="Swift.Int")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

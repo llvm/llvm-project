@@ -120,9 +120,3 @@ class TestSwiftArchetypeResolution(TestBase):
         self.assertTrue(var_x.GetValue() == 'A', "GE case fails")
         if self.TraceOn():
             self.runCmd("frame variable -d run")
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
