@@ -185,6 +185,22 @@ public:
   Type *getTypeValue() const { return Ty; }
 };
 
+class AttributeBitSet {
+  /// Bitset with a bit for each available attribute Attribute::AttrKind.
+  uint8_t AvailableAttrs[12] = {};
+  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
+                "Too many attributes");
+
+public:
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return AvailableAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
+  }
+
+  void addAttribute(Attribute::AttrKind Kind) {
+    AvailableAttrs[Kind / 8] |= 1ULL << (Kind % 8);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// \class
 /// This class represents a group of attributes that apply to one
@@ -195,8 +211,7 @@ class AttributeSetNode final
   friend TrailingObjects;
 
   unsigned NumAttrs; ///< Number of attributes in this node.
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableAttrs[12] = {};
+  AttributeBitSet AvailableAttrs; ///< Available enum attributes.
 
   DenseMap<StringRef, Attribute> StringAttrs;
 
@@ -221,7 +236,7 @@ public:
   unsigned getNumAttributes() const { return NumAttrs; }
 
   bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
+    return AvailableAttrs.hasAttribute(Kind);
   }
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
@@ -265,8 +280,8 @@ class AttributeListImpl final
 
 private:
   unsigned NumAttrSets; ///< Number of entries in this set.
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint8_t AvailableFunctionAttrs[12] = {};
+  /// Available enum function attributes.
+  AttributeBitSet AvailableFunctionAttrs;
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
@@ -281,7 +296,7 @@ public:
   /// Return true if the AttributeSet or the FunctionIndex has an
   /// enum attribute of the given kind.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AvailableFunctionAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
+    return AvailableFunctionAttrs.hasAttribute(Kind);
   }
 
   using iterator = const AttributeSet *;
