@@ -646,10 +646,12 @@ public:
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripInBoundsOffsets() const;
-  Value *stripInBoundsOffsets() {
+  const Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
+                                        [](const Value *) {}) const;
+  Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
+                                  [](const Value *) {}) {
     return const_cast<Value *>(
-                      static_cast<const Value *>(this)->stripInBoundsOffsets());
+        static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
 
   /// Returns the number of bytes known to be dereferenceable for the
