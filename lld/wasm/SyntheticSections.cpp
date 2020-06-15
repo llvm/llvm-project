@@ -287,6 +287,7 @@ void GlobalSection::writeBody() {
   writeUleb128(os, numGlobals(), "global count");
   for (InputGlobal *g : inputGlobals)
     writeGlobal(os, g->global);
+  // TODO(wvo): when do these need I64_CONST?
   for (const Symbol *sym : staticGotSymbols) {
     WasmGlobal global;
     global.Type = {WASM_TYPE_I32, false};

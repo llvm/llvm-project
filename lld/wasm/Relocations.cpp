@@ -88,6 +88,8 @@ void scanRelocations(InputChunk *chunk) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_MEMORY_ADDR_SLEB:
       case R_WASM_MEMORY_ADDR_LEB:
+      case R_WASM_MEMORY_ADDR_SLEB64:
+      case R_WASM_MEMORY_ADDR_LEB64:
         // Certain relocation types can't be used when building PIC output,
         // since they would require absolute symbol addresses at link time.
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
@@ -96,6 +98,7 @@ void scanRelocations(InputChunk *chunk) {
         break;
       case R_WASM_TABLE_INDEX_I32:
       case R_WASM_MEMORY_ADDR_I32:
+      case R_WASM_MEMORY_ADDR_I64:
         // These relocation types are only present in the data section and
         // will be converted into code by `generateRelocationCode`.  This code
         // requires the symbols to have GOT entires.

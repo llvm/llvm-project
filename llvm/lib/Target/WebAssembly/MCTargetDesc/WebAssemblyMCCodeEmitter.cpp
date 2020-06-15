@@ -101,9 +101,6 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         case WebAssembly::OPERAND_I64IMM:
           encodeSLEB128(int64_t(MO.getImm()), OS);
           break;
-        case WebAssembly::OPERAND_OFFSET64:
-          encodeULEB128(uint64_t(MO.getImm()), OS);
-          break;
         case WebAssembly::OPERAND_SIGNATURE:
           OS << uint8_t(MO.getImm());
           break;
@@ -163,6 +160,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         break;
       case WebAssembly::OPERAND_OFFSET64:
         FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i64);
+        PaddedSize = 10;
         break;
       default:
         llvm_unreachable("unexpected symbolic operand kind");
