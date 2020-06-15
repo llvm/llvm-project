@@ -345,16 +345,16 @@ public:
 
   uint64_t getMemberOffset(unsigned) const;
 
-  // Returns in `allMemberDecorations` the spirv::Decorations (apart from
+  // Returns in `memberDecorations` the spirv::Decorations (apart from
   // Offset) associated with all members of the StructType.
   void getMemberDecorations(SmallVectorImpl<StructType::MemberDecorationInfo>
-                                &allMemberDecorations) const;
+                                &memberDecorations) const;
 
-  // Returns in `memberDecorations` all the spirv::Decorations (apart from
+  // Returns in `decorationsInfo` all the spirv::Decorations (apart from
   // Offset) associated with the `i`-th member of the StructType.
   void getMemberDecorations(unsigned i,
                             SmallVectorImpl<StructType::MemberDecorationInfo>
-                                &memberDecorations) const;
+                                &decorationsInfo) const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);
