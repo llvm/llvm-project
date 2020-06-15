@@ -40,6 +40,9 @@ class StackColoring {
   /// Each bit in the BitVector represents the liveness property
   /// for a different stack slot.
   struct BlockLifetimeInfo {
+    explicit BlockLifetimeInfo(unsigned Size)
+        : Begin(Size), End(Size), LiveIn(Size), LiveOut(Size) {}
+
     /// Which slots BEGINs in each basic block.
     BitVector Begin;
 
