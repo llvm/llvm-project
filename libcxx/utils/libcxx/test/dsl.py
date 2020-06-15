@@ -31,11 +31,17 @@ def _executeScriptInternal(test, commands):
   """
   parsedCommands = libcxx.test.newformat.parseScript(test, preamble=commands)
 
-  class FakeLitConfig(object):
-    def __init__(self):
-      self.isWindows = platform.system() == 'Windows'
-      self.maxIndividualTestTime = 0
-  litConfig = FakeLitConfig()
+  litConfig = lit.LitConfig.LitConfig(
+    progname='lit',
+    path=[],
+    quiet=False,
+    useValgrind=False,
+    valgrindLeakCheck=False,
+    valgrindArgs=[],
+    noExecute=False,
+    debug=False,
+    isWindows=platform.system() == 'Windows',
+    params={})
   _, tmpBase = libcxx.test.newformat._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
   if not os.path.exists(execDir):
