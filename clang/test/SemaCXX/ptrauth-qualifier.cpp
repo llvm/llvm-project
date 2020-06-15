@@ -137,5 +137,5 @@ int test_call_diag() {
   void *AQ ptr1, *AQ2 ptr2, *ptr3;
   test_bad_call_diag(&ptr2); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
   test_bad_call_diag(&ptr3); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
-  test_bad_call_diag2(&ptr1) // expected-error {{no matching function for call to 'test_bad_call_diag2'}}
+  test_bad_call_diag2(&ptr1); // expected-error {{no matching function for call to 'test_bad_call_diag2'}}
 }
