@@ -164,13 +164,13 @@ void NDTransferOpHelper<ConcreteOp>::emitLoops(Lambda loopBodyBuilder) {
     auto majorLbs = vectorBoundsCapture.getLbs();
     auto majorUbs = vectorBoundsCapture.getUbs();
     auto majorSteps = vectorBoundsCapture.getSteps();
-    SmallVector<Value, 8> majorIvs(vectorBoundsCapture.rank());
-    AffineLoopNestBuilder(majorIvs, majorLbs, majorUbs, majorSteps)([&] {
-      ValueRange indices(xferOp.indices());
-      loopBodyBuilder(majorIvs, indices.take_front(leadingRank),
-                      indices.drop_front(leadingRank).take_front(majorRank),
-                      indices.take_back(minorRank), memrefBoundsCapture);
-    });
+    affineLoopNestBuilder(
+        majorLbs, majorUbs, majorSteps, [&](ValueRange majorIvs) {
+          ValueRange indices(xferOp.indices());
+          loopBodyBuilder(majorIvs, indices.take_front(leadingRank),
+                          indices.drop_front(leadingRank).take_front(majorRank),
+                          indices.take_back(minorRank), memrefBoundsCapture);
+        });
   }
 }
 
