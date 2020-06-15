@@ -2330,6 +2330,122 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
+/// Perform a G_EXTRACT_VECTOR_ELT in a different sized vector element. If this
+/// is casting to a vector with a smaller element size, perform multiple element
+/// extracts and merge the results. If this is coercing to a vector with larger
+/// elements, index the bitcasted vector and extract the target element with bit
+/// operations. This is intended to force the indexing in the native register
+/// size for architectures that can dynamically index the register file.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT CastTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register SrcVec = MI.getOperand(1).getReg();
+  Register Idx = MI.getOperand(2).getReg();
+  LLT SrcVecTy = MRI.getType(SrcVec);
+  LLT IdxTy = MRI.getType(Idx);
+
+  LLT SrcEltTy = SrcVecTy.getElementType();
+  unsigned NewNumElts = CastTy.isVector() ? CastTy.getNumElements() : 1;
+  unsigned OldNumElts = SrcVecTy.getNumElements();
+
+  LLT NewEltTy = CastTy.isVector() ? CastTy.getElementType() : CastTy;
+  Register CastVec = MIRBuilder.buildBitcast(CastTy, SrcVec).getReg(0);
+
+  const unsigned NewEltSize = NewEltTy.getSizeInBits();
+  const unsigned OldEltSize = SrcEltTy.getSizeInBits();
+  if (NewNumElts > OldNumElts) {
+    // Decreasing the vector element size
+    //
+    // e.g. i64 = extract_vector_elt x:v2i64, y:i32
+    //  =>
+    //  v4i32:castx = bitcast x:v2i64
+    //
+    // i64 = bitcast
+    //   (v2i32 build_vector (i32 (extract_vector_elt castx, (2 * y))),
+    //                       (i32 (extract_vector_elt castx, (2 * y + 1)))
+    //
+    if (NewNumElts % OldNumElts != 0)
+      return UnableToLegalize;
+
+    // Type of the intermediate result vector.
+    const unsigned NewEltsPerOldElt = NewNumElts / OldNumElts;
+    LLT MidTy = LLT::scalarOrVector(NewEltsPerOldElt, NewEltTy);
+
+    auto NewEltsPerOldEltK = MIRBuilder.buildConstant(IdxTy, NewEltsPerOldElt);
+
+    SmallVector<Register, 8> NewOps(NewEltsPerOldElt);
+    auto NewBaseIdx = MIRBuilder.buildMul(IdxTy, Idx, NewEltsPerOldEltK);
+
+    for (unsigned I = 0; I < NewEltsPerOldElt; ++I) {
+      auto IdxOffset = MIRBuilder.buildConstant(IdxTy, I);
+      auto TmpIdx = MIRBuilder.buildAdd(IdxTy, NewBaseIdx, IdxOffset);
+      auto Elt = MIRBuilder.buildExtractVectorElement(NewEltTy, CastVec, TmpIdx);
+      NewOps[I] = Elt.getReg(0);
+    }
+
+    auto NewVec = MIRBuilder.buildBuildVector(MidTy, NewOps);
+    MIRBuilder.buildBitcast(Dst, NewVec);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  if (NewNumElts < OldNumElts) {
+    if (NewEltSize % OldEltSize != 0)
+      return UnableToLegalize;
+
+    // This only depends on powers of 2 because we use bit tricks to figure out
+    // the bit offset we need to shift to get the target element. A general
+    // expansion could emit division/multiply.
+    if (!isPowerOf2_32(NewEltSize / OldEltSize))
+      return UnableToLegalize;
+
+    // Increasing the vector element size.
+    // %elt:_(small_elt) = G_EXTRACT_VECTOR_ELT %vec:_(<N x small_elt>), %idx
+    //
+    //   =>
+    //
+    // %cast = G_BITCAST %vec
+    // %scaled_idx = G_LSHR %idx, Log2(DstEltSize / SrcEltSize)
+    // %wide_elt  = G_EXTRACT_VECTOR_ELT %cast, %scaled_idx
+    // %offset_idx = G_AND %idx, ~(-1 << Log2(DstEltSize / SrcEltSize))
+    // %offset_bits = G_SHL %offset_idx, Log2(SrcEltSize)
+    // %elt_bits = G_LSHR %wide_elt, %offset_bits
+    // %elt = G_TRUNC %elt_bits
+
+    const unsigned Log2EltRatio = Log2_32(NewEltSize / OldEltSize);
+    auto Log2Ratio = MIRBuilder.buildConstant(IdxTy, Log2EltRatio);
+
+    // Divide to get the index in the wider element type.
+    auto ScaledIdx = MIRBuilder.buildLShr(IdxTy, Idx, Log2Ratio);
+
+    Register WideElt = CastVec;
+    if (CastTy.isVector()) {
+      WideElt = MIRBuilder.buildExtractVectorElement(NewEltTy, CastVec,
+                                                     ScaledIdx).getReg(0);
+    }
+
+    // Now figure out the amount we need to shift to get the target bits.
+    auto OffsetMask = MIRBuilder.buildConstant(
+      IdxTy, ~(APInt::getAllOnesValue(IdxTy.getSizeInBits()) << Log2EltRatio));
+    auto OffsetIdx = MIRBuilder.buildAnd(IdxTy, Idx, OffsetMask);
+    auto OffsetBits = MIRBuilder.buildShl(
+      IdxTy, OffsetIdx,
+      MIRBuilder.buildConstant(IdxTy, Log2_32(OldEltSize)));
+
+    // Shift the wide element to get the target element.
+    auto ExtractedBits = MIRBuilder.buildLShr(NewEltTy, WideElt, OffsetBits);
+    MIRBuilder.buildTrunc(Dst, ExtractedBits);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
   switch (MI.getOpcode()) {
@@ -2378,6 +2494,8 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    return bitcastExtractVectorElt(MI, TypeIdx, CastTy);
   default:
     return UnableToLegalize;
   }

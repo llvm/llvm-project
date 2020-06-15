@@ -70,6 +70,13 @@ static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   };
 }
 
+static LegalityPredicate sizeIsMultipleOf32(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return Ty.getSizeInBits() % 32 == 0;
+  };
+}
+
 static LegalityPredicate isWideVec16(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -129,6 +136,15 @@ static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
       CoercedTy = LLT::scalarOrVector(Size / 32, 32);
 
     return std::make_pair(TypeIdx, CoercedTy);
+  };
+}
+
+static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned Size = Ty.getSizeInBits();
+    assert(Size % 32 == 0);
+    return std::make_pair(TypeIdx, LLT::scalarOrVector(Size / 32, 32));
   };
 }
 
@@ -1279,11 +1295,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const LLT EltTy = Query.Types[EltTypeIdx];
           const LLT VecTy = Query.Types[VecTypeIdx];
           const LLT IdxTy = Query.Types[IdxTypeIdx];
-          return (EltTy.getSizeInBits() == 16 ||
-                  EltTy.getSizeInBits() % 32 == 0) &&
-                 VecTy.getSizeInBits() % 32 == 0 &&
-                 VecTy.getSizeInBits() <= MaxRegisterSize &&
-                 IdxTy.getSizeInBits() == 32;
+          const unsigned EltSize = EltTy.getSizeInBits();
+          return (EltSize == 32 || EltSize == 64) &&
+                  VecTy.getSizeInBits() % 32 == 0 &&
+                  VecTy.getSizeInBits() <= MaxRegisterSize &&
+                  IdxTy.getSizeInBits() == 32;
+        })
+      .bitcastIf(all(sizeIsMultipleOf32(1), scalarOrEltNarrowerThan(1, 32)),
+                 bitcastToVectorElement32(1))
+      //.bitcastIf(vectorSmallerThan(1, 32), bitcastToScalar(1))
+      .bitcastIf(
+        all(sizeIsMultipleOf32(1), scalarOrEltWiderThan(1, 64)),
+        [=](const LegalityQuery &Query) {
+          // For > 64-bit element types, try to turn this into a 64-bit
+          // element vector since we may be able to do better indexing
+          // if this is scalar. If not, fall back to 32.
+          const LLT EltTy = Query.Types[EltTypeIdx];
+          const LLT VecTy = Query.Types[VecTypeIdx];
+          const unsigned DstEltSize = EltTy.getSizeInBits();
+          const unsigned VecSize = VecTy.getSizeInBits();
+
+          const unsigned TargetEltSize = DstEltSize % 64 == 0 ? 64 : 32;
+          return std::make_pair(
+            VecTypeIdx, LLT::vector(VecSize / TargetEltSize, TargetEltSize));
         })
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
