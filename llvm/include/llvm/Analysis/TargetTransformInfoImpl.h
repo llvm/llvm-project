@@ -861,11 +861,14 @@ public:
     case Instruction::AShr:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
-      TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
-      TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
-      Op1VK = TTI::getOperandInfo(U->getOperand(0), Op1VP);
-      Op2VK = TTI::getOperandInfo(U->getOperand(1), Op2VP);
+    case Instruction::Xor:
+    case Instruction::FNeg: {
+      TTI::OperandValueProperties Op1VP = TTI::OP_None;
+      TTI::OperandValueProperties Op2VP = TTI::OP_None;
+      TTI::OperandValueKind Op1VK =
+        TTI::getOperandInfo(U->getOperand(0), Op1VP);
+      TTI::OperandValueKind Op2VK = Opcode != Instruction::FNeg ?
+        TTI::getOperandInfo(U->getOperand(1), Op2VP) : TTI::OK_AnyValue;
       SmallVector<const Value *, 2> Operands(U->operand_values());
       return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind,
                                                Op1VK, Op2VK,

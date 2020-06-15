@@ -983,26 +983,6 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getUnrollingPreferences(L, SE, UP);
 }
 
-unsigned
-GCNTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                        TTI::TargetCostKind CostKind) {
-  const Instruction *I = dyn_cast<Instruction>(U);
-  if (!I)
-    return BaseT::getUserCost(U, Operands, CostKind);
-
-  // Estimate different operations to be optimized out
-  switch (I->getOpcode()) {
-  case Instruction::FNeg:
-    return getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
-                                  TTI::OK_AnyValue, TTI::OK_AnyValue,
-                                  TTI::OP_None, TTI::OP_None, Operands, I);
-  default:
-    break;
-  }
-
-  return BaseT::getUserCost(U, Operands, CostKind);
-}
-
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
