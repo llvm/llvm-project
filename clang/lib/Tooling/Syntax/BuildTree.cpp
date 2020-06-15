@@ -216,7 +216,8 @@ static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
   }
   if (Initializer.isValid()) {
     auto InitializerEnd = Initializer.getEnd();
-    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) || End == InitializerEnd);
+    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) ||
+           End == InitializerEnd);
     End = InitializerEnd;
   }
   return SourceRange(Start, End);
@@ -708,6 +709,42 @@ public:
     return NNS;
   }
 
+  bool TraverseUserDefinedLiteral(UserDefinedLiteral *S) {
+    // The semantic AST node `UserDefinedLiteral` (UDL) may have one child node
+    // referencing the location of the UDL suffix (`_w` in `1.2_w`). The
+    // UDL suffix location does not point to the beginning of a token, so we
+    // can't represent the UDL suffix as a separate syntax tree node.
+
+    return WalkUpFromUserDefinedLiteral(S);
+  }
+
+  syntax::NodeKind getUserDefinedLiteralKind(UserDefinedLiteral *S) {
+    switch (S->getLiteralOperatorKind()) {
+    case clang::UserDefinedLiteral::LOK_Integer:
+      return syntax::NodeKind::IntegerUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Floating:
+      return syntax::NodeKind::FloatUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Character:
+      return syntax::NodeKind::CharUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_String:
+      return syntax::NodeKind::StringUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Raw:
+    case clang::UserDefinedLiteral::LOK_Template:
+      // FIXME: Apply `NumericLiteralParser` to the underlying token to deduce
+      // the right UDL kind. That would require a `Preprocessor` though.
+      return syntax::NodeKind::UnknownUserDefinedLiteralExpression;
+    }
+  }
+
+  bool WalkUpFromUserDefinedLiteral(UserDefinedLiteral *S) {
+    Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::UserDefinedLiteralExpression(
+                         getUserDefinedLiteralKind(S)),
+                     S);
+    return true;
+  }
+
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
     if (auto *NNS = BuildNestedNameSpecifier(S->getQualifierLoc()))
       Builder.markChild(NNS, syntax::NodeRole::IdExpression_qualifier);
@@ -817,9 +854,9 @@ public:
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     if (getOperatorNodeKind(*S) ==
         syntax::NodeKind::PostfixUnaryOperatorExpression) {
-      // A postfix unary operator is declared as taking two operands. The second
-      // operand is used to distinguish from its prefix counterpart. In the
-      // semantic AST this "phantom" operand is represented as a
+      // A postfix unary operator is declared as taking two operands. The
+      // second operand is used to distinguish from its prefix counterpart. In
+      // the semantic AST this "phantom" operand is represented as a
       // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
       // operand because it does not correspond to anything written in source
       // code
