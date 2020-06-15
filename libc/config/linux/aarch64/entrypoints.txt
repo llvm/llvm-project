@@ -3,6 +3,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.__errno_location
 
     # string.h entrypoints
+    libc.src.string.bzero
+    libc.src.string.memcpy
+    libc.src.string.memset
+    libc.src.string.strcpy
+    libc.src.string.strcat
     libc.src.string.strlen
 )
 
