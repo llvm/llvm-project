@@ -1119,9 +1119,8 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   SaveRetExprRAII SaveRetExpr(RV, *this);
 
   RunCleanupsScope cleanupScope(*this);
-  if (const FullExpr *fe = dyn_cast_or_null<FullExpr>(RV))
-    RV = fe->getSubExpr();
-
+  if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV))
+    RV = EWC->getSubExpr();
   // FIXME: Clean this up by using an LValue for ReturnTemp,
   // EmitStoreThroughLValue, and EmitAnyExpr.
   // Check if the NRVO candidate was not globalized in OpenMP mode.
