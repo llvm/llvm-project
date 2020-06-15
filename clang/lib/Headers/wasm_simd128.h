@@ -864,6 +864,11 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_sub(v128_t __a,
   return (v128_t)((__u64x2)__a - (__u64x2)__b);
 }
 
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_mul(v128_t __a,
+                                                           v128_t __b) {
+  return (v128_t)((__u64x2)__a * (__u64x2)__b);
+}
+
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_abs(v128_t __a) {
   return (v128_t)__builtin_wasm_abs_f32x4((__f32x4)__a);
 }

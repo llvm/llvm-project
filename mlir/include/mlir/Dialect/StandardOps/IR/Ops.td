@@ -42,7 +42,8 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard cast operations. Requires single operand and result,
 // but does not constrain them to specific types.
 class CastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic, !listconcat(traits, [NoSideEffect])> {
+    Std_Op<mnemonic,
+           !listconcat(traits, [NoSideEffect, SameOperandsAndResultShape])> {
 
   let results = (outs AnyType);
 

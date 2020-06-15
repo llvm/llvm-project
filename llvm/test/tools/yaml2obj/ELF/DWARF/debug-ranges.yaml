@@ -84,8 +84,7 @@ DWARF:
           HighOffset: 0x00000010
         - LowOffset:  0x00000000
           HighOffset: 0x00000000
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000010
           HighOffset: 0x0000000000000020
         - LowOffset:  0x0000000000000030
@@ -207,8 +206,7 @@ Sections:
     Size: 0x10
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
@@ -229,8 +227,7 @@ Sections:
     Content: "00"
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
@@ -290,30 +287,15 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x0000000000000001
           HighOffset: 0x0000000000000002
 
-## h) Test that yaml2obj will not generate the .debug_ranges section when the "DWARF" entry
-## exists but the "debug_ranges" entry doesn't exist in the "DWARF" entry or the "Sections" entry.
-
-# RUN: yaml2obj --docnum=8 %s -o %t8.o
-# RUN: llvm-readelf --sections %t8.o | FileCheck /dev/null --implicit-check-not=.debug_ranges
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-DWARF:
-
-## i) Test that yaml2obj automatically pads zeros if we try to assign an offset that
+## h) Test that yaml2obj automatically pads zeros if we try to assign an offset that
 ## is greater than or equal to the number of bytes written already.
 
-# RUN: yaml2obj --docnum=9 %s -o %t9.o
-# RUN: llvm-readelf --hex-dump=.debug_ranges %t9.o | FileCheck %s --check-prefix=PADDED
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --hex-dump=.debug_ranges %t8.o | FileCheck %s --check-prefix=PADDED
 
 #      PADDED: Hex dump of section '.debug_ranges':
 # PADDED-NEXT: 0x00000000 01000000 00000000 02000000 00000000
@@ -359,25 +341,22 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x21  ## There are 0x20 bytes before this entry.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x41  ## There are 0x41 bytes before this entry.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
 
-## j) Test that yaml2obj emits an error message if we try to assign an invalid offset to an
+## i) Test that yaml2obj emits an error message if we try to assign an invalid offset to an
 ## entry of the '.debug_ranges' section.
 
-# RUN: not yaml2obj --docnum=10 %s -o %t10.o 2>&1 | FileCheck %s --check-prefix=INVALID-OFFSET
+# RUN: not yaml2obj --docnum=9 %s -o %t9.o 2>&1 | FileCheck %s --check-prefix=INVALID-OFFSET
 
 # INVALID-OFFSET: yaml2obj: error: 'Offset' for 'debug_ranges' with index 1 must be greater than or equal to the number of bytes written already (0x20)
 
@@ -389,12 +368,10 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_ranges:
-    - AddrSize: 0x08
-      Entries:
+    - Entries:
         - LowOffset:  0x01
           HighOffset: 0x02
     - Offset:   0x1F ## Must be greater than or equal to 0x20.
-      AddrSize: 0x08
       Entries:
         - LowOffset:  0x01
           HighOffset: 0x02

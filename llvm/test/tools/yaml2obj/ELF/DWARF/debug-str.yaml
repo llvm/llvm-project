@@ -175,31 +175,17 @@ DWARF:
     - b
     - c
 
-## h) Test that yaml2obj will not generate the .debug_str section when the "DWARF" entry exists
-## but the "debug_str" entry doesn't exist in the "DWARF" entry or the "Sections" entry.
-
-# RUN: yaml2obj --docnum=8 %s -o %t8.o
-# RUN: llvm-readelf -S %t8.o | FileCheck /dev/null --implicit-check-not=.debug_str
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-DWARF:
-
-## i) Test that if we try to initialize the .debug_str section with a "Type" with non-standard
+## h) Test that if we try to initialize the .debug_str section with a "Type" with non-standard
 ## syntax, e.g., SHT_DYNAMIC, yaml2obj will treat it as a dynamic section and discard the
 ## content in the "DWARF" entry.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf -S %t8.o | FileCheck %s --check-prefix=DYN-SHDR
+# RUN: llvm-readelf -d %t8.o | FileCheck %s --check-prefix=DYNAMIC
 
 # RUN: yaml2obj --docnum=9 %s -o %t9.o
 # RUN: llvm-readelf -S %t9.o | FileCheck %s --check-prefix=DYN-SHDR
 # RUN: llvm-readelf -d %t9.o | FileCheck %s --check-prefix=DYNAMIC
-
-# RUN: yaml2obj --docnum=10 %s -o %t10.o
-# RUN: llvm-readelf -S %t10.o | FileCheck %s --check-prefix=DYN-SHDR
-# RUN: llvm-readelf -d %t10.o | FileCheck %s --check-prefix=DYNAMIC
 
 # DYN-SHDR: Name       Type    Address          Off    Size   ES Flg Lk Inf Al
 # DYN-SHDR: .debug_str DYNAMIC 0000000000000000 000040 000010 10     0  0   0

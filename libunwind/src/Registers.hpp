@@ -3734,11 +3734,11 @@ public:
 
   uint64_t  getSP() const         { return _registers[2]; }
   void      setSP(uint64_t value) { _registers[2] = value; }
-  uint64_t  getIP() const         { return _registers[1]; }
-  void      setIP(uint64_t value) { _registers[1] = value; }
+  uint64_t  getIP() const         { return _registers[0]; }
+  void      setIP(uint64_t value) { _registers[0] = value; }
 
 private:
-
+  // _registers[0] holds the pc
   uint64_t _registers[32];
   double   _floats[32];
 };
@@ -3773,7 +3773,7 @@ inline bool Registers_riscv::validRegister(int regNum) const {
 
 inline uint64_t Registers_riscv::getRegister(int regNum) const {
   if (regNum == UNW_REG_IP)
-    return _registers[1];
+    return _registers[0];
   if (regNum == UNW_REG_SP)
     return _registers[2];
   if (regNum == UNW_RISCV_X0)
@@ -3785,7 +3785,7 @@ inline uint64_t Registers_riscv::getRegister(int regNum) const {
 
 inline void Registers_riscv::setRegister(int regNum, uint64_t value) {
   if (regNum == UNW_REG_IP)
-    _registers[1] = value;
+    _registers[0] = value;
   else if (regNum == UNW_REG_SP)
     _registers[2] = value;
   else if (regNum == UNW_RISCV_X0)

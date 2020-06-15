@@ -187,6 +187,8 @@ static DecodeStatus DecodeCall(MCInst &Inst, uint64_t insn, uint64_t Address,
                                const void *Decoder);
 static DecodeStatus DecodeSIMM7(MCInst &Inst, uint64_t insn, uint64_t Address,
                                 const void *Decoder);
+static DecodeStatus DecodeSIMM32(MCInst &Inst, uint64_t insn, uint64_t Address,
+                                 const void *Decoder);
 static DecodeStatus DecodeCCOperand(MCInst &Inst, uint64_t insn,
                                     uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeRDOperand(MCInst &Inst, uint64_t insn,
@@ -464,6 +466,13 @@ static DecodeStatus DecodeCall(MCInst &Inst, uint64_t insn, uint64_t Address,
 static DecodeStatus DecodeSIMM7(MCInst &MI, uint64_t insn, uint64_t Address,
                                 const void *Decoder) {
   uint64_t tgt = SignExtend64<7>(insn);
+  MI.addOperand(MCOperand::createImm(tgt));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSIMM32(MCInst &MI, uint64_t insn, uint64_t Address,
+                                 const void *Decoder) {
+  uint64_t tgt = SignExtend64<32>(insn);
   MI.addOperand(MCOperand::createImm(tgt));
   return MCDisassembler::Success;
 }

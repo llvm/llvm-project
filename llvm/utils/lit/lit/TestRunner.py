@@ -1401,7 +1401,7 @@ def _parseKeywords(sourcepath, additional_parsers=[],
     # Install user-defined additional parsers.
     for parser in additional_parsers:
         if not isinstance(parser, IntegratedTestKeywordParser):
-            raise ValueError('additional parser must be an instance of '
+            raise ValueError('Additional parser must be an instance of '
                              'IntegratedTestKeywordParser')
         if parser.keyword in keyword_parsers:
             raise ValueError("Parser for keyword '%s' already exists"
@@ -1419,12 +1419,11 @@ def _parseKeywords(sourcepath, additional_parsers=[],
 
     # Verify the script contains a run line.
     if require_script and not script:
-        return lit.Test.Result(Test.UNRESOLVED, "Test has no run line!")
+        raise ValueError("Test has no 'RUN:' line")
 
     # Check for unterminated run lines.
     if script and script[-1][-1] == '\\':
-        return lit.Test.Result(Test.UNRESOLVED,
-                               "Test has unterminated run lines (with '\\')")
+        raise ValueError("Test has unterminated 'RUN:' lines (with '\\')")
 
     # Check boolean expressions for unterminated lines.
     for key in keyword_parsers:
@@ -1433,13 +1432,13 @@ def _parseKeywords(sourcepath, additional_parsers=[],
             continue
         value = kp.getValue()
         if value and value[-1][-1] == '\\':
-            raise ValueError("Test has unterminated %s lines (with '\\')" % key)
+            raise ValueError("Test has unterminated '{key}' lines (with '\\')"
+                             .format(key=key))
 
     # Make sure there's at most one ALLOW_RETRIES: line
     allowed_retries = keyword_parsers['ALLOW_RETRIES:'].getValue()
     if allowed_retries and len(allowed_retries) > 1:
-        return lit.Test.Result(Test.UNRESOLVED,
-                               "Test has more than one ALLOW_RETRIES lines")
+        raise ValueError("Test has more than one ALLOW_RETRIES lines")
 
     return {p.keyword: p.getValue() for p in keyword_parsers.values()}
 
@@ -1458,7 +1457,11 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     is optional or ignored.
     """
     # Parse the test sources and extract test properties
-    parsed = _parseKeywords(test.getSourcePath(), additional_parsers, require_script)
+    try:
+        parsed = _parseKeywords(test.getSourcePath(), additional_parsers,
+                                require_script)
+    except ValueError as e:
+        return lit.Test.Result(Test.UNRESOLVED, str(e))
     script = parsed['RUN:'] or []
     test.xfails = parsed['XFAIL:'] or []
     test.requires = parsed['REQUIRES:'] or []

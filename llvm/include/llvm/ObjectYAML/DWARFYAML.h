@@ -83,7 +83,7 @@ struct RangeEntry {
 /// Class that describes a single range list inside the .debug_ranges section.
 struct Ranges {
   Optional<llvm::yaml::Hex64> Offset;
-  llvm::yaml::Hex8 AddrSize;
+  Optional<llvm::yaml::Hex8> AddrSize;
   std::vector<RangeEntry> Entries;
 };
 
@@ -144,7 +144,8 @@ struct LineTableOpcode {
 };
 
 struct LineTable {
-  InitialLength Length;
+  dwarf::DwarfFormat Format;
+  uint64_t Length;
   uint16_t Version;
   uint64_t PrologueLength;
   uint8_t MinInstLength;
@@ -161,6 +162,7 @@ struct LineTable {
 
 struct Data {
   bool IsLittleEndian;
+  bool Is64bit;
   std::vector<Abbrev> AbbrevDecls;
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;

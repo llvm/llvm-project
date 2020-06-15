@@ -1324,12 +1324,19 @@ bool FastISel::selectCall(const User *I) {
       ExtraInfo |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       ExtraInfo |= InlineAsm::Extra_IsAlignStack;
+    if (Call->isConvergent())
+      ExtraInfo |= InlineAsm::Extra_IsConvergent;
     ExtraInfo |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
 
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::INLINEASM))
-        .addExternalSymbol(IA->getAsmString().c_str())
-        .addImm(ExtraInfo);
+    MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                                      TII.get(TargetOpcode::INLINEASM));
+    MIB.addExternalSymbol(IA->getAsmString().c_str());
+    MIB.addImm(ExtraInfo);
+
+    const MDNode *SrcLoc = Call->getMetadata("srcloc");
+    if (SrcLoc)
+      MIB.addMetadata(SrcLoc);
+
     return true;
   }
 

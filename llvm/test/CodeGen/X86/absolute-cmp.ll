@@ -15,8 +15,8 @@ define void @foo8(i64 %val) {
 ; NOPIC:       # %bb.0:
 ; NOPIC-NEXT:    pushq %rax # encoding: [0x50]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 16
-; NOPIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x81,0xff,A,A,A,A]
-; NOPIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: reloc_signed_4byte
+; NOPIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x83,0xff,A]
+; NOPIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: FK_Data_1
 ; NOPIC-NEXT:    ja .LBB0_2 # encoding: [0x77,A]
 ; NOPIC-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
 ; NOPIC-NEXT:  # %bb.1: # %t
@@ -31,8 +31,8 @@ define void @foo8(i64 %val) {
 ; PIC:       # %bb.0:
 ; PIC-NEXT:    pushq %rax # encoding: [0x50]
 ; PIC-NEXT:    .cfi_def_cfa_offset 16
-; PIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x81,0xff,A,A,A,A]
-; PIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: reloc_signed_4byte
+; PIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x83,0xff,A]
+; PIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: FK_Data_1
 ; PIC-NEXT:    ja .LBB0_2 # encoding: [0x77,A]
 ; PIC-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
 ; PIC-NEXT:  # %bb.1: # %t

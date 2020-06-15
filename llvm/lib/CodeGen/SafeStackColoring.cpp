@@ -26,18 +26,14 @@ using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safestackcoloring"
 
-// Disabled by default due to PR32143.
-static cl::opt<bool> ClColoring("safe-stack-coloring",
-                                cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(false));
-
-const StackColoring::LiveRange &StackColoring::getLiveRange(AllocaInst *AI) {
+const StackColoring::LiveRange &
+StackColoring::getLiveRange(const AllocaInst *AI) const {
   const auto IT = AllocaNumbering.find(AI);
   assert(IT != AllocaNumbering.end());
   return LiveRanges[IT->second];
 }
 
-bool StackColoring::readMarker(Instruction *I, bool *IsStart) {
+static bool readMarker(const Instruction *I, bool *IsStart) {
   if (!I->isLifetimeStartOrEnd())
     return false;
 
@@ -46,33 +42,32 @@ bool StackColoring::readMarker(Instruction *I, bool *IsStart) {
   return true;
 }
 
-void StackColoring::removeAllMarkers() {
-  for (auto *I : Markers) {
-    auto *Op = dyn_cast<Instruction>(I->getOperand(1));
-    I->eraseFromParent();
-    // Remove the operand bitcast, too, if it has no more uses left.
-    if (Op && Op->use_empty())
-      Op->eraseFromParent();
-  }
+std::vector<const IntrinsicInst *> StackColoring::getMarkers() const {
+  std::vector<const IntrinsicInst *> Markers;
+  for (auto &M : InstructionNumbering)
+    if (M.getFirst()->isLifetimeStartOrEnd())
+      Markers.push_back(M.getFirst());
+  return Markers;
 }
 
 void StackColoring::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
-  DenseMap<BasicBlock *, SmallDenseMap<Instruction *, Marker>> BBMarkerSet;
+  DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
+      BBMarkerSet;
 
   // Compute the set of start/end markers per basic block.
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo) {
-    AllocaInst *AI = Allocas[AllocaNo];
-    SmallVector<Instruction *, 8> WorkList;
+    const AllocaInst *AI = Allocas[AllocaNo];
+    SmallVector<const Instruction *, 8> WorkList;
     WorkList.push_back(AI);
     while (!WorkList.empty()) {
-      Instruction *I = WorkList.pop_back_val();
-      for (User *U : I->users()) {
+      const Instruction *I = WorkList.pop_back_val();
+      for (const User *U : I->users()) {
         if (auto *BI = dyn_cast<BitCastInst>(U)) {
           WorkList.push_back(BI);
           continue;
         }
-        auto *UI = dyn_cast<Instruction>(U);
+        auto *UI = dyn_cast<IntrinsicInst>(U);
         if (!UI)
           continue;
         bool IsStart;
@@ -81,7 +76,6 @@ void StackColoring::collectMarkers() {
         if (IsStart)
           InterestingAllocas.set(AllocaNo);
         BBMarkerSet[UI->getParent()][UI] = {AllocaNo, IsStart};
-        Markers.push_back(UI);
       }
     }
   }
@@ -95,15 +89,12 @@ void StackColoring::collectMarkers() {
   // * the sets of allocas whose lifetime starts or ends in this BB
   LLVM_DEBUG(dbgs() << "Instructions:\n");
   unsigned InstNo = 0;
-  for (BasicBlock *BB : depth_first(&F)) {
+  for (const BasicBlock *BB : depth_first(&F)) {
     LLVM_DEBUG(dbgs() << "  " << InstNo << ": BB " << BB->getName() << "\n");
     unsigned BBStart = InstNo++;
 
-    BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
-    BlockInfo.Begin.resize(NumAllocas);
-    BlockInfo.End.resize(NumAllocas);
-    BlockInfo.LiveIn.resize(NumAllocas);
-    BlockInfo.LiveOut.resize(NumAllocas);
+    BlockLifetimeInfo &BlockInfo =
+        BlockLiveness.try_emplace(BB, NumAllocas).first->getSecond();
 
     auto &BlockMarkerSet = BBMarkerSet[BB];
     if (BlockMarkerSet.empty()) {
@@ -112,7 +103,7 @@ void StackColoring::collectMarkers() {
       continue;
     }
 
-    auto ProcessMarker = [&](Instruction *I, const Marker &M) {
+    auto ProcessMarker = [&](const IntrinsicInst *I, const Marker &M) {
       LLVM_DEBUG(dbgs() << "  " << InstNo << ":  "
                         << (M.IsStart ? "start " : "end   ") << M.AllocaNo
                         << ", " << *I << "\n");
@@ -122,12 +113,10 @@ void StackColoring::collectMarkers() {
       InstructionNumbering[I] = InstNo++;
 
       if (M.IsStart) {
-        if (BlockInfo.End.test(M.AllocaNo))
-          BlockInfo.End.reset(M.AllocaNo);
+        BlockInfo.End.reset(M.AllocaNo);
         BlockInfo.Begin.set(M.AllocaNo);
       } else {
-        if (BlockInfo.Begin.test(M.AllocaNo))
-          BlockInfo.Begin.reset(M.AllocaNo);
+        BlockInfo.Begin.reset(M.AllocaNo);
         BlockInfo.End.set(M.AllocaNo);
       }
     };
@@ -137,11 +126,14 @@ void StackColoring::collectMarkers() {
                     BlockMarkerSet.begin()->getSecond());
     } else {
       // Scan the BB to determine the marker order.
-      for (Instruction &I : *BB) {
-        auto It = BlockMarkerSet.find(&I);
+      for (const Instruction &I : *BB) {
+        const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+        if (!II)
+          continue;
+        auto It = BlockMarkerSet.find(II);
         if (It == BlockMarkerSet.end())
           continue;
-        ProcessMarker(&I, It->getSecond());
+        ProcessMarker(II, It->getSecond());
       }
     }
 
@@ -152,12 +144,12 @@ void StackColoring::collectMarkers() {
 }
 
 void StackColoring::calculateLocalLiveness() {
-  bool changed = true;
-  while (changed) {
-    changed = false;
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
 
-    for (BasicBlock *BB : depth_first(&F)) {
-      BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
+    for (const BasicBlock *BB : depth_first(&F)) {
+      BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
       BitVector LocalLiveIn;
@@ -182,13 +174,13 @@ void StackColoring::calculateLocalLiveness() {
 
       // Update block LiveIn set, noting whether it has changed.
       if (LocalLiveIn.test(BlockInfo.LiveIn)) {
-        changed = true;
+        Changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
       if (LocalLiveOut.test(BlockInfo.LiveOut)) {
-        changed = true;
+        Changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
     }
@@ -197,7 +189,7 @@ void StackColoring::calculateLocalLiveness() {
 
 void StackColoring::calculateLiveIntervals() {
   for (auto IT : BlockLiveness) {
-    BasicBlock *BB = IT.getFirst();
+    const BasicBlock *BB = IT.getFirst();
     BlockLifetimeInfo &BlockInfo = IT.getSecond();
     unsigned BBStart, BBEnd;
     std::tie(BBStart, BBEnd) = BlockInstRange[BB];
@@ -231,7 +223,7 @@ void StackColoring::calculateLiveIntervals() {
       } else {
         assert(!Ended.test(AllocaNo));
         if (Started.test(AllocaNo)) {
-          LiveRanges[AllocaNo].AddRange(Start[AllocaNo], InstNo);
+          LiveRanges[AllocaNo].addRange(Start[AllocaNo], InstNo);
           Started.reset(AllocaNo);
         }
         Ended.set(AllocaNo);
@@ -240,23 +232,23 @@ void StackColoring::calculateLiveIntervals() {
 
     for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
       if (Started.test(AllocaNo))
-        LiveRanges[AllocaNo].AddRange(Start[AllocaNo], BBEnd);
+        LiveRanges[AllocaNo].addRange(Start[AllocaNo], BBEnd);
   }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void StackColoring::dumpAllocas() {
+LLVM_DUMP_METHOD void StackColoring::dumpAllocas() const {
   dbgs() << "Allocas:\n";
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
     dbgs() << "  " << AllocaNo << ": " << *Allocas[AllocaNo] << "\n";
 }
 
-LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() {
+LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() const {
   dbgs() << "Block liveness:\n";
   for (auto IT : BlockLiveness) {
-    BasicBlock *BB = IT.getFirst();
-    BlockLifetimeInfo &BlockInfo = BlockLiveness[BB];
-    auto BlockRange = BlockInstRange[BB];
+    const BasicBlock *BB = IT.getFirst();
+    const BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
+    auto BlockRange = BlockInstRange.find(BB)->getSecond();
     dbgs() << "  BB [" << BlockRange.first << ", " << BlockRange.second
            << "): begin " << BlockInfo.Begin << ", end " << BlockInfo.End
            << ", livein " << BlockInfo.LiveIn << ", liveout "
@@ -264,34 +256,26 @@ LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() {
   }
 }
 
-LLVM_DUMP_METHOD void StackColoring::dumpLiveRanges() {
+LLVM_DUMP_METHOD void StackColoring::dumpLiveRanges() const {
   dbgs() << "Alloca liveness:\n";
-  for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo) {
-    LiveRange &Range = LiveRanges[AllocaNo];
-    dbgs() << "  " << AllocaNo << ": " << Range << "\n";
-  }
+  for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
+    dbgs() << "  " << AllocaNo << ": " << LiveRanges[AllocaNo] << "\n";
 }
 #endif
 
-void StackColoring::run() {
+StackColoring::StackColoring(const Function &F,
+                             ArrayRef<const AllocaInst *> Allocas)
+    : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {
   LLVM_DEBUG(dumpAllocas());
 
   for (unsigned I = 0; I < NumAllocas; ++I)
     AllocaNumbering[Allocas[I]] = I;
-  LiveRanges.resize(NumAllocas);
 
   collectMarkers();
+}
 
-  if (!ClColoring) {
-    for (auto &R : LiveRanges) {
-      R.SetMaximum(1);
-      R.AddRange(0, 1);
-    }
-    return;
-  }
-
-  for (auto &R : LiveRanges)
-    R.SetMaximum(NumInst);
+void StackColoring::run() {
+  LiveRanges.resize(NumAllocas, LiveRange(NumInst));
   for (unsigned I = 0; I < NumAllocas; ++I)
     if (!InterestingAllocas.test(I))
       LiveRanges[I] = getFullLiveRange();

@@ -2,7 +2,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not lld -flavor darwinnew -arch x86_64 -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
 #
-# CHECK: error: invalid relocation at offset 1 of __TEXT,__text in [[FILE]]: relocations of type 0 must not be pcrel
+# CHECK: error: invalid relocation at offset 1 of __TEXT,__text in [[FILE]]: relocations of type 0 must have r_length of 2 or 3
 
 !mach-o
 FileHeader:
@@ -43,8 +43,8 @@ LoadCommands:
         relocations:
           - address:         0x00000001
             symbolnum:       1
-            pcrel:           true
-            length:          3
+            pcrel:           false
+            length:          1
             extern:          true
             type:            0
             scattered:       false

@@ -30,7 +30,6 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[MOVaddrBA:%[0-9]+]]:gpr64 = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
   ; CHECK:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
   ; CHECK:   STRXui [[MOVaddrBA]], [[MOVaddr]], 0 :: (store 8 into @addr)
@@ -39,7 +38,6 @@ body:             |
   ; CHECK:   RET_ReallyLR
   ; LARGE-LABEL: name: test_blockaddress
   ; LARGE: bb.0 (%ir-block.0):
-  ; LARGE:   successors: %bb.1(0x80000000)
   ; LARGE:   [[MOVZXi:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 0
   ; LARGE:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi]], target-flags(aarch64-g1, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 16
   ; LARGE:   [[MOVKXi1:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi]], target-flags(aarch64-g2, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 32

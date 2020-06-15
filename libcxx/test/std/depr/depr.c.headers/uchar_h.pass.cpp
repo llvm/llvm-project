@@ -8,7 +8,6 @@
 //
 // XFAIL: suse-linux-enterprise-server-11
 // XFAIL: darwin
-// XFAIL: newlib
 // XFAIL: netbsd
 
 // <uchar.h>

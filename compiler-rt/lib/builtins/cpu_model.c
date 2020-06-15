@@ -270,12 +270,11 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 }
 
 static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                            unsigned Brand_id,
-                                            unsigned Features,
-                                            unsigned Features2, unsigned *Type,
-                                            unsigned *Subtype) {
-  if (Brand_id != 0)
-    return;
+                                            const unsigned *Features,
+                                            unsigned *Type, unsigned *Subtype) {
+#define testFeature(F)                                                         \
+  (Features[F / 32] & (F % 32)) != 0
+
   switch (Family) {
   case 6:
     switch (Model) {
@@ -354,7 +353,7 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = INTEL_COREI7;
-      if (Features2 & (1 << (FEATURE_AVX512VNNI - 32)))
+      if (testFeature(FEATURE_AVX512VNNI))
         *Subtype = INTEL_COREI7_CASCADELAKE; // "cascadelake"
       else
         *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
@@ -427,7 +426,7 @@ static void getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                          unsigned Features, unsigned Features2,
+                                          const unsigned *Features,
                                           unsigned *Type, unsigned *Subtype) {
   // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
   // appears to be no way to generate the wide variety of AMD-specific targets
@@ -489,19 +488,13 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 }
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
-                                 unsigned *FeaturesOut,
-                                 unsigned *Features2Out) {
-  unsigned Features = 0;
-  unsigned Features2 = 0;
+                                 unsigned *Features) {
+  Features[0] = 0;
+  Features[1] = 0;
   unsigned EAX, EBX;
 
 #define setFeature(F)                                                          \
-  do {                                                                         \
-    if (F < 32)                                                                \
-      Features |= 1U << (F & 0x1f);                                            \
-    else if (F < 64)                                                           \
-      Features2 |= 1U << ((F - 32) & 0x1f);                                    \
-  } while (0)
+  Features[F / 32] |= 1U << (F % 32)
 
   if ((EDX >> 15) & 1)
     setFeature(FEATURE_CMOV);
@@ -612,9 +605,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_XOP);
   if (HasExtLeaf1 && ((ECX >> 16) & 1))
     setFeature(FEATURE_FMA4);
-
-  *FeaturesOut = Features;
-  *Features2Out = Features2;
 #undef setFeature
 }
 
@@ -646,7 +636,7 @@ struct __processor_model {
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
-unsigned int __cpu_features2;
+unsigned int __cpu_features2 = 0;
 
 // A constructor function that is sets __cpu_model and __cpu_features2 with
 // the right values.  This needs to run only once.  This constructor is
@@ -658,9 +648,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned EAX, EBX, ECX, EDX;
   unsigned MaxLeaf = 5;
   unsigned Vendor;
-  unsigned Model, Family, Brand_id;
-  unsigned Features = 0;
-  unsigned Features2 = 0;
+  unsigned Model, Family;
+  unsigned Features[2];
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
@@ -676,22 +665,21 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   }
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
   detectX86FamilyModel(EAX, &Family, &Model);
-  Brand_id = EBX & 0xff;
 
   // Find available features.
-  getAvailableFeatures(ECX, EDX, MaxLeaf, &Features, &Features2);
-  __cpu_model.__cpu_features[0] = Features;
-  __cpu_features2 = Features2;
+  getAvailableFeatures(ECX, EDX, MaxLeaf, &Features[0]);
+  __cpu_model.__cpu_features[0] = Features[0];
+  __cpu_features2 = Features[1];
 
   if (Vendor == SIG_INTEL) {
     // Get CPU type.
-    getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
-                                    Features2, &(__cpu_model.__cpu_type),
+    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0],
+                                    &(__cpu_model.__cpu_type),
                                     &(__cpu_model.__cpu_subtype));
     __cpu_model.__cpu_vendor = VENDOR_INTEL;
   } else if (Vendor == SIG_AMD) {
     // Get CPU type.
-    getAMDProcessorTypeAndSubtype(Family, Model, Features, Features2,
+    getAMDProcessorTypeAndSubtype(Family, Model, &Features[0],
                                   &(__cpu_model.__cpu_type),
                                   &(__cpu_model.__cpu_subtype));
     __cpu_model.__cpu_vendor = VENDOR_AMD;

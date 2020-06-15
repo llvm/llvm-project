@@ -217,12 +217,12 @@ define i64 @reassociate_mulld(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 define double @reassociate_mamaa_double(double %0, double %1, double %2, double %3, double %4, double %5) {
 ; CHECK-LABEL: reassociate_mamaa_double:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:   fadd 0, 2, 1
-; CHECK-QPX:   fmadd 0, 4, 3, 0
-; CHECK-QPX:   fmadd 1, 6, 5, 0
-; CHECK-PWR:   xsadddp 1, 2, 1
-; CHECK-PWR:   xsmaddadp 1, 4, 3
-; CHECK-PWR:   xsmaddadp 1, 6, 5
+; CHECK-QPX-DAG:   fmadd [[REG0:[0-9]+]], 4, 3, 2
+; CHECK-QPX-DAG:   fmadd [[REG1:[0-9]+]], 6, 5, 1
+; CHECK-QPX:       fadd 1, [[REG0]], [[REG1]]
+; CHECK-PWR-DAG:   xsmaddadp 1, 6, 5
+; CHECK-PWR-DAG:   xsmaddadp 2, 4, 3
+; CHECK-PWR:       xsadddp 1, 2, 1
 ; CHECK-NEXT:  blr
   %7 = fmul reassoc nsz double %3, %2
   %8 = fmul reassoc nsz double %5, %4
@@ -235,10 +235,10 @@ define double @reassociate_mamaa_double(double %0, double %1, double %2, double 
 ; FIXME: should use xsmaddasp instead of fmadds for pwr7 arch.
 define float @reassociate_mamaa_float(float %0, float %1, float %2, float %3, float %4, float %5) {
 ; CHECK-LABEL: reassociate_mamaa_float:
-; CHECK:   # %bb.0:
-; CHECK:   fadds 0, 2, 1
-; CHECK:   fmadds 0, 4, 3, 0
-; CHECK:   fmadds 1, 6, 5, 0
+; CHECK:       # %bb.0:
+; CHECK-DAG:   fmadds [[REG0:[0-9]+]], 4, 3, 2
+; CHECK-DAG:   fmadds [[REG1:[0-9]+]], 6, 5, 1
+; CHECK:       fadds 1, [[REG0]], [[REG1]]
 ; CHECK-NEXT:  blr
   %7 = fmul reassoc nsz float %3, %2
   %8 = fmul reassoc nsz float %5, %4
@@ -251,12 +251,12 @@ define float @reassociate_mamaa_float(float %0, float %1, float %2, float %3, fl
 define <4 x float> @reassociate_mamaa_vec(<4 x float> %0, <4 x float> %1, <4 x float> %2, <4 x float> %3, <4 x float> %4, <4 x float> %5) {
 ; CHECK-LABEL: reassociate_mamaa_vec:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:   qvfadds 0, 2, 1
-; CHECK-QPX:   qvfmadds 0, 4, 3, 0
-; CHECK-QPX:   qvfmadds 1, 6, 5, 0
-; CHECK-PWR:   xvaddsp 34, 35, 34
-; CHECK-PWR:   xvmaddasp 34, 37, 36
-; CHECK-PWR:   xvmaddasp 34, 39, 38
+; CHECK-QPX-DAG:   qvfmadds [[REG0:[0-9]+]], 4, 3, 2
+; CHECK-QPX-DAG:   qvfmadds [[REG1:[0-9]+]], 6, 5, 1
+; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
+; CHECK-PWR-DAG:   xvmaddasp [[REG0:[0-9]+]], 39, 38
+; CHECK-PWR-DAG:   xvmaddasp [[REG1:[0-9]+]], 37, 36
+; CHECK-PWR:       xvaddsp 34, [[REG1]], [[REG0]]
 ; CHECK-NEXT:  blr
   %7 = fmul reassoc nsz <4 x float> %3, %2
   %8 = fmul reassoc nsz <4 x float> %5, %4
@@ -269,15 +269,16 @@ define <4 x float> @reassociate_mamaa_vec(<4 x float> %0, <4 x float> %1, <4 x f
 define double @reassociate_mamama_double(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, double %8) {
 ; CHECK-LABEL: reassociate_mamama_double:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       fmadd 0, 2, 1, 7
-; CHECK-QPX-DAG:   fmadd 0, 4, 3, 0
-; CHECK-QPX-DAG:   fmadd 0, 6, 5, 0
-; CHECK-QPX:       fmadd 1, 9, 8, 0
+; CHECK-QPX:       fmadd [[REG0:[0-9]+]], 2, 1, 7
+; CHECK-QPX-DAG:   fmul [[REG1:[0-9]+]], 4, 3
+; CHECK-QPX-DAG:   fmadd [[REG2:[0-9]+]], 6, 5, [[REG0]]
+; CHECK-QPX-DAG:   fmadd [[REG3:[0-9]+]], 9, 8, [[REG1]]
+; CHECK-QPX:       fadd 1, [[REG2]], [[REG3]]
 ; CHECK-PWR:       xsmaddadp 7, 2, 1
-; CHECK-PWR-DAG:   xsmaddadp 7, 4, 3
+; CHECK-PWR-DAG:   xsmuldp [[REG0:[0-9]+]], 4, 3
 ; CHECK-PWR-DAG:   xsmaddadp 7, 6, 5
-; CHECK-PWR-DAG:   xsmaddadp 7, 9, 8
-; CHECK-PWR:       fmr 1, 7
+; CHECK-PWR-DAG:   xsmaddadp [[REG0]], 9, 8
+; CHECK-PWR:       xsadddp 1, 7, [[REG0]]
 ; CHECK-NEXT:  blr
   %10 = fmul reassoc nsz double %1, %0
   %11 = fmul reassoc nsz double %3, %2
@@ -295,16 +296,18 @@ define dso_local float @reassociate_mamama_8(float %0, float %1, float %2, float
                                              float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16) {
 ; CHECK-LABEL: reassociate_mamama_8:
 ; CHECK:       # %bb.0:
-; CHECK:       fmadds [[REG0:[0-9]+]], 3, 2, 1
-; CHECK-DAG:   fmadds [[REG0]], 5, 4, [[REG0]]
-; CHECK-DAG:   fmadds [[REG0]], 7, 6, [[REG0]]
-; CHECK-DAG:   fmadds [[REG0]], 9, 8, [[REG0]]
-; CHECK-DAG:   fmadds [[REG0]], 13, 12, [[REG0]]
-; CHECK-DAG:   fmadds [[REG0]], 11, 10, [[REG0]]
+; CHECK-DAG:    fmadds [[REG0:[0-9]+]], 3, 2, 1
+; CHECK-DAG:    fmuls  [[REG1:[0-9]+]], 5, 4
+; CHECK-DAG:    fmadds [[REG2:[0-9]+]], 7, 6, [[REG0]]
+; CHECK-DAG:    fmadds [[REG3:[0-9]+]], 9, 8, [[REG1]]
 ;
-; CHECK:       fmadds [[REG0]],
-; CHECK:       fmadds 1,
-; CHECK-NEXT:  blr
+; CHECK-DAG:    fmadds [[REG4:[0-9]+]], 13, 12, [[REG3]]
+; CHECK-DAG:    fmadds [[REG5:[0-9]+]], 11, 10, [[REG2]]
+;
+; CHECK-DAG:    fmadds [[REG6:[0-9]+]], 3, 2, [[REG4]]
+; CHECK-DAG:    fmadds [[REG7:[0-9]+]], 5, 4, [[REG5]]
+; CHECK:        fadds 1, [[REG7]], [[REG6]]
+; CHECK-NEXT:   blr
   %18 = fmul reassoc nsz float %2, %1
   %19 = fadd reassoc nsz float %18, %0
   %20 = fmul reassoc nsz float %4, %3

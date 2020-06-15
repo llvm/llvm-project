@@ -23,7 +23,7 @@ define <4 x double> @fneg_fdiv_splat(double %a0, <4 x double> %a1) {
 entry:
   %splat.splatinsert = insertelement <4 x double> undef, double %a0, i32 0
   %splat.splat = shufflevector <4 x double> %splat.splatinsert, <4 x double> undef, <4 x i32> zeroinitializer
-  %div = fdiv reassoc nsz arcp <4 x double> %a1, %splat.splat
+  %div = fdiv reassoc nsz arcp ninf <4 x double> %a1, %splat.splat
   %sub = fsub reassoc nsz <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, %div
   ret <4 x double> %sub
 }

@@ -10,7 +10,7 @@ define float @emit_xsresp() {
 entry:
   %0 = load float, float* @a, align 4
   %1 = load float, float* @b, align 4
-  %div = fdiv arcp float %0, %1
+  %div = fdiv arcp ninf float %0, %1
   ret float %div
 ; CHECK-LABEL: @emit_xsresp
 ; CHECK: xsresp {{[0-9]+}}
@@ -38,7 +38,7 @@ define double @emit_xsredp() {
 entry:
   %0 = load double, double* @c, align 8
   %1 = load double, double* @d, align 8
-  %div = fdiv arcp double %0, %1
+  %div = fdiv arcp ninf double %0, %1
   ret double %div
 ; CHECK-LABEL: @emit_xsredp
 ; CHECK: xsredp {{[0-9]+}}

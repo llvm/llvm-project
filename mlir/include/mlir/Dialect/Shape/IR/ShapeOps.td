@@ -155,7 +155,7 @@ def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
+def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
   let summary = "Creates a shape from a tensor of extents";
   let description = [{
     Creates a shape from a 1D integral tensor of extents. The rank of the
@@ -165,25 +165,24 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
 
   let arguments = (ins IndexTensor:$input);
   let results = (outs Shape_ShapeType:$result);
+
+  let assemblyFormat = "attr-dict $input `:` type($input)";
 }
 
-def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", []> {
+def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
   let summary = "Creates a dimension tensor from a shape";
-  // TODO: Think more about the error situation. Perhaps factor out the
-  // error detection into a separate op so downstream consumers can control
-  // their error behavior. Then this op would assume that the input has
-  // been properly checked to not be an error (and could thus be a
-  // NoSideEffect op).
   let description = [{
     Converts a shape to a 1D integral tensor of extents. The number of elements
     in the tensor equals the rank of the shape, and the elements equal the
     extents of the shape.
 
-    If the shape represents an error, then this op currently aborts the program.
+    If the shape represents an error, this op's behavior is undefined.
   }];
 
   let arguments = (ins Shape_ShapeType:$input);
   let results = (outs IndexTensor:$result);
+
+  let assemblyFormat = "attr-dict $input `:` type($result)";
 
   let hasFolder = 1;
 }

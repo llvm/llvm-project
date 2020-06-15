@@ -1606,7 +1606,7 @@ struct DSEState {
     const DataLayout &DL = F.getParent()->getDataLayout();
 
     return CC &&
-           isOverwrite(DefLoc, *CC, DL, TLI, DepWriteOffset, InstWriteOffset,
+           isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset, InstWriteOffset,
                        UseInst, IOL, AA, &F) == OW_Complete;
   }
 

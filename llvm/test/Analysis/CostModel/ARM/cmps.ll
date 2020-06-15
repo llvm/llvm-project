@@ -23,7 +23,6 @@ define i32 @cmps() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-RECIP-LABEL: 'cmps'
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -39,7 +38,6 @@ define i32 @cmps() {
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8M-MAIN-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-BASE-RECIP-LABEL: 'cmps'
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -55,7 +53,6 @@ define i32 @cmps() {
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8M-BASE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8R-RECIP-LABEL: 'cmps'
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -71,7 +68,6 @@ define i32 @cmps() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-MVE-SIZE-LABEL: 'cmps'
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -87,7 +83,6 @@ define i32 @cmps() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'cmps'
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -103,7 +98,6 @@ define i32 @cmps() {
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8M-MAIN-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-BASE-SIZE-LABEL: 'cmps'
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -119,7 +113,6 @@ define i32 @cmps() {
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8M-BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8R-SIZE-LABEL: 'cmps'
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a = icmp slt i8 undef, undef
@@ -135,7 +128,6 @@ define i32 @cmps() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %a = icmp slt i8 undef, undef
   %b = icmp ult i16 undef, undef

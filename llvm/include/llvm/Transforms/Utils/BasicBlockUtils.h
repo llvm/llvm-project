@@ -141,6 +141,10 @@ struct CriticalEdgeSplittingOptions {
   bool KeepOneInputPHIs = false;
   bool PreserveLCSSA = false;
   bool IgnoreUnreachableDests = false;
+  /// SplitCriticalEdge is guaranteed to preserve loop-simplify form if LI is
+  /// provided. If it cannot be preserved, no splitting will take place. If it
+  /// is not set, preserve loop-simplify form if possible.
+  bool PreserveLoopSimplify = true;
 
   CriticalEdgeSplittingOptions(DominatorTree *DT = nullptr,
                                LoopInfo *LI = nullptr,
@@ -165,6 +169,11 @@ struct CriticalEdgeSplittingOptions {
 
   CriticalEdgeSplittingOptions &setIgnoreUnreachableDests() {
     IgnoreUnreachableDests = true;
+    return *this;
+  }
+
+  CriticalEdgeSplittingOptions &unsetPreserveLoopSimplify() {
+    PreserveLoopSimplify = false;
     return *this;
   }
 };

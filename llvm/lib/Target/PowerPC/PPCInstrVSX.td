@@ -882,65 +882,65 @@ let hasSideEffects = 0 in {
   def XSRDPI : XX2Form<60, 73,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpi $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (fround f64:$XB))]>;
+                      [(set f64:$XT, (any_fround f64:$XB))]>;
   def XSRDPIC : XX2Form<60, 107,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpic $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (fnearbyint f64:$XB))]>;
+                      [(set f64:$XT, (any_fnearbyint f64:$XB))]>;
   def XSRDPIM : XX2Form<60, 121,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpim $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (ffloor f64:$XB))]>;
+                      [(set f64:$XT, (any_ffloor f64:$XB))]>;
   def XSRDPIP : XX2Form<60, 105,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpip $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (fceil f64:$XB))]>;
+                      [(set f64:$XT, (any_fceil f64:$XB))]>;
   def XSRDPIZ : XX2Form<60, 89,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpiz $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (ftrunc f64:$XB))]>;
+                      [(set f64:$XT, (any_ftrunc f64:$XB))]>;
 
   def XVRDPI : XX2Form<60, 201,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpi $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (fround v2f64:$XB))]>;
+                      [(set v2f64:$XT, (any_fround v2f64:$XB))]>;
   def XVRDPIC : XX2Form<60, 235,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpic $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (fnearbyint v2f64:$XB))]>;
+                      [(set v2f64:$XT, (any_fnearbyint v2f64:$XB))]>;
   def XVRDPIM : XX2Form<60, 249,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpim $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (ffloor v2f64:$XB))]>;
+                      [(set v2f64:$XT, (any_ffloor v2f64:$XB))]>;
   def XVRDPIP : XX2Form<60, 233,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpip $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (fceil v2f64:$XB))]>;
+                      [(set v2f64:$XT, (any_fceil v2f64:$XB))]>;
   def XVRDPIZ : XX2Form<60, 217,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpiz $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (ftrunc v2f64:$XB))]>;
+                      [(set v2f64:$XT, (any_ftrunc v2f64:$XB))]>;
 
   def XVRSPI : XX2Form<60, 137,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspi $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (fround v4f32:$XB))]>;
+                      [(set v4f32:$XT, (any_fround v4f32:$XB))]>;
   def XVRSPIC : XX2Form<60, 171,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspic $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (fnearbyint v4f32:$XB))]>;
+                      [(set v4f32:$XT, (any_fnearbyint v4f32:$XB))]>;
   def XVRSPIM : XX2Form<60, 185,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspim $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (ffloor v4f32:$XB))]>;
+                      [(set v4f32:$XT, (any_ffloor v4f32:$XB))]>;
   def XVRSPIP : XX2Form<60, 169,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspip $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (fceil v4f32:$XB))]>;
+                      [(set v4f32:$XT, (any_fceil v4f32:$XB))]>;
   def XVRSPIZ : XX2Form<60, 153,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspiz $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (ftrunc v4f32:$XB))]>;
+                      [(set v4f32:$XT, (any_ftrunc v4f32:$XB))]>;
 
   // Max/Min Instructions
   let isCommutable = 1 in {
@@ -1163,10 +1163,11 @@ let Predicates = [HasVSX, HasP8Vector] in {
                         "xsresp $XT, $XB", IIC_VecFP,
                         [(set f32:$XT, (PPCfre f32:$XB))]>;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
-  let hasSideEffects = 1 in
+  let hasSideEffects = 1, mayRaiseFPException = 1 in
   def XSRSP : XX2Form<60, 281,
                         (outs vssrc:$XT), (ins vsfrc:$XB),
-                        "xsrsp $XT, $XB", IIC_VecFP, []>;
+                        "xsrsp $XT, $XB", IIC_VecFP,
+                        [(set f32:$XT, (any_fpround f64:$XB))]>;
   def XSSQRTSP : XX2Form<60, 11,
                         (outs vssrc:$XT), (ins vssrc:$XB),
                         "xssqrtsp $XT, $XB", IIC_FPSqrtS,
@@ -1455,16 +1456,18 @@ let Predicates = [HasVSX, HasP9Vector] in {
   //===--------------------------------------------------------------------===//
   // Quad-Precision Floating-Point Conversion Instructions:
 
-  // Convert DP -> QP
-  def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vfrc,
-                                     [(set f128:$vT, (fpextend f64:$vB))]>;
+  let mayRaiseFPException = 1 in {
+    // Convert DP -> QP
+    def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vfrc,
+                                       [(set f128:$vT, (any_fpextend f64:$vB))]>;
 
-  // Round & Convert QP -> DP (dword[1] is set to zero)
-  def XSCVQPDP  : X_VT5_XO5_VB5_VSFR<63, 20, 836, "xscvqpdp" , []>;
-  def XSCVQPDPO : X_VT5_XO5_VB5_VSFR_Ro<63, 20, 836, "xscvqpdpo",
-                                        [(set f64:$vT,
-                                        (int_ppc_truncf128_round_to_odd
-                                        f128:$vB))]>;
+    // Round & Convert QP -> DP (dword[1] is set to zero)
+    def XSCVQPDP  : X_VT5_XO5_VB5_VSFR<63, 20, 836, "xscvqpdp" , []>;
+    def XSCVQPDPO : X_VT5_XO5_VB5_VSFR_Ro<63, 20, 836, "xscvqpdpo",
+                                          [(set f64:$vT,
+                                          (int_ppc_truncf128_round_to_odd
+                                          f128:$vB))]>;
+  }
 
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
@@ -1497,9 +1500,11 @@ let Predicates = [HasVSX, HasP9Vector] in {
                                  [(set v4f32:$XT,
                                      (int_ppc_vsx_xvcvsphp v4f32:$XB))]>;
 
-  // Round to Quad-Precision Integer [with Inexact]
-  def XSRQPI   : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 0, "xsrqpi" , []>;
-  def XSRQPIX  : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 1, "xsrqpix", []>;
+  let mayRaiseFPException = 1 in {
+    // Round to Quad-Precision Integer [with Inexact]
+    def XSRQPI   : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 0, "xsrqpi" , []>;
+    def XSRQPIX  : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 1, "xsrqpix", []>;
+  }
 
   // Round Quad-Precision to Double-Extended Precision (fp80)
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
@@ -2174,10 +2179,10 @@ def AnyExts {
 }
 
 def DblToFlt {
-  dag A0 = (f32 (fpround (f64 (extractelt v2f64:$A, 0))));
-  dag A1 = (f32 (fpround (f64 (extractelt v2f64:$A, 1))));
-  dag B0 = (f32 (fpround (f64 (extractelt v2f64:$B, 0))));
-  dag B1 = (f32 (fpround (f64 (extractelt v2f64:$B, 1))));
+  dag A0 = (f32 (any_fpround (f64 (extractelt v2f64:$A, 0))));
+  dag A1 = (f32 (any_fpround (f64 (extractelt v2f64:$A, 1))));
+  dag B0 = (f32 (any_fpround (f64 (extractelt v2f64:$B, 0))));
+  dag B1 = (f32 (any_fpround (f64 (extractelt v2f64:$B, 1))));
 }
 
 def ExtDbl {
@@ -2664,22 +2669,22 @@ def : Pat<(v4i32 (int_ppc_vsx_lxvw4x_be xoaddr:$src)), (LXVW4X xoaddr:$src)>;
 def : Pat<(v2f64 (int_ppc_vsx_lxvd2x_be xoaddr:$src)), (LXVD2X xoaddr:$src)>;
 
 // Rounding for single precision.
-def : Pat<(f32 (fround f32:$S)),
+def : Pat<(f32 (any_fround f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPI
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f32 (fnearbyint f32:$S)),
+def : Pat<(f32 (any_fnearbyint f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIC
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f32 (ffloor f32:$S)),
+def : Pat<(f32 (any_ffloor f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIM
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f32 (fceil f32:$S)),
+def : Pat<(f32 (any_fceil f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIP
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f32 (ftrunc f32:$S)),
+def : Pat<(f32 (any_ftrunc f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIZ
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f32 (frint f32:$S)),
+def : Pat<(f32 (any_frint f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIC
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
 def : Pat<(v4f32 (frint v4f32:$S)), (v4f32 (XVRSPIC $S))>;
@@ -2985,7 +2990,7 @@ def : Pat<(f64 (extloadf32 xoaddr:$src)),
           (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$src), VSFRC)>;
 def : Pat<(f32 (fpround (f64 (extloadf32 xoaddr:$src)))),
           (f32 (XFLOADf32 xoaddr:$src))>;
-def : Pat<(f64 (fpextend f32:$src)),
+def : Pat<(f64 (any_fpextend f32:$src)),
           (COPY_TO_REGCLASS $src, VSFRC)>;
 
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),
@@ -3560,17 +3565,17 @@ def : Pat<(v4f32 (int_ppc_vsx_xvcvhpsp v8i16:$A)),
           (v4f32 (XVCVHPSP (COPY_TO_REGCLASS $A, VSRC)))>;
 
 // Use current rounding mode
-def : Pat<(f128 (fnearbyint f128:$vB)), (f128 (XSRQPI 0, $vB, 3))>;
+def : Pat<(f128 (any_fnearbyint f128:$vB)), (f128 (XSRQPI 0, $vB, 3))>;
 // Round to nearest, ties away from zero
-def : Pat<(f128 (fround f128:$vB)), (f128 (XSRQPI 0, $vB, 0))>;
+def : Pat<(f128 (any_fround f128:$vB)), (f128 (XSRQPI 0, $vB, 0))>;
 // Round towards Zero
-def : Pat<(f128 (ftrunc f128:$vB)), (f128 (XSRQPI 1, $vB, 1))>;
+def : Pat<(f128 (any_ftrunc f128:$vB)), (f128 (XSRQPI 1, $vB, 1))>;
 // Round towards +Inf
-def : Pat<(f128 (fceil f128:$vB)), (f128 (XSRQPI 1, $vB, 2))>;
+def : Pat<(f128 (any_fceil f128:$vB)), (f128 (XSRQPI 1, $vB, 2))>;
 // Round towards -Inf
-def : Pat<(f128 (ffloor f128:$vB)), (f128 (XSRQPI 1, $vB, 3))>;
+def : Pat<(f128 (any_ffloor f128:$vB)), (f128 (XSRQPI 1, $vB, 3))>;
 // Use current rounding mode, [with Inexact]
-def : Pat<(f128 (frint f128:$vB)), (f128 (XSRQPIX 0, $vB, 3))>;
+def : Pat<(f128 (any_frint f128:$vB)), (f128 (XSRQPIX 0, $vB, 3))>;
 
 def : Pat<(f128 (int_ppc_scalar_insert_exp_qp f128:$vA, i64:$vB)),
           (f128 (XSIEXPQP $vA, (MTVSRD $vB)))>;
@@ -3784,11 +3789,11 @@ def : Pat<(PPCstore_scal_int_from_vsr
           (STXSIBX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
 
 // Round & Convert QP -> DP/SP
-def : Pat<(f64 (fpround f128:$src)), (f64 (XSCVQPDP $src))>;
-def : Pat<(f32 (fpround f128:$src)), (f32 (XSRSP (XSCVQPDPO $src)))>;
+def : Pat<(f64 (any_fpround f128:$src)), (f64 (XSCVQPDP $src))>;
+def : Pat<(f32 (any_fpround f128:$src)), (f32 (XSRSP (XSCVQPDPO $src)))>;
 
 // Convert SP -> QP
-def : Pat<(f128 (fpextend f32:$src)),
+def : Pat<(f128 (any_fpextend f32:$src)),
           (f128 (XSCVDPQP (COPY_TO_REGCLASS $src, VFRC)))>;
 
 def : Pat<(f32 (PPCxsmaxc f32:$XA, f32:$XB)),

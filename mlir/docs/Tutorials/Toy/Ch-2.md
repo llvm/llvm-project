@@ -117,7 +117,7 @@ compiler passes - does not include locations in the output by default. The
 
 MLIR is designed to allow most IR elements, such as attributes,
 operations, and types, to be customized. At the same time, IR
-elements can always be reduced to the above fundmental concepts. This
+elements can always be reduced to the above fundamental concepts. This
 allows MLIR to parse, represent, and
 [round-trip](../../../getting_started/Glossary.md#round-trip) IR for
 *any* operation. For example, we could place our Toy operation from
@@ -134,7 +134,7 @@ func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
 In the cases of unregistered attributes, operations, and types, MLIR
 will enforce some structural constraints (SSA, block termination,
 etc.), but otherwise they are completely opaque. For instance, MLIR
-has little information about whether an unregisted operation can
+has little information about whether an unregistered operation can
 operate on particular datatypes, how many operands it can take, or how
 many results it produces. This flexibility can be useful for
 bootstrapping purposes, but it is generally advised against in mature
@@ -684,10 +684,10 @@ variadic operands, etc. Check out the
 ## Complete Toy Example
 
 We can now generate our "Toy IR". You can build `toyc-ch2` and try yourself on
-the above example: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir 
--mlir-print-debuginfo`. We can also check our RoundTrip: `toyc-ch2 
-test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo 2> 
-codegen.mlir` followed by `toyc-ch2 codegen.mlir -emit=mlir`. You should also 
+the above example: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir
+-mlir-print-debuginfo`. We can also check our RoundTrip: `toyc-ch2
+test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo 2>
+codegen.mlir` followed by `toyc-ch2 codegen.mlir -emit=mlir`. You should also
 use `mlir-tblgen` on the final definition file and study the generated C++ code.
 
 At this point, MLIR knows about our Toy dialect and operations. In the

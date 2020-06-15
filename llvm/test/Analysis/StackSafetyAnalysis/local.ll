@@ -460,3 +460,28 @@ entry:
   call void @ByValArray([100000 x i64]* byval %z3)
   ret void
 }
+
+define dso_local i8 @LoadMinInt64(i8* %p) {
+  ; CHECK-LABEL: @LoadMinInt64{{$}}
+  ; CHECK-NEXT: args uses:
+  ; CHECK-NEXT: p[]: [-9223372036854775808,-9223372036854775807){{$}}
+  ; CHECK-NEXT: allocas uses:
+  ; CHECK-NOT: ]:
+  %p2 = getelementptr i8, i8* %p, i64 -9223372036854775808
+  %v = load i8, i8* %p2, align 1
+  ret i8 %v
+}
+
+define void @Overflow() {
+; CHECK-LABEL: @Overflow dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; LOCAL: x[1]: empty-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
+; GLOBAL: x[1]: full-set, @LoadMinInt64(arg0, [-9223372036854775808,-9223372036854775807)){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca i8, align 4
+  %x2 = getelementptr i8, i8* %x, i64 -9223372036854775808
+  %v = call i8 @LoadMinInt64(i8* %x2)
+  ret void
+}

@@ -406,17 +406,3 @@ DWARF:
       Descriptors:
         - Address: 0x0000000000001234
           Length:  0x20
-
-## h) Test that yaml2obj will not generate the .debug_aranges section when the "DWARF" entry
-## exists but the "debug_aranges" entry doesn't exist in the "DWARF" entry or the "Sections" entry.
-
-# RUN: yaml2obj --docnum=8 %s -o %t8.o
-# RUN: llvm-readelf --sections %t8.o | FileCheck /dev/null --implicit-check-not=.debug_aranges
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-DWARF:

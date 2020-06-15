@@ -685,7 +685,7 @@ func @fpext_f32_to_i32(%arg0 : f32) {
 // -----
 
 func @fpext_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{requires the same shape for all operands and results}}
   %0 = fpext %arg0 : vector<2xf16> to vector<3xf32>
   return
 }
@@ -757,7 +757,7 @@ func @fptrunc_f32_to_i32(%arg0 : f32) {
 // -----
 
 func @fptrunc_vec(%arg0 : vector<2xf16>) {
-  // expected-error@+1 {{are cast incompatible}}
+  // expected-error@+1 {{requires the same shape for all operands and results}}
   %0 = fptrunc %arg0 : vector<2xf16> to vector<3xf32>
   return
 }

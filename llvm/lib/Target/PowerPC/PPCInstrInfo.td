@@ -2539,7 +2539,7 @@ def FTDIV: XForm_17<63, 128, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
 def FTSQRT: XForm_17a<63, 160, (outs crrc:$crD), (ins f8rc:$fB),
                       "ftsqrt $crD, $fB", IIC_FPCompare>;
 
-let Uses = [RM] in {
+let Uses = [RM], mayRaiseFPException = 1 in {
   let hasSideEffects = 0 in {
   defm FCTIW  : XForm_26r<63, 14, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fctiw", "$frD, $frB", IIC_FPGeneral,
@@ -2553,39 +2553,39 @@ let Uses = [RM] in {
 
   defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
                           "frsp", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fpround f64:$frB))]>;
+                          [(set f32:$frD, (any_fpround f64:$frB))]>;
 
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIND  : XForm_26r<63, 392, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (fround f64:$frB))]>;
+                          [(set f64:$frD, (any_fround f64:$frB))]>;
   defm FRINS  : XForm_26r<63, 392, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fround f32:$frB))]>;
+                          [(set f32:$frD, (any_fround f32:$frB))]>;
   }
 
   let hasSideEffects = 0 in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIPD  : XForm_26r<63, 456, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frip", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (fceil f64:$frB))]>;
+                          [(set f64:$frD, (any_fceil f64:$frB))]>;
   defm FRIPS  : XForm_26r<63, 456, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frip", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (fceil f32:$frB))]>;
+                          [(set f32:$frD, (any_fceil f32:$frB))]>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIZD  : XForm_26r<63, 424, (outs f8rc:$frD), (ins f8rc:$frB),
                           "friz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (ftrunc f64:$frB))]>;
+                          [(set f64:$frD, (any_ftrunc f64:$frB))]>;
   defm FRIZS  : XForm_26r<63, 424, (outs f4rc:$frD), (ins f4rc:$frB),
                           "friz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (ftrunc f32:$frB))]>;
+                          [(set f32:$frD, (any_ftrunc f32:$frB))]>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIMD  : XForm_26r<63, 488, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frim", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (ffloor f64:$frB))]>;
+                          [(set f64:$frD, (any_ffloor f64:$frB))]>;
   defm FRIMS  : XForm_26r<63, 488, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frim", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (ffloor f32:$frB))]>;
+                          [(set f32:$frD, (any_ffloor f32:$frB))]>;
 
   defm FSQRT  : XForm_26r<63, 22, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fsqrt", "$frD, $frB", IIC_FPSqrtD,
@@ -4537,8 +4537,20 @@ def : InstAlias<"mtmsr $RS", (MTMSR gprc:$RS, 0)>;
 def : InstAlias<"mtxer $Rx", (MTSPR 1, gprc:$Rx)>;
 def : InstAlias<"mfxer $Rx", (MFSPR gprc:$Rx, 1)>;
 
+def : InstAlias<"mtudscr $Rx", (MTSPR 3, gprc:$Rx)>;
+def : InstAlias<"mfudscr $Rx", (MFSPR gprc:$Rx, 3)>;
+
 def : InstAlias<"mfrtcu $Rx", (MFSPR gprc:$Rx, 4)>;
 def : InstAlias<"mfrtcl $Rx", (MFSPR gprc:$Rx, 5)>;
+
+def : InstAlias<"mtlr $Rx", (MTSPR 8, gprc:$Rx)>;
+def : InstAlias<"mflr $Rx", (MFSPR gprc:$Rx, 8)>;
+
+def : InstAlias<"mtctr $Rx", (MTSPR 9, gprc:$Rx)>;
+def : InstAlias<"mfctr $Rx", (MFSPR gprc:$Rx, 9)>;
+
+def : InstAlias<"mtuamr $Rx", (MTSPR 13, gprc:$Rx)>;
+def : InstAlias<"mfuamr $Rx", (MFSPR gprc:$Rx, 13)>;
 
 def : InstAlias<"mtdscr $Rx", (MTSPR 17, gprc:$Rx)>;
 def : InstAlias<"mfdscr $Rx", (MFSPR gprc:$Rx, 17)>;
@@ -4625,6 +4637,9 @@ foreach BATR = 0-3 in {
                     (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 529)))>,
                     Requires<[IsPPC6xx]>;
 }
+
+def : InstAlias<"mtppr $RT", (MTSPR 896, gprc:$RT)>;
+def : InstAlias<"mfppr $RT", (MFSPR gprc:$RT, 896)>;
 
 def : InstAlias<"mtesr $Rx", (MTSPR 980, gprc:$Rx)>, Requires<[IsPPC4xx]>;
 def : InstAlias<"mfesr $Rx", (MFSPR gprc:$Rx, 980)>, Requires<[IsPPC4xx]>;

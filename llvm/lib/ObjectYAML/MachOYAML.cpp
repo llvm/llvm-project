@@ -107,6 +107,8 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
 
   IO.mapRequired("FileHeader", Object.Header);
+  Object.DWARF.Is64bit = Object.Header.magic == MachO::MH_MAGIC_64 ||
+                         Object.Header.magic == MachO::MH_CIGAM_64;
   IO.mapOptional("LoadCommands", Object.LoadCommands);
   if(!Object.LinkEdit.isEmpty() || !IO.outputting())
     IO.mapOptional("LinkEditData", Object.LinkEdit);

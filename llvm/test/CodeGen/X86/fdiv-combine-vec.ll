@@ -120,7 +120,7 @@ define <4 x float> @splat_fdiv_v4f32_estimate(<4 x float> %x, float %y) #0 {
 ; AVX-NEXT:    retq
   %vy = insertelement <4 x float> undef, float %y, i32 0
   %splaty = shufflevector <4 x float> %vy, <4 x float> undef, <4 x i32> zeroinitializer
-  %r = fdiv arcp reassoc <4 x float> %x, %splaty
+  %r = fdiv arcp reassoc ninf <4 x float> %x, %splaty
   ret <4 x float> %r
 }
 

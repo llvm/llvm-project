@@ -5,7 +5,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
 endif()
 add_subdirectory(minidump)
 
-add_lldb_unittest(ProcessEventDataTest
+add_lldb_unittest(ProcessEventDataTests
   ProcessEventDataTest.cpp
 
   LINK_LIBS

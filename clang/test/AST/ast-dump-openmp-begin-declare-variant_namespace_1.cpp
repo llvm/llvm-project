@@ -134,6 +134,8 @@ int main() {
 // CHECK-NEXT: |   | `-UsingDirectiveDecl [[ADDR_65:0x[a-z0-9]*]] <col:3, col:19> col:19 Namespace [[ADDR_0]] 'A'
 // CHECK-NEXT: |   |-DeclStmt [[ADDR_66:0x[a-z0-9]*]] <line:55:3, col:20>
 // CHECK-NEXT: |   | `-UsingDirectiveDecl [[ADDR_67:0x[a-z0-9]*]] <col:3, col:19> col:19 Namespace [[ADDR_5]] 'B'
+// CHECK-NEXT: |   |-RecoveryExpr {{.*}} <line:57:3, col:7>
+// CHECK-NEXT: |   | `-UnresolvedLookupExpr {{.*}} <col:3>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_68:0x[a-z0-9]*]] <line:58:3, col:22>
 // CHECK-NEXT: |     `-BinaryOperator [[ADDR_69:0x[a-z0-9]*]] <col:10, col:22> 'int' '+'
 // CHECK-NEXT: |       |-PseudoObjectExpr [[ADDR_70:0x[a-z0-9]*]] <col:10, col:14> 'int'

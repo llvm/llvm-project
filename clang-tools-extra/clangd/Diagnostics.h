@@ -13,6 +13,7 @@
 #include "support/Path.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
@@ -64,6 +65,7 @@ struct DiagBase {
   // Since File is only descriptive, we store a separate flag to distinguish
   // diags from the main file.
   bool InsideMainFile = false;
+  unsigned ID; // e.g. member of clang::diag, or clang-tidy assigned ID.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DiagBase &D);
 
@@ -82,7 +84,6 @@ struct Note : DiagBase {};
 
 /// A top-level diagnostic that may have Notes and Fixes.
 struct Diag : DiagBase {
-  unsigned ID;      // e.g. member of clang::diag, or clang-tidy assigned ID.
   std::string Name; // if ID was recognized.
   // The source of this diagnostic.
   enum {
@@ -145,9 +146,10 @@ private:
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;
-  /// Set iff adjustDiagFromHeader resulted in changes to LastDiag.
-  bool LastDiagWasAdjusted = false;
-  llvm::DenseSet<int> IncludeLinesWithErrors;
+  llvm::Optional<FullSourceLoc> LastDiagLoc; // Valid only when LastDiag is set.
+  bool LastDiagOriginallyError = false;      // Valid only when LastDiag is set.
+
+  llvm::DenseSet<std::pair<unsigned, unsigned>> IncludedErrorLocations;
   bool LastPrimaryDiagnosticWasSuppressed = false;
 };
 

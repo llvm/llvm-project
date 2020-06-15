@@ -253,8 +253,6 @@ public:
   }
 };
 
-using IndexAttrPair = std::pair<unsigned, AttributeSet>;
-
 //===----------------------------------------------------------------------===//
 /// \class
 /// This class represents a set of attributes that apply to the function,
