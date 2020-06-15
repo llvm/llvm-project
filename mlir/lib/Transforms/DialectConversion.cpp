@@ -1742,11 +1742,35 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 /// This hooks allows for converting a type.
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) {
+  auto existingIt = cachedDirectConversions.find(t);
+  if (existingIt != cachedDirectConversions.end()) {
+    if (existingIt->second)
+      results.push_back(existingIt->second);
+    return success(existingIt->second != nullptr);
+  }
+  auto multiIt = cachedMultiConversions.find(t);
+  if (multiIt != cachedMultiConversions.end()) {
+    results.append(multiIt->second.begin(), multiIt->second.end());
+    return success();
+  }
+
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
-  for (ConversionCallbackFn &converter : llvm::reverse(conversions))
-    if (Optional<LogicalResult> result = converter(t, results))
-      return *result;
+  size_t currentCount = results.size();
+  for (ConversionCallbackFn &converter : llvm::reverse(conversions)) {
+    if (Optional<LogicalResult> result = converter(t, results)) {
+      if (!succeeded(*result)) {
+        cachedDirectConversions.try_emplace(t, nullptr);
+        return failure();
+      }
+      auto newTypes = ArrayRef<Type>(results).drop_front(currentCount);
+      if (newTypes.size() == 1)
+        cachedDirectConversions.try_emplace(t, newTypes.front());
+      else
+        cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
+      return success();
+    }
+  }
   return failure();
 }
 
@@ -1775,18 +1799,16 @@ LogicalResult TypeConverter::convertTypes(ArrayRef<Type> types,
 
 /// Return true if the given type is legal for this type converter, i.e. the
 /// type converts to itself.
-bool TypeConverter::isLegal(Type type) {
-  SmallVector<Type, 1> results;
-  return succeeded(convertType(type, results)) && results.size() == 1 &&
-         results.front() == type;
+bool TypeConverter::isLegal(Type type) { return convertType(type) == type; }
+/// Return true if the given operation has legal operand and result types.
+bool TypeConverter::isLegal(Operation *op) {
+  return isLegal(op->getOperandTypes()) && isLegal(op->getResultTypes());
 }
 
 /// Return true if the inputs and outputs of the given function type are
 /// legal.
-bool TypeConverter::isSignatureLegal(FunctionType funcType) {
-  return llvm::all_of(
-      llvm::concat<const Type>(funcType.getInputs(), funcType.getResults()),
-      [this](Type type) { return isLegal(type); });
+bool TypeConverter::isSignatureLegal(FunctionType ty) {
+  return isLegal(llvm::concat<const Type>(ty.getInputs(), ty.getResults()));
 }
 
 /// This hook allows for converting a specific argument of a signature.
@@ -1805,6 +1827,14 @@ LogicalResult TypeConverter::convertSignatureArg(unsigned inputNo, Type type,
   result.addInputs(inputNo, convertedTypes);
   return success();
 }
+LogicalResult TypeConverter::convertSignatureArgs(TypeRange types,
+                                                  SignatureConversion &result,
+                                                  unsigned origInputOffset) {
+  for (unsigned i = 0, e = types.size(); i != e; ++i)
+    if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
+      return failure();
+  return success();
+}
 
 Value TypeConverter::materializeConversion(PatternRewriter &rewriter,
                                            Location loc, Type resultType,
@@ -1813,6 +1843,17 @@ Value TypeConverter::materializeConversion(PatternRewriter &rewriter,
     if (Optional<Value> result = fn(rewriter, resultType, inputs, loc))
       return result.getValue();
   return nullptr;
+}
+
+/// This function converts the type signature of the given block, by invoking
+/// 'convertSignatureArg' for each argument. This function should return a valid
+/// conversion for the signature on success, None otherwise.
+auto TypeConverter::convertBlockSignature(Block *block)
+    -> Optional<SignatureConversion> {
+  SignatureConversion conversion(block->getNumArguments());
+  if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
+    return llvm::None;
+  return conversion;
 }
 
 /// Create a default conversion pattern that rewrites the type signature of a
@@ -1828,15 +1869,11 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType type = funcOp.getType();
 
-    // Convert the original function arguments.
+    // Convert the original function types.
     TypeConverter::SignatureConversion result(type.getNumInputs());
-    for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-      if (failed(converter.convertSignatureArg(i, type.getInput(i), result)))
-        return failure();
-
-    // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
-    if (failed(converter.convertTypes(type.getResults(), convertedResults)))
+    if (failed(converter.convertSignatureArgs(type.getInputs(), result)) ||
+        failed(converter.convertTypes(type.getResults(), convertedResults)))
       return failure();
 
     // Update the function signature in-place.
@@ -1857,19 +1894,6 @@ void mlir::populateFuncOpTypeConversionPattern(
     OwningRewritePatternList &patterns, MLIRContext *ctx,
     TypeConverter &converter) {
   patterns.insert<FuncOpSignatureConversion>(ctx, converter);
-}
-
-/// This function converts the type signature of the given block, by invoking
-/// 'convertSignatureArg' for each argument. This function should return a valid
-/// conversion for the signature on success, None otherwise.
-auto TypeConverter::convertBlockSignature(Block *block)
-    -> Optional<SignatureConversion> {
-  SignatureConversion conversion(block->getNumArguments());
-  for (unsigned i = 0, e = block->getNumArguments(); i != e; ++i)
-    if (failed(convertSignatureArg(i, block->getArgument(i).getType(),
-                                   conversion)))
-      return llvm::None;
-  return conversion;
 }
 
 //===----------------------------------------------------------------------===//

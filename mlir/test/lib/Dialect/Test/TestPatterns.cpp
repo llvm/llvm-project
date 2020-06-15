@@ -314,10 +314,9 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
 
     // Convert the original entry arguments.
     TypeConverter::SignatureConversion result(entry->getNumArguments());
-    for (unsigned i = 0, e = entry->getNumArguments(); i != e; ++i)
-      if (failed(converter.convertSignatureArg(
-              i, entry->getArgument(i).getType(), result)))
-        return failure();
+    if (failed(
+            converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
+      return failure();
 
     // Convert the region signature and just drop the operation.
     rewriter.applySignatureConversion(&region, result);

@@ -72,16 +72,16 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature with a range of types in the
-    /// new signature.
-    void remapInput(unsigned origInputNo, unsigned newInputNo,
-                    unsigned newInputCount = 1);
-
     /// Remap an input of the original signature to another `replacement`
     /// value. This drops the original argument.
     void remapInput(unsigned origInputNo, Value replacement);
 
   private:
+    /// Remap an input of the original signature with a range of types in the
+    /// new signature.
+    void remapInput(unsigned origInputNo, unsigned newInputNo,
+                    unsigned newInputCount = 1);
+
     /// The remapping information for each of the original arguments.
     SmallVector<Optional<InputMapping>, 4> remappedInputs;
 
@@ -149,16 +149,29 @@ public:
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.
   bool isLegal(Type type);
+  /// Return true if all of the given types are legal for this type converter.
+  template <typename RangeT>
+  std::enable_if_t<!std::is_convertible<RangeT, Type>::value &&
+                       !std::is_convertible<RangeT, Operation *>::value,
+                   bool>
+  isLegal(RangeT &&range) {
+    return llvm::all_of(range, [this](Type type) { return isLegal(type); });
+  }
+  /// Return true if the given operation has legal operand and result types.
+  bool isLegal(Operation *op);
 
   /// Return true if the inputs and outputs of the given function type are
   /// legal.
-  bool isSignatureLegal(FunctionType funcType);
+  bool isSignatureLegal(FunctionType ty);
 
   /// This method allows for converting a specific argument of a signature. It
   /// takes as inputs the original argument input number, type.
   /// On success, it populates 'result' with any new mappings.
   LogicalResult convertSignatureArg(unsigned inputNo, Type type,
                                     SignatureConversion &result);
+  LogicalResult convertSignatureArgs(TypeRange types,
+                                     SignatureConversion &result,
+                                     unsigned origInputOffset = 0);
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
@@ -214,6 +227,8 @@ private:
   /// Register a type conversion.
   void registerConversion(ConversionCallbackFn callback) {
     conversions.emplace_back(std::move(callback));
+    cachedDirectConversions.clear();
+    cachedMultiConversions.clear();
   }
 
   /// Generate a wrapper for the given materialization callback. The callback
@@ -240,6 +255,13 @@ private:
 
   /// The list of registered materialization functions.
   SmallVector<MaterializationCallbackFn, 2> materializations;
+
+  /// A set of cached conversions to avoid recomputing in the common case.
+  /// Direct 1-1 conversions are the most common, so this cache stores the
+  /// successful 1-1 conversions as well as all failed conversions.
+  DenseMap<Type, Type> cachedDirectConversions;
+  /// This cache stores the successful 1->N conversions, where N != 1.
+  DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
 };
 
 //===----------------------------------------------------------------------===//
