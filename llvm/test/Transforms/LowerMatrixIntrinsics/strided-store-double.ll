@@ -67,8 +67,8 @@ define void @strided_store_2x3(<10 x double> %in, double* %out) {
 
 declare void @llvm.matrix.columnwise.store.v10f64(<10 x double>, double*, i32, i32, i32)
 
-; CHECK: declare void @llvm.matrix.columnwise.store.v6f64.p0f64(<6 x double>, double* writeonly, i32, i32 immarg, i32 immarg) [[WRITEONLY:#[0-9]]]
+; CHECK: declare void @llvm.matrix.columnwise.store.v6f64.p0f64(<6 x double>, double* nocapture writeonly, i32, i32 immarg, i32 immarg) [[WRITEONLY:#[0-9]]]
 
-; CHECK: declare void @llvm.matrix.columnwise.store.v10f64.p0f64(<10 x double>, double* writeonly, i32, i32 immarg, i32 immarg) [[WRITEONLY]]
+; CHECK: declare void @llvm.matrix.columnwise.store.v10f64.p0f64(<10 x double>, double* nocapture writeonly, i32, i32 immarg, i32 immarg) [[WRITEONLY]]
 
-; CHECK: attributes [[WRITEONLY]] = { argmemonly nounwind willreturn writeonly }
+; CHECK: attributes [[WRITEONLY]] = { argmemonly nosync nounwind willreturn writeonly }
