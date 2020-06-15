@@ -10,6 +10,111 @@
 ; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 ; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 
+; Do an end-to-test using the new LTO API
+; TODO: Hideous llvm-lto2 invocation, add a --default-symbol-resolution to llvm-lto2?
+; RUN: opt -module-summary %s -o %t.summ0.bc
+; RUN: opt -module-summary %S/Inputs/ipa.ll -o %t.summ1.bc
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN:  -r %t.summ0.bc,Write1, \
+; RUN:  -r %t.summ0.bc,Write4, \
+; RUN:  -r %t.summ0.bc,Write4_2, \
+; RUN:  -r %t.summ0.bc,Write8, \
+; RUN:  -r %t.summ0.bc,WriteAndReturn8, \
+; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
+; RUN:  -r %t.summ0.bc,ExternalCall, \
+; RUN:  -r %t.summ0.bc,PreemptableWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableWrite1, \
+; RUN:  -r %t.summ0.bc,ReturnDependent, \
+; RUN:  -r %t.summ0.bc,Rec2, \
+; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
+; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
+; RUN:  -r %t.summ0.bc,f1,px \
+; RUN:  -r %t.summ0.bc,f2,px \
+; RUN:  -r %t.summ0.bc,f3,px \
+; RUN:  -r %t.summ0.bc,f4,px \
+; RUN:  -r %t.summ0.bc,f5,px \
+; RUN:  -r %t.summ0.bc,f6,px \
+; RUN:  -r %t.summ0.bc,PreemptableCall,px \
+; RUN:  -r %t.summ0.bc,InterposableCall,px \
+; RUN:  -r %t.summ0.bc,PrivateCall,px \
+; RUN:  -r %t.summ0.bc,f7,px \
+; RUN:  -r %t.summ0.bc,f8left,px \
+; RUN:  -r %t.summ0.bc,f8right,px \
+; RUN:  -r %t.summ0.bc,f8oobleft,px \
+; RUN:  -r %t.summ0.bc,f8oobright,px \
+; RUN:  -r %t.summ0.bc,TwoArguments,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
+; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
+; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:  -r %t.summ1.bc,Write4,px \
+; RUN:  -r %t.summ1.bc,Write4_2,px \
+; RUN:  -r %t.summ1.bc,Write8,px \
+; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
+; RUN:  -r %t.summ1.bc,ExternalCall,px \
+; RUN:  -r %t.summ1.bc,PreemptableWrite1,px \
+; RUN:  -r %t.summ1.bc,InterposableWrite1,px \
+; RUN:  -r %t.summ1.bc,ReturnDependent,px \
+; RUN:  -r %t.summ1.bc,Rec0,px \
+; RUN:  -r %t.summ1.bc,Rec1,px \
+; RUN:  -r %t.summ1.bc,Rec2,px \
+; RUN:  -r %t.summ1.bc,RecursiveNoOffset,px \
+; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
+; RUN:  -r %t.summ1.bc,ReturnAlloca,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -use-new-pm -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN:  -r %t.summ0.bc,Write1, \
+; RUN:  -r %t.summ0.bc,Write4, \
+; RUN:  -r %t.summ0.bc,Write4_2, \
+; RUN:  -r %t.summ0.bc,Write8, \
+; RUN:  -r %t.summ0.bc,WriteAndReturn8, \
+; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
+; RUN:  -r %t.summ0.bc,ExternalCall, \
+; RUN:  -r %t.summ0.bc,PreemptableWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableWrite1, \
+; RUN:  -r %t.summ0.bc,ReturnDependent, \
+; RUN:  -r %t.summ0.bc,Rec2, \
+; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
+; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
+; RUN:  -r %t.summ0.bc,f1,px \
+; RUN:  -r %t.summ0.bc,f2,px \
+; RUN:  -r %t.summ0.bc,f3,px \
+; RUN:  -r %t.summ0.bc,f4,px \
+; RUN:  -r %t.summ0.bc,f5,px \
+; RUN:  -r %t.summ0.bc,f6,px \
+; RUN:  -r %t.summ0.bc,PreemptableCall,px \
+; RUN:  -r %t.summ0.bc,InterposableCall,px \
+; RUN:  -r %t.summ0.bc,PrivateCall,px \
+; RUN:  -r %t.summ0.bc,f7,px \
+; RUN:  -r %t.summ0.bc,f8left,px \
+; RUN:  -r %t.summ0.bc,f8right,px \
+; RUN:  -r %t.summ0.bc,f8oobleft,px \
+; RUN:  -r %t.summ0.bc,f8oobright,px \
+; RUN:  -r %t.summ0.bc,TwoArguments,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
+; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
+; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
+; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:  -r %t.summ1.bc,Write4,px \
+; RUN:  -r %t.summ1.bc,Write4_2,px \
+; RUN:  -r %t.summ1.bc,Write8,px \
+; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
+; RUN:  -r %t.summ1.bc,ExternalCall,px \
+; RUN:  -r %t.summ1.bc,PreemptableWrite1,px \
+; RUN:  -r %t.summ1.bc,InterposableWrite1,px \
+; RUN:  -r %t.summ1.bc,ReturnDependent,px \
+; RUN:  -r %t.summ1.bc,Rec0,px \
+; RUN:  -r %t.summ1.bc,Rec1,px \
+; RUN:  -r %t.summ1.bc,Rec2,px \
+; RUN:  -r %t.summ1.bc,RecursiveNoOffset,px \
+; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
+; RUN:  -r %t.summ1.bc,ReturnAlloca,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
 
@@ -142,6 +247,7 @@ define void @InterposableCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[4]: full-set, @InterposableWrite1(arg0, [0,1)){{$}}
+; LTO-NEXT: x[4]: [0,1), @InterposableWrite1(arg0, [0,1)){{$}}
 ; CHECK-NOT: ]:
 entry:
   %x = alloca i32, align 4
@@ -271,7 +377,7 @@ entry:
   ret void
 }
 
-define void @TwoArgumentsOOBOne() {
+define void @TwoArgumentsOOBOne() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBOne dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
@@ -318,7 +424,7 @@ entry:
   ret void
 }
 
-define i32 @TestRecursiveNoOffset(i32* %p, i32 %size) {
+define i32 @TestRecursiveNoOffset(i32* %p, i32 %size) #0 {
 ; CHECK-LABEL: @TestRecursiveNoOffset dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @RecursiveNoOffset(arg0, [0,1)){{$}}
@@ -416,21 +522,21 @@ entry:
 ; CHECK-LABEL: @Rec0{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Write4(arg0, [2,3)){{$}}
-; GLOBAL-NEXT: p[]: [2,6), @Write4(arg0, [2,3)){{$}}
+; GLOBAL-NEXT: p[]: [2,6)
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
 
 ; CHECK-LABEL: @Rec1{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Rec0(arg0, [1,2)){{$}}
-; GLOBAL-NEXT: p[]: [3,7), @Rec0(arg0, [1,2)){{$}}
+; GLOBAL-NEXT: p[]: [3,7)
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
 
 ; CHECK-LABEL: @Rec2{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Rec1(arg0, [-5,-4)){{$}}
-; GLOBAL-NEXT: p[]: [-2,2), @Rec1(arg0, [-5,-4)){{$}}
+; GLOBAL-NEXT: p[]: [-2,2)
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NOT: ]:
 
