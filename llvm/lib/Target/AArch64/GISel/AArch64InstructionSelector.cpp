@@ -2605,12 +2605,43 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // %v2(s32) = G_ZEXT %v(s8)
     if (!IsSigned) {
       auto *LoadMI = getOpcodeDef(TargetOpcode::G_LOAD, SrcReg, MRI);
-      if (LoadMI &&
-          RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID) {
+      bool IsGPR =
+          RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID;
+      if (LoadMI && IsGPR) {
         const MachineMemOperand *MemOp = *LoadMI->memoperands_begin();
         unsigned BytesLoaded = MemOp->getSize();
         if (BytesLoaded < 4 && SrcTy.getSizeInBytes() == BytesLoaded)
           return selectCopy(I, TII, MRI, TRI, RBI);
+      }
+
+      // If we are zero extending from 32 bits to 64 bits, it's possible that
+      // the instruction implicitly does the zero extend for us. In that case,
+      // we can just emit a SUBREG_TO_REG.
+      if (IsGPR && SrcSize == 32 && DstSize == 64) {
+        // Unlike with the G_LOAD case, we don't want to look through copies
+        // here.
+        MachineInstr *Def = MRI.getVRegDef(SrcReg);
+        if (Def && isDef32(*Def)) {
+          MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
+              .addImm(0)
+              .addUse(SrcReg)
+              .addImm(AArch64::sub_32);
+
+          if (!RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass,
+                                            MRI)) {
+            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT destination\n");
+            return false;
+          }
+
+          if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
+                                            MRI)) {
+            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT source\n");
+            return false;
+          }
+
+          I.eraseFromParent();
+          return true;
+        }
       }
     }
 
