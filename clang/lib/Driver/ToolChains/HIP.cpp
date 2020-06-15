@@ -243,6 +243,11 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (JA.getType() == types::TY_HIP_FATBIN)
     return constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs, Args, *this);
 
+  assert(Inputs.size());
+  if (Inputs.size() == 1 && Inputs[0].getType() == types::TY_Object)
+    return constructLldCommand(C, JA, Inputs, Output, Args,
+                               Inputs[0].getFilename());
+
   assert(getToolChain().getTriple().getArch() == llvm::Triple::amdgcn &&
          "Unsupported target");
 

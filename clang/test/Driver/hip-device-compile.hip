@@ -63,10 +63,10 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck -check-prefixes=BUNDLE %s
 
-// BUNDLE: {{"*.clang.*"}}
-// BUNDLE: {{"*.llvm-link"}}
-// BUNDLE: {{".*opt"}}
-// BUNDLE: {{".*llc"}}
+// BUNDLE: {{"*.clang.*"}} {{.*}} "-emit-obj"
+// BUNDLE-NOT: {{"*.llvm-link"}}
+// BUNDLE-NOT: {{".*opt"}}
+// BUNDLE-NOT: {{".*llc"}}
 // BUNDLE: {{".*lld.*"}}
 // BUNDLE: {{".*clang-offload-bundler"}}
 
