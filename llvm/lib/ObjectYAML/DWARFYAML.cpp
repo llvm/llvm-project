@@ -97,7 +97,7 @@ void MappingTraits<DWARFYAML::RangeEntry>::mapping(
 void MappingTraits<DWARFYAML::Ranges>::mapping(IO &IO,
                                                DWARFYAML::Ranges &DebugRanges) {
   IO.mapOptional("Offset", DebugRanges.Offset);
-  IO.mapRequired("AddrSize", DebugRanges.AddrSize);
+  IO.mapOptional("AddrSize", DebugRanges.AddrSize);
   IO.mapRequired("Entries", DebugRanges.Entries);
 }
 
