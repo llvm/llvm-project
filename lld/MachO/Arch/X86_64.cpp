@@ -27,7 +27,7 @@ struct X86_64 : TargetInfo {
 
   uint64_t getImplicitAddend(MemoryBufferRef, const section_64 &,
                              const relocation_info &) const override;
-  void relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const override;
+  void relocateOne(uint8_t *loc, const Reloc &, uint64_t val) const override;
 
   void writeStub(uint8_t *buf, const DylibSymbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
@@ -48,12 +48,35 @@ static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
       .str();
 }
 
+static void validateLength(MemoryBufferRef mb, const section_64 &sec,
+                           const relocation_info &rel,
+                           const std::vector<uint8_t> &validLengths) {
+  if (std::find(validLengths.begin(), validLengths.end(), rel.r_length) !=
+      validLengths.end())
+    return;
+
+  std::string msg = getErrorLocation(mb, sec, rel) + ": relocations of type " +
+                    std::to_string(rel.r_type) + " must have r_length of ";
+  bool first = true;
+  for (uint8_t length : validLengths) {
+    if (!first)
+      msg += " or ";
+    first = false;
+    msg += std::to_string(length);
+  }
+  fatal(msg);
+}
+
 uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
                                    const relocation_info &rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + sec.offset + rel.r_address;
   switch (rel.r_type) {
   case X86_64_RELOC_BRANCH:
+    // XXX: ld64 also supports r_length = 0 here but I'm not sure when such a
+    // relocation will actually be generated.
+    validateLength(mb, sec, rel, {2});
+    break;
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
@@ -62,20 +85,35 @@ uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
     if (!rel.r_pcrel)
       fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
             std::to_string(rel.r_type) + " must be pcrel");
-    return read32le(loc);
+    validateLength(mb, sec, rel, {2});
+    break;
   case X86_64_RELOC_UNSIGNED:
     if (rel.r_pcrel)
       fatal(getErrorLocation(mb, sec, rel) + ": relocations of type " +
             std::to_string(rel.r_type) + " must not be pcrel");
-    return read64le(loc);
+    validateLength(mb, sec, rel, {2, 3});
+    break;
   default:
     error("TODO: Unhandled relocation type " + std::to_string(rel.r_type));
     return 0;
   }
+
+  switch (rel.r_length) {
+  case 0:
+    return *loc;
+  case 1:
+    return read16le(loc);
+  case 2:
+    return read32le(loc);
+  case 3:
+    return read64le(loc);
+  default:
+    llvm_unreachable("invalid r_length");
+  }
 }
 
-void X86_64::relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const {
-  switch (type) {
+void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t val) const {
+  switch (r.type) {
   case X86_64_RELOC_BRANCH:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
@@ -83,15 +121,32 @@ void X86_64::relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const {
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
     // These types are only used for pc-relative relocations, so offset by 4
-    // since the RIP has advanced by 4 at this point.
-    write32le(loc, val - 4);
+    // since the RIP has advanced by 4 at this point. This is only valid when
+    // r_length = 0, which is enforced by validateLength().
+    val -= 4;
     break;
   case X86_64_RELOC_UNSIGNED:
-    write64le(loc, val);
     break;
   default:
     llvm_unreachable(
         "getImplicitAddend should have flagged all unhandled relocation types");
+  }
+
+  switch (r.length) {
+  case 0:
+    *loc = val;
+    break;
+  case 1:
+    write16le(loc, val);
+    break;
+  case 2:
+    write32le(loc, val);
+    break;
+  case 3:
+    write64le(loc, val);
+    break;
+  default:
+    llvm_unreachable("invalid r_length");
   }
 }
 
