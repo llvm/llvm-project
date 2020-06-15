@@ -3421,8 +3421,7 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
     int64_t ME = MI.getOperand(4).getImm();
     APInt InVal(32, SExtImm, true);
     InVal = InVal.rotl(SH);
-    // Set the bits (        MB + 32        ) to (        ME + 32        ).
-    uint64_t Mask = ((1LLU << (32 - MB)) - 1) & ~((1LLU << (31 - ME)) - 1);
+    APInt Mask = APInt::getBitsSetWithWrap(32, 32 - ME - 1, 32 - MB);
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use
