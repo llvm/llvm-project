@@ -779,7 +779,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                 /*printBlockTerminators=*/false);
 }
 
-// Namespace avoids ambiguous ReturnOpOperandAdaptor.
+// Namespace avoids ambiguous ReturnOpAdaptor.
 namespace mlir {
 namespace gpu {
 #define GET_OP_CLASSES
