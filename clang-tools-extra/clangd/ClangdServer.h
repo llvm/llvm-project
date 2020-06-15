@@ -121,7 +121,7 @@ public:
     ClangTidyOptionsBuilder GetClangTidyOptions;
 
     /// If true, turn on the `-frecovery-ast` clang flag.
-    bool BuildRecoveryAST = false;
+    bool BuildRecoveryAST = true;
 
     /// If true, turn on the `-frecovery-ast-type` clang flag.
     bool PreserveRecoveryASTType = false;
@@ -354,7 +354,7 @@ private:
   bool SuggestMissingIncludes = false;
 
   // If true, preserve expressions in AST for broken code.
-  bool BuildRecoveryAST = false;
+  bool BuildRecoveryAST = true;
   // If true, preserve the type for recovery AST.
   bool PreserveRecoveryASTType = false;
 
