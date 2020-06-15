@@ -127,9 +127,7 @@ struct TestBufferPlacementPreparationPass
     auto isLegalOperation = [&](Operation *op) {
       return converter.isLegal(op);
     };
-    target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
-        Optional<ConversionTarget::DynamicLegalityCallbackFn>(
-            isLegalOperation));
+    target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
