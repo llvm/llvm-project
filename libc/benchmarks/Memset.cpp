@@ -1,4 +1,4 @@
-//===-- Benchmark memcpy implementation -----------------------------------===//
+//===-- Benchmark memset implementation -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,44 +11,45 @@
 #include "LibcMemoryBenchmarkMain.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
+
+namespace __llvm_libc {
+void *memset(void *, int, size_t);
+} // namespace __llvm_libc
 
 namespace llvm {
 namespace libc_benchmarks {
 
 // The context encapsulates the buffers, parameters and the measure.
-struct MemcpyContext : public BenchmarkRunner {
-  using FunctionPrototype = void *(*)(void *, const void *, size_t);
+struct MemsetContext : public BenchmarkRunner {
+  using FunctionPrototype = void *(*)(void *, int, size_t);
 
   struct ParameterType {
-    uint16_t SrcOffset = 0;
     uint16_t DstOffset = 0;
   };
 
-  explicit MemcpyContext(const StudyConfiguration &Conf)
-      : OD(Conf), SrcBuffer(Conf.BufferSize), DstBuffer(Conf.BufferSize),
+  explicit MemsetContext(const StudyConfiguration &Conf)
+      : OD(Conf), DstBuffer(Conf.BufferSize), MemsetValue(Conf.MemsetValue),
         PP(*this) {}
 
   // Needed by the ParameterProvider to update the current batch of parameter.
   void Randomize(MutableArrayRef<ParameterType> Parameters) {
     for (auto &P : Parameters) {
       P.DstOffset = OD(Gen);
-      P.SrcOffset = OD(Gen);
     }
   }
 
   ArrayRef<StringRef> getFunctionNames() const override {
-    static std::array<StringRef, 1> kFunctionNames = {"memcpy"};
+    static std::array<StringRef, 1> kFunctionNames = {"memset"};
     return kFunctionNames;
   }
 
   BenchmarkResult benchmark(const BenchmarkOptions &Options,
                             StringRef FunctionName, size_t Size) override {
-    FunctionPrototype Function =
-        StringSwitch<FunctionPrototype>(FunctionName).Case("memcpy", &::memcpy);
+    FunctionPrototype Function = StringSwitch<FunctionPrototype>(FunctionName)
+                                     .Case("memset", &__llvm_libc::memset);
     return llvm::libc_benchmarks::benchmark(
         Options, PP, [this, Function, Size](ParameterType p) {
-          Function(DstBuffer + p.DstOffset, SrcBuffer + p.SrcOffset, Size);
+          Function(DstBuffer + p.DstOffset, MemsetValue, Size);
           return DstBuffer + p.DstOffset;
         });
   }
@@ -56,13 +57,13 @@ struct MemcpyContext : public BenchmarkRunner {
 private:
   std::default_random_engine Gen;
   OffsetDistribution OD;
-  AlignedBuffer SrcBuffer;
   AlignedBuffer DstBuffer;
-  SmallParameterProvider<MemcpyContext> PP;
+  const uint8_t MemsetValue;
+  SmallParameterProvider<MemsetContext> PP;
 };
 
 std::unique_ptr<BenchmarkRunner> getRunner(const StudyConfiguration &Conf) {
-  return std::make_unique<MemcpyContext>(Conf);
+  return std::make_unique<MemsetContext>(Conf);
 }
 
 } // namespace libc_benchmarks
