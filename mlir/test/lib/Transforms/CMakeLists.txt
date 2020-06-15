@@ -2,6 +2,7 @@
 add_mlir_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
   TestBufferPlacement.cpp
+  TestExpandTanh.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
   TestConvertGPUKernelToCubin.cpp
