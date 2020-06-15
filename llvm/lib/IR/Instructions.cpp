@@ -330,13 +330,13 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::FunctionIndex, Kind);
+    return F->getAttributes().hasFnAttribute(Kind);
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(AttributeList::FunctionIndex, Kind);
+    return F->getAttributes().hasFnAttribute(Kind);
   return false;
 }
 
