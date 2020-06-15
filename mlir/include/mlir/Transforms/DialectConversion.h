@@ -607,6 +607,12 @@ public:
     if (callback)
       setLegalityCallback(dialectNames, *callback);
   }
+  template <typename... Args>
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {
+    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
+    setDialectAction(dialectNames, LegalizationAction::Dynamic);
+    setLegalityCallback(dialectNames, callback);
+  }
 
   /// Register unknown operations as dynamically legal. For operations(and
   /// dialects) that do not have a set legalization action, treat them as
