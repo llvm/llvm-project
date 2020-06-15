@@ -306,8 +306,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // The current loop unroll pass can unroll loops that have
   // (1) single latch; and
-  // (2a) latch is an exiting block; or
-  // (2b) latch is unconditional and there exists a single exiting block.
+  // (2a) latch is unconditional; or
+  // (2b) latch is conditional and is an exiting block
   // FIXME: The implementation can be extended to work with more complicated
   // cases, e.g. loops with multiple latches.
   BasicBlock *Header = L->getHeader();
@@ -321,18 +321,18 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     ExitingBI = LatchBI;
   else if (BasicBlock *ExitingBlock = L->getExitingBlock())
     ExitingBI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
-  if (!LatchBI || !ExitingBI) {
-    LLVM_DEBUG(dbgs() << "  Can't unroll; loop not terminated by a conditional "
-                         "branch in latch or a single exiting block.\n");
-    return LoopUnrollResult::Unmodified;
-  }
-  if (LatchBI->isConditional() && LatchBI != ExitingBI) {
+  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
     return LoopUnrollResult::Unmodified;
   }
-  LLVM_DEBUG(dbgs() << "  Exiting Block = " << ExitingBI->getParent()->getName()
-                    << "\n");
+  LLVM_DEBUG({
+    if (ExitingBI)
+      dbgs() << "  Exiting Block = " << ExitingBI->getParent()->getName()
+             << "\n";
+    else
+      dbgs() << "  No single exiting block\n";
+  });
 
   if (Header->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
@@ -523,8 +523,12 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   if (!LatchIsExiting)
     ++NumUnrolledNotLatch;
-  bool ContinueOnTrue = L->contains(ExitingBI->getSuccessor(0));
-  BasicBlock *LoopExit = ExitingBI->getSuccessor(ContinueOnTrue);
+  Optional<bool> ContinueOnTrue = None;
+  BasicBlock *LoopExit = nullptr;
+  if (ExitingBI) {
+    ContinueOnTrue = L->contains(ExitingBI->getSuccessor(0));
+    LoopExit = ExitingBI->getSuccessor(*ContinueOnTrue);
+  }
 
   // For the first iteration of the loop, we should use the precloned values for
   // PHI nodes.  Insert associations now.
@@ -540,8 +544,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   std::vector<BasicBlock *> Latches;
   Headers.push_back(Header);
   Latches.push_back(LatchBlock);
-  ExitingBlocks.push_back(ExitingBI->getParent());
-  ExitingSucc.push_back(ExitingBI->getSuccessor(!ContinueOnTrue));
+  if (ExitingBI) {
+    ExitingBlocks.push_back(ExitingBI->getParent());
+    ExitingSucc.push_back(ExitingBI->getSuccessor(!(*ContinueOnTrue)));
+  }
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each
@@ -634,10 +640,12 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
       // Keep track of the exiting block and its successor block contained in
       // the loop for the current iteration.
-      if (*BB == ExitingBlocks[0])
-        ExitingBlocks.push_back(New);
-      if (*BB == ExitingSucc[0])
-        ExitingSucc.push_back(New);
+      if (ExitingBI) {
+        if (*BB == ExitingBlocks[0])
+          ExitingBlocks.push_back(New);
+        if (*BB == ExitingSucc[0])
+          ExitingSucc.push_back(New);
+      }
 
       NewBlocks.push_back(New);
       UnrolledLoopBlocks.push_back(New);
@@ -689,13 +697,15 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   }
 
   auto setDest = [](BasicBlock *Src, BasicBlock *Dest, BasicBlock *BlockInLoop,
-                    bool NeedConditional, bool ContinueOnTrue,
+                    bool NeedConditional, Optional<bool> ContinueOnTrue,
                     bool IsDestLoopExit) {
     auto *Term = cast<BranchInst>(Src->getTerminator());
     if (NeedConditional) {
       // Update the conditional branch's successor for the following
       // iteration.
-      Term->setSuccessor(!ContinueOnTrue, Dest);
+      assert(ContinueOnTrue.hasValue() &&
+             "Expecting valid ContinueOnTrue when NeedConditional is true");
+      Term->setSuccessor(!(*ContinueOnTrue), Dest);
     } else {
       // Remove phi operands at this loop exit
       if (!IsDestLoopExit) {
@@ -780,7 +790,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (NeedConditional)
         continue;
       setDest(ExitingBlocks[i], ExitingSucc[i], ExitingSucc[i], NeedConditional,
-              ContinueOnTrue, false);
+              None, false);
     }
 
     // When completely unrolling, the last latch becomes unreachable.
@@ -805,9 +815,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           ChildrenToUpdate.push_back(ChildBB);
       }
       BasicBlock *NewIDom;
-      BasicBlock *&TermBlock = ExitingBlocks[0];
-      auto &TermBlocks = ExitingBlocks;
-      if (BB == TermBlock) {
+      if (ExitingBI && BB == ExitingBlocks[0]) {
         // The latch is special because we emit unconditional branches in
         // some cases where the original loop contained a conditional branch.
         // Since the latch is always at the bottom of the loop, if the latch
@@ -816,12 +824,13 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         // latch which ends in a conditional branch, or the last latch if
         // there is no such latch.
         // For loops exiting from non latch exiting block, we limit the
-        // supported loops to have a single exiting block.
-        NewIDom = TermBlocks.back();
-        for (unsigned i = 0, e = TermBlocks.size(); i != e; ++i) {
-          Instruction *Term = TermBlocks[i]->getTerminator();
+        // branch simplification to single exiting block loops.
+        NewIDom = ExitingBlocks.back();
+        for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
+          Instruction *Term = ExitingBlocks[i]->getTerminator();
           if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
-            NewIDom = DT->findNearestCommonDominator(TermBlocks[i], Latches[i]);
+            NewIDom =
+                DT->findNearestCommonDominator(ExitingBlocks[i], Latches[i]);
             break;
           }
         }
