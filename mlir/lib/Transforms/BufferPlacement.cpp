@@ -296,7 +296,9 @@ private:
         if (!dominators.dominates(definingBlock, blockArg.getOwner())) {
           toProcess.emplace_back(blockArg, blockArg.getParentBlock());
           blockArgsToFree.insert(blockArg);
-        } else if (visitedBlockArgs.insert({blockArg, definingBlock}).second)
+        } else if (visitedBlockArgs
+                       .insert(std::make_tuple(blockArg, definingBlock))
+                       .second)
           toProcess.emplace_back(blockArg, definingBlock);
       }
     };
@@ -328,13 +330,12 @@ private:
         // Get the terminator and the value that will be passed to our
         // argument.
         Operation *terminator = (*it)->getTerminator();
-        auto successorOperand =
-            cast<BranchOpInterface>(terminator)
-                .getMutableSuccessorOperands(it.getSuccessorIndex())
-                .getValue()
-                .slice(blockArg.getArgNumber(), 1);
-        Value sourceValue = ((OperandRange)successorOperand)[0];
-
+        auto branchInterface = cast<BranchOpInterface>(terminator);
+        // Convert the mutable operand range to an immutable range and query the
+        // associated source value.
+        Value sourceValue =
+            branchInterface.getSuccessorOperands(it.getSuccessorIndex())
+                .getValue()[blockArg.getArgNumber()];
         // Create a new alloc at the current location of the terminator.
         auto memRefType = sourceValue.getType().cast<MemRefType>();
         OpBuilder builder(terminator);
@@ -354,7 +355,10 @@ private:
         auto alloc = builder.create<AllocOp>(terminator->getLoc(), memRefType,
                                              dynamicOperands);
         // Wire new alloc and successor operand.
-        successorOperand.assign(alloc);
+        branchInterface.getMutableSuccessorOperands(it.getSuccessorIndex())
+            .getValue()
+            .slice(blockArg.getArgNumber(), 1)
+            .assign(alloc);
         // Create a new copy operation that copies to contents of the old
         // allocation to the new one.
         builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue,
