@@ -1328,7 +1328,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 
   taskdata->td_flags.task_serial =
       (parent_task->td_flags.final || taskdata->td_flags.team_serial ||
-       taskdata->td_flags.tasking_ser);
+       taskdata->td_flags.tasking_ser || flags->merged_if0);
 
   taskdata->td_flags.started = 0;
   taskdata->td_flags.executing = 0;
