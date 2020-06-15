@@ -1,5 +1,5 @@
 # RUN: llc -march=riscv32 -o - -run-pass=none -verify-machineinstrs %s | FileCheck %s
-# REQUIRES: global-isel, riscv-registered-target
+# REQUIRES: riscv-registered-target
 
 # This test checks that the G_BRINDIRECT is an indirect branch by leveraging
 # RISCV's version of analyzeBranch. If G_BRINDIRECT would not be an indirect
