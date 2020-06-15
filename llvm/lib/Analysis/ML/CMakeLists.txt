@@ -1,6 +1,4 @@
-set(BUILD_SHARED_LIBS OFF)
-
-add_llvm_internal_library(LLVMMLPolicies PUBLIC
+add_llvm_component_library(LLVMMLPolicies
   InlineFeaturesAnalysis.cpp
 
   DEPENDS

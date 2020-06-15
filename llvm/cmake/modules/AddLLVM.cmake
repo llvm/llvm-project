@@ -390,13 +390,8 @@ endfunction(set_windows_version_resource_properties)
 #   SHARED;STATIC
 #     STATIC by default w/o BUILD_SHARED_LIBS.
 #     SHARED by default w/  BUILD_SHARED_LIBS.
-#   OBJECT_ONLY
-#     builds an OBJECT target, irrespective of BUILD_SHARED_LIBS. 
-#     Cannot be mixed with SHARED, STATIC, or OBJECT.
 #   OBJECT
 #     Also create an OBJECT library target. Default if STATIC && SHARED.
-#     The OBJECT target will be named obj.${name} and will have an empty link
-#     interface.
 #   MODULE
 #     Target ${name} might not be created on unsupported platforms.
 #     Check with "if(TARGET ${name})".
@@ -426,7 +421,7 @@ endfunction(set_windows_version_resource_properties)
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;OBJECT_ONLY;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -439,10 +434,6 @@ function(llvm_add_library name)
     set(ALL_FILES ${ARG_OBJLIBS})
   else()
     llvm_process_sources(ALL_FILES ${ARG_UNPARSED_ARGUMENTS} ${ARG_ADDITIONAL_HEADERS})
-  endif()
-
-  if ((ARG_STATIC OR ARG_SHARED OR ARG_OBJECT) AND ARG_OBJECT_ONLY)
-    message(ERROR "OBJECT_ONLY should appear alone, without STATIC|SHARED|OBJECT")
   endif()
 
   if(ARG_MODULE)
@@ -461,12 +452,12 @@ function(llvm_add_library name)
     if(BUILD_SHARED_LIBS AND NOT ARG_STATIC)
       set(ARG_SHARED TRUE)
     endif()
-    if(NOT ARG_SHARED AND NOT ARG_OBJECT_ONLY)
+    if(NOT ARG_SHARED)
       set(ARG_STATIC TRUE)
     endif()
   endif()
 
-  # Generate the extra objlib
+  # Generate objlib
   if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
@@ -532,10 +523,8 @@ function(llvm_add_library name)
   elseif(ARG_SHARED)
     add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})
-  elseif(ARG_STATIC)
-    add_library(${name} STATIC ${ALL_FILES})
   else()
-    add_library(${name} OBJECT ${ALL_FILES})
+    add_library(${name} STATIC ${ALL_FILES})
   endif()
 
   if(ARG_COMPONENT_LIB)
@@ -646,11 +635,11 @@ function(llvm_add_library name)
     get_property(lib_deps GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_${name})
   endif()
 
-  if(ARG_SHARED)
+  if(ARG_STATIC)
+    set(libtype PUBLIC)
+  else()
     # We can use PRIVATE since SO knows its dependent libs.
     set(libtype PRIVATE)
-  else()
-    set(libtype PUBLIC)
   endif()
 
   target_link_libraries(${name} ${libtype}
@@ -685,27 +674,6 @@ function(llvm_add_library name)
       )
   endif()
 endfunction()
-
-# Add a target which is logically and deployment-wise part of another one
-# (owner), but - perhaps because it has optional build dependencies - may be
-# built separately.
-# The owner consumes it via target_link_libraries (or equivalent syntax).
-#
-# PUBLIC creates an OBJECT library, so linking it in the owner translates to 
-# linking the object files in this target as if they were built by the owner.
-#
-# PRIVATE creates a STATIC library, so linking it would drop objects that are
-# not referenced.
-macro (add_llvm_internal_library name)
-  cmake_parse_arguments(ARG "PUBLIC;PRIVATE" "" "" ${ARGN})
-  if (ARG_PUBLIC)
-    add_llvm_library(${name} OBJECT_ONLY DISABLE_LLVM_LINK_LLVM_DYLIB 
-      ${ARG_UNPARSED_ARGUMENTS})
-  else()
-    add_llvm_library(${name} STATIC DISABLE_LLVM_LINK_LLVM_DYLIB 
-      ${ARG_UNPARSED_ARGUMENTS})
-  endif()
-endmacro()
 
 function(add_llvm_install_targets target)
   cmake_parse_arguments(ARG "" "COMPONENT;PREFIX;SYMLINK" "DEPENDS" ${ARGN})
