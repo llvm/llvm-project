@@ -226,7 +226,7 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P8-NEXT:    xsmaddadp 4, 2, 0
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
 ; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
-; CHECK-P8-NEXT:    frsp 0, 0
+; CHECK-P8-NEXT:    xsrsp 0, 0
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
@@ -246,7 +246,7 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddadp 4, 2, 0
 ; CHECK-P9-NEXT:    xsmuldp 0, 0, 3
 ; CHECK-P9-NEXT:    xsmuldp 0, 0, 4
-; CHECK-P9-NEXT:    frsp 0, 0
+; CHECK-P9-NEXT:    xsrsp 0, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
   %x = call reassoc arcp double @llvm.sqrt.f64(double %b)
@@ -266,14 +266,14 @@ define float @food_safe(float %a, double %b) nounwind {
 ; CHECK-P8-LABEL: food_safe:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xssqrtdp 0, 2
-; CHECK-P8-NEXT:    frsp 0, 0
+; CHECK-P8-NEXT:    xsrsp 0, 0
 ; CHECK-P8-NEXT:    xsdivsp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: food_safe:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    xssqrtdp 0, 2
-; CHECK-P9-NEXT:    frsp 0, 0
+; CHECK-P9-NEXT:    xsrsp 0, 0
 ; CHECK-P9-NEXT:    xsdivsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
   %x = call double @llvm.sqrt.f64(double %b)
