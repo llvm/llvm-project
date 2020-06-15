@@ -5580,11 +5580,33 @@ bool llvm::HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
 /// | Frame overhead in Bytes |      4 |   4 |
 /// | Stack fixup required    |     No |  No |
 /// +-------------------------+--------+-----+
+///
+/// \p MachineOutlinerRegSave implies that the function should be called with a
+/// save and restore of LR to an available register. This allows us to avoid
+/// stack fixups. Note that this outlining variant is compatible with the
+/// NoLRSave case.
+///
+/// That is,
+///
+/// I1     Save LR                    OUTLINED_FUNCTION:
+/// I2 --> BL OUTLINED_FUNCTION       I1
+/// I3     Restore LR                 I2
+///                                   I3
+///                                   BX LR
+///
+/// +-------------------------+--------+-----+
+/// |                         | Thumb2 | ARM |
+/// +-------------------------+--------+-----+
+/// | Call overhead in Bytes  |      8 |  12 |
+/// | Frame overhead in Bytes |      2 |   4 |
+/// | Stack fixup required    |     No |  No |
+/// +-------------------------+--------+-----+
 
 enum MachineOutlinerClass {
   MachineOutlinerTailCall,
   MachineOutlinerThunk,
-  MachineOutlinerNoLRSave
+  MachineOutlinerNoLRSave,
+  MachineOutlinerRegSave
 };
 
 enum MachineOutlinerMBBFlags {
@@ -5600,6 +5622,8 @@ struct OutlinerCosts {
   const int FrameThunk;
   const int CallNoLRSave;
   const int FrameNoLRSave;
+  const int CallRegSave;
+  const int FrameRegSave;
 
   OutlinerCosts(const ARMSubtarget &target)
       : CallTailCall(target.isThumb() ? 4 : 4),
@@ -5607,8 +5631,32 @@ struct OutlinerCosts {
         CallThunk(target.isThumb() ? 4 : 4),
         FrameThunk(target.isThumb() ? 0 : 0),
         CallNoLRSave(target.isThumb() ? 4 : 4),
-        FrameNoLRSave(target.isThumb() ? 4 : 4) {}
+        FrameNoLRSave(target.isThumb() ? 4 : 4),
+        CallRegSave(target.isThumb() ? 8 : 12),
+        FrameRegSave(target.isThumb() ? 2 : 4) {}
 };
+
+unsigned
+ARMBaseInstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
+  assert(C.LRUWasSet && "LRU wasn't set?");
+  MachineFunction *MF = C.getMF();
+  const ARMBaseRegisterInfo *ARI = static_cast<const ARMBaseRegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  BitVector regsReserved = ARI->getReservedRegs(*MF);
+  // Check if there is an available register across the sequence that we can
+  // use.
+  for (unsigned Reg : ARM::rGPRRegClass) {
+    if (!(Reg < regsReserved.size() && regsReserved.test(Reg)) &&
+        Reg != ARM::LR &&  // LR is not reserved, but don't use it.
+        Reg != ARM::R12 && // R12 is not guaranteed to be preserved.
+        C.LRU.available(Reg) && C.UsedInSequence.available(Reg))
+      return Reg;
+  }
+
+  // No suitable register. Return 0.
+  return 0u;
+}
 
 outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
@@ -5707,6 +5755,15 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
         FrameID = MachineOutlinerNoLRSave;
         NumBytesNoStackCalls += Costs.CallNoLRSave;
         C.setCallInfo(MachineOutlinerNoLRSave, Costs.CallNoLRSave);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is an unused register available? If so, we won't modify the stack, so
+      // we can outline with the same frame type as those that don't save LR.
+      else if (findRegisterToSaveLRTo(C)) {
+        FrameID = MachineOutlinerRegSave;
+        NumBytesNoStackCalls += Costs.CallRegSave;
+        C.setCallInfo(MachineOutlinerRegSave, Costs.CallRegSave);
         CandidatesWithoutStackFixups.push_back(C);
       }
     }
@@ -5961,6 +6018,20 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     CallMIB.add(predOps(ARMCC::AL));
   CallMIB.addGlobalAddress(M.getNamedValue(MF.getName()));
 
+  // Can we save to a register?
+  if (C.CallConstructionID == MachineOutlinerRegSave) {
+    unsigned Reg = findRegisterToSaveLRTo(C);
+    assert(Reg != 0 && "No callee-saved register available?");
+
+    // Save and restore LR from that register.
+    if (!MBB.isLiveIn(ARM::LR))
+      MBB.addLiveIn(ARM::LR);
+    copyPhysReg(MBB, It, DebugLoc(), Reg, ARM::LR, true);
+    CallPt = MBB.insert(It, CallMIB);
+    copyPhysReg(MBB, It, DebugLoc(), ARM::LR, Reg, true);
+    It--;
+    return CallPt;
+  }
   // Insert the call.
   It = MBB.insert(It, CallMIB);
   return It;
