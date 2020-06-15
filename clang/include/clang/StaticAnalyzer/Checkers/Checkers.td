@@ -1628,4 +1628,13 @@ def RefCntblBaseVirtualDtorChecker : Checker<"RefCntblBaseVirtualDtor">,
 def WebKitNoUncountedMemberChecker : Checker<"WebKitNoUncountedMemberChecker">,
   HelpText<"Check for no uncounted member variables.">,
   Documentation<HasDocumentation>;
+
 } // end webkit
+
+let ParentPackage = WebKitAlpha in {
+
+def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
+  HelpText<"Check uncounted call arguments.">,
+  Documentation<HasDocumentation>;
+
+} // end alpha.webkit
