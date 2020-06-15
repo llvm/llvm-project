@@ -2,8 +2,8 @@
 
 func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
-   linalg.matmul(%a, %b, %c) {__internal_linalg_transform__ = "START"}
-     : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+   linalg.matmul %a, %b, %c {__internal_linalg_transform__ = "START"}
+     : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
    return
 }
 
@@ -26,7 +26,7 @@ func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK:       linalg.copy(%[[T7]], %[[T19]])
 //      CHECK:       linalg.fill(%[[T21]], %[[C42]])
 //      CHECK:       linalg.copy(%[[T17]], %[[T21]])
-//      CHECK:       linalg.matmul(%[[T19]], %[[T12]], %[[T21]])
+//      CHECK:       linalg.matmul %[[T19]], %[[T12]], %[[T21]]
 //  CHECK-NOT:       linalg.fill
 //      CHECK:       linalg.copy(%[[T21]], %[[T17]])
 //      CHECK:       dealloc %[[T18]]
