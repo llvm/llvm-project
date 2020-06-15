@@ -694,8 +694,7 @@ DWARF:
         - AbbrCode:        0x00000000
           Values:          []
   debug_line:
-    - Length:
-        TotalLength:     102
+    - Length:          102
       Version:         4
       PrologueLength:  32
       MinInstLength:   1
