@@ -501,7 +501,14 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   static const StackColoring::LiveRange NoColoringRange(1, true);
   if (ClColoring)
     SSC.run();
-  SSC.removeAllMarkers();
+
+  for (auto *I : SSC.getMarkers()) {
+    auto *Op = dyn_cast<Instruction>(I->getOperand(1));
+    const_cast<IntrinsicInst *>(I)->eraseFromParent();
+    // Remove the operand bitcast, too, if it has no more uses left.
+    if (Op && Op->use_empty())
+      Op->eraseFromParent();
+  }
 
   // Unsafe stack always grows down.
   StackLayout SSL(StackAlignment);
