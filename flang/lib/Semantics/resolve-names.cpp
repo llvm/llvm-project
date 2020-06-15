@@ -287,7 +287,7 @@ protected:
     case parser::AccessSpec::Kind::Private:
       return Attr::PRIVATE;
     }
-    common::die("unreachable"); // suppress g++ warning
+    llvm_unreachable("Switch covers all cases"); // suppress g++ warning
   }
   Attr IntentSpecToAttr(const parser::IntentSpec &x) {
     switch (x.v) {
@@ -298,7 +298,7 @@ protected:
     case parser::IntentSpec::Intent::InOut:
       return Attr::INTENT_INOUT;
     }
-    common::die("unreachable"); // suppress g++ warning
+    llvm_unreachable("Switch covers all cases"); // suppress g++ warning
   }
 
 private:
@@ -1398,13 +1398,27 @@ public:
   void Post(const parser::AssignedGotoStmt &);
 
   // These nodes should never be reached: they are handled in ProgramUnit
-  bool Pre(const parser::MainProgram &) { DIE("unreachable"); }
-  bool Pre(const parser::FunctionSubprogram &) { DIE("unreachable"); }
-  bool Pre(const parser::SubroutineSubprogram &) { DIE("unreachable"); }
-  bool Pre(const parser::SeparateModuleSubprogram &) { DIE("unreachable"); }
-  bool Pre(const parser::Module &) { DIE("unreachable"); }
-  bool Pre(const parser::Submodule &) { DIE("unreachable"); }
-  bool Pre(const parser::BlockData &) { DIE("unreachable"); }
+  bool Pre(const parser::MainProgram &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::FunctionSubprogram &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::SubroutineSubprogram &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::SeparateModuleSubprogram &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::Module &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::Submodule &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
+  bool Pre(const parser::BlockData &) {
+    llvm_unreachable("This node is handled in ProgramUnit");
+  }
 
   void NoteExecutablePartCall(Symbol::Flag, const parser::Call &);
 
