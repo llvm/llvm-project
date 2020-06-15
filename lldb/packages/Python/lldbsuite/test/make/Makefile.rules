@@ -825,10 +825,12 @@ endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
+	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -toolchain-stdlib-rpath \
+            -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
             $(patsubst %.swiftmodule.o,,$^)
 else
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
+	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -toolchain-stdlib-rpath \
+            -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
