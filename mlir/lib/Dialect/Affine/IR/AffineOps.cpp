@@ -1176,9 +1176,10 @@ LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineForOp
 //===----------------------------------------------------------------------===//
 
-void AffineForOp::build(OpBuilder &builder, OperationState &result,
-                        ValueRange lbOperands, AffineMap lbMap,
-                        ValueRange ubOperands, AffineMap ubMap, int64_t step) {
+void AffineForOp::build(
+    OpBuilder &builder, OperationState &result, ValueRange lbOperands,
+    AffineMap lbMap, ValueRange ubOperands, AffineMap ubMap, int64_t step,
+    function_ref<void(OpBuilder &, Location, Value)> bodyBuilder) {
   assert(((!lbMap && lbOperands.empty()) ||
           lbOperands.size() == lbMap.getNumInputs()) &&
          "lower bound operand count does not match the affine map");
@@ -1202,17 +1203,25 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
   // Create a region and a block for the body.  The argument of the region is
   // the loop induction variable.
   Region *bodyRegion = result.addRegion();
-  Block *body = new Block();
-  body->addArgument(IndexType::get(builder.getContext()));
+  Block *body = new Block;
+  Value inductionVar = body->addArgument(IndexType::get(builder.getContext()));
   bodyRegion->push_back(body);
-  ensureTerminator(*bodyRegion, builder, result.location);
+  if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(body);
+    bodyBuilder(builder, result.location, inductionVar);
+  } else {
+    ensureTerminator(*bodyRegion, builder, result.location);
+  }
 }
 
-void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
-                        int64_t ub, int64_t step) {
+void AffineForOp::build(
+    OpBuilder &builder, OperationState &result, int64_t lb, int64_t ub,
+    int64_t step,
+    function_ref<void(OpBuilder &, Location, Value)> bodyBuilder) {
   auto lbMap = AffineMap::getConstantMap(lb, builder.getContext());
   auto ubMap = AffineMap::getConstantMap(ub, builder.getContext());
-  return build(builder, result, {}, lbMap, {}, ubMap, step);
+  return build(builder, result, {}, lbMap, {}, ubMap, step, bodyBuilder);
 }
 
 static LogicalResult verify(AffineForOp op) {
