@@ -2064,6 +2064,28 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
                                        InstWriteOffset, NI, IOL, AA, &F);
 
+      if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
+        auto *Earlier = dyn_cast<StoreInst>(NI);
+        auto *Later = dyn_cast<StoreInst>(SI);
+        if (Constant *Merged = tryToMergePartialOverlappingStores(
+                Earlier, Later, InstWriteOffset, DepWriteOffset, DL, &AA,
+                &DT)) {
+
+          // Update stored value of earlier store to merged constant.
+          Earlier->setOperand(0, Merged);
+          ++NumModifiedStores;
+          MadeChange = true;
+
+          // Remove later store and remove any outstanding overlap intervals for
+          // the updated store.
+          State.deleteDeadInstruction(Later);
+          auto I = State.IOLs.find(Earlier->getParent());
+          if (I != State.IOLs.end())
+            I->second.erase(Earlier);
+          break;
+        }
+      }
+
       ToCheck.insert(NextDef->getDefiningAccess());
       if (OR == OW_Complete) {
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *NI

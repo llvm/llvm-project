@@ -10,23 +10,6 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) n
 declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
-; Do not delete stores that are only partially killed.
-define i32 @test8() {
-; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[V:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1234567, i32* [[V]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]]
-; CHECK-NEXT:    ret i32 [[X]]
-;
-  %V = alloca i32
-  store i32 1234567, i32* %V
-  %V2 = bitcast i32* %V to i8*
-  store i8 0, i8* %V2
-  %X = load i32, i32* %V
-  ret i32 %X
-
-}
-
 ; Test for byval handling.
 %struct.x = type { i32, i32, i32, i32 }
 define void @test9(%struct.x* byval  %a) nounwind  {
@@ -134,19 +117,4 @@ bb1:
   br i1 undef, label %bb1, label %bb2
 bb2:
   ret i32 0
-}
-
-define void @test43a(i32* %P, i32* noalias %Q) {
-; CHECK-LABEL: @test43a(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store atomic i32 50331649, i32* [[P:%.*]] unordered, align 4
-; CHECK-NEXT:    store atomic i32 2, i32* [[Q:%.*]] unordered, align 4
-; CHECK-NEXT:    ret void
-;
-entry:
-  store atomic i32 1, i32* %P unordered, align 4
-  %P2 = bitcast i32* %P to i8*
-  store atomic i32 2, i32* %Q unordered, align 4
-  store atomic i8 3, i8* %P2 unordered, align 4
-  ret void
 }
