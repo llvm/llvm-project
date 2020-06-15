@@ -66,13 +66,13 @@ public:
 
   public:
     LiveRange(unsigned Size, bool Set = false) : Bits(Size, Set) {}
-    void AddRange(unsigned Start, unsigned End) { Bits.set(Start, End); }
+    void addRange(unsigned Start, unsigned End) { Bits.set(Start, End); }
 
-    bool Overlaps(const LiveRange &Other) const {
+    bool overlaps(const LiveRange &Other) const {
       return Bits.anyCommon(Other.Bits);
     }
 
-    void Join(const LiveRange &Other) { Bits |= Other.Bits; }
+    void join(const LiveRange &Other) { Bits |= Other.Bits; }
   };
 
 private:
@@ -142,15 +142,15 @@ public:
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
   OS << "{";
-  int idx = V.find_first();
-  bool first = true;
-  while (idx >= 0) {
-    if (!first) {
+  int Idx = V.find_first();
+  bool First = true;
+  while (Idx >= 0) {
+    if (!First) {
       OS << ", ";
     }
-    first = false;
-    OS << idx;
-    idx = V.find_next(idx);
+    First = false;
+    OS << Idx;
+    Idx = V.find_next(Idx);
   }
   OS << "}";
   return OS;

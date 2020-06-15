@@ -149,9 +149,9 @@ void StackColoring::collectMarkers() {
 }
 
 void StackColoring::calculateLocalLiveness() {
-  bool changed = true;
-  while (changed) {
-    changed = false;
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
 
     for (const BasicBlock *BB : depth_first(&F)) {
       BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
@@ -179,13 +179,13 @@ void StackColoring::calculateLocalLiveness() {
 
       // Update block LiveIn set, noting whether it has changed.
       if (LocalLiveIn.test(BlockInfo.LiveIn)) {
-        changed = true;
+        Changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
       if (LocalLiveOut.test(BlockInfo.LiveOut)) {
-        changed = true;
+        Changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
     }
@@ -228,7 +228,7 @@ void StackColoring::calculateLiveIntervals() {
       } else {
         assert(!Ended.test(AllocaNo));
         if (Started.test(AllocaNo)) {
-          LiveRanges[AllocaNo].AddRange(Start[AllocaNo], InstNo);
+          LiveRanges[AllocaNo].addRange(Start[AllocaNo], InstNo);
           Started.reset(AllocaNo);
         }
         Ended.set(AllocaNo);
@@ -237,7 +237,7 @@ void StackColoring::calculateLiveIntervals() {
 
     for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
       if (Started.test(AllocaNo))
-        LiveRanges[AllocaNo].AddRange(Start[AllocaNo], BBEnd);
+        LiveRanges[AllocaNo].addRange(Start[AllocaNo], BBEnd);
   }
 }
 
