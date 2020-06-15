@@ -1385,7 +1385,7 @@ struct ImOpLowering : public ConvertOpToLLVMPattern<ImOp> {
 };
 
 struct BinaryComplexOperands {
-  Value lhsReal, lhsImag, rhsReal, rhsImag;
+  std::complex<Value> lhs, rhs;
 };
 
 template <typename OpTy>
@@ -1399,11 +1399,11 @@ unpackBinaryComplexOperands(OpTy op, ArrayRef<Value> operands,
   // Extract real and imaginary values from operands.
   BinaryComplexOperands unpacked;
   ComplexStructBuilder lhs(transformed.lhs());
-  unpacked.lhsReal = lhs.real(rewriter, loc);
-  unpacked.lhsImag = lhs.imaginary(rewriter, loc);
+  unpacked.lhs.real(lhs.real(rewriter, loc));
+  unpacked.lhs.imag(lhs.imaginary(rewriter, loc));
   ComplexStructBuilder rhs(transformed.rhs());
-  unpacked.rhsReal = rhs.real(rewriter, loc);
-  unpacked.rhsImag = rhs.imaginary(rewriter, loc);
+  unpacked.rhs.real(rhs.real(rewriter, loc));
+  unpacked.rhs.imag(rhs.imaginary(rewriter, loc));
 
   return unpacked;
 }
@@ -1424,8 +1424,10 @@ struct AddCFOpLowering : public ConvertOpToLLVMPattern<AddCFOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
-    Value real = rewriter.create<LLVM::FAddOp>(loc, arg.lhsReal, arg.rhsReal);
-    Value imag = rewriter.create<LLVM::FAddOp>(loc, arg.lhsImag, arg.rhsImag);
+    Value real =
+        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.real(), arg.rhs.real());
+    Value imag =
+        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.imag(), arg.rhs.imag());
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
@@ -1450,8 +1452,10 @@ struct SubCFOpLowering : public ConvertOpToLLVMPattern<SubCFOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to substract complex numbers.
-    Value real = rewriter.create<LLVM::FSubOp>(loc, arg.lhsReal, arg.rhsReal);
-    Value imag = rewriter.create<LLVM::FSubOp>(loc, arg.lhsImag, arg.rhsImag);
+    Value real =
+        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.real(), arg.rhs.real());
+    Value imag =
+        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.imag(), arg.rhs.imag());
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
