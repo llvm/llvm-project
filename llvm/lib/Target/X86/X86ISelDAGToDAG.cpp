@@ -472,14 +472,6 @@ namespace {
 
     bool isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const;
 
-    /// Returns whether this is a relocatable immediate in the range
-    /// [-2^Width .. 2^Width-1].
-    template <unsigned Width> bool isSExtRelocImm(SDNode *N) const {
-      if (auto *CN = dyn_cast<ConstantSDNode>(N))
-        return isInt<Width>(CN->getSExtValue());
-      return isSExtAbsoluteSymbolRef(Width, N);
-    }
-
     // Indicates we should prefer to use a non-temporal load for this load.
     bool useNonTemporalLoad(LoadSDNode *N) const {
       if (!N->isNonTemporal())
@@ -2651,12 +2643,6 @@ bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectRelocImm(SDValue N, SDValue &Op) {
-  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
-    Op = CurDAG->getTargetConstant(CN->getAPIntValue(), SDLoc(CN),
-                                   N.getValueType());
-    return true;
-  }
-
   // Keep track of the original value type and whether this value was
   // truncated. If we see a truncation from pointer type to VT that truncates
   // bits that are known to be zero, we can use a narrow reference.
