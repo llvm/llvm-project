@@ -10523,7 +10523,13 @@ def err_await_suspend_invalid_return_type : Error<
 def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"
 >;
-}
+def err_coroutine_promise_final_suspend_requires_nothrow : Error<
+  "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"
+>;
+def note_coroutine_function_declare_noexcept : Note<
+  "must be declared with 'noexcept'"
+>;
+} // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
 def warn_not_a_doxygen_trailing_member_comment : Warning<

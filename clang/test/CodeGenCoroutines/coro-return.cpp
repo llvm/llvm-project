@@ -5,27 +5,27 @@ template <typename... T> struct coroutine_traits;
 
 template <class Promise = void> struct coroutine_handle {
   coroutine_handle() = default;
-  static coroutine_handle from_address(void *) { return {}; }
+  static coroutine_handle from_address(void *) noexcept { return {}; }
 };
 template <> struct coroutine_handle<void> {
   static coroutine_handle from_address(void *) { return {}; }
   coroutine_handle() = default;
   template <class PromiseType>
-  coroutine_handle(coroutine_handle<PromiseType>) {}
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept {}
 };
 }
 
 struct suspend_always {
-  bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>);
-  void await_resume();
+  bool await_ready() noexcept;
+  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_resume() noexcept;
 };
 
 template <> struct std::experimental::coroutine_traits<void> {
   struct promise_type {
     void get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void return_void();
   };
 };
@@ -44,7 +44,7 @@ struct std::experimental::coroutine_traits<int> {
   struct promise_type {
     int get_return_object();
     suspend_always initial_suspend();
-    suspend_always final_suspend();
+    suspend_always final_suspend() noexcept;
     void return_value(int);
   };
 };

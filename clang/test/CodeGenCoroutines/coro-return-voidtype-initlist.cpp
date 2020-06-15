@@ -14,7 +14,7 @@ template <>
 struct coroutine_handle<> {};
 template <typename>
 struct coroutine_handle : coroutine_handle<> {
-  static coroutine_handle from_address(void *);
+  static coroutine_handle from_address(void *) noexcept;
 };
 struct e {
   int await_ready();
@@ -29,13 +29,13 @@ template <typename>
 struct f;
 struct g {
   struct h {
-    int await_ready();
+    int await_ready() noexcept;
     template <typename al>
-    void await_suspend(std::experimental::coroutine_handle<al>);
-    void await_resume();
+    void await_suspend(std::experimental::coroutine_handle<al>) noexcept;
+    void await_resume() noexcept;
   };
   std::experimental::e initial_suspend();
-  h final_suspend();
+  h final_suspend() noexcept;
   template <typename ag>
   auto await_transform(ag) { return ah(ag()); }
 };

@@ -1697,6 +1697,10 @@ public:
   static QualType GetTypeFromParser(ParsedType Ty,
                                     TypeSourceInfo **TInfo = nullptr);
   CanThrowResult canThrow(const Stmt *E);
+  /// Determine whether the callee of a particular function call can throw.
+  /// E, D and Loc are all optional.
+  static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
+                                       SourceLocation Loc = SourceLocation());
   const FunctionProtoType *ResolveExceptionSpec(SourceLocation Loc,
                                                 const FunctionProtoType *FPT);
   void UpdateExceptionSpec(FunctionDecl *FD,
