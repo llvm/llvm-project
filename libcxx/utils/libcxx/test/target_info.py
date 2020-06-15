@@ -35,9 +35,6 @@ class DefaultTargetInfo(object):
     def allow_cxxabi_link(self): return True
     def use_lit_shell_default(self): return False
 
-    def add_platform_features(self, features):
-        features.add(self.platform())
-
     def add_path(self, dest_env, new_path):
         if not new_path:
             return
@@ -167,19 +164,6 @@ class LinuxLocalTI(DefaultTargetInfo):
         _, ver, _ = self._distribution()
         ver = ver.lower().strip().replace(' ', '-')
         return ver # Permitted to be None.
-
-    def add_platform_features(self, features):
-        super(LinuxLocalTI, self).add_platform_features(features)
-
-        # Some linux distributions have different locale data than others.
-        # Insert the distributions name and name-version into the available
-        # features to allow tests to XFAIL on them.
-        name = self.platform_name()
-        ver = self.platform_ver()
-        if name:
-            features.add(name)
-        if name and ver:
-            features.add('%s-%s' % (name, ver))
 
     def add_cxx_compile_flags(self, flags):
         flags += ['-D__STDC_FORMAT_MACROS',
