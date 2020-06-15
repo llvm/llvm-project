@@ -40,9 +40,3 @@ class TestSwiftRangeType(TestBase):
                     '(ClosedRange<Int>) c = 1...100'])
         self.expect("frame variable d", substrs=[
                     '(Range<Int>) d = 1..<100'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -64,10 +64,3 @@ class TestSwiftIncludeConflict(TestBase):
         self.assertTrue((not value.GetError().Success()) or
                          not value.GetSummary())
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
-        
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

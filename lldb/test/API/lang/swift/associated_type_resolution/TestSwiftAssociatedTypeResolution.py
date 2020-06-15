@@ -51,9 +51,3 @@ class TestSwiftArchetypeResolution(TestBase):
                             (i, var.GetError().GetCString()))
             value = child.GetValueAsUnsigned()
             self.assertEqual(value, i, "Wrong value: %d not %d."%(value, i))
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

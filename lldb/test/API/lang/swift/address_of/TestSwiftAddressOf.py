@@ -93,10 +93,3 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         # the inout type appears as direct.
         self.check_variable("in_struct", False, 12345)
         
-        
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

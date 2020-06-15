@@ -93,9 +93,3 @@ class TestSwiftMacroConflict(TestBase):
         self.expect("v foo", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         lldb.SBDebugger.MemoryPressureDetected()
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

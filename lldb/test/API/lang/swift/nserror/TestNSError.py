@@ -61,9 +61,3 @@ class SwiftNSErrorTest(TestBase):
                     'value = 0',
                     'value = 3',
                     'value = 4'])
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

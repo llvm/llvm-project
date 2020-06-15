@@ -213,9 +213,3 @@ class TestSwiftReturns(TestBase):
         self.thread.StepOut()
         return_value = self.thread.GetStopReturnValue()
         self.assertTrue(not return_value.IsValid())
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

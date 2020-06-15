@@ -112,8 +112,3 @@ class TestEnumVariables(TestBase):
                     substrs=['Some', 'one1 = A', 'one2 = A'])
         self.expect('frame variable ContainerOfEnums_Nil', substrs=['nil'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

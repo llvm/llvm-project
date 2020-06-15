@@ -63,9 +63,3 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
             classValue != 0,
             "Class types are aggregates with pointer values")
 
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

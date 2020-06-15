@@ -71,9 +71,3 @@ class TestSwiftObjCMainConflictingDylibs(TestBase):
         self.expect("p baz", "correct baz", substrs=["i_am_from_Foo"])
         self.expect("fr var baz", "correct baz", substrs=["i_am_from_Foo"])
         
-
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

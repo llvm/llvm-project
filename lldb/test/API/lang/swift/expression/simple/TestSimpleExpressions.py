@@ -182,8 +182,3 @@ class TestSimpleSwiftExpressions(TestBase):
         self.check_expression(
             "var enum_six : SomeValues = SomeValues.Six; return enum_six == .Six", "true")
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()

@@ -77,8 +77,3 @@ class TestSwiftVersion(TestBase):
           self.assertTrue(t['substr'] in str(val.GetValue()), "Expression " + t['expr'] + " result " + val.GetValue() + " has substring " + t['substr'])
           process.Continue()
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
