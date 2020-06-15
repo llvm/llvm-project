@@ -60,7 +60,7 @@ std::string tblgen::Operator::getOperationName() const {
 }
 
 std::string tblgen::Operator::getAdaptorName() const {
-  return std::string(llvm::formatv("{0}OperandAdaptor", getCppClassName()));
+  return std::string(llvm::formatv("{0}Adaptor", getCppClassName()));
 }
 
 StringRef tblgen::Operator::getDialectName() const { return dialect.getName(); }

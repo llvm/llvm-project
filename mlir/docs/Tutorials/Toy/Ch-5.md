@@ -124,7 +124,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
           // This allows for using the nice named accessors that are generated
           // by the ODS. This adaptor is automatically provided by the ODS
           // framework.
-          TransposeOpOperandAdaptor transposeAdaptor(memRefOperands);
+          TransposeOpAdaptor transposeAdaptor(memRefOperands);
           mlir::Value input = transposeAdaptor.input();
 
           // Transpose the elements by generating a load from the reverse

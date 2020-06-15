@@ -227,8 +227,7 @@ void tblgen::OpClass::writeDeclTo(raw_ostream &os) const {
     os << ", " << trait;
   os << "> {\npublic:\n";
   os << "  using Op::Op;\n";
-  os << "  using OperandAdaptor = " << className << "OperandAdaptor;\n";
-  os << "  using Adaptor = " << className << "OperandAdaptor;\n";
+  os << "  using Adaptor = " << className << "Adaptor;\n";
 
   bool hasPrivateMethod = false;
   for (const auto &method : methods) {

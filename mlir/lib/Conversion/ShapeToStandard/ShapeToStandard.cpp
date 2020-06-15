@@ -28,7 +28,7 @@ public:
   LogicalResult
   matchAndRewrite(SrcOpTy op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    typename SrcOpTy::OperandAdaptor adaptor(operands);
+    typename SrcOpTy::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
                                          adaptor.rhs());
     return success();
@@ -43,7 +43,7 @@ public:
   LogicalResult
   matchAndRewrite(FromExtentTensorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    FromExtentTensorOpOperandAdaptor transformed(operands);
+    FromExtentTensorOp::Adaptor transformed(operands);
     rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
@@ -56,7 +56,7 @@ public:
   LogicalResult
   matchAndRewrite(IndexToSizeOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    IndexToSizeOpOperandAdaptor transformed(operands);
+    IndexToSizeOp::Adaptor transformed(operands);
     rewriter.replaceOp(op.getOperation(), transformed.arg());
     return success();
   }
@@ -69,7 +69,7 @@ public:
   LogicalResult
   matchAndRewrite(SizeToIndexOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    SizeToIndexOpOperandAdaptor transformed(operands);
+    SizeToIndexOp::Adaptor transformed(operands);
     rewriter.replaceOp(op.getOperation(), transformed.arg());
     return success();
   }
@@ -83,7 +83,7 @@ public:
   LogicalResult
   matchAndRewrite(ToExtentTensorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    ToExtentTensorOpOperandAdaptor transformed(operands);
+    ToExtentTensorOp::Adaptor transformed(operands);
     rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
