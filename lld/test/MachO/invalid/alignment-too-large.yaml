@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: yaml2obj %s -o %t.o
 # RUN: not lld -flavor darwinnew -o %t %t.o 2>&1 | FileCheck %s
 #
