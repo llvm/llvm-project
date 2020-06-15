@@ -118,6 +118,7 @@ body:             |
     $r4 = t2MOVi 3, 14, $noreg, $noreg
     tBL 14, $noreg, @foo
   bb.2:
+    liveins: $lr, $r0, $r6, $r7, $r8, $r9, $r10, $r11
     tBX_RET 14, $noreg
 
   ; CHECK-LABEL: name: OUTLINED_FUNCTION_0
