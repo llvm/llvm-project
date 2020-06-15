@@ -249,8 +249,6 @@ private:
 /// contain a reference to a specific `Value`.
 class OpOperand : public IROperand<OpOperand, detail::OpaqueValue> {
 public:
-  using IROperand<OpOperand, detail::OpaqueValue>::IROperand;
-
   /// Provide the use list that is attached to the given value.
   static IRObjectWithUseList<OpOperand> *getUseList(Value value);
 
@@ -262,6 +260,12 @@ public:
 
   /// Return which operand this is in the operand list of the User.
   unsigned getOperandNumber();
+
+private:
+  /// Keep the constructor private and accessible to the OperandStorage class
+  /// only to avoid hard-to-debug typo/programming mistakes.
+  friend class OperandStorage;
+  using IROperand<OpOperand, detail::OpaqueValue>::IROperand;
 };
 
 //===----------------------------------------------------------------------===//
