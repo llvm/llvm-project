@@ -65,6 +65,8 @@ static const char *YAMLContent =
     "          Offset:          100\n"
     "          Length:          12\n"
     "          ReplacementText: 'replacement #1'\n"
+    "    Level:           Warning\n"
+    "    BuildDirectory:  'path/to/build/directory'\n"
     "  - DiagnosticName:  'diagnostic#2'\n"
     "    DiagnosticMessage:\n"
     "      Message:         'message #2'\n"
@@ -75,6 +77,8 @@ static const char *YAMLContent =
     "          Offset:          62\n"
     "          Length:          2\n"
     "          ReplacementText: 'replacement #2'\n"
+    "    Level:           Warning\n"
+    "    BuildDirectory:  'path/to/build/directory'\n"
     "    Ranges:\n"
     "      - FilePath:        'path/to/source.cpp'\n"
     "        FileOffset:      10\n"
@@ -94,6 +98,8 @@ static const char *YAMLContent =
     "        FilePath:        'path/to/note2.cpp'\n"
     "        FileOffset:      99\n"
     "        Replacements:    []\n"
+    "    Level:           Warning\n"
+    "    BuildDirectory:  'path/to/build/directory'\n"
     "...\n";
 
 TEST(DiagnosticsYamlTest, serializesDiagnostics) {
