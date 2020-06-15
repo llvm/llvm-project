@@ -2480,6 +2480,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
               return false;
             LLVM_FALLTHROUGH;
           }
+          case Intrinsic::assume:
           case Intrinsic::invariant_start:
           case Intrinsic::invariant_end:
           case Intrinsic::lifetime_start:
