@@ -115,8 +115,7 @@ private:
   void calculateLiveIntervals();
 
 public:
-  StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas)
-      : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {}
+  StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas);
 
   void run();
   void removeAllMarkers();
