@@ -2118,7 +2118,7 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
 
     Optional<int64_t> index = dimOp.getConstantIndex();
     if (!index.hasValue()) {
-      // TODO(frgossen): Implement this lowering.
+      // TODO: Implement this lowering.
       return failure();
     }
 
