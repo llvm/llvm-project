@@ -298,6 +298,11 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
     switch (ExtraCode[0]) {
     default: return true;  // Unknown modifier.
+    case 'L': // A memory reference to the upper word of a double word op.
+      O << getDataLayout().getPointerSize() << "(";
+      printOperand(MI, OpNo, O);
+      O << ")";
+      return false;
     case 'y': // A memory reference for an X-form instruction
       {
         const char *RegName = "r0";
@@ -309,7 +314,6 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       }
     case 'U': // Print 'u' for update form.
     case 'X': // Print 'x' for indexed form.
-    {
       // FIXME: Currently for PowerPC memory operands are always loaded
       // into a register, so we never get an update or indexed form.
       // This is bad even for offset forms, since even if we know we
@@ -318,7 +322,6 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       // tolerate 'U' and 'X' but don't output anything.
       assert(MI->getOperand(OpNo).isReg());
       return false;
-    }
     }
   }
 
