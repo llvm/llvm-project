@@ -67,8 +67,8 @@ entry:
   ret <8 x double> %load
 }
 
-; CHECK: declare <9 x double> @llvm.matrix.columnwise.load.v9f64.p0v9f64(<9 x double>*, i32, i32 immarg, i32 immarg) [[READONLY:#[0-9]]]
+; CHECK: declare <9 x double> @llvm.matrix.columnwise.load.v9f64.p0v9f64(<9 x double>* nocapture, i32, i32 immarg, i32 immarg) [[READONLY:#[0-9]]]
 
-; CHECK: declare <8 x double> @llvm.matrix.columnwise.load.v8f64.p0v8f64(<8 x double>*, i32, i32 immarg, i32 immarg) [[READONLY]]
+; CHECK: declare <8 x double> @llvm.matrix.columnwise.load.v8f64.p0v8f64(<8 x double>* nocapture, i32, i32 immarg, i32 immarg) [[READONLY]]
 
-; CHECK: attributes [[READONLY]] = { argmemonly nounwind readonly willreturn }
+; CHECK: attributes [[READONLY]] = { argmemonly nosync nounwind readonly willreturn }
