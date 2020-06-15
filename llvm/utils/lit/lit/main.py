@@ -96,17 +96,13 @@ def main(builtin_params={}):
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    # TODO(yln): eventually, all functions below should act on discovered_tests
-    executed_tests = [
-        t for t in selected_tests if t.result.code != lit.Test.SKIPPED]
-
     if opts.time_tests:
         print_histogram(discovered_tests)
 
     print_results(discovered_tests, elapsed, opts)
 
     for report in opts.reports:
-        report.write_results(executed_tests, elapsed)
+        report.write_results(discovered_tests, elapsed)
 
     if lit_config.numErrors:
         sys.stderr.write('\n%d error(s) in tests\n' % lit_config.numErrors)

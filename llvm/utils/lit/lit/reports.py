@@ -17,7 +17,8 @@ class JsonReport(object):
         self.output_file = output_file
 
     def write_results(self, tests, elapsed):
-        assert not any(t.result.code in {lit.Test.EXCLUDED, lit.Test.SKIPPED} for t in tests)
+        unexecuted_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED}
+        tests = [t for t in tests if t.result.code not in unexecuted_codes]
         # Construct the data we will write.
         data = {}
         # Encode the current lit version as a schema version.
@@ -75,7 +76,6 @@ class XunitReport(object):
 
     # TODO(yln): elapsed unused, put it somewhere?
     def write_results(self, tests, elapsed):
-        assert not any(t.result.code in {lit.Test.EXCLUDED, lit.Test.SKIPPED} for t in tests)
         tests.sort(key=by_suite_and_test_path)
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
 
@@ -136,4 +136,4 @@ class XunitReport(object):
         features = test.getMissingRequiredFeatures()
         if features:
             return 'Missing required feature(s): ' + ', '.join(features)
-        return 'Skipping because of configuration'
+        return 'Unsupported configuration'
