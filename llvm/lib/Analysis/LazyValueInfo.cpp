@@ -334,40 +334,40 @@ public:
 };
 }
 namespace {
-  // The actual implementation of the lazy analysis and update.  Note that the
-  // inheritance from LazyValueInfoCache is intended to be temporary while
-  // splitting the code and then transitioning to a has-a relationship.
-  class LazyValueInfoImpl {
+// The actual implementation of the lazy analysis and update.  Note that the
+// inheritance from LazyValueInfoCache is intended to be temporary while
+// splitting the code and then transitioning to a has-a relationship.
+class LazyValueInfoImpl {
 
-    /// Cached results from previous queries
-    LazyValueInfoCache TheCache;
+  /// Cached results from previous queries
+  LazyValueInfoCache TheCache;
 
-    /// This stack holds the state of the value solver during a query.
-    /// It basically emulates the callstack of the naive
-    /// recursive value lookup process.
-    SmallVector<std::pair<BasicBlock*, Value*>, 8> BlockValueStack;
+  /// This stack holds the state of the value solver during a query.
+  /// It basically emulates the callstack of the naive
+  /// recursive value lookup process.
+  SmallVector<std::pair<BasicBlock*, Value*>, 8> BlockValueStack;
 
-    /// Keeps track of which block-value pairs are in BlockValueStack.
-    DenseSet<std::pair<BasicBlock*, Value*> > BlockValueSet;
+  /// Keeps track of which block-value pairs are in BlockValueStack.
+  DenseSet<std::pair<BasicBlock*, Value*> > BlockValueSet;
 
-    /// Push BV onto BlockValueStack unless it's already in there.
-    /// Returns true on success.
-    bool pushBlockValue(const std::pair<BasicBlock *, Value *> &BV) {
-      if (!BlockValueSet.insert(BV).second)
-        return false;  // It's already in the stack.
+  /// Push BV onto BlockValueStack unless it's already in there.
+  /// Returns true on success.
+  bool pushBlockValue(const std::pair<BasicBlock *, Value *> &BV) {
+    if (!BlockValueSet.insert(BV).second)
+      return false;  // It's already in the stack.
 
-      LLVM_DEBUG(dbgs() << "PUSH: " << *BV.second << " in "
-                        << BV.first->getName() << "\n");
-      BlockValueStack.push_back(BV);
-      return true;
-    }
+    LLVM_DEBUG(dbgs() << "PUSH: " << *BV.second << " in "
+                      << BV.first->getName() << "\n");
+    BlockValueStack.push_back(BV);
+    return true;
+  }
 
-    AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
-    const DataLayout &DL; ///< A mandatory DataLayout
+  AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
+  const DataLayout &DL; ///< A mandatory DataLayout
 
-    /// Declaration of the llvm.experimental.guard() intrinsic,
-    /// if it exists in the module.
-    Function *GuardDecl;
+  /// Declaration of the llvm.experimental.guard() intrinsic,
+  /// if it exists in the module.
+  Function *GuardDecl;
 
   Optional<ValueLatticeElement> getBlockValue(Value *Val, BasicBlock *BB);
   Optional<ValueLatticeElement> getEdgeValue(Value *V, BasicBlock *F,
@@ -408,48 +408,48 @@ namespace {
 
   void solve();
 
-  public:
-    /// This is the query interface to determine the lattice
-    /// value for the specified Value* at the end of the specified block.
-    ValueLatticeElement getValueInBlock(Value *V, BasicBlock *BB,
-                                        Instruction *CxtI = nullptr);
+public:
+  /// This is the query interface to determine the lattice
+  /// value for the specified Value* at the end of the specified block.
+  ValueLatticeElement getValueInBlock(Value *V, BasicBlock *BB,
+                                      Instruction *CxtI = nullptr);
 
-    /// This is the query interface to determine the lattice
-    /// value for the specified Value* at the specified instruction (generally
-    /// from an assume intrinsic).
-    ValueLatticeElement getValueAt(Value *V, Instruction *CxtI);
+  /// This is the query interface to determine the lattice
+  /// value for the specified Value* at the specified instruction (generally
+  /// from an assume intrinsic).
+  ValueLatticeElement getValueAt(Value *V, Instruction *CxtI);
 
-    /// This is the query interface to determine the lattice
-    /// value for the specified Value* that is true on the specified edge.
-    ValueLatticeElement getValueOnEdge(Value *V, BasicBlock *FromBB,
-                                       BasicBlock *ToBB,
-                                   Instruction *CxtI = nullptr);
+  /// This is the query interface to determine the lattice
+  /// value for the specified Value* that is true on the specified edge.
+  ValueLatticeElement getValueOnEdge(Value *V, BasicBlock *FromBB,
+                                     BasicBlock *ToBB,
+                                     Instruction *CxtI = nullptr);
 
-    /// Complete flush all previously computed values
-    void clear() {
-      TheCache.clear();
-    }
+  /// Complete flush all previously computed values
+  void clear() {
+    TheCache.clear();
+  }
 
-    /// Printing the LazyValueInfo Analysis.
-    void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
-        LazyValueInfoAnnotatedWriter Writer(this, DTree);
-        F.print(OS, &Writer);
-    }
+  /// Printing the LazyValueInfo Analysis.
+  void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
+    LazyValueInfoAnnotatedWriter Writer(this, DTree);
+    F.print(OS, &Writer);
+  }
 
-    /// This is part of the update interface to inform the cache
-    /// that a block has been deleted.
-    void eraseBlock(BasicBlock *BB) {
-      TheCache.eraseBlock(BB);
-    }
+  /// This is part of the update interface to inform the cache
+  /// that a block has been deleted.
+  void eraseBlock(BasicBlock *BB) {
+    TheCache.eraseBlock(BB);
+  }
 
-    /// This is the update interface to inform the cache that an edge from
-    /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
-    void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
+  /// This is the update interface to inform the cache that an edge from
+  /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
+  void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
-                      Function *GuardDecl)
-        : AC(AC), DL(DL), GuardDecl(GuardDecl) {}
-  };
+  LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
+                    Function *GuardDecl)
+      : AC(AC), DL(DL), GuardDecl(GuardDecl) {}
+};
 } // end anonymous namespace
 
 
