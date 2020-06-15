@@ -243,6 +243,7 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(LHS);
     (void)SRE;
     const MCConstantExpr *CE = cast<MCConstantExpr>(RHS);
+    (void)CE;
     assert(isInt<34>(CE->getValue()) && "Value must fit in 34 bits.");
 
     // Currently these are the only valid PCRelative Relocations.
