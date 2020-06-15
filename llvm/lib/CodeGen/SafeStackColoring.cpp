@@ -116,12 +116,10 @@ void StackColoring::collectMarkers() {
       InstructionNumbering[I] = InstNo++;
 
       if (M.IsStart) {
-        if (BlockInfo.End.test(M.AllocaNo))
-          BlockInfo.End.reset(M.AllocaNo);
+        BlockInfo.End.reset(M.AllocaNo);
         BlockInfo.Begin.set(M.AllocaNo);
       } else {
-        if (BlockInfo.Begin.test(M.AllocaNo))
-          BlockInfo.Begin.reset(M.AllocaNo);
+        BlockInfo.Begin.reset(M.AllocaNo);
         BlockInfo.End.set(M.AllocaNo);
       }
     };
