@@ -855,7 +855,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
     // terminal has already dupped the tty descriptors to stdin/out/err. This
     // closes original fd from which they were copied (and avoids leaking
     // descriptors to the debugged process.
-    terminal.CloseSlaveFileDescriptor();
+    terminal.CloseSecondaryFileDescriptor();
 
     // Do not inherit setgid powers.
     if (setgid(getgid()) != 0)
@@ -939,7 +939,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
 #endif
   // Release the master terminal descriptor and pass it off to the
   // ProcessMonitor instance.  Similarly stash the inferior pid.
-  monitor->m_terminal_fd = terminal.ReleaseMasterFileDescriptor();
+  monitor->m_terminal_fd = terminal.ReleasePrimaryFileDescriptor();
   monitor->m_pid = pid;
 
   // Set the terminal fd to be in non blocking mode (it simplifies the

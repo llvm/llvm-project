@@ -256,7 +256,7 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
+      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
       Info.GetArchitecture(), mainloop, {pid}));
 }
 

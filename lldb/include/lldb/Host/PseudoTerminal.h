@@ -29,36 +29,37 @@ public:
 
   /// Default constructor
   ///
-  /// Constructs this object with invalid master and slave file descriptors.
+  /// Constructs this object with invalid primary and secondary file
+  /// descriptors.
   PseudoTerminal();
 
   /// Destructor
   ///
-  /// The destructor will close the master and slave file descriptors if they
-  /// are valid and ownership has not been released using one of: @li
-  /// PseudoTerminal::ReleaseMasterFileDescriptor() @li
+  /// The destructor will close the primary and secondary file descriptors if
+  /// they are valid and ownership has not been released using one of: @li
+  /// PseudoTerminal::ReleasePrimaryFileDescriptor() @li
   /// PseudoTerminal::ReleaseSaveFileDescriptor()
   ~PseudoTerminal();
 
-  /// Close the master file descriptor if it is valid.
-  void CloseMasterFileDescriptor();
+  /// Close the primary file descriptor if it is valid.
+  void ClosePrimaryFileDescriptor();
 
-  /// Close the slave file descriptor if it is valid.
-  void CloseSlaveFileDescriptor();
+  /// Close the secondary file descriptor if it is valid.
+  void CloseSecondaryFileDescriptor();
 
   /// Fork a child process that uses pseudo terminals for its stdio.
   ///
   /// In the parent process, a call to this function results in a pid being
-  /// returned. If the pid is valid, the master file descriptor can be used
+  /// returned. If the pid is valid, the primary file descriptor can be used
   /// for read/write access to stdio of the child process.
   ///
   /// In the child process the stdin/stdout/stderr will already be routed to
-  /// the slave pseudo terminal and the master file descriptor will be closed
-  /// as it is no longer needed by the child process.
+  /// the secondary pseudo terminal and the primary file descriptor will be
+  /// closed as it is no longer needed by the child process.
   ///
-  /// This class will close the file descriptors for the master/slave when the
-  /// destructor is called. The file handles can be released using either: @li
-  /// PseudoTerminal::ReleaseMasterFileDescriptor() @li
+  /// This class will close the file descriptors for the primary/secondary when
+  /// the destructor is called. The file handles can be released using either:
+  /// @li PseudoTerminal::ReleasePrimaryFileDescriptor() @li
   /// PseudoTerminal::ReleaseSaveFileDescriptor()
   ///
   /// \param[out] error_str
@@ -71,37 +72,37 @@ public:
   ///     \b Child process: zero.
   lldb::pid_t Fork(char *error_str, size_t error_len);
 
-  /// The master file descriptor accessor.
+  /// The primary file descriptor accessor.
   ///
-  /// This object retains ownership of the master file descriptor when this
+  /// This object retains ownership of the primary file descriptor when this
   /// accessor is used. Users can call the member function
-  /// PseudoTerminal::ReleaseMasterFileDescriptor() if this object should
-  /// release ownership of the slave file descriptor.
+  /// PseudoTerminal::ReleasePrimaryFileDescriptor() if this object should
+  /// release ownership of the secondary file descriptor.
   ///
   /// \return
-  ///     The master file descriptor, or PseudoTerminal::invalid_fd
-  ///     if the master file  descriptor is not currently valid.
+  ///     The primary file descriptor, or PseudoTerminal::invalid_fd
+  ///     if the primary file  descriptor is not currently valid.
   ///
-  /// \see PseudoTerminal::ReleaseMasterFileDescriptor()
-  int GetMasterFileDescriptor() const;
+  /// \see PseudoTerminal::ReleasePrimaryFileDescriptor()
+  int GetPrimaryFileDescriptor() const;
 
-  /// The slave file descriptor accessor.
+  /// The secondary file descriptor accessor.
   ///
-  /// This object retains ownership of the slave file descriptor when this
+  /// This object retains ownership of the secondary file descriptor when this
   /// accessor is used. Users can call the member function
-  /// PseudoTerminal::ReleaseSlaveFileDescriptor() if this object should
-  /// release ownership of the slave file descriptor.
+  /// PseudoTerminal::ReleaseSecondaryFileDescriptor() if this object should
+  /// release ownership of the secondary file descriptor.
   ///
   /// \return
-  ///     The slave file descriptor, or PseudoTerminal::invalid_fd
-  ///     if the slave file descriptor is not currently valid.
+  ///     The secondary file descriptor, or PseudoTerminal::invalid_fd
+  ///     if the secondary file descriptor is not currently valid.
   ///
-  /// \see PseudoTerminal::ReleaseSlaveFileDescriptor()
-  int GetSlaveFileDescriptor() const;
+  /// \see PseudoTerminal::ReleaseSecondaryFileDescriptor()
+  int GetSecondaryFileDescriptor() const;
 
-  /// Get the name of the slave pseudo terminal.
+  /// Get the name of the secondary pseudo terminal.
   ///
-  /// A master pseudo terminal should already be valid prior to
+  /// A primary pseudo terminal should already be valid prior to
   /// calling this function.
   ///
   /// \param[out] error_str
@@ -109,27 +110,27 @@ public:
   ///     occur. This can be NULL if no error status is desired.
   ///
   /// \return
-  ///     The name of the slave pseudo terminal as a NULL terminated
+  ///     The name of the secondary pseudo terminal as a NULL terminated
   ///     C. This string that comes from static memory, so a copy of
   ///     the string should be made as subsequent calls can change
   ///     this value. NULL is returned if this object doesn't have
-  ///     a valid master pseudo terminal opened or if the call to
+  ///     a valid primary pseudo terminal opened or if the call to
   ///     \c ptsname() fails.
   ///
-  /// \see PseudoTerminal::OpenFirstAvailableMaster()
-  const char *GetSlaveName(char *error_str, size_t error_len) const;
+  /// \see PseudoTerminal::OpenFirstAvailablePrimary()
+  const char *GetSecondaryName(char *error_str, size_t error_len) const;
 
   /// Open the first available pseudo terminal.
   ///
   /// Opens the first available pseudo terminal with \a oflag as the
-  /// permissions. The opened master file descriptor is stored in this object
+  /// permissions. The opened primary file descriptor is stored in this object
   /// and can be accessed by calling the
-  /// PseudoTerminal::GetMasterFileDescriptor() accessor. Clients can call the
-  /// PseudoTerminal::ReleaseMasterFileDescriptor() accessor function if they
-  /// wish to use the master file descriptor beyond the lifespan of this
+  /// PseudoTerminal::GetPrimaryFileDescriptor() accessor. Clients can call the
+  /// PseudoTerminal::ReleasePrimaryFileDescriptor() accessor function if they
+  /// wish to use the primary file descriptor beyond the lifespan of this
   /// object.
   ///
-  /// If this object still has a valid master file descriptor when its
+  /// If this object still has a valid primary file descriptor when its
   /// destructor is called, it will close it.
   ///
   /// \param[in] oflag
@@ -141,25 +142,25 @@ public:
   ///     occur. This can be NULL if no error status is desired.
   ///
   /// \return
-  ///     \b true when the master files descriptor is
+  ///     \b true when the primary files descriptor is
   ///         successfully opened.
   ///     \b false if anything goes wrong.
   ///
-  /// \see PseudoTerminal::GetMasterFileDescriptor() @see
-  /// PseudoTerminal::ReleaseMasterFileDescriptor()
-  bool OpenFirstAvailableMaster(int oflag, char *error_str, size_t error_len);
+  /// \see PseudoTerminal::GetPrimaryFileDescriptor() @see
+  /// PseudoTerminal::ReleasePrimaryFileDescriptor()
+  bool OpenFirstAvailablePrimary(int oflag, char *error_str, size_t error_len);
 
-  /// Open the slave for the current master pseudo terminal.
+  /// Open the secondary for the current primary pseudo terminal.
   ///
-  /// A master pseudo terminal should already be valid prior to
-  /// calling this function. The opened slave file descriptor is stored in
+  /// A primary pseudo terminal should already be valid prior to
+  /// calling this function. The opened secondary file descriptor is stored in
   /// this object and can be accessed by calling the
-  /// PseudoTerminal::GetSlaveFileDescriptor() accessor. Clients can call the
-  /// PseudoTerminal::ReleaseSlaveFileDescriptor() accessor function if they
-  /// wish to use the slave file descriptor beyond the lifespan of this
+  /// PseudoTerminal::GetSecondaryFileDescriptor() accessor. Clients can call
+  /// the PseudoTerminal::ReleaseSecondaryFileDescriptor() accessor function if
+  /// they wish to use the secondary file descriptor beyond the lifespan of this
   /// object.
   ///
-  /// If this object still has a valid slave file descriptor when its
+  /// If this object still has a valid secondary file descriptor when its
   /// destructor is called, it will close it.
   ///
   /// \param[in] oflag
@@ -170,43 +171,43 @@ public:
   ///     occur. This can be NULL if no error status is desired.
   ///
   /// \return
-  ///     \b true when the master files descriptor is
+  ///     \b true when the primary files descriptor is
   ///         successfully opened.
   ///     \b false if anything goes wrong.
   ///
-  /// \see PseudoTerminal::OpenFirstAvailableMaster() @see
-  /// PseudoTerminal::GetSlaveFileDescriptor() @see
-  /// PseudoTerminal::ReleaseSlaveFileDescriptor()
-  bool OpenSlave(int oflag, char *error_str, size_t error_len);
+  /// \see PseudoTerminal::OpenFirstAvailablePrimary() @see
+  /// PseudoTerminal::GetSecondaryFileDescriptor() @see
+  /// PseudoTerminal::ReleaseSecondaryFileDescriptor()
+  bool OpenSecondary(int oflag, char *error_str, size_t error_len);
 
-  /// Release the master file descriptor.
+  /// Release the primary file descriptor.
   ///
-  /// Releases ownership of the master pseudo terminal file descriptor without
-  /// closing it. The destructor for this class will close the master file
+  /// Releases ownership of the primary pseudo terminal file descriptor without
+  /// closing it. The destructor for this class will close the primary file
   /// descriptor if the ownership isn't released using this call and the
-  /// master file descriptor has been opened.
+  /// primary file descriptor has been opened.
   ///
   /// \return
-  ///     The master file descriptor, or PseudoTerminal::invalid_fd
+  ///     The primary file descriptor, or PseudoTerminal::invalid_fd
   ///     if the mast file descriptor is not currently valid.
-  int ReleaseMasterFileDescriptor();
+  int ReleasePrimaryFileDescriptor();
 
-  /// Release the slave file descriptor.
+  /// Release the secondary file descriptor.
   ///
-  /// Release ownership of the slave pseudo terminal file descriptor without
-  /// closing it. The destructor for this class will close the slave file
-  /// descriptor if the ownership isn't released using this call and the slave
-  /// file descriptor has been opened.
+  /// Release ownership of the secondary pseudo terminal file descriptor without
+  /// closing it. The destructor for this class will close the secondary file
+  /// descriptor if the ownership isn't released using this call and the
+  /// secondary file descriptor has been opened.
   ///
   /// \return
-  ///     The slave file descriptor, or PseudoTerminal::invalid_fd
-  ///     if the slave file descriptor is not currently valid.
-  int ReleaseSlaveFileDescriptor();
+  ///     The secondary file descriptor, or PseudoTerminal::invalid_fd
+  ///     if the secondary file descriptor is not currently valid.
+  int ReleaseSecondaryFileDescriptor();
 
 protected:
   // Member variables
-  int m_master_fd; ///< The file descriptor for the master.
-  int m_slave_fd;  ///< The file descriptor for the slave.
+  int m_primary_fd;   ///< The file descriptor for the primary.
+  int m_secondary_fd; ///< The file descriptor for the secondary.
 
 private:
   PseudoTerminal(const PseudoTerminal &) = delete;

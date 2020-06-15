@@ -395,7 +395,7 @@ public:
   std::string m_dictionary_name;
   ActiveIOHandler m_active_io_handler;
   bool m_session_is_active;
-  bool m_pty_slave_is_open;
+  bool m_pty_secondary_is_open;
   bool m_valid_session;
   uint32_t m_lock_count;
   PyThreadState *m_command_thread_state;
