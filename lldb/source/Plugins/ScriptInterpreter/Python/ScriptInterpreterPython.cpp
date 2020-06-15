@@ -489,7 +489,7 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_run_one_line_str_global(),
       m_dictionary_name(m_debugger.GetInstanceName().AsCString()),
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
-      m_pty_slave_is_open(false), m_valid_session(true), m_lock_count(0),
+      m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
   InitializePrivate();
 

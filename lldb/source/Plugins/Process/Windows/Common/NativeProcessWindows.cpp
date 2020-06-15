@@ -48,7 +48,7 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
     : NativeProcessProtocol(LLDB_INVALID_PROCESS_ID,
-                            launch_info.GetPTY().ReleaseMasterFileDescriptor(),
+                            launch_info.GetPTY().ReleasePrimaryFileDescriptor(),
                             delegate),
       ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
   ErrorAsOutParameter EOut(&E);
