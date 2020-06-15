@@ -269,22 +269,6 @@ public:
 };
 
 template <typename IndexedValueType>
-class LinalgScopedEmitter<IndexedValueType, MatmulOp> {
-public:
-  static void emitScalarImplementation(ArrayRef<Value> allIvs,
-                                       MatmulOp matmulOp) {
-    assert(matmulOp.hasBufferSemantics() &&
-           "expected linalg op with buffer semantics");
-    assert(allIvs.size() == 3);
-    Value i(allIvs[0]), j(allIvs[1]), r_k(allIvs[2]);
-    IndexedValueType A(matmulOp.getInput(0)), B(matmulOp.getInput(1)),
-        C(matmulOp.getOutputBuffer(0));
-    // Emit scalar form.
-    C(i, j) = C(i, j) + A(i, r_k) * B(r_k, j);
-  }
-};
-
-template <typename IndexedValueType>
 class LinalgScopedEmitter<IndexedValueType, ConvOp> {
 public:
   /// Returns the input value of convOp. If the indices in `imIdx` is out of
@@ -737,7 +721,6 @@ INSTANTIATE_LINALG_OP_TO_LOOPS(CopyOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(FillOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(DotOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(MatvecOp)
-INSTANTIATE_LINALG_OP_TO_LOOPS(MatmulOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(ConvOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(PoolingMaxOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(PoolingMinOp)
