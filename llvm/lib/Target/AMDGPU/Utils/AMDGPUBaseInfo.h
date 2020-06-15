@@ -558,6 +558,9 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
+bool isGCN3Encoding(const MCSubtargetInfo &STI);
+bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
+bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);

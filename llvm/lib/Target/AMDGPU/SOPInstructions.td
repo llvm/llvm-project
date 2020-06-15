@@ -793,7 +793,11 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
+let hasSideEffects = 1 in {
+
 let mayLoad = 1 in {
+// s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
+// its use in the readcyclecounter selection.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
@@ -801,7 +805,7 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
-let hasSideEffects = 1, mayLoad = 0, mayStore =0 in {
+let mayLoad = 0, mayStore =0 in {
 
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
@@ -829,6 +833,7 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   let Uses = [MODE];
 }
 
+}
 } // End hasSideEffects = 1
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :

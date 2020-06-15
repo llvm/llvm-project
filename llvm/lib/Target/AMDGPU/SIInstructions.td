@@ -916,6 +916,7 @@ class FMADModsPat<ValueType Ty, Instruction inst, SDPatternOperator mad_opr>
   $src2_mod, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+let SubtargetPredicate = HasMadMacF32Insts in
 def : FMADModsPat<f32, V_MAD_F32, AMDGPUfmad_ftz>;
 def : FMADModsPat<f16, V_MAD_F16, AMDGPUfmad_ftz> {
   let SubtargetPredicate = Has16BitInsts;
