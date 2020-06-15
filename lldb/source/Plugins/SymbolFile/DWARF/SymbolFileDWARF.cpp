@@ -191,15 +191,7 @@ static bool ParseLLVMLineTablePrologue(lldb_private::DWARFContext &context,
   llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVM();
   llvm::DWARFContext &ctx = context.GetAsLLVM();
   uint64_t offset = line_offset;
-  llvm::Error error = prologue.parse(
-      data, &offset,
-      [&](llvm::Error e) {
-        success = false;
-        LLDB_LOG_ERROR(log, std::move(e),
-                       "SymbolFileDWARF::ParseSupportFiles failed to parse "
-                       "line table prologue: {0}");
-      },
-      ctx, nullptr);
+  llvm::Error error = prologue.parse(data, &offset, ctx, nullptr);
   if (error) {
     LLDB_LOG_ERROR(log, std::move(error),
                    "SymbolFileDWARF::ParseSupportFiles failed to parse line "
