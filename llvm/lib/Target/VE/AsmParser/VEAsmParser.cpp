@@ -65,6 +65,8 @@ class VEAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
+  // Helper function to parse and generate identifier with relocation.
+  const MCExpr *parseIdentifier(StringRef Identifier);
   // Custom parse functions for VE specific operands.
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
   OperandMatchResultTy parseMEMAsOperand(OperandVector &Operands);
@@ -946,6 +948,29 @@ bool VEAsmParser::ParseDirective(AsmToken DirectiveID) {
   return true;
 }
 
+const MCExpr *VEAsmParser::parseIdentifier(StringRef Identifier) {
+  StringRef Modifier;
+  // Search @modifiers like "symbol@hi".
+  size_t at = Identifier.rfind('@');
+  if (at != 0 || at != StringRef::npos) {
+    std::pair<StringRef, StringRef> Pair = Identifier.rsplit("@");
+    if (!Pair.first.empty() && !Pair.second.empty()) {
+      Identifier = Pair.first;
+      Modifier = Pair.second;
+    }
+  }
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  VEMCExpr::VariantKind VK = VEMCExpr::parseVariantKind(Modifier);
+  if (VK == VEMCExpr::VK_VE_None) {
+    // Create identifier using default variant kind
+    VEMCExpr::VariantKind Kind = VEMCExpr::VK_VE_REFLONG;
+    return VEMCExpr::create(Kind, Res, getContext());
+  }
+  return VEMCExpr::create(VK, Res, getContext());
+}
+
 OperandMatchResultTy VEAsmParser::parseMEMOperand(OperandVector &Operands) {
   LLVM_DEBUG(dbgs() << "parseMEMOperand\n");
   const AsmToken &Tok = Parser.getTok();
@@ -975,6 +1000,19 @@ OperandMatchResultTy VEAsmParser::parseMEMOperand(OperandVector &Operands) {
       return MatchOperand_NoMatch;
     break;
   }
+
+  case AsmToken::Identifier: {
+    StringRef Identifier;
+    if (!getParser().parseIdentifier(Identifier)) {
+      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      const MCExpr *EVal = parseIdentifier(Identifier);
+
+      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      Offset = VEOperand::CreateImm(EVal, S, E);
+    }
+    break;
+  }
+
   case AsmToken::LParen:
     // empty disp (= 0)
     Offset =
