@@ -1945,9 +1945,9 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     // Check if we're storing a value that we just loaded.
     if (auto *Load = dyn_cast<LoadInst>(SI->getOperand(0))) {
       if (storeIsNoop(MSSA, Load, KillingDef)) {
-        State.deleteDeadInstruction(SI);
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *SI
                           << '\n');
+        State.deleteDeadInstruction(SI);
         NumNoopStores++;
         MadeChange = true;
         continue;
