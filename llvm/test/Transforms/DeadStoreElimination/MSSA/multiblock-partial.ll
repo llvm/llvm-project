@@ -5,15 +5,13 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define void @second_store_smaller_1(i32* noalias %P, i1 %c) {
 ; CHECK-LABEL: @second_store_smaller_1(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[P_I16:%.*]] = bitcast i32* [[P]] to i16*
-; CHECK-NEXT:    store i16 0, i16* [[P_I16]], align 2
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %P
@@ -30,15 +28,13 @@ bb3:
 
 define void @second_store_smaller_2(i32* noalias %P, i1 %c) {
 ; CHECK-LABEL: @second_store_smaller_2(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 12345, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[P_I16:%.*]] = bitcast i32* [[P]] to i16*
-; CHECK-NEXT:    store i16 12345, i16* [[P_I16]], align 2
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %P
