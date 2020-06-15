@@ -108,4 +108,7 @@ add_llvm_component_library(LLVMAnalysis
 
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS
+  PRIVATE LLVMMLPolicies
   )
