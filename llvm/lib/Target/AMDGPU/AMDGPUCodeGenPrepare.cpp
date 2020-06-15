@@ -923,7 +923,10 @@ Value *AMDGPUCodeGenPrepare::expandDivRem24Impl(IRBuilder<> &Builder,
   Value *FQNeg = Builder.CreateFNeg(FQ);
 
   // float fr = mad(fqneg, fb, fa);
-  Value *FR = Builder.CreateIntrinsic(Intrinsic::amdgcn_fmad_ftz,
+  auto FMAD = !ST->hasMadMacF32Insts()
+                  ? Intrinsic::fma
+                  : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
+  Value *FR = Builder.CreateIntrinsic(FMAD,
                                       {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;

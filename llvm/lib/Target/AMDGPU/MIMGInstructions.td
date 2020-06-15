@@ -829,6 +829,9 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <0x000000ef, AMDGPUSample_c_cd_cl
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", 0x0000007e>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", 0x0000007f>;
 
+let SubtargetPredicate = HasGFX10_BEncoding in
+defm IMAGE_MSAA_LOAD : MIMG_NoSampler <0x00000080, "image_msaa_load", 1>;
+
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/
 /********** ========================================= **********/
