@@ -103,6 +103,7 @@ public:
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
+  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);

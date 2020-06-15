@@ -439,7 +439,13 @@ public:
   }
 
   unsigned getCFInstrCost(unsigned Opcode,
-                          TTI::TargetCostKind CostKind) { return 1; }
+                          TTI::TargetCostKind CostKind) {
+    // A phi would be free, unless we're costing the throughput because it
+    // will require a register.
+    if (Opcode == Instruction::PHI && CostKind != TTI::TCK_RecipThroughput)
+      return 0;
+    return 1;
+  }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                               TTI::TargetCostKind CostKind,
@@ -830,7 +836,10 @@ public:
     switch (Opcode) {
     default:
       break;
+    case Instruction::Br:
+    case Instruction::Ret:
     case Instruction::PHI:
+      return TargetTTI->getCFInstrCost(Opcode, CostKind);
     case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;

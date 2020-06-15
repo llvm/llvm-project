@@ -115,7 +115,7 @@ define i32 @const_costs() {
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
 ; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
-; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 1
+; CHECK-T1-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
 ;
 ; CHECK-T2-THROUGHPUT-LABEL: 'const_costs'
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add_1 = add i32 undef, 1
@@ -137,7 +137,7 @@ define i32 @const_costs() {
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_1024 = icmp ult i32 undef, 1024
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_1_0 = select i1 undef, i32 1, i32 0
 ; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %select_7_255 = select i1 undef, i32 7, i32 255
-; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 1
+; CHECK-T2-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 1
 ;
   %add_1 = add i32 undef, 1
   %add_32767 = add i32 undef, 32767
