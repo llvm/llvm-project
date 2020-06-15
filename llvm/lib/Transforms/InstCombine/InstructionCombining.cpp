@@ -2737,6 +2737,10 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
 }
 
 Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
+  // Nothing to do about unconditional branches.
+  if (BI.isUnconditional())
+    return nullptr;
+
   // Change br (not X), label True, label False to: br X, label False, True
   Value *X = nullptr;
   if (match(&BI, m_Br(m_Not(m_Value(X)), m_BasicBlock(), m_BasicBlock())) &&
@@ -2748,7 +2752,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
 
   // If the condition is irrelevant, remove the use so that other
   // transforms on the condition become more effective.
-  if (BI.isConditional() && !isa<ConstantInt>(BI.getCondition()) &&
+  if (!isa<ConstantInt>(BI.getCondition()) &&
       BI.getSuccessor(0) == BI.getSuccessor(1))
     return replaceOperand(
         BI, 0, ConstantInt::getFalse(BI.getCondition()->getType()));
