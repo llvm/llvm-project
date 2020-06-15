@@ -1264,6 +1264,12 @@ def SVMLLA_F32 : SInst<"svmmla[_f32]", "dddd","f", MergeNone, "aarch64_sve_fmmla
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
 def SVMLLA_F64 : SInst<"svmmla[_f64]", "dddd","d", MergeNone, "aarch64_sve_fmmla">;
+def SVTRN1Q      : SInst<"svtrn1q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_trn1q">;
+def SVTRN2Q      : SInst<"svtrn2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_trn2q">;
+def SVUZP1Q      : SInst<"svuzp1q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_uzp1q">;
+def SVUZP2Q      : SInst<"svuzp2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_uzp2q">;
+def SVZIP1Q      : SInst<"svzip1q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip1q">;
+def SVZIP2Q      : SInst<"svzip2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip2q">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
