@@ -1404,9 +1404,9 @@ Ref-counted types hold their ref-countable data by a raw pointer and allow impli
 
  struct Derived : RefCntblBase { }; // warn
 
-.. _webkit-WebKitNoUncountedMemberChecker:
+.. _webkit-NoUncountedMemberChecker:
 
-webkit.WebKitNoUncountedMemberChecker
+webkit.NoUncountedMemberChecker
 """""""""""""""""""""""""""""""""""""
 Raw pointers and references to uncounted types can't be used as class members. Only ref-counted types are allowed.
 
@@ -2404,7 +2404,7 @@ Here are some examples of situations that we warn about as they *might* be poten
       consume(uncounted); // warn
     }
 
-Although we are enforcing member variables to be ref-counted by `webkit.WebKitNoUncountedMemberChecker` any method of the same class still has unrestricted access to these. Since from a caller's perspective we can't guarantee a particular member won't get modified by callee (directly or indirectly) we don't consider values obtained from members safe.
+Although we are enforcing member variables to be ref-counted by `webkit.NoUncountedMemberChecker` any method of the same class still has unrestricted access to these. Since from a caller's perspective we can't guarantee a particular member won't get modified by callee (directly or indirectly) we don't consider values obtained from members safe.
 
 Note: It's likely this heuristic could be made more precise with fewer false positives - for example calls to free functions that don't have any parameter other than the pointer should be safe as the callee won't be able to tamper with the member unless it's a global variable.
 
