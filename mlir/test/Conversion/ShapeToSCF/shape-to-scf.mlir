@@ -15,7 +15,7 @@ func @shape_reduce(%shape : !shape.shape) -> !shape.size {
 // CHECK-NEXT: [[C0:%.*]] = constant 0 : index
 // CHECK-NEXT: [[C1:%.*]] = constant 1 : index
 
-// CHECK-NEXT: [[EXTENTS:%.*]] = "shape.to_extent_tensor"([[SHAPE]])
+// CHECK-NEXT: [[EXTENTS:%.*]] = shape.to_extent_tensor [[SHAPE]]
 // CHECK-NEXT: [[SIZE:%.*]] = dim [[EXTENTS]], [[C0]] : tensor<?xindex>
 
 // CHECK-NEXT: [[RESULT:%.*]] = scf.for [[I:%.*]] = [[C0]] to [[SIZE]]
