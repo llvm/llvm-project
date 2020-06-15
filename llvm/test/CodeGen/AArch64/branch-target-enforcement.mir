@@ -292,6 +292,10 @@ body:             |
 ---
 # Function takes address of the entry block, so the entry block needs a BTI JC.
 name:            label_address_entry
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0.entry (address-taken):
     ; CHECK-LABEL: label_address_entry
@@ -310,12 +314,16 @@ body:             |
     ; CHECK: bb.1.return (address-taken):
     ; CHECK-NEXT: HINT 36
     liveins: $x8
-
+    frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
+    frame-setup CFI_INSTRUCTION negate_ra_sign_state
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
     $x9 = ADRP target-flags(aarch64-page) blockaddress(@label_address, %ir-block.entry)
     renamable $w0 = ORRWri $wzr, 0
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.entry), 0
     STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
-    RET undef $lr, implicit killed $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    RETAA implicit $sp, implicit $lr, implicit killed $w0
 
   bb.2.lab2:
     ; CHECK: bb.2.lab2:
