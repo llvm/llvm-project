@@ -73,25 +73,25 @@ public:
   };
 
 private:
-  Function &F;
+  const Function &F;
 
   /// Maps active slots (per bit) for each basic block.
-  using LivenessMap = DenseMap<BasicBlock *, BlockLifetimeInfo>;
+  using LivenessMap = DenseMap<const BasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
   /// Number of interesting instructions.
   int NumInst = -1;
 
   /// Numeric ids for interesting instructions.
-  DenseMap<Instruction *, unsigned> InstructionNumbering;
+  DenseMap<const IntrinsicInst *, unsigned> InstructionNumbering;
 
   /// A range [Start, End) of instruction ids for each basic block.
   /// Instructions inside each BB have monotonic and consecutive ids.
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
 
-  ArrayRef<AllocaInst *> Allocas;
+  ArrayRef<const AllocaInst *> Allocas;
   unsigned NumAllocas;
-  DenseMap<AllocaInst *, unsigned> AllocaNumbering;
+  DenseMap<const AllocaInst *, unsigned> AllocaNumbering;
 
   /// LiveRange for allocas.
   SmallVector<LiveRange, 8> LiveRanges;
@@ -99,7 +99,7 @@ private:
   /// The set of allocas that have at least one lifetime.start. All other
   /// allocas get LiveRange that corresponds to the entire function.
   BitVector InterestingAllocas;
-  SmallVector<IntrinsicInst *, 8> Markers;
+  SmallVector<const IntrinsicInst *, 8> Markers;
 
   struct Marker {
     unsigned AllocaNo;
@@ -107,19 +107,19 @@ private:
   };
 
   /// List of {InstNo, {AllocaNo, IsStart}} for each BB, ordered by InstNo.
-  DenseMap<BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>> BBMarkers;
+  DenseMap<const BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>>
+      BBMarkers;
 
-  void dumpAllocas();
-  void dumpBlockLiveness();
-  void dumpLiveRanges();
+  void dumpAllocas() const;
+  void dumpBlockLiveness() const;
+  void dumpLiveRanges() const;
 
-  bool readMarker(Instruction *II, bool *IsStart);
   void collectMarkers();
   void calculateLocalLiveness();
   void calculateLiveIntervals();
 
 public:
-  StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas);
+  StackColoring(const Function &F, ArrayRef<const AllocaInst *> Allocas);
 
   void run();
   void removeAllMarkers();
@@ -127,11 +127,11 @@ public:
   /// Returns a set of "interesting" instructions where the given alloca is
   /// live. Not all instructions in a function are interesting: we pick a set
   /// that is large enough for LiveRange::Overlaps to be correct.
-  const LiveRange &getLiveRange(AllocaInst *AI);
+  const LiveRange &getLiveRange(const AllocaInst *AI) const;
 
   /// Returns a live range that represents an alloca that is live throughout the
   /// entire function.
-  LiveRange getFullLiveRange() {
+  LiveRange getFullLiveRange() const {
     assert(NumInst >= 0);
     LiveRange R;
     R.SetMaximum(NumInst);
