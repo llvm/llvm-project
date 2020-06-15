@@ -1,4 +1,4 @@
-//===- SafeStackColoring.h - SafeStack frame coloring ----------*- C++ -*--===//
+//===- StackLifetime.h - Alloca Lifetime Analysis --------------*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H
-#define LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H
+#ifndef LLVM_ANALYSIS_STACKLIFETIME_H
+#define LLVM_ANALYSIS_STACKLIFETIME_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -25,8 +25,6 @@ class BasicBlock;
 class Function;
 class Instruction;
 
-namespace safestack {
-
 /// Compute live ranges of allocas.
 /// Live ranges are represented as sets of "interesting" instructions, which are
 /// defined as instructions that may start or end an alloca's lifetime. These
@@ -35,7 +33,7 @@ namespace safestack {
 /// * first instruction of any basic block
 /// Interesting instructions are numbered in the depth-first walk of the CFG,
 /// and in the program order inside each basic block.
-class StackColoring {
+class StackLifetime {
   /// A class representing liveness information for a single basic block.
   /// Each bit in the BitVector represents the liveness property
   /// for a different stack slot.
@@ -62,7 +60,7 @@ public:
   class LiveRange {
     BitVector Bits;
     friend raw_ostream &operator<<(raw_ostream &OS,
-                                   const StackColoring::LiveRange &R);
+                                   const StackLifetime::LiveRange &R);
 
   public:
     LiveRange(unsigned Size, bool Set = false) : Bits(Size, Set) {}
@@ -121,7 +119,7 @@ private:
   void calculateLiveIntervals();
 
 public:
-  StackColoring(const Function &F, ArrayRef<const AllocaInst *> Allocas);
+  StackLifetime(const Function &F, ArrayRef<const AllocaInst *> Allocas);
 
   void run();
   std::vector<const IntrinsicInst *> getMarkers() const;
@@ -156,12 +154,10 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS,
-                               const StackColoring::LiveRange &R) {
+                               const StackLifetime::LiveRange &R) {
   return OS << R.Bits;
 }
 
-} // end namespace safestack
-
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_SAFESTACKCOLORING_H
+#endif // LLVM_ANALYSIS_STACKLIFETIME_H
