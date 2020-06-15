@@ -243,6 +243,12 @@ public:
   /// Erase \p MI
   bool eraseInst(MachineInstr &MI);
 
+  /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
+  bool matchSimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
+  bool applySimplifyAddToSub(MachineInstr &MI,
+                             std::tuple<Register, Register> &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
