@@ -653,7 +653,7 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
 LogicalResult
 CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
-  CmpFOpOperandAdaptor cmpFOpOperands(operands);
+  CmpFOpAdaptor cmpFOpOperands(operands);
 
   switch (cmpFOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
@@ -693,7 +693,7 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
 LogicalResult
 BoolCmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
-  CmpIOpOperandAdaptor cmpIOpOperands(operands);
+  CmpIOpAdaptor cmpIOpOperands(operands);
 
   Type operandType = cmpIOp.lhs().getType();
   if (!operandType.isa<IntegerType>() ||
@@ -720,7 +720,7 @@ BoolCmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 LogicalResult
 CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
-  CmpIOpOperandAdaptor cmpIOpOperands(operands);
+  CmpIOpAdaptor cmpIOpOperands(operands);
 
   Type operandType = cmpIOp.lhs().getType();
   if (operandType.isa<IntegerType>() &&
@@ -763,7 +763,7 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 LogicalResult
 IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
-  LoadOpOperandAdaptor loadOperands(operands);
+  LoadOpAdaptor loadOperands(operands);
   auto loc = loadOp.getLoc();
   auto memrefType = loadOp.memref().getType().cast<MemRefType>();
   if (!memrefType.getElementType().isSignlessInteger())
@@ -838,7 +838,7 @@ IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
 LogicalResult
 LoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
-  LoadOpOperandAdaptor loadOperands(operands);
+  LoadOpAdaptor loadOperands(operands);
   auto memrefType = loadOp.memref().getType().cast<MemRefType>();
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
@@ -870,7 +870,7 @@ ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
 LogicalResult
 SelectOpPattern::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
-  SelectOpOperandAdaptor selectOperands(operands);
+  SelectOpAdaptor selectOperands(operands);
   rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, selectOperands.condition(),
                                                selectOperands.true_value(),
                                                selectOperands.false_value());
@@ -884,7 +884,7 @@ SelectOpPattern::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
 LogicalResult
 IntStoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
-  StoreOpOperandAdaptor storeOperands(operands);
+  StoreOpAdaptor storeOperands(operands);
   auto memrefType = storeOp.memref().getType().cast<MemRefType>();
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
@@ -963,7 +963,7 @@ IntStoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
 LogicalResult
 StoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter) const {
-  StoreOpOperandAdaptor storeOperands(operands);
+  StoreOpAdaptor storeOperands(operands);
   auto memrefType = storeOp.memref().getType().cast<MemRefType>();
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
