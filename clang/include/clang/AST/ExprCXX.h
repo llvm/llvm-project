@@ -84,6 +84,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   friend class ASTStmtWriter;
 
   SourceRange Range;
+  FPOptionsOverride Overrides;
 
   // CXXOperatorCallExpr has some trailing objects belonging
   // to CallExpr. See CallExpr for the details.
@@ -92,7 +93,7 @@ class CXXOperatorCallExpr final : public CallExpr {
 
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
-                      SourceLocation OperatorLoc, FPOptions FPFeatures,
+                      SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
                       ADLCallKind UsesADL);
 
   CXXOperatorCallExpr(unsigned NumArgs, EmptyShell Empty);
@@ -101,7 +102,7 @@ public:
   static CXXOperatorCallExpr *
   Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
-         SourceLocation OperatorLoc, FPOptions FPFeatures,
+         SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
          ADLCallKind UsesADL = NotADL);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
@@ -164,20 +165,10 @@ public:
     return T->getStmtClass() == CXXOperatorCallExprClass;
   }
 
-  // Set the FP contractability status of this operator. Only meaningful for
+  // Set the FPFeatures status of this operator. Only meaningful for
   // operations on floating point types.
-  void setFPFeatures(FPOptions F) {
-    CXXOperatorCallExprBits.FPFeatures = F.getAsOpaqueInt();
-  }
-  FPOptions getFPFeatures() const {
-    return FPOptions(CXXOperatorCallExprBits.FPFeatures);
-  }
-
-  // Get the FP contractability status of this operator. Only meaningful for
-  // operations on floating point types.
-  bool isFPContractableWithinStatement() const {
-    return getFPFeatures().allowFPContractWithinStatement();
-  }
+  void setFPFeatures(FPOptionsOverride F) { Overrides = F; }
+  FPOptionsOverride getFPFeatures() const { return Overrides; }
 };
 
 /// Represents a call to a member function that

@@ -366,175 +366,175 @@ public:
 };
 
 /// Floating point control options
+class FPOptionsOverride;
 class FPOptions {
+public:
+  // We start by defining the layout.
+  using storage_type = uint16_t;
+
   using RoundingMode = llvm::RoundingMode;
 
-public:
-  FPOptions()
-      : fp_contract(LangOptions::FPM_Off), fenv_access(LangOptions::FPM_Off),
-        rounding(LangOptions::FPR_ToNearest),
-        exceptions(LangOptions::FPE_Ignore), allow_reassoc(0), no_nans(0),
-        no_infs(0), no_signed_zeros(0), allow_reciprocal(0), approx_func(0) {}
+  // Define a fake option named "First" so that we have a PREVIOUS even for the
+  // real first option.
+  static constexpr storage_type FirstShift = 0, FirstWidth = 0;
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  static constexpr storage_type NAME##Shift =                                  \
+      PREVIOUS##Shift + PREVIOUS##Width;                                       \
+  static constexpr storage_type NAME##Width = WIDTH;                           \
+  static constexpr storage_type NAME##Mask = ((1 << NAME##Width) - 1)          \
+                                             << NAME##Shift;
+#include "clang/Basic/FPOptions.def"
 
+private:
+  storage_type Value;
+
+public:
+  FPOptions() : Value(0) {
+    setFPContractMode(LangOptions::FPM_Off);
+    setRoundingMode(static_cast<RoundingMode>(LangOptions::FPR_ToNearest));
+    setFPExceptionMode(LangOptions::FPE_Ignore);
+  }
   // Used for serializing.
   explicit FPOptions(unsigned I) { getFromOpaqueInt(I); }
 
-  explicit FPOptions(const LangOptions &LangOpts)
-      : fp_contract(LangOpts.getDefaultFPContractMode()),
-        fenv_access(LangOptions::FPM_Off),
-        rounding(static_cast<unsigned>(LangOpts.getFPRoundingMode())),
-        exceptions(LangOpts.getFPExceptionMode()),
-        allow_reassoc(LangOpts.AllowFPReassoc), no_nans(LangOpts.NoHonorNaNs),
-        no_infs(LangOpts.NoHonorInfs), no_signed_zeros(LangOpts.NoSignedZero),
-        allow_reciprocal(LangOpts.AllowRecip),
-        approx_func(LangOpts.ApproxFunc) {}
-  // FIXME: Use getDefaultFEnvAccessMode() when available.
-
-  void setFastMath(bool B = true) {
-    allow_reassoc = no_nans = no_infs = no_signed_zeros = approx_func =
-        allow_reciprocal = B;
+  explicit FPOptions(const LangOptions &LO) {
+    setFPContractMode(LO.getDefaultFPContractMode());
+    setRoundingMode(LO.getFPRoundingMode());
+    setFPExceptionMode(LO.getFPExceptionMode());
+    setAllowFEnvAccess(LangOptions::FPM_Off),
+        setAllowFPReassociate(LO.AllowFPReassoc);
+    setNoHonorNaNs(LO.NoHonorNaNs);
+    setNoHonorInfs(LO.NoHonorInfs);
+    setNoSignedZero(LO.NoSignedZero);
+    setAllowReciprocal(LO.AllowRecip);
+    setAllowApproxFunc(LO.ApproxFunc);
   }
+
+  bool allowFPContractWithinStatement() const {
+    return getFPContractMode() == LangOptions::FPM_On;
+  }
+  void setAllowFPContractWithinStatement() {
+    setFPContractMode(LangOptions::FPM_On);
+  }
+
+  bool allowFPContractAcrossStatement() const {
+    return getFPContractMode() == LangOptions::FPM_Fast;
+  }
+  void setAllowFPContractAcrossStatement() {
+    setFPContractMode(LangOptions::FPM_Fast);
+  }
+
+  bool isFPConstrained() const {
+    return getRoundingMode() !=
+               static_cast<unsigned>(RoundingMode::NearestTiesToEven) ||
+           getFPExceptionMode() != LangOptions::FPE_Ignore ||
+           getAllowFEnvAccess();
+  }
+
+  bool operator==(FPOptions other) const { return Value == other.Value; }
 
   /// Return the default value of FPOptions that's used when trailing
   /// storage isn't required.
   static FPOptions defaultWithoutTrailingStorage(const LangOptions &LO);
 
-  /// Does this FPOptions require trailing storage when stored in various
-  /// AST nodes, or can it be recreated using `defaultWithoutTrailingStorage`?
-  bool requiresTrailingStorage(const LangOptions &LO);
+  storage_type getAsOpaqueInt() const { return Value; }
+  void getFromOpaqueInt(storage_type value) { Value = value; }
 
-  bool allowFPContractWithinStatement() const {
-    return fp_contract == LangOptions::FPM_On;
+  // We can define most of the accessors automatically:
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  unsigned get##NAME() const {                                                 \
+    return static_cast<unsigned>(TYPE((Value & NAME##Mask) >> NAME##Shift));   \
+  }                                                                            \
+  void set##NAME(TYPE value) {                                                 \
+    Value = (Value & ~NAME##Mask) | (storage_type(value) << NAME##Shift);      \
   }
+#include "clang/Basic/FPOptions.def"
+  LLVM_DUMP_METHOD void dump();
+};
 
-  bool allowFPContractAcrossStatement() const {
-    return fp_contract == LangOptions::FPM_Fast;
-  }
+/// The FPOptions override type is value of the new FPOptions
+///  plus a mask showing which fields are actually set in it:
+class FPOptionsOverride {
+  FPOptions Options;
+  FPOptions::storage_type OverrideMask = 0;
+
+public:
+  using RoundingMode = llvm::RoundingMode;
+  FPOptionsOverride() {}
+
+  // Used for serializing.
+  explicit FPOptionsOverride(unsigned I) { getFromOpaqueInt(I); }
+
+  bool requiresTrailingStorage() const { return OverrideMask != 0; }
 
   void setAllowFPContractWithinStatement() {
-    fp_contract = LangOptions::FPM_On;
+    setFPContractModeOverride(LangOptions::FPM_On);
   }
 
   void setAllowFPContractAcrossStatement() {
-    fp_contract = LangOptions::FPM_Fast;
+    setFPContractModeOverride(LangOptions::FPM_Fast);
   }
 
-  void setDisallowFPContract() { fp_contract = LangOptions::FPM_Off; }
-
-  bool allowFEnvAccess() const { return fenv_access == LangOptions::FPM_On; }
-
-  void setAllowFEnvAccess() { fenv_access = LangOptions::FPM_On; }
+  void setDisallowFPContract() {
+    setFPContractModeOverride(LangOptions::FPM_Off);
+  }
 
   void setFPPreciseEnabled(bool Value) {
-    if (Value) {
+    setAllowFPReassociateOverride(!Value);
+    setNoHonorNaNsOverride(!Value);
+    setNoHonorInfsOverride(!Value);
+    setNoSignedZeroOverride(!Value);
+    setAllowReciprocalOverride(!Value);
+    setAllowApproxFuncOverride(!Value);
+    if (Value)
       /* Precise mode implies fp_contract=on and disables ffast-math */
-      setFastMath(false);
       setAllowFPContractWithinStatement();
-    } else {
-      /* Precise mode implies fp_contract=fast and enables ffast-math */
-      setFastMath(true);
+    else
+      /* Precise mode disabled sets fp_contract=fast and enables ffast-math */
       setAllowFPContractAcrossStatement();
-    }
   }
 
-  void setDisallowFEnvAccess() { fenv_access = LangOptions::FPM_Off; }
-
-  RoundingMode getRoundingMode() const {
-    return static_cast<RoundingMode>(rounding);
-  }
-
-  void setRoundingMode(RoundingMode RM) {
-    rounding = static_cast<unsigned>(RM);
-  }
-
-  LangOptions::FPExceptionModeKind getExceptionMode() const {
-    return static_cast<LangOptions::FPExceptionModeKind>(exceptions);
-  }
-
-  void setExceptionMode(LangOptions::FPExceptionModeKind EM) {
-    exceptions = EM;
-  }
-
-  /// FMF Flag queries
-  bool allowAssociativeMath() const { return allow_reassoc; }
-  bool noHonorNaNs() const { return no_nans; }
-  bool noHonorInfs() const { return no_infs; }
-  bool noSignedZeros() const { return no_signed_zeros; }
-  bool allowReciprocalMath() const { return allow_reciprocal; }
-  bool allowApproximateFunctions() const { return approx_func; }
-
-  /// Flag setters
-  void setAllowAssociativeMath(bool B = true) { allow_reassoc = B; }
-  void setNoHonorNaNs(bool B = true) { no_nans = B; }
-  void setNoHonorInfs(bool B = true) { no_infs = B; }
-  void setNoSignedZeros(bool B = true) { no_signed_zeros = B; }
-  void setAllowReciprocalMath(bool B = true) { allow_reciprocal = B; }
-  void setAllowApproximateFunctions(bool B = true) { approx_func = B; }
-
-  bool isFPConstrained() const {
-    return getRoundingMode() != RoundingMode::NearestTiesToEven ||
-           getExceptionMode() != LangOptions::FPE_Ignore ||
-           allowFEnvAccess();
-  }
-
-  /// Used to serialize this.
   unsigned getAsOpaqueInt() const {
-    return fp_contract | (fenv_access << 2) | (rounding << 3) |
-           (exceptions << 6) | (allow_reassoc << 8) | (no_nans << 9) |
-           (no_infs << 10) | (no_signed_zeros << 11) |
-           (allow_reciprocal << 12) | (approx_func << 13);
+    return Options.getAsOpaqueInt() << 16 | OverrideMask;
   }
-
-  /// Used with getAsOpaqueInt() to manage the float_control pragma stack.
   void getFromOpaqueInt(unsigned I) {
-    fp_contract = (static_cast<LangOptions::FPModeKind>(I & 3));
-    fenv_access = ((I >> 2) & 1);
-    rounding = static_cast<unsigned>(static_cast<RoundingMode>((I >> 3) & 7));
-    exceptions = (static_cast<LangOptions::FPExceptionModeKind>((I >> 6) & 3));
-    allow_reassoc = ((I >> 8) & 1);
-    no_nans = ((I >> 9) & 1);
-    no_infs = ((I >> 10) & 1);
-    no_signed_zeros = ((I >> 11) & 1);
-    allow_reciprocal = ((I >> 12) & 1);
-    approx_func = ((I >> 13) & 1);
+    OverrideMask = I & 0xffff;
+    Options.getFromOpaqueInt(I >> 16);
   }
 
-private:
-  /// Adjust BinaryOperatorBitfields::FPFeatures and
-  /// CXXOperatorCallExprBitfields::FPFeatures to match the total bit-field size
-  /// of these fields.
-  unsigned fp_contract : 2;
-  unsigned fenv_access : 1;
-  unsigned rounding : 3;
-  unsigned exceptions : 2;
-  /// Allow reassociation transformations for floating-point instructions
-  /// across multiple statements.
-  unsigned allow_reassoc : 1;
-  /// No NaNs - Allow optimizations to assume the arguments and result
-  /// are not NaN. If an argument is a nan, or the result would be a nan,
-  /// it produces a :ref:`poison value <poisonvalues>` instead.
-  unsigned no_nans : 1;
-  /// No Infs - Allow optimizations to assume the arguments and result
-  /// are not +/-Inf. If an argument is +/-Inf, or the result would be +/-Inf,
-  /// it produces a :ref:`poison value <poisonvalues>` instead.
-  unsigned no_infs : 1;
-  /// No Signed Zeros - Allow optimizations to treat the sign of a zero
-  /// argument or result as insignificant.
-  unsigned no_signed_zeros : 1;
-  /// Allow Reciprocal - Allow optimizations to use the reciprocal
-  /// of an argument rather than perform division.
-  unsigned allow_reciprocal : 1;
-  /// Approximate functions - Allow substitution of approximate calculations
-  /// for functions (sin, log, sqrt, etc).
-  unsigned approx_func : 1;
-};
+  FPOptions applyOverrides(const LangOptions &LO) {
+    FPOptions Base(LO);
+    FPOptions result((Base.getAsOpaqueInt() & ~OverrideMask) |
+                     (Options.getAsOpaqueInt() & OverrideMask));
+    return result;
+  }
 
-inline bool operator==(FPOptions LHS, FPOptions RHS) {
-  return LHS.getAsOpaqueInt() == RHS.getAsOpaqueInt();
-}
-inline bool operator!=(FPOptions LHS, FPOptions RHS) {
-  return LHS.getAsOpaqueInt() != RHS.getAsOpaqueInt();
-}
+  bool operator==(FPOptionsOverride other) const {
+    return Options == other.Options && OverrideMask == other.OverrideMask;
+  }
+  bool operator!=(FPOptionsOverride other) const { return !(*this == other); }
+
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  bool has##NAME##Override() const {                                           \
+    return OverrideMask & FPOptions::NAME##Mask;                               \
+  }                                                                            \
+  unsigned get##NAME##Override() const {                                       \
+    assert(has##NAME##Override());                                             \
+    return Options.get##NAME();                                                \
+  }                                                                            \
+  void clear##NAME##Override() {                                               \
+    /* Clear the actual value so that we don't have spurious differences when  \
+     * testing equality. */                                                    \
+    Options.set##NAME(TYPE(0));                                                \
+    OverrideMask &= ~FPOptions::NAME##Mask;                                    \
+  }                                                                            \
+  void set##NAME##Override(TYPE value) {                                       \
+    Options.set##NAME(value);                                                  \
+    OverrideMask |= FPOptions::NAME##Mask;                                     \
+  }
+#include "clang/Basic/FPOptions.def"
+  LLVM_DUMP_METHOD void dump();
+};
 
 /// Describes the kind of translation unit being processed.
 enum TranslationUnitKind {
