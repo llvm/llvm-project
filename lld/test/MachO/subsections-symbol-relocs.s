@@ -17,9 +17,9 @@
 # RUN: echo "_main" >> %t/order-file-2
 # RUN: echo "_qux" >> %t/order-file-2
 
-# RUN: lld -flavor darwinnew -o %t/test-1 %t/test.o -order_file %t/order-file-1
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/test-1 %t/test.o -order_file %t/order-file-1
 # RUN: llvm-objdump -d --no-show-raw-insn %t/test-1 | FileCheck %s
-# RUN: lld -flavor darwinnew -o %t/test-2 %t/test.o -order_file %t/order-file-2
+# RUN: lld -flavor darwinnew -arch x86_64 -o %t/test-2 %t/test.o -order_file %t/order-file-2
 # RUN: llvm-objdump -d --no-show-raw-insn %t/test-2 | FileCheck %s
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:       <_bar>:
