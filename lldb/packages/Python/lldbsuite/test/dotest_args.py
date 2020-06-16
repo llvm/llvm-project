@@ -41,7 +41,7 @@ def create_parser():
     group.add_argument('-C', '--compiler', metavar='compiler', dest='compiler', help=textwrap.dedent(
         '''Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times.'''))
     if sys.platform == 'darwin':
-        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
+        group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="", help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))
     # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument(
