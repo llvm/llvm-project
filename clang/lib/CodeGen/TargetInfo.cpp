@@ -6265,13 +6265,6 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty);
 
-  // __bf16 gets passed using the bfloat IR type, or using i32 but
-  // with the top 16 bits unspecified.
-  if (Ty->isBFloat16Type() && IsFloatABISoftFP) {
-    llvm::Type *ResType = llvm::Type::getInt32Ty(getVMContext());
-    return ABIArgInfo::getDirect(ResType);
-  }
-
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
@@ -6473,15 +6466,6 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
         (IsFloatABISoftFP &&
          VT->getElementType()->isBFloat16Type()))
       return coerceIllegalVector(RetTy);
-  }
-
-  // if we're using the softfp float abi, __bf16 get returned as if it were an
-  // int but with the top 16 bits unspecified.
-  if (RetTy->isBFloat16Type()) {
-    llvm::Type *ResType = IsAAPCS_VFP ?
-      llvm::Type::getBFloatTy(getVMContext()) :
-      llvm::Type::getInt32Ty(getVMContext());
-    return ABIArgInfo::getDirect(ResType);
   }
 
   if (!isAggregateTypeForABI(RetTy)) {
