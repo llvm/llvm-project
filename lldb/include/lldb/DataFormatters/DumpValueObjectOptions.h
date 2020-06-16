@@ -130,7 +130,6 @@ public:
   DumpValueObjectOptions &
   SetPointerAsArray(const PointerAsArraySettings &ptr_array);
 
-public:
   uint32_t m_max_depth = UINT32_MAX;
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   uint32_t m_omit_summary_depth = 0;

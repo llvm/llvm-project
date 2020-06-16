@@ -1344,7 +1344,6 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-public:
   /// Get the exit status for a process.
   ///
   /// \return
