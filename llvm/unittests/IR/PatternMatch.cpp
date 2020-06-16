@@ -928,9 +928,9 @@ TEST_F(PatternMatchTest, VectorOps) {
   //
   //   SP1 = VectorSplat(2, i8 2)
   //   SP2 = VectorSplat(2, i8 %Val)
-  Type *VecTy = VectorType::get(IRB.getInt8Ty(), 2);
+  Type *VecTy = FixedVectorType::get(IRB.getInt8Ty(), 2);
   Type *i32 = IRB.getInt32Ty();
-  Type *i32VecTy = VectorType::get(i32, 2);
+  Type *i32VecTy = FixedVectorType::get(i32, 2);
 
   Value *Val = IRB.CreateAdd(IRB.getInt8(0), IRB.getInt8(1));
   Value *Val2 = IRB.CreateAdd(Val, IRB.getInt8(3));
@@ -1021,7 +1021,7 @@ TEST_F(PatternMatchTest, VectorOps) {
 
 TEST_F(PatternMatchTest, VectorUndefInt) {
   Type *ScalarTy = IRB.getInt8Ty();
-  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Type *VectorTy = FixedVectorType::get(ScalarTy, 4);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarZero = Constant::getNullValue(ScalarTy);
@@ -1086,7 +1086,7 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
 
 TEST_F(PatternMatchTest, VectorUndefFloat) {
   Type *ScalarTy = IRB.getFloatTy();
-  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Type *VectorTy = FixedVectorType::get(ScalarTy, 4);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarZero = Constant::getNullValue(ScalarTy);
