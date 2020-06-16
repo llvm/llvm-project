@@ -805,7 +805,7 @@ public:
   }
 
 private:
-  static unsigned getArtifactSrcReg(const MachineInstr &MI) {
+  static Register getArtifactSrcReg(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case TargetOpcode::COPY:
     case TargetOpcode::G_TRUNC:
@@ -839,7 +839,7 @@ private:
     // and as a result, %3, %2, %1 are dead.
     MachineInstr *PrevMI = &MI;
     while (PrevMI != &DefMI) {
-      unsigned PrevRegSrc = getArtifactSrcReg(*PrevMI);
+      Register PrevRegSrc = getArtifactSrcReg(*PrevMI);
 
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
@@ -908,7 +908,7 @@ private:
 
   /// Looks through copy instructions and returns the actual
   /// source register.
-  unsigned lookThroughCopyInstrs(Register Reg) {
+  Register lookThroughCopyInstrs(Register Reg) {
     Register TmpReg;
     while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
       if (MRI.getType(TmpReg).isValid())
