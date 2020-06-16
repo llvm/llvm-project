@@ -45,7 +45,6 @@ the Repository Directory.
 import SATestBuild
 from ProjectMap import ProjectMap, ProjectInfo
 
-import argparse
 import os
 import sys
 
@@ -85,41 +84,7 @@ def is_existing_project(project_map: ProjectMap, project: ProjectInfo) -> bool:
                for existing_project in project_map.projects)
 
 
-# TODO: Add an option not to build.
-# TODO: Set the path to the Repository directory.
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("name", nargs=1, help="Name of the new project")
-    parser.add_argument("--mode", action="store", default=1, type=int,
-                        choices=[0, 1, 2],
-                        help="Build mode: 0 for single file project, "
-                        "1 for scan_build, "
-                        "2 for single file c++11 project")
-    parser.add_argument("--source", action="store", default="script",
-                        choices=["script", "git", "zip"],
-                        help=f"Source type of the new project: "
-                        f"'git' for getting from git "
-                        f"(please provide --origin and --commit), "
-                        f"'zip' for unpacking source from a zip file, "
-                        f"'script' for downloading source by running "
-                        f"a custom script {SATestBuild.DOWNLOAD_SCRIPT}")
-    parser.add_argument("--origin", action="store", default="",
-                        help="Origin link for a git repository")
-    parser.add_argument("--commit", action="store", default="",
-                        help="Git hash for a commit to checkout")
-
-    args = parser.parse_args()
-
-    if args.source == "git" and (args.origin == "" or args.commit == ""):
-        parser.error(
-            "Please provide both --origin and --commit if source is 'git'")
-
-    if args.source != "git" and (args.origin != "" or args.commit != ""):
-        parser.error("Options --origin and --commit don't make sense when "
-                     "source is not 'git'")
-
-    project = ProjectInfo(args.name[0], args.mode, args.source, args.origin,
-                          args.commit)
-
-    add_new_project(project)
+    print("SATestAdd.py should not be used on its own.")
+    print("Please use 'SATest.py add' instead")
+    sys.exit(1)
