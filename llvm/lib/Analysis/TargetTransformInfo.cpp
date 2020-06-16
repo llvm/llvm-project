@@ -1225,13 +1225,9 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
 
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:
-    return getUserCost(I, CostKind);
-
   case Instruction::Ret:
   case Instruction::PHI:
-  case Instruction::Br: {
-    return getCFInstrCost(I->getOpcode(), CostKind);
-  }
+  case Instruction::Br:
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:
@@ -1251,7 +1247,6 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::Or:
   case Instruction::Xor:
   case Instruction::FNeg:
-    return getUserCost(I, CostKind);
   case Instruction::Select:
   case Instruction::ICmp:
   case Instruction::FCmp:
