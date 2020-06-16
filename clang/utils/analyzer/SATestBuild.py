@@ -46,7 +46,6 @@ import CmpRuns
 import SATestUtils
 from ProjectMap import DownloadType, ProjectInfo, ProjectMap
 
-import argparse
 import glob
 import logging
 import math
@@ -635,7 +634,6 @@ class TestProjectThread(threading.Thread):
                the canonical ones.
         :param failure_flag: Used to signify a failure during the run.
         """
-        self.args = args
         self.tasks_queue = tasks_queue
         self.results_differ = results_differ
         self.failure_flag = failure_flag
@@ -883,37 +881,6 @@ def clean_up_empty_folders(output_dir: str):
 
 
 if __name__ == "__main__":
-    # Parse command line arguments.
-    parser = argparse.ArgumentParser(
-        description="Test the Clang Static Analyzer.")
-
-    parser.add_argument("--strictness", dest="strictness", type=int, default=0,
-                        help="0 to fail on runtime errors, 1 to fail when the "
-                        "number of found bugs are different from the "
-                        "reference, 2 to fail on any difference from the "
-                        "reference. Default is 0.")
-    parser.add_argument("-r", dest="regenerate", action="store_true",
-                        default=False, help="Regenerate reference output.")
-    parser.add_argument("--override-compiler", action="store_true",
-                        default=False, help="Call scan-build with "
-                        "--override-compiler option.")
-    parser.add_argument("-j", "--jobs", dest="jobs", type=int,
-                        default=0,
-                        help="Number of projects to test concurrently")
-    parser.add_argument("--extra-analyzer-config",
-                        dest="extra_analyzer_config", type=str,
-                        default="",
-                        help="Arguments passed to to -analyzer-config")
-    parser.add_argument("-v", "--verbose", action="count", default=0)
-
-    args = parser.parse_args()
-
-    VERBOSE = args.verbose
-    tester = RegressionTester(args.jobs, args.override_compiler,
-                              args.extra_analyzer_config, args.regenerate,
-                              args.strictness)
-    tests_passed = tester.test_all()
-
-    if not tests_passed:
-        stderr("ERROR: Tests failed.")
-        sys.exit(42)
+    print("SATestBuild.py should not be used on its own.")
+    print("Please use 'SATest.py build' instead")
+    sys.exit(1)

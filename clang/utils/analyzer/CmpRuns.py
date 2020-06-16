@@ -25,7 +25,6 @@ Usage:
     diff = compare_results(resultsA, resultsB)
 
 """
-import argparse
 import json
 import os
 import plistlib
@@ -524,51 +523,7 @@ def dump_scan_build_results_diff(dir_old: ResultsDirectory,
         len(results_new.diagnostics)
 
 
-def generate_option_parser():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--root-old", dest="root_old",
-                        help="Prefix to ignore on source files for "
-                        "OLD directory",
-                        action="store", type=str, default="")
-    parser.add_argument("--root-new", dest="root_new",
-                        help="Prefix to ignore on source files for "
-                        "NEW directory",
-                        action="store", type=str, default="")
-    parser.add_argument("--verbose-log", dest="verbose_log",
-                        help="Write additional information to LOG "
-                        "[default=None]",
-                        action="store", type=str, default=None,
-                        metavar="LOG")
-    parser.add_argument("--stats-only", action="store_true", dest="stats_only",
-                        default=False, help="Only show statistics on reports")
-    parser.add_argument("--show-stats", action="store_true", dest="show_stats",
-                        default=False, help="Show change in statistics")
-    parser.add_argument("--histogram", action="store", default=None,
-                        choices=[HistogramType.RELATIVE.value,
-                                 HistogramType.LOG_RELATIVE.value,
-                                 HistogramType.ABSOLUTE.value],
-                        help="Show histogram of paths differences. "
-                        "Requires matplotlib")
-    parser.add_argument("old", nargs=1, help="Directory with old results")
-    parser.add_argument("new", nargs=1, help="Directory with new results")
-
-    return parser
-
-
-def main():
-    parser = generate_option_parser()
-    args = parser.parse_args()
-
-    dir_old = ResultsDirectory(args.old[0], args.root_old)
-    dir_new = ResultsDirectory(args.new[0], args.root_new)
-
-    dump_scan_build_results_diff(dir_old, dir_new,
-                                 show_stats=args.show_stats,
-                                 stats_only=args.stats_only,
-                                 histogram=args.histogram,
-                                 verbose_log=args.verbose_log)
-
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    print("CmpRuns.py should not be used on its own.")
+    print("Please use 'SATest.py compare' instead")
+    sys.exit(1)
