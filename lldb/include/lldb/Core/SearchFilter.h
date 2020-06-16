@@ -398,7 +398,6 @@ public:
 protected:
   lldb::SearchFilterSP DoCreateCopy() override;
 
-protected:
   FileSpecList m_module_spec_list;
 };
 

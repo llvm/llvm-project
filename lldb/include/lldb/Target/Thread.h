@@ -1258,7 +1258,6 @@ private:
                                 // for this thread?
   StructuredData::ObjectSP m_extended_info; // The extended info for this thread
 
-private:
   void BroadcastSelectedFrameChange(StackID &new_frame_id);
 
   Thread(const Thread &) = delete;

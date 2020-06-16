@@ -326,7 +326,6 @@ private:
 
   void ApplyTerminalSizeChange();
 
-private:
 #if LLDB_EDITLINE_USE_WCHAR
   std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
 #endif

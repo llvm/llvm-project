@@ -775,7 +775,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   StepType m_step_type;
   StepScope m_step_scope;
   ThreadStepScopeOptionGroup m_options;

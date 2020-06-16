@@ -79,7 +79,6 @@ private:
     const ReadHandle &operator=(const ReadHandle &) = delete;
   };
 
-private:
   MainLoopBase(const MainLoopBase &) = delete;
   const MainLoopBase &operator=(const MainLoopBase &) = delete;
 };
