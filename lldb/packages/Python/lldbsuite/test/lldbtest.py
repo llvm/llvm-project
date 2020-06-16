@@ -696,6 +696,7 @@ class Base(unittest2.TestCase):
         return os.path.join(self.getSourceDir(), name)
 
     def getReproducerArtifact(self, name):
+        lldbutil.mkdir_p(self.getReproducerDir())
         return os.path.join(self.getReproducerDir(), name)
 
     @classmethod
