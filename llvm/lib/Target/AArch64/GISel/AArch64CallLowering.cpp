@@ -776,7 +776,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall) {
   if (!IsTailCall)
-    return IsIndirect ? getBLRCallOpcode(CallerF) : AArch64::BL;
+    return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
 
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
