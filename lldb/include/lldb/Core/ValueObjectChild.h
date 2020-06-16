@@ -75,7 +75,6 @@ protected:
   //  void
   //  ReadValueFromMemory (ValueObject* parent, lldb::addr_t address);
 
-protected:
   friend class ValueObject;
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;

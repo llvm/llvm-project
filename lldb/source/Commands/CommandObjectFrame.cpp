@@ -186,7 +186,6 @@ protected:
     return true;
   }
 
-protected:
   CommandOptions m_options;
 };
 
@@ -379,7 +378,6 @@ protected:
     return result.Succeeded();
   }
 
-protected:
   CommandOptions m_options;
 };
 
@@ -714,7 +712,6 @@ protected:
     return res;
   }
 
-protected:
   OptionGroupOptions m_option_group;
   OptionGroupVariable m_option_variable;
   OptionGroupFormat m_option_format;
