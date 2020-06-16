@@ -1732,11 +1732,8 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
     OMPAfterScanBlock = createBasicBlock("omp.after.scan.bb");
     // No need to allocate inscan exit block, in simd mode it is selected in the
     // codegen for the scan directive.
-    if (D.getDirectiveKind() != OMPD_simd &&
-        (!getLangOpts().OpenMPSimd ||
-         isOpenMPSimdDirective(D.getDirectiveKind()))) {
+    if (D.getDirectiveKind() != OMPD_simd && !getLangOpts().OpenMPSimd)
       OMPScanExitBlock = createBasicBlock("omp.exit.inscan.bb");
-    }
     OMPScanDispatch = createBasicBlock("omp.inscan.dispatch");
     EmitBranch(OMPScanDispatch);
     EmitBlock(OMPBeforeScanBlock);
@@ -3261,9 +3258,34 @@ void CodeGenFunction::EmitOMPForSimdDirective(const OMPForSimdDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, &HasLastprivates](CodeGenFunction &CGF,
                                           PrePostActionTy &) {
-    HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                 emitForLoopBounds,
-                                                 emitDispatchForLoopBounds);
+    if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+                     [](const OMPReductionClause *C) {
+                       return C->getModifier() == OMPC_REDUCTION_inscan;
+                     })) {
+      const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
+        OMPLocalDeclMapRAII Scope(CGF);
+        OMPLoopScope LoopScope(CGF, S);
+        return CGF.EmitScalarExpr(S.getNumIterations());
+      };
+      const auto &&FirstGen = [&S](CodeGenFunction &CGF) {
+        (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                         emitForLoopBounds,
+                                         emitDispatchForLoopBounds);
+        // Emit an implicit barrier at the end.
+        CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
+                                                   OMPD_for);
+      };
+      const auto &&SecondGen = [&S, &HasLastprivates](CodeGenFunction &CGF) {
+        HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                                     emitForLoopBounds,
+                                                     emitDispatchForLoopBounds);
+      };
+      emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
+    } else {
+      HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                                   emitForLoopBounds,
+                                                   emitDispatchForLoopBounds);
+    }
   };
   {
     auto LPCRegion =
