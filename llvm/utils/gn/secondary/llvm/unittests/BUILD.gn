@@ -4,7 +4,6 @@ group("unittests") {
   deps = [
     "ADT:ADTTests",
     "Analysis:AnalysisTests",
-    "Analysis/ML:MLAnalysisTests",
     "AsmParser:AsmParserTests",
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
