@@ -10,32 +10,18 @@
 @n_spills = external global i32		; <i32*> [#uses=2]
 
 define i32 @reload(%struct.rtx_def* %first, i32 %global, %struct.FILE* %dumpfile) {
-; NO_ASSUME-LABEL: @reload(
-; NO_ASSUME-NEXT:  cond_next2835.1:
-; NO_ASSUME-NEXT:    br label [[BB2928:%.*]]
-; NO_ASSUME:       bb2928:
-; NO_ASSUME-NEXT:    br i1 false, label [[COND_NEXT2943:%.*]], label [[COND_TRUE2935:%.*]]
-; NO_ASSUME:       cond_true2935:
-; NO_ASSUME-NEXT:    br label [[COND_NEXT2943]]
-; NO_ASSUME:       cond_next2943:
-; NO_ASSUME-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
-; NO_ASSUME:       bb2982.preheader:
-; NO_ASSUME-NEXT:    store i8 undef, i8* null
-; NO_ASSUME-NEXT:    ret i32 undef
-;
-; USE_ASSUME-LABEL: @reload(
-; USE_ASSUME-NEXT:  cond_next2835.1:
-; USE_ASSUME-NEXT:    br label [[BB2928:%.*]]
-; USE_ASSUME:       bb2928:
-; USE_ASSUME-NEXT:    br i1 false, label [[COND_NEXT2943:%.*]], label [[COND_TRUE2935:%.*]]
-; USE_ASSUME:       cond_true2935:
-; USE_ASSUME-NEXT:    br label [[COND_NEXT2943]]
-; USE_ASSUME:       cond_next2943:
-; USE_ASSUME-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
-; USE_ASSUME:       bb2982.preheader:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* @n_spills, i64 4), "nonnull"(i32* @n_spills), "align"(i32* @n_spills, i64 4) ]
-; USE_ASSUME-NEXT:    store i8 undef, i8* null
-; USE_ASSUME-NEXT:    ret i32 undef
+; CHECK-LABEL: @reload(
+; CHECK-NEXT:  cond_next2835.1:
+; CHECK-NEXT:    br label [[BB2928:%.*]]
+; CHECK:       bb2928:
+; CHECK-NEXT:    br i1 false, label [[COND_NEXT2943:%.*]], label [[COND_TRUE2935:%.*]]
+; CHECK:       cond_true2935:
+; CHECK-NEXT:    br label [[COND_NEXT2943]]
+; CHECK:       cond_next2943:
+; CHECK-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
+; CHECK:       bb2982.preheader:
+; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    ret i32 undef
 ;
 cond_next2835.1:		; preds = %cond_next2861
   %tmp2922 = load i32, i32* @n_spills, align 4		; <i32> [#uses=0]
