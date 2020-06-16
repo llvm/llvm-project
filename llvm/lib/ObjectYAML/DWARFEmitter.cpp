@@ -352,6 +352,40 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   return Error::success();
 }
 
+Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
+  for (const AddrTableEntry &TableEntry : DI.DebugAddr) {
+    uint8_t AddrSize;
+    if (TableEntry.AddrSize)
+      AddrSize = *TableEntry.AddrSize;
+    else
+      AddrSize = DI.Is64bit ? 8 : 4;
+
+    uint64_t Length;
+    if (TableEntry.Length)
+      Length = (uint64_t)*TableEntry.Length;
+    else
+      // 2 (version) + 1 (address_size) + 1 (segment_selector_size) = 4
+      Length = 4 + (AddrSize + TableEntry.SegSelectorSize) *
+                       TableEntry.SegAddrPairs.size();
+
+    writeInitialLength(TableEntry.Format, Length, OS, DI.IsLittleEndian);
+    writeInteger((uint16_t)TableEntry.Version, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)TableEntry.SegSelectorSize, OS, DI.IsLittleEndian);
+
+    for (const SegAddrPair &Pair : TableEntry.SegAddrPairs) {
+      if (TableEntry.SegSelectorSize != 0)
+        writeVariableSizedInteger(Pair.Segment, TableEntry.SegSelectorSize, OS,
+                                  DI.IsLittleEndian);
+      if (AddrSize != 0)
+        writeVariableSizedInteger(Pair.Address, AddrSize, OS,
+                                  DI.IsLittleEndian);
+    }
+  }
+
+  return Error::success();
+}
+
 using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
 
 static Error

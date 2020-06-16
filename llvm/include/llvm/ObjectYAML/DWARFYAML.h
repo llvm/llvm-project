@@ -160,6 +160,20 @@ struct LineTable {
   std::vector<LineTableOpcode> Opcodes;
 };
 
+struct SegAddrPair {
+  yaml::Hex64 Segment;
+  yaml::Hex64 Address;
+};
+
+struct AddrTableEntry {
+  dwarf::DwarfFormat Format;
+  Optional<yaml::Hex64> Length;
+  yaml::Hex16 Version;
+  Optional<yaml::Hex8> AddrSize;
+  yaml::Hex8 SegSelectorSize;
+  std::vector<SegAddrPair> SegAddrPairs;
+};
+
 struct Data {
   bool IsLittleEndian;
   bool Is64bit;
@@ -167,6 +181,7 @@ struct Data {
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
   std::vector<Ranges> DebugRanges;
+  std::vector<AddrTableEntry> DebugAddr;
   Optional<PubSection> PubNames;
   Optional<PubSection> PubTypes;
 
@@ -198,6 +213,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Entry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::File)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTable)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTableOpcode)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::SegAddrPair)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AddrTableEntry)
 
 namespace llvm {
 namespace yaml {
@@ -260,6 +277,14 @@ template <> struct MappingTraits<DWARFYAML::LineTableOpcode> {
 
 template <> struct MappingTraits<DWARFYAML::LineTable> {
   static void mapping(IO &IO, DWARFYAML::LineTable &LineTable);
+};
+
+template <> struct MappingTraits<DWARFYAML::SegAddrPair> {
+  static void mapping(IO &IO, DWARFYAML::SegAddrPair &SegAddrPair);
+};
+
+template <> struct MappingTraits<DWARFYAML::AddrTableEntry> {
+  static void mapping(IO &IO, DWARFYAML::AddrTableEntry &AddrTable);
 };
 
 template <> struct MappingTraits<DWARFYAML::InitialLength> {
