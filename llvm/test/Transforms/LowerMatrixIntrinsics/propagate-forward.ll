@@ -37,7 +37,7 @@ define void @transpose_store(<8 x double> %a, <8 x double>* %Ptr) {
 ;
 entry:
   %c  = call <8 x double> @llvm.matrix.transpose(<8 x double> %a, i32 2, i32 4)
-  store <8 x double> %c, <8 x double>* %Ptr
+  store <8 x double> %c, <8 x double>* %Ptr, align 8
   ret void
 }
 
