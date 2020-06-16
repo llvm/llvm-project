@@ -516,9 +516,7 @@ enum PointerStripKind {
 };
 
 template <PointerStripKind StripKind>
-static const Value *stripPointerCastsAndOffsets(
-    const Value *V,
-    function_ref<void(const Value *)> Func = [](const Value *) {}) {
+static const Value *stripPointerCastsAndOffsets(const Value *V) {
   if (!V->getType()->isPointerTy())
     return V;
 
@@ -528,7 +526,6 @@ static const Value *stripPointerCastsAndOffsets(
 
   Visited.insert(V);
   do {
-    Func(V);
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       switch (StripKind) {
       case PSK_ZeroIndices:
@@ -670,9 +667,8 @@ const Value *Value::stripAndAccumulateConstantOffsets(
   return V;
 }
 
-const Value *
-Value::stripInBoundsOffsets(function_ref<void(const Value *)> Func) const {
-  return stripPointerCastsAndOffsets<PSK_InBounds>(this, Func);
+const Value *Value::stripInBoundsOffsets() const {
+  return stripPointerCastsAndOffsets<PSK_InBounds>(this);
 }
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
