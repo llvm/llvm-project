@@ -742,10 +742,10 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
            << f->Name << '\n';
       const LineData &line = LineInfo[source.filename];
       for (uint32_t lineNum = 0; lineNum != line.LastLine; ++lineNum) {
-        BlockLines::const_iterator blocksIt = line.Blocks.find(lineNum);
-        if (blocksIt == line.Blocks.end())
+        BlockLines::const_iterator BlocksIt = line.Blocks.find(lineNum);
+        if (BlocksIt == line.Blocks.end())
           continue;
-        const BlockVector &blocks = blocksIt->second;
+        const BlockVector &blocks = BlocksIt->second;
         // GCC 8 (r254259) added third third field for Ada:
         // lcount:<line>,<count>,<has_unexecuted_blocks>
         // We don't need the third field.

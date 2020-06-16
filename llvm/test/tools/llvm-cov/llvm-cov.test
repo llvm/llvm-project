@@ -169,11 +169,17 @@ NO-GCDA-NEXT:  Creating 'test.h.gcov'
 # Invalid gcno file.
 RUN: llvm-cov gcov test.c -gcno=test_read_fail.gcno
 
+# Not a .gcda file. Error but keep the .gcov output.
+RUN: echo invalid > not.gcda
+RUN: llvm-cov gcov test.c -gcda=not.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
+RUN: FileCheck %s --check-prefix=NOT-GCDA < %t.err
+NOT-GCDA: not.gcda:not a gcov data file
+
 # Bad file checksum on gcda.
-RUN: llvm-cov gcov test.c -gcda=test_file_checksum_fail.gcda
+RUN: llvm-cov gcov test.c -gcda=test_file_checksum_fail.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
 
 # Bad function checksum on gcda
-RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda
+RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
 
 # Has arcs from exit blocks
 RUN-DISABLED: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS
