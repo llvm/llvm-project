@@ -192,6 +192,9 @@ public:
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
+  std::vector<std::string> filenames;
+  StringMap<unsigned> filenameToIdx;
+
 private:
   bool GCNOInitialized = false;
   GCOV::GCOVVersion Version;
@@ -201,6 +204,11 @@ private:
   std::map<uint32_t, GCOVFunction *> IdentToFunction;
   uint32_t RunCount = 0;
   uint32_t ProgramCount = 0;
+
+  using iterator = pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<GCOVFunction>>::const_iterator>;
+  iterator begin() const { return iterator(Functions.begin()); }
+  iterator end() const { return iterator(Functions.end()); }
 };
 
 struct GCOVArc {
@@ -220,10 +228,10 @@ public:
   using BlockIterator = pointee_iterator<
       SmallVectorImpl<std::unique_ptr<GCOVBlock>>::const_iterator>;
 
-  GCOVFunction(GCOVFile &P) {}
+  GCOVFunction(GCOVFile &file) : file(file) {}
 
   StringRef getName() const { return Name; }
-  StringRef getFilename() const { return Filename; }
+  StringRef getFilename() const;
   size_t getNumBlocks() const { return Blocks.size(); }
   uint64_t getEntryCount() const;
   uint64_t getExitCount() const;
@@ -238,6 +246,7 @@ public:
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
+  GCOVFile &file;
   uint32_t ident = 0;
   uint32_t linenoChecksum;
   uint32_t cfgChecksum = 0;
@@ -247,7 +256,7 @@ public:
   uint32_t endColumn = 0;
   uint8_t artificial = 0;
   StringRef Name;
-  StringRef Filename;
+  unsigned srcIdx;
   SmallVector<std::unique_ptr<GCOVBlock>, 0> Blocks;
   SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
 };
@@ -312,6 +321,28 @@ public:
   SmallVector<uint32_t, 16> Lines;
 };
 
+struct GCOVCoverage {
+  GCOVCoverage() = default;
+  GCOVCoverage(StringRef Name) : Name(Name) {}
+
+  StringRef Name;
+
+  uint32_t LogicalLines = 0;
+  uint32_t LinesExec = 0;
+
+  uint32_t Branches = 0;
+  uint32_t BranchesExec = 0;
+  uint32_t BranchesTaken = 0;
+};
+
+struct SourceInfo {
+  StringRef filename;
+  std::string name;
+  std::vector<GCOVFunction *> functions;
+  GCOVCoverage coverage;
+  SourceInfo(StringRef filename) : filename(filename) {}
+};
+
 class FileInfo {
 protected:
   // It is unlikely--but possible--for multiple functions to be on the same
@@ -332,20 +363,8 @@ protected:
     uint32_t LastLine = 0;
   };
 
-  struct GCOVCoverage {
-    GCOVCoverage(StringRef Name) : Name(Name) {}
-
-    StringRef Name;
-
-    uint32_t LogicalLines = 0;
-    uint32_t LinesExec = 0;
-
-    uint32_t Branches = 0;
-    uint32_t BranchesExec = 0;
-    uint32_t BranchesTaken = 0;
-  };
-
 public:
+  friend class GCOVFile;
   FileInfo(const GCOV::Options &Options) : Options(Options) {}
 
   void addBlockLine(StringRef Filename, uint32_t Line, const GCOVBlock *Block) {
@@ -364,7 +383,7 @@ public:
   void setRunCount(uint32_t Runs) { RunCount = Runs; }
   void setProgramCount(uint32_t Programs) { ProgramCount = Programs; }
   void print(raw_ostream &OS, StringRef MainFilename, StringRef GCNOFile,
-             StringRef GCDAFile, GCOV::GCOVVersion Version);
+             StringRef GCDAFile, GCOVFile &file);
 
 protected:
   std::string getCoveragePath(StringRef Filename, StringRef MainFilename);
@@ -386,11 +405,10 @@ protected:
   uint32_t RunCount = 0;
   uint32_t ProgramCount = 0;
 
-  using FileCoverageList = SmallVector<std::pair<std::string, GCOVCoverage>, 4>;
   using FuncCoverageMap = MapVector<const GCOVFunction *, GCOVCoverage>;
 
-  FileCoverageList FileCoverages;
   FuncCoverageMap FuncCoverages;
+  std::vector<SourceInfo> sources;
 };
 
 } // end namespace llvm
