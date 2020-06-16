@@ -1361,8 +1361,8 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     bp_options->SetCallback(
         ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
     return error;
-  } else
-    return error;
+  }
+  return error;
 }
 
 // Set a Python one-liner as the callback for the watchpoint.
@@ -1988,8 +1988,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
   }
   if (should_step)
     return lldb::eStateStepping;
-  else
-    return lldb::eStateRunning;
+  return lldb::eStateRunning;
 }
 
 StructuredData::GenericSP
@@ -2061,8 +2060,7 @@ ScriptInterpreterPythonImpl::ScriptedBreakpointResolverSearchDepth(
 
   if (depth_as_int <= lldb::kLastSearchDepthKind)
     return (lldb::SearchDepth)depth_as_int;
-  else
-    return lldb::eSearchDepthModule;
+  return lldb::eSearchDepthModule;
 }
 
 StructuredData::ObjectSP
@@ -3029,39 +3027,42 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
   return ret_val;
 }
 
-// in Python, a special attribute __doc__ contains the docstring for an object
-// (function, method, class, ...) if any is defined Otherwise, the attribute's
-// value is None
+/// In Python, a special attribute __doc__ contains the docstring for an object
+/// (function, method, class, ...) if any is defined Otherwise, the attribute's
+/// value is None.
 bool ScriptInterpreterPythonImpl::GetDocumentationForItem(const char *item,
                                                           std::string &dest) {
   dest.clear();
+
   if (!item || !*item)
     return false;
+
   std::string command(item);
   command += ".__doc__";
 
-  char *result_ptr = nullptr; // Python is going to point this to valid data if
-                              // ExecuteOneLineWithReturn returns successfully
+  // Python is going to point this to valid data if ExecuteOneLineWithReturn
+  // returns successfully.
+  char *result_ptr = nullptr;
 
   if (ExecuteOneLineWithReturn(
-          command.c_str(), ScriptInterpreter::eScriptReturnTypeCharStrOrNone,
+          command, ScriptInterpreter::eScriptReturnTypeCharStrOrNone,
           &result_ptr,
           ScriptInterpreter::ExecuteScriptOptions().SetEnableIO(false))) {
     if (result_ptr)
       dest.assign(result_ptr);
     return true;
-  } else {
-    StreamString str_stream;
-    str_stream.Printf(
-        "Function %s was not found. Containing module might be missing.", item);
-    dest = std::string(str_stream.GetString());
-    return false;
   }
+
+  StreamString str_stream;
+  str_stream << "Function " << item
+             << " was not found. Containing module might be missing.";
+  dest = std::string(str_stream.GetString());
+
+  return false;
 }
 
 bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
     StructuredData::GenericSP cmd_obj_sp, std::string &dest) {
-  bool got_string = false;
   dest.clear();
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
@@ -3095,12 +3096,12 @@ bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
   if (PyErr_Occurred())
     PyErr_Clear();
 
-  // right now we know this function exists and is callable..
+  // Right now we know this function exists and is callable.
   PythonObject py_return(
       PyRefType::Owned,
       PyObject_CallMethod(implementor.get(), callee_name, nullptr));
 
-  // if it fails, print the error but otherwise go on
+  // If it fails, print the error but otherwise go on.
   if (PyErr_Occurred()) {
     PyErr_Print();
     PyErr_Clear();
@@ -3110,9 +3111,10 @@ bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
     PythonString py_string(PyRefType::Borrowed, py_return.get());
     llvm::StringRef return_data(py_string.GetString());
     dest.assign(return_data.data(), return_data.size());
-    got_string = true;
+    return true;
   }
-  return got_string;
+
+  return false;
 }
 
 uint32_t ScriptInterpreterPythonImpl::GetFlagsForCommandObject(
