@@ -219,12 +219,12 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   // If we are building the layout of an executable or dynamic library
   // which does not have any segments other than __LINKEDIT,
   // the Offset can be equal to zero by this time. It happens because of the
-  // convention that in such cases the file offsets specified by LC_SEGMENT start
-  // with zero (unlike the case of a relocatable object file).
-  const bool IsObject = O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
+  // convention that in such cases the file offsets specified by LC_SEGMENT
+  // start with zero (unlike the case of a relocatable object file).
   const uint64_t HeaderSize =
       Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
-  assert((!IsObject || Offset >= HeaderSize + O.Header.SizeOfCmds) &&
+  assert((!(O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) ||
+          Offset >= HeaderSize + O.Header.SizeOfCmds) &&
          "Incorrect tail offset");
   Offset = std::max(Offset, HeaderSize + O.Header.SizeOfCmds);
 
