@@ -775,12 +775,12 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
 
         patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
-        # TODO: get rid of option parser invocation here
-        args = CmpRuns.generate_option_parser().parse_args(
-            ["--root-old", "", "--root-new", patched_source, "", ""])
+        ref_results = CmpRuns.ResultsDirectory(ref_dir)
+        new_results = CmpRuns.ResultsDirectory(new_dir, patched_source)
+
         # Scan the results, delete empty plist files.
         num_diffs, reports_in_ref, reports_in_new = \
-            CmpRuns.dump_scan_build_results_diff(ref_dir, new_dir, args,
+            CmpRuns.dump_scan_build_results_diff(ref_results, new_results,
                                                  delete_empty=False,
                                                  out=LOCAL.stdout)
 

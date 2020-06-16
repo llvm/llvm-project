@@ -35,8 +35,9 @@ import sys
 from math import log
 from collections import defaultdict
 from copy import copy
-from typing import (Any, cast, Dict, List, Optional, Sequence, TextIO, TypeVar,
-                    Tuple, Union)
+from enum import Enum
+from typing import (Any, cast, Dict, List, NamedTuple, Optional, Sequence,
+                    TextIO, TypeVar, Tuple, Union)
 
 
 Number = Union[int, float]
@@ -58,6 +59,17 @@ class Colors:
     CLEAR = '\x1b[0m'
 
 
+class HistogramType(str, Enum):
+    RELATIVE = "relative"
+    LOG_RELATIVE = "log-relative"
+    ABSOLUTE = "absolute"
+
+
+class ResultsDirectory(NamedTuple):
+    path: str
+    root: str = ""
+
+
 class SingleRunInfo:
     """
     Information about analysis run:
@@ -65,9 +77,10 @@ class SingleRunInfo:
     root - the name of the root directory, which will be disregarded when
     determining the source file name
     """
-    def __init__(self, path: str, root: str = "", verbose_log=None):
-        self.path = path
-        self.root = root.rstrip("/\\")
+    def __init__(self, results: ResultsDirectory,
+                 verbose_log: Optional[str] = None):
+        self.path = results.path
+        self.root = results.root.rstrip("/\\")
         self.verbose_log = verbose_log
 
 
@@ -232,13 +245,13 @@ class AnalysisReport:
         self.diagnostics: List[AnalysisDiagnostic] = []
 
 
-def load_results(path: str, args: argparse.Namespace, root: str = "",
-                 delete_empty: bool = True) -> AnalysisRun:
+def load_results(results: ResultsDirectory, delete_empty: bool = True,
+                 verbose_log: Optional[str] = None) -> AnalysisRun:
     """
     Backwards compatibility API.
     """
-    return load_results_from_single_run(SingleRunInfo(path, root,
-                                                      args.verbose_log),
+    return load_results_from_single_run(SingleRunInfo(results,
+                                                      verbose_log),
                                         delete_empty)
 
 
@@ -280,7 +293,8 @@ ComparisonResult = List[Union[PresentInBoth,
 
 
 def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
-                    args: argparse.Namespace) -> ComparisonResult:
+                    histogram: Optional[HistogramType] = None
+                    ) -> ComparisonResult:
     """
     compare_results - Generate a relation from diagnostics in run A to
     diagnostics in run B.
@@ -311,15 +325,15 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
         if a.get_issue_identifier() == b.get_issue_identifier():
             if a.get_path_length() != b.get_path_length():
 
-                if args.relative_path_histogram:
+                if histogram == HistogramType.RELATIVE:
                     path_difference_data.append(
                         float(a.get_path_length()) / b.get_path_length())
 
-                elif args.relative_log_path_histogram:
+                elif histogram == HistogramType.LOG_RELATIVE:
                     path_difference_data.append(
                         log(float(a.get_path_length()) / b.get_path_length()))
 
-                elif args.absolute_path_histogram:
+                elif histogram == HistogramType.ABSOLUTE:
                     path_difference_data.append(
                         a.get_path_length() - b.get_path_length())
 
@@ -347,8 +361,7 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
     for b in neq_new:
         res.append((None, b))
 
-    if args.relative_log_path_histogram or args.relative_path_histogram or \
-            args.absolute_path_histogram:
+    if histogram:
         from matplotlib import pyplot
         pyplot.hist(path_difference_data, bins=100)
         pyplot.show()
@@ -394,7 +407,8 @@ def derive_stats(results: AnalysisRun) -> Stats:
 
 # TODO: compare_results decouples comparison from the output, we should
 #       do it here as well
-def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
+def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun,
+                  out: TextIO = sys.stdout):
     stats_old = derive_stats(results_old)
     stats_new = derive_stats(results_new)
 
@@ -403,7 +417,7 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
     keys = sorted(old_keys & new_keys)
 
     for key in keys:
-        print(key)
+        out.write(f"{key}\n")
 
         nested_keys = sorted(set(stats_old[key]) & set(stats_new[key]))
 
@@ -414,7 +428,7 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
             report = f"{val_old:.3f} -> {val_new:.3f}"
 
             # Only apply highlighting when writing to TTY and it's not Windows
-            if sys.stdout.isatty() and os.name != 'nt':
+            if out.isatty() and os.name != 'nt':
                 if val_new != 0:
                     ratio = (val_new - val_old) / val_new
                     if ratio < -0.2:
@@ -422,39 +436,52 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
                     elif ratio > 0.2:
                         report = Colors.RED + report + Colors.CLEAR
 
-            print(f"\t {nested_key} {report}")
+            out.write(f"\t {nested_key} {report}\n")
 
     removed_keys = old_keys - new_keys
     if removed_keys:
-        print(f"REMOVED statistics: {removed_keys}")
+        out.write(f"REMOVED statistics: {removed_keys}\n")
 
     added_keys = new_keys - old_keys
     if added_keys:
-        print(f"ADDED statistics: {added_keys}")
+        out.write(f"ADDED statistics: {added_keys}\n")
 
-    print()
+    out.write("\n")
 
 
-def dump_scan_build_results_diff(dir_old: str, dir_new: str,
-                                 args: argparse.Namespace,
+def dump_scan_build_results_diff(dir_old: ResultsDirectory,
+                                 dir_new: ResultsDirectory,
                                  delete_empty: bool = True,
-                                 out: TextIO = sys.stdout):
-    # Load the run results.
-    results_old = load_results(dir_old, args, args.root_old, delete_empty)
-    results_new = load_results(dir_new, args, args.root_new, delete_empty)
+                                 out: TextIO = sys.stdout,
+                                 show_stats: bool = False,
+                                 stats_only: bool = False,
+                                 histogram: Optional[HistogramType] = None,
+                                 verbose_log: Optional[str] = None):
+    """
+    Compare directories with analysis results and dump results.
 
-    if args.show_stats:
+    :param delete_empty: delete empty plist files
+    :param out: buffer to dump comparison results to.
+    :param show_stats: compare execution stats as well.
+    :param stats_only: compare ONLY execution stats.
+    :param histogram: optional histogram type to plot path differences.
+    :param verbose_log: optional path to an additional log file.
+    """
+    results_old = load_results(dir_old, delete_empty, verbose_log)
+    results_new = load_results(dir_new, delete_empty, verbose_log)
+
+    if show_stats or stats_only:
         compare_stats(results_old, results_new)
-    if args.stats_only:
+    if stats_only:
         return
 
     # Open the verbose log, if given.
-    if args.verbose_log:
-        auxLog: Optional[TextIO] = open(args.verbose_log, "w")
+    if verbose_log:
+        auxLog: Optional[TextIO] = open(verbose_log, "w")
     else:
         auxLog = None
 
-    diff = compare_results(results_old, results_new, args)
+    diff = compare_results(results_old, results_new, histogram)
     found_diffs = 0
     total_added = 0
     total_removed = 0
@@ -513,25 +540,16 @@ def generate_option_parser():
                         "[default=None]",
                         action="store", type=str, default=None,
                         metavar="LOG")
-    parser.add_argument("--relative-path-differences-histogram",
-                        action="store_true", dest="relative_path_histogram",
-                        default=False,
-                        help="Show histogram of relative paths differences. "
-                        "Requires matplotlib")
-    parser.add_argument("--relative-log-path-differences-histogram",
-                        action="store_true",
-                        dest="relative_log_path_histogram", default=False,
-                        help="Show histogram of log relative paths "
-                        "differences. Requires matplotlib")
-    parser.add_argument("--absolute-path-differences-histogram",
-                        action="store_true", dest="absolute_path_histogram",
-                        default=False,
-                        help="Show histogram of absolute paths differences. "
-                        "Requires matplotlib")
     parser.add_argument("--stats-only", action="store_true", dest="stats_only",
                         default=False, help="Only show statistics on reports")
     parser.add_argument("--show-stats", action="store_true", dest="show_stats",
                         default=False, help="Show change in statistics")
+    parser.add_argument("--histogram", action="store", default=None,
+                        choices=[HistogramType.RELATIVE.value,
+                                 HistogramType.LOG_RELATIVE.value,
+                                 HistogramType.ABSOLUTE.value],
+                        help="Show histogram of paths differences. "
+                        "Requires matplotlib")
     parser.add_argument("old", nargs=1, help="Directory with old results")
     parser.add_argument("new", nargs=1, help="Directory with new results")
 
@@ -542,10 +560,14 @@ def main():
     parser = generate_option_parser()
     args = parser.parse_args()
 
-    dir_old = args.old[0]
-    dir_new = args.new[0]
+    dir_old = ResultsDirectory(args.old[0], args.root_old)
+    dir_new = ResultsDirectory(args.new[0], args.root_new)
 
-    dump_scan_build_results_diff(dir_old, dir_new, args)
+    dump_scan_build_results_diff(dir_old, dir_new,
+                                 show_stats=args.show_stats,
+                                 stats_only=args.stats_only,
+                                 histogram=args.histogram,
+                                 verbose_log=args.verbose_log)
 
 
 if __name__ == '__main__':
