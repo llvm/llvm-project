@@ -743,7 +743,8 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
     const Record &RuleDef = Rule->getDef();
 
     OS << Indent << "// Rule: " << RuleDef.getName() << "\n"
-       << Indent << "if (!isRuleDisabled(" << Rule->getID() << ")) {\n";
+       << Indent << "if (!RuleConfig->isRuleDisabled(" << Rule->getID()
+       << ")) {\n";
 
     CodeExpansions Expansions;
     for (const auto &VarBinding : Leaf.var_bindings()) {
@@ -897,13 +898,29 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "#endif // ifdef " << Name.upper() << "_GENCOMBINERHELPER_DEPS\n\n";
 
   OS << "#ifdef " << Name.upper() << "_GENCOMBINERHELPER_H\n"
-     << "class " << getClassName() << " {\n"
+     << "class " << getClassName() << "RuleConfig {\n"
      << "  SparseBitVector<> DisabledRules;\n"
      << "\n"
      << "public:\n"
      << "  bool parseCommandLineOption();\n"
      << "  bool isRuleDisabled(unsigned ID) const;\n"
      << "  bool setRuleDisabled(StringRef RuleIdentifier);\n"
+     << "\n"
+     << "};\n"
+     << "\n"
+     << "class " << getClassName();
+  StringRef StateClass = Combiner->getValueAsString("StateClass");
+  if (!StateClass.empty())
+    OS << " : public " << StateClass;
+  OS << " {\n"
+     << " const " << getClassName() << "RuleConfig *RuleConfig;\n"
+     << "\n"
+     << "public:\n"
+     << "  template<typename ... Args>" << getClassName() << "(const "
+     << getClassName() << "RuleConfig &RuleConfig, Args &&... args) : ";
+  if (!StateClass.empty())
+    OS << StateClass << "(std::forward<Args>(args)...), ";
+  OS << "RuleConfig(&RuleConfig) {}\n"
      << "\n"
      << "  bool tryCombineAll(\n"
      << "    GISelChangeObserver &Observer,\n"
@@ -916,7 +933,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitNameMatcher(OS);
 
   OS << "bool " << getClassName()
-     << "::setRuleDisabled(StringRef RuleIdentifier) {\n"
+     << "RuleConfig::setRuleDisabled(StringRef RuleIdentifier) {\n"
      << "  std::pair<StringRef, StringRef> RangePair = "
         "RuleIdentifier.split('-');\n"
      << "  if (!RangePair.second.empty()) {\n"
@@ -941,7 +958,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "}\n";
 
   OS << "bool " << getClassName()
-     << "::isRuleDisabled(unsigned RuleID) const {\n"
+     << "RuleConfig::isRuleDisabled(unsigned RuleID) const {\n"
      << "  return DisabledRules.test(RuleID);\n"
      << "}\n";
   OS << "#endif // ifdef " << Name.upper() << "_GENCOMBINERHELPER_H\n\n";
@@ -956,7 +973,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "    cl::Hidden,\n"
      << "    cl::cat(GICombinerOptionCategory));\n"
      << "\n"
-     << "bool " << getClassName() << "::parseCommandLineOption() {\n"
+     << "bool " << getClassName() << "RuleConfig::parseCommandLineOption() {\n"
      << "  for (const auto &Identifier : " << Name << "Option)\n"
      << "    if (!setRuleDisabled(Identifier))\n"
      << "      return false;\n"
@@ -973,7 +990,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  MachineFunction *MF = MBB->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"
      << "  SmallVector<MachineInstr *, 8> MIs = { &MI };\n\n"
-     << "  (void)MBB; (void)MF; (void)MRI;\n\n";
+     << "  (void)MBB; (void)MF; (void)MRI; (void)RuleConfig;\n\n";
 
   OS << "  // Match data\n";
   for (const auto &Rule : Rules)

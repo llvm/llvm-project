@@ -53,6 +53,15 @@ static void applyFConstantToConstant(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+class AArch64PreLegalizerCombinerHelperState {
+protected:
+  CombinerHelper &Helper;
+
+public:
+  AArch64PreLegalizerCombinerHelperState(CombinerHelper &Helper)
+      : Helper(Helper) {}
+};
+
 #define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
@@ -65,16 +74,15 @@ namespace {
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  AArch64GenPreLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
 public:
-  AArch64GenPreLegalizerCombinerHelper Generated;
-
   AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!Generated.parseCommandLineOption())
+    if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -86,6 +94,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, KB, MDT);
+  AArch64GenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
@@ -105,7 +114,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     }
   }
 
-  if (Generated.tryCombineAll(Observer, MI, B, Helper))
+  if (Generated.tryCombineAll(Observer, MI, B))
     return true;
 
   switch (MI.getOpcode()) {
