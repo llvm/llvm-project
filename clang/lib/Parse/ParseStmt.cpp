@@ -2195,9 +2195,11 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
   Attrs.takeAllFrom(TempAttrs);
 
-  assert(Attrs.Range.getBegin().isInvalid() &&
-         "start of attribute range already set");
-  Attrs.Range.setBegin(StartLoc);
+  // Start of attribute range may already be set for some invalid input.
+  // See PR46336.
+  if (Attrs.Range.getBegin().isInvalid())
+    Attrs.Range.setBegin(StartLoc);
+
   return S;
 }
 
