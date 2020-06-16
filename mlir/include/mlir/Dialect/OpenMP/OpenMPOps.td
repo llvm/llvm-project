@@ -91,6 +91,9 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
              OptionalAttr<ClauseProcBind>:$proc_bind_val);
 
   let regions = (region AnyRegion:$region);
+
+  let parser = [{ return parseParallelOp(parser, result); }];
+  let printer = [{ return printParallelOp(p, *this); }];
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
