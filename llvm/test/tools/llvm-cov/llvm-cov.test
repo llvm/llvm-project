@@ -131,18 +131,18 @@ RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitesp
  OUT-FB-NEXT:Taken at least once:81.82% of 11
  OUT-FB-NEXT:No calls
  OUT-F-EMPTY:
-         OUT:File './test.h'
-    OUT-NEXT:Lines executed:100.00% of 1
-  OUT-B-NEXT:No branches
-  OUT-B-NEXT:No calls
-OUTFILE-NEXT:Creating 'test.h.gcov'
-   OUT-EMPTY:
-    OUT-NEXT:File 'test.cpp'
+         OUT:File 'test.cpp'
     OUT-NEXT:Lines executed:81.40% of 43
   OUT-B-NEXT:Branches executed:100.00% of 15
   OUT-B-NEXT:Taken at least once:86.67% of 15
   OUT-B-NEXT:No calls
 OUTFILE-NEXT:Creating 'test.cpp.gcov'
+   OUT-EMPTY:
+    OUT-NEXT:File './test.h'
+    OUT-NEXT:Lines executed:100.00% of 1
+  OUT-B-NEXT:No branches
+  OUT-B-NEXT:No calls
+OUTFILE-NEXT:Creating 'test.h.gcov'
 
 # Summarize unconditional branches too.
 RUN: llvm-cov gcov test.c -a -b -u | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-B
@@ -158,13 +158,13 @@ H-C: unconditional  0 taken 1
 RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | FileCheck %s --check-prefix=NO-GCDA
 RUN: diff -aub test_no_gcda.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_no_gcda.h.gcov test.h.gcov
-NO-GCDA:       File './test.h'
-NO-GCDA-NEXT:  Lines executed:0.00% of 1
-NO-GCDA-NEXT:  Creating 'test.h.gcov'
-NO-GCDA-EMPTY:
-NO-GCDA-NEXT:  File 'test.cpp'
+NO-GCDA:       File 'test.cpp'
 NO-GCDA-NEXT:  Lines executed:0.00% of 43
 NO-GCDA-NEXT:  Creating 'test.cpp.gcov'
+NO-GCDA-EMPTY:
+NO-GCDA-NEXT:  File './test.h'
+NO-GCDA-NEXT:  Lines executed:0.00% of 1
+NO-GCDA-NEXT:  Creating 'test.h.gcov'
 
 # Invalid gcno file.
 RUN: llvm-cov gcov test.c -gcno=test_read_fail.gcno
