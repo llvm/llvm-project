@@ -68,18 +68,23 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
       if (Version >= GCOV::V407)
         fn->cfgChecksum = buf.getWord();
       buf.readString(fn->Name);
+      StringRef filename;
       if (Version < GCOV::V800) {
-        buf.readString(fn->Filename);
+        filename = buf.getString();
         fn->startLine = buf.getWord();
       } else {
         fn->artificial = buf.getWord();
-        fn->Filename = buf.getString();
+        filename = buf.getString();
         fn->startLine = buf.getWord();
         fn->startColumn = buf.getWord();
         fn->endLine = buf.getWord();
         if (Version >= GCOV::V900)
           fn->endColumn = buf.getWord();
       }
+      auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
+      if (r.second)
+        filenames.emplace_back(filename);
+      fn->srcIdx = r.first->second;
       IdentToFunction[fn->ident] = fn;
     } else if (tag == GCOV_TAG_BLOCKS && fn) {
       if (Version < GCOV::V800) {
@@ -224,8 +229,8 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
 }
 
 void GCOVFile::print(raw_ostream &OS) const {
-  for (const auto &FPtr : Functions)
-    FPtr->print(OS);
+  for (const GCOVFunction &f : *this)
+    f.print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -235,15 +240,22 @@ LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
-void GCOVFile::collectLineCounts(FileInfo &FI) {
-  for (const auto &FPtr : Functions)
-    FPtr->collectLineCounts(FI);
-  FI.setRunCount(RunCount);
-  FI.setProgramCount(ProgramCount);
+void GCOVFile::collectLineCounts(FileInfo &fi) {
+  assert(fi.sources.empty());
+  for (StringRef filename : filenames)
+    fi.sources.emplace_back(filename);
+  for (GCOVFunction &f : *this) {
+    f.collectLineCounts(fi);
+    fi.sources[f.srcIdx].functions.push_back(&f);
+  }
+  fi.setRunCount(RunCount);
+  fi.setProgramCount(ProgramCount);
 }
 
 //===----------------------------------------------------------------------===//
 // GCOVFunction implementation.
+
+StringRef GCOVFunction::getFilename() const { return file.filenames[srcIdx]; }
 
 /// getEntryCount - Get the number of times the function was called by
 /// retrieving the entry block's count.
@@ -258,7 +270,7 @@ uint64_t GCOVFunction::getExitCount() const {
 }
 
 void GCOVFunction::print(raw_ostream &OS) const {
-  OS << "===== " << Name << " (" << ident << ") @ " << Filename << ":"
+  OS << "===== " << Name << " (" << ident << ") @ " << getFilename() << ":"
      << startLine << "\n";
   for (const auto &Block : Blocks)
     Block->print(OS);
@@ -279,7 +291,7 @@ void GCOVFunction::collectLineCounts(FileInfo &FI) {
 
   for (const auto &Block : Blocks)
     Block->collectLineCounts(FI);
-  FI.addFunctionLine(Filename, startLine, this);
+  FI.addFunctionLine(getFilename(), startLine, this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -596,8 +608,7 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
 
 /// print -  Print source files with collected line count information.
 void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
-                     StringRef GCNOFile, StringRef GCDAFile,
-                     GCOV::GCOVVersion Version) {
+                     StringRef GCNOFile, StringRef GCDAFile, GCOVFile &file) {
   SmallVector<StringRef, 4> Filenames;
   for (const auto &LI : LineInfo)
     Filenames.push_back(LI.first());
@@ -619,7 +630,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     CovOS << "        -:    0:Graph:" << GCNOFile << "\n";
     CovOS << "        -:    0:Data:" << GCDAFile << "\n";
     CovOS << "        -:    0:Runs:" << RunCount << "\n";
-    if (Version < GCOV::V900)
+    if (file.getVersion() < GCOV::V900)
       CovOS << "        -:    0:Programs:" << ProgramCount << "\n";
 
     const LineData &Line = LineInfo[Filename];
@@ -707,7 +718,9 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
         }
       }
     }
-    FileCoverages.push_back(std::make_pair(CoveragePath, FileCoverage));
+    SourceInfo &source = sources[file.filenameToIdx.find(Filename)->second];
+    source.name = CoveragePath;
+    source.coverage = FileCoverage;
   }
 
   if (!Options.UseStdout) {
@@ -816,13 +829,12 @@ void FileInfo::printFuncCoverage(raw_ostream &OS) const {
 
 // printFileCoverage - Print per-file coverage info.
 void FileInfo::printFileCoverage(raw_ostream &OS) const {
-  for (const auto &FC : FileCoverages) {
-    const std::string &Filename = FC.first;
-    const GCOVCoverage &Coverage = FC.second;
+  for (const SourceInfo &source : sources) {
+    const GCOVCoverage &Coverage = source.coverage;
     OS << "File '" << Coverage.Name << "'\n";
     printCoverage(OS, Coverage);
     if (!Options.NoOutput)
-      OS << "Creating '" << Filename << "'\n";
+      OS << "Creating '" << source.name << "'\n";
     OS << "\n";
   }
 }
