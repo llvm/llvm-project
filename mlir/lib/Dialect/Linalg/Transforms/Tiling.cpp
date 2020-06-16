@@ -375,29 +375,31 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
 
   // 3. Create the tiled loops.
   LinalgOp res = op;
-  SmallVector<Value, 4> ivs(loopRanges.size());
+  SmallVector<Value, 4> ivs;
   SmallVector<Attribute, 4> iteratorTypes =
       llvm::to_vector<4>(op.iterator_types().cast<ArrayAttr>().getValue());
   if (!options.interchangeVector.empty())
     applyPermutationToVector(iteratorTypes, options.interchangeVector);
-  GenerateLoopNest<LoopTy>::doit(ivs, loopRanges, iteratorTypes, [&] {
-    auto &b = ScopedContext::getBuilderRef();
-    auto loc = ScopedContext::getLocation();
-    SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
+  GenerateLoopNest<LoopTy>::doit(
+      loopRanges, iteratorTypes, [&](ValueRange localIvs) {
+        auto &b = ScopedContext::getBuilderRef();
+        auto loc = ScopedContext::getLocation();
+        ivs.assign(localIvs.begin(), localIvs.end());
+        SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
 
-    // If we have to apply a permutation to the tiled loop nest, we have to
-    // reorder the induction variables This permutation is the right one
-    // assuming that loopRanges have previously been permuted by
-    // (i,j,k)->(k,i,j) So this permutation should be the inversePermutation
-    // of that one: (d0,d1,d2)->(d2,d0,d1)
-    if (!options.interchangeVector.empty())
-      ivValues = applyMapToValues(b, loc, invPermutationMap, ivValues);
+        // If we have to apply a permutation to the tiled loop nest, we have to
+        // reorder the induction variables This permutation is the right one
+        // assuming that loopRanges have previously been permuted by
+        // (i,j,k)->(k,i,j) So this permutation should be the inversePermutation
+        // of that one: (d0,d1,d2)->(d2,d0,d1)
+        if (!options.interchangeVector.empty())
+          ivValues = applyMapToValues(b, loc, invPermutationMap, ivValues);
 
-    auto views = makeTiledViews(b, loc, op, ivValues, tileSizes, viewSizes);
-    auto operands = getAssumedNonViewOperands(op);
-    views.append(operands.begin(), operands.end());
-    res = op.clone(b, loc, views);
-  });
+        auto views = makeTiledViews(b, loc, op, ivValues, tileSizes, viewSizes);
+        auto operands = getAssumedNonViewOperands(op);
+        views.append(operands.begin(), operands.end());
+        res = op.clone(b, loc, views);
+      });
 
   // 4. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
   transformIndexedGenericOpIndices(b, res, ivs, loopIndexToRangeIndex);
