@@ -1474,10 +1474,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
           TypeRange inputTypes, TypeRange outputTypes);
 
         static void regionBuilder(Block &block);
-
-        std::string getLibraryCallName() {{
-          return generateLibraryCallName(getOperation());
-        }
       }];
   })FMT";
 

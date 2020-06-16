@@ -83,9 +83,9 @@ func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<?xf32, offset: ?, strides: [1]>,
           %arg3: memref<f32>) {
-  linalg.matmul %arg0, %arg0, %arg0 : (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+  linalg.matmul(%arg0, %arg0, %arg0) : memref<?x?xf32, offset: ?, strides: [?, 1]>,
                                        memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                                       memref<?x?xf32, offset: ?, strides: [?, 1]>)
+                                       memref<?x?xf32, offset: ?, strides: [?, 1]>
   linalg.matvec(%arg0, %arg1, %arg2) : memref<?x?xf32, offset: ?, strides: [?, 1]>,
                                        memref<?xf32, offset: ?, strides: [1]>,
                                        memref<?xf32, offset: ?, strides: [1]>
@@ -95,10 +95,10 @@ func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   return
 }
 // CHECK-LABEL: func @ops(%
-//  CHECK-NEXT:  linalg.matmul %{{.*}}, %{{.*}}, %{{.*}} :
-//  CHECK-SAME:    (memref<?x?xf32, #[[$strided2D]]>,
+//  CHECK-NEXT:  linalg.matmul(%{{.*}}, %{{.*}}, %{{.*}}) :
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>,
-//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>)
+//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>,
+//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>
 //  CHECK-NEXT:  linalg.matvec(%{{.*}}, %{{.*}}, %{{.*}}) :
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>,
 //  CHECK-SAME:     memref<?xf32, #[[$strided1D]]>,
