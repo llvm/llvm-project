@@ -287,19 +287,15 @@ def print_results(tests, elapsed, opts):
         tests_by_code[test.result.code].append(test)
 
     for (code, label) in result_codes:
-        print_group(code, label, tests_by_code[code], opts)
+        print_group(code, label, tests_by_code[code], opts.show_results)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
 
 
-def print_group(code, label, tests, opts):
+def print_group(code, label, tests, show_results):
     if not tests:
         return
-    # TODO(yln): FLAKYPASS? Make this more consistent!
-    if code in {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.PASS}:
-        return
-    if (lit.Test.XFAIL == code and not opts.show_xfail) or \
-       (lit.Test.UNSUPPORTED == code and not opts.show_unsupported):
+    if not code.isFailure and code not in show_results:
         return
     print('*' * 20)
     print('%s Tests (%d):' % (label, len(tests)))
