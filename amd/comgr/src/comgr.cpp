@@ -154,6 +154,8 @@ dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.linkToExecutable();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     return Compiler.compileToFatBin();
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
+    return Compiler.compileToBitcode(true);
 
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -210,6 +212,8 @@ static StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
   default:
     return "UNKNOWN_ACTION_KIND";
   }
@@ -1128,6 +1132,7 @@ amd_comgr_status_t AMD_API
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                           ResultSetP, *LogP);
     break;

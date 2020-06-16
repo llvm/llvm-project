@@ -110,6 +110,11 @@ class AMDGPUCompiler {
   llvm::SmallString<128> OutputDir;
   llvm::SmallString<128> IncludeDir;
   llvm::raw_ostream &LogS;
+  /// Storage for other dynamic strings we need to include in Argv.
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver = Allocator;
+  /// Whether we need to disable Clang's device-lib linking.
+  bool NoGpuLib = true;
 
   amd_comgr_status_t createTmpDirs();
   amd_comgr_status_t removeTmpDirs();
@@ -133,7 +138,7 @@ public:
   ~AMDGPUCompiler();
 
   amd_comgr_status_t preprocessToSource();
-  amd_comgr_status_t compileToBitcode();
+  amd_comgr_status_t compileToBitcode(bool WithDeviceLibs = false);
   amd_comgr_status_t linkBitcodeToBitcode();
   amd_comgr_status_t codeGenBitcodeToRelocatable();
   amd_comgr_status_t codeGenBitcodeToAssembly();

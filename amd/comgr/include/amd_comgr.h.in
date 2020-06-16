@@ -1336,6 +1336,12 @@ typedef enum amd_comgr_action_kind_s {
    * is not set in @p info, the language is not supported, an unknown
    * language-specific flag is supplied, or a language-specific flag is
    * repeated.
+   *
+   * @deprecated since 1.7
+   * @warning This action, followed by @c AMD_COMGR_ACTION_LINK_BC_TO_BC, may
+   * result in subtle bugs due to incorrect linking of the device libraries.
+   * The @c AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC action can
+   * be used as a workaround which ensures the link occurs correctly.
    */
   AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES = 0x3,
   /**
@@ -1482,9 +1488,26 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN = 0xE,
   /**
+   * Compile each source data object in @p input in order. For each
+   * successful compilation add a bc data object to @p result. Resolve
+   * any include source names using the names of include data objects
+   * in @p input. Resolve any include relative path names using the
+   * working directory path in @p info. Produce bc for isa name in @p
+   * info. Compile the source for the language in @p info. Link against
+   * the device-specific and language-specific bitcode device libraries
+   * required for compilation.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any compilation
+   * fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if isa name or language is not set in @p info.
+   */
+  AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC = 0xF,
+  /**
    * Marker for last valid action kind.
    */
-  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN
+  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC
 } amd_comgr_action_kind_t;
 
 /**

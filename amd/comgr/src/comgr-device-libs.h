@@ -37,6 +37,9 @@
 #define COMGR_DEVICE_LIBS_H
 
 #include "amd_comgr.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include <tuple>
 
 namespace COMGR {
 
@@ -48,6 +51,9 @@ amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
 
 amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
                                       DataSet *ResultSet);
+
+llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
+getDeviceLibraries();
 
 } // namespace COMGR
 

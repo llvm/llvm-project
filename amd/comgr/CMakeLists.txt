@@ -14,7 +14,7 @@ if (ROCM_CCACHE_BUILD)
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
 
-project(amd_comgr VERSION "1.6.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "1.7.0" LANGUAGES C CXX)
 
 find_package(ROCM PATHS "/opt/rocm")
 if (ROCM_FOUND)
