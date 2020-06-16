@@ -92,8 +92,8 @@ public:
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float; }
-  bool isBFloat() const { return BFloat; }
+  bool isFloat() const { return Float && !BFloat; }
+  bool isBFloat() const { return BFloat && !Float; }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const { return !isFloatingPoint() && !Predicate; }
   bool isScalarPredicate() const {
@@ -491,6 +491,7 @@ void SVEType::applyTypespec() {
       break;
     case 'b':
       BFloat = true;
+      Float = false;
       ElementBitwidth = 16;
       break;
     default:
@@ -643,6 +644,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -681,6 +683,7 @@ void SVEType::applyModifier(char Mod) {
   case 'M':
     Predicate = false;
     Float = true;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'N':
