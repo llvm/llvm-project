@@ -398,16 +398,18 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
     stats_old = derive_stats(results_old)
     stats_new = derive_stats(results_new)
 
-    keys = sorted(stats_old.keys())
+    old_keys = set(stats_old.keys())
+    new_keys = set(stats_new.keys())
+    keys = sorted(old_keys & new_keys)
 
-    # FIXME: stats_old and stats_new are not necessarily sharing all of their
-    #        stats and can crash when stats_new doesn't have/removed some
     for key in keys:
         print(key)
 
-        for kkey in stats_old[key]:
-            val_old = float(stats_old[key][kkey])
-            val_new = float(stats_new[key][kkey])
+        nested_keys = sorted(set(stats_old[key]) & set(stats_new[key]))
+
+        for nested_key in nested_keys:
+            val_old = float(stats_old[key][nested_key])
+            val_new = float(stats_new[key][nested_key])
 
             report = f"{val_old:.3f} -> {val_new:.3f}"
 
@@ -420,7 +422,17 @@ def compare_stats(results_old: AnalysisRun, results_new: AnalysisRun):
                     elif ratio > 0.2:
                         report = Colors.RED + report + Colors.CLEAR
 
-            print(f"\t {kkey} {report}")
+            print(f"\t {nested_key} {report}")
+
+    removed_keys = old_keys - new_keys
+    if removed_keys:
+        print(f"REMOVED statistics: {removed_keys}")
+
+    added_keys = new_keys - old_keys
+    if added_keys:
+        print(f"ADDED statistics: {added_keys}")
+
+    print()
 
 
 def dump_scan_build_results_diff(dir_old: str, dir_new: str,
