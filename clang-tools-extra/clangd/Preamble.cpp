@@ -30,6 +30,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -237,7 +239,7 @@ scanPreamble(llvm::StringRef Contents,
       VFSProvider(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
           : VFS(std::move(FS)) {}
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-      getFileSystem() const override {
+      getFileSystem(llvm::NoneType) const override {
         return VFS;
       }
 
@@ -356,13 +358,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
-  auto VFS = Inputs.FSProvider->getFileSystem();
-  if (VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
-    log("Couldn't set working directory when building the preamble.");
-    // We proceed anyway, our lit-tests rely on results for non-existing working
-    // dirs.
-  }
-
+  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
@@ -399,8 +395,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
   auto Bounds =
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
-  auto VFS = Inputs.FSProvider->getFileSystem();
-  VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
@@ -427,8 +422,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   trace::Span Tracer("CreatePreamblePatch");
   SPAN_ATTACH(Tracer, "File", FileName);
   assert(llvm::sys::path::is_absolute(FileName) && "relative FileName!");
-  auto VFS =
-      Baseline.StatCache->getConsumingFS(Modified.FSProvider->getFileSystem());
+  auto VFS = Baseline.StatCache->getConsumingFS(
+      Modified.FSProvider->getFileSystem(/*CWD=*/llvm::None));
   // First scan preprocessor directives in Baseline and Modified. These will be
   // used to figure out newly added directives in Modified. Scanning can fail,
   // the code just bails out and creates an empty patch in such cases, as:

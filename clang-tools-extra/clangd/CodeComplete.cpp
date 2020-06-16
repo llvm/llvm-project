@@ -1113,12 +1113,10 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-      Input.ParseInput.FSProvider->getFileSystem();
+      Input.ParseInput.FSProvider->getFileSystem(
+          Input.ParseInput.CompileCommand.Directory);
   if (Input.Preamble.StatCache)
     VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
-  if (VFS->setCurrentWorkingDirectory(
-          Input.ParseInput.CompileCommand.Directory))
-    elog("Couldn't set working directory during code completion");
   auto Clang = prepareCompilerInstance(
       std::move(CI), !CompletingInPreamble ? &Input.Preamble.Preamble : nullptr,
       std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);
@@ -1292,9 +1290,9 @@ public:
       assert(Recorder && "Recorder is not set");
       CCContextKind = Recorder->CCContext.getKind();
       IsUsingDeclaration = Recorder->CCContext.isUsingDeclaration();
-      auto Style = getFormatStyleForFile(
-          SemaCCInput.FileName, SemaCCInput.ParseInput.Contents,
-          SemaCCInput.ParseInput.FSProvider->getFileSystem().get());
+      auto Style = getFormatStyleForFile(SemaCCInput.FileName,
+                                         SemaCCInput.ParseInput.Contents,
+                                         *SemaCCInput.ParseInput.FSProvider);
       const auto NextToken = Lexer::findNextToken(
           Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
           Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
@@ -1365,9 +1363,8 @@ public:
     // Indexes may choose to impose their own limits even if we don't have one.
   }
 
-  CodeCompleteResult
-  runWithoutSema(llvm::StringRef Content, size_t Offset,
-                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) && {
+  CodeCompleteResult runWithoutSema(llvm::StringRef Content, size_t Offset,
+                                    const FileSystemProvider &FSProvider) && {
     trace::Span Tracer("CodeCompleteWithoutSema");
     // Fill in fields normally set by runWithSema()
     HeuristicPrefix = guessCompletionPrefix(Content, Offset);
@@ -1383,7 +1380,7 @@ public:
     ProxSources[FileName].Cost = 0;
     FileProximity.emplace(ProxSources);
 
-    auto Style = getFormatStyleForFile(FileName, Content, VFS.get());
+    auto Style = getFormatStyleForFile(FileName, Content, FSProvider);
     // This will only insert verbatim headers.
     Inserter.emplace(FileName, Content, Style,
                      /*BuildDir=*/"", /*HeaderSearchInfo=*/nullptr);
@@ -1783,9 +1780,8 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
       FileName, Preamble ? Preamble->Includes : IncludeStructure(),
       SpecFuzzyFind, Opts);
   return (!Preamble || Opts.RunParser == CodeCompleteOptions::NeverParse)
-             ? std::move(Flow).runWithoutSema(
-                   ParseInput.Contents, *Offset,
-                   ParseInput.FSProvider->getFileSystem())
+             ? std::move(Flow).runWithoutSema(ParseInput.Contents, *Offset,
+                                              *ParseInput.FSProvider)
              : std::move(Flow).run({FileName, *Offset, *Preamble,
                                     // We want to serve code completions with
                                     // low latency, so don't bother patching.

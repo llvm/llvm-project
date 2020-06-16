@@ -183,7 +183,8 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   // FIXME: call tidy options builder on the worker thread, it can do IO.
   if (GetClangTidyOptions)
-    Opts.ClangTidyOpts = GetClangTidyOptions(*FSProvider.getFileSystem(), File);
+    Opts.ClangTidyOpts = GetClangTidyOptions(
+        *FSProvider.getFileSystem(/*CWD=*/llvm::None), File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
@@ -317,9 +318,9 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
   llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
   if (!CursorPos)
     return CursorPos.takeError();
-  auto FS = FSProvider.getFileSystem();
-  auto Style = format::getStyle(format::DefaultFormatStyle, File,
-                                format::DefaultFallbackStyle, Code, FS.get());
+  auto Style = format::getStyle(
+      format::DefaultFormatStyle, File, format::DefaultFallbackStyle, Code,
+      FSProvider.getFileSystem(/*CWD=*/llvm::None).get());
   if (!Style)
     return Style.takeError();
 
@@ -395,9 +396,8 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
       return CB(Edits.takeError());
 
     if (Opts.WantFormat) {
-      auto Style = getFormatStyleForFile(
-          File, InpAST->Inputs.Contents,
-          InpAST->Inputs.FSProvider->getFileSystem().get());
+      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                         *InpAST->Inputs.FSProvider);
       llvm::Error Err = llvm::Error::success();
       for (auto &E : *Edits)
         Err =
@@ -473,38 +473,38 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
   static constexpr trace::Metric TweakAttempt(
       "tweak_attempt", trace::Metric::Counter, "tweak_id");
   TweakAttempt.record(1, TweakID);
-  auto Action =
-      [File = File.str(), Sel, TweakID = TweakID.str(), CB = std::move(CB),
-       FS = FSProvider.getFileSystem()](Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        auto Selections = tweakSelection(Sel, *InpAST);
-        if (!Selections)
-          return CB(Selections.takeError());
-        llvm::Optional<llvm::Expected<Tweak::Effect>> Effect;
-        // Try each selection, take the first one that prepare()s.
-        // If they all fail, Effect will hold get the last error.
-        for (const auto &Selection : *Selections) {
-          auto T = prepareTweak(TweakID, *Selection);
-          if (T) {
-            Effect = (*T)->apply(*Selection);
-            break;
-          }
-          Effect = T.takeError();
-        }
-        assert(Effect.hasValue() && "Expected at least one selection");
-        if (*Effect) {
-          // Tweaks don't apply clang-format, do that centrally here.
-          for (auto &It : (*Effect)->ApplyEdits) {
-            Edit &E = It.second;
-            format::FormatStyle Style =
-                getFormatStyleForFile(File, E.InitialCode, FS.get());
-            if (llvm::Error Err = reformatEdit(E, Style))
-              elog("Failed to format {0}: {1}", It.first(), std::move(Err));
-          }
-        }
-        return CB(std::move(*Effect));
-      };
+  auto Action = [File = File.str(), Sel, TweakID = TweakID.str(),
+                 CB = std::move(CB),
+                 this](Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto Selections = tweakSelection(Sel, *InpAST);
+    if (!Selections)
+      return CB(Selections.takeError());
+    llvm::Optional<llvm::Expected<Tweak::Effect>> Effect;
+    // Try each selection, take the first one that prepare()s.
+    // If they all fail, Effect will hold get the last error.
+    for (const auto &Selection : *Selections) {
+      auto T = prepareTweak(TweakID, *Selection);
+      if (T) {
+        Effect = (*T)->apply(*Selection);
+        break;
+      }
+      Effect = T.takeError();
+    }
+    assert(Effect.hasValue() && "Expected at least one selection");
+    if (*Effect) {
+      // Tweaks don't apply clang-format, do that centrally here.
+      for (auto &It : (*Effect)->ApplyEdits) {
+        Edit &E = It.second;
+        format::FormatStyle Style =
+            getFormatStyleForFile(File, E.InitialCode, FSProvider);
+        if (llvm::Error Err = reformatEdit(E, Style))
+          elog("Failed to format {0}: {1}", It.first(), std::move(Err));
+      }
+    }
+    return CB(std::move(*Effect));
+  };
   WorkScheduler.runWithAST("ApplyTweak", File, std::move(Action));
 }
 
@@ -549,7 +549,7 @@ void ClangdServer::switchSourceHeader(
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
   if (auto CorrespondingFile = getCorrespondingHeaderOrSource(
-          std::string(Path), FSProvider.getFileSystem()))
+          std::string(Path), FSProvider.getFileSystem(llvm::None)))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
@@ -564,8 +564,7 @@ llvm::Expected<tooling::Replacements>
 ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
                          llvm::ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
-  format::FormatStyle Style =
-      getFormatStyleForFile(File, Code, FSProvider.getFileSystem().get());
+  format::FormatStyle Style = getFormatStyleForFile(File, Code, FSProvider);
   tooling::Replacements IncludeReplaces =
       format::sortIncludes(Style, Code, Ranges, File);
   auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
@@ -597,9 +596,8 @@ void ClangdServer::findHover(PathRef File, Position Pos,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    format::FormatStyle Style =
-        getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                              InpAST->Inputs.FSProvider->getFileSystem().get());
+    format::FormatStyle Style = getFormatStyleForFile(
+        File, InpAST->Inputs.Contents, *InpAST->Inputs.FSProvider);
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 

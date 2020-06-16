@@ -15,9 +15,12 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "URI.h"
+#include "support/Path.h"
 #include "support/Threading.h"
 #include "clang/Config/config.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Errc.h"
@@ -270,7 +273,8 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+    getFileSystem(llvm::NoneType) const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
@@ -925,7 +929,8 @@ TEST(ClangdTests, PreambleVFSStatCache) {
     ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+    getFileSystem(llvm::NoneType) const override {
       class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
       public:
         ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,

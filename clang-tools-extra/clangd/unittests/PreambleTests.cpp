@@ -70,11 +70,11 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   // We don't run PP directly over the patch cotents to test production
   // behaviour.
   auto Bounds = Lexer::ComputePreamble(ModifiedContents, *CI->getLangOpts());
-  auto Clang =
-      prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
-                              llvm::MemoryBuffer::getMemBufferCopy(
-                                  ModifiedContents.slice(0, Bounds.Size).str()),
-                              PI.FSProvider->getFileSystem(), Diags);
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), &BaselinePreamble->Preamble,
+      llvm::MemoryBuffer::getMemBufferCopy(
+          ModifiedContents.slice(0, Bounds.Size).str()),
+      PI.FSProvider->getFileSystem(PI.CompileCommand.Directory), Diags);
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     ADD_FAILURE() << "failed begin source file";
