@@ -216,6 +216,10 @@ def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
                                          FeatureP9Altivec]>;
+def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
+                                         "true",
+                                         "Enable POWER10 vector instructions",
+                                         [FeatureISA3_1, FeatureP9Vector]>;
 // A separate feature for this even though it is equivalent to P9Vector
 // because this is a feature of the implementation rather than the architecture
 // and may go away with future CPU's.
@@ -337,7 +341,7 @@ def ProcessorFeatures {
   // still exist with the exception of those we know are Power9 specific.
   list<SubtargetFeature> P10AdditionalFeatures =
     [DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
-     FeaturePCRelativeMemops];
+     FeaturePCRelativeMemops, FeatureP10Vector];
   list<SubtargetFeature> P10SpecificFeatures = [];
   list<SubtargetFeature> P10InheritableFeatures =
     !listconcat(P9InheritableFeatures, P10AdditionalFeatures);
