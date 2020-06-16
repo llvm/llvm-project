@@ -53,10 +53,10 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.matmul(%A, %B, %C) { __internal_linalg_transform__ = "MEM" } :
-                memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?x?xf32, offset: ?, strides: [?, 1]>
+  linalg.matmul %A, %B, %C { __internal_linalg_transform__ = "MEM" } :
+    (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+     memref<?x?xf32, offset: ?, strides: [?, 1]>,
+     memref<?x?xf32, offset: ?, strides: [?, 1]>)
   return
 }
 // CHECK-LABEL: func @matmul
@@ -85,7 +85,10 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:                           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2]] {
 // CHECK:                             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3]] {
 // CHECK:                               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4]] {
-// CHECK:                                 linalg.matmul({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:                                 linalg.matmul {{.*}}, {{.*}}, {{.*}} : (
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>,
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>,
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>)
 
 #matmul_trait = {
   args_in = 2,
@@ -117,8 +120,8 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {
-  linalg.matmul(%A, %B, %C) { __internal_linalg_transform__ = "VECTORIZE"} :
-    memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>
+  linalg.matmul %A, %B, %C { __internal_linalg_transform__ = "VECTORIZE"} :
+    (memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>)
   return
 }
 // CHECK-LABEL: func @vectorization_test_2
@@ -216,10 +219,10 @@ func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.matmul(%A, %B, %C) {__internal_linalg_transform__ = "__with_perm__"} :
-               memref<?x?xf32, offset: ?, strides: [?, 1]>,
-               memref<?x?xf32, offset: ?, strides: [?, 1]>,
-               memref<?x?xf32, offset: ?, strides: [?, 1]>
+  linalg.matmul %A, %B, %C {__internal_linalg_transform__ = "__with_perm__"} :
+               (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?x?xf32, offset: ?, strides: [?, 1]>)
   return
 }
 // CHECK-LABEL: func @matmul_perm
@@ -242,7 +245,10 @@ func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:                     scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c20]] {
 // CHECK:                       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
 // CHECK:                         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
-// CHECK:                                 linalg.matmul({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:                                 linalg.matmul {{.*}}, {{.*}}, {{.*}} : (
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>,
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>,
+// CHECK:                                   memref<?x?xf32, #[[$STRIDED_2D]]>)
 
 func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -264,10 +270,10 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
         %5 = subview %arg2[%arg3, %arg4][%c2000, %c3000][%c1, %c1] :
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%3, %4, %5) {__internal_linalg_transform__ = "_promote_views_"} :
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %3, %4, %5 {__internal_linalg_transform__ = "_promote_views_"} :
+                      (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                       memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                       memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -296,7 +302,8 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:               linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:               linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK:               linalg.matmul(%[[v0]], %[[v1]], %[[v2]]) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+// CHECK:               linalg.matmul %[[v0]], %[[v1]], %[[v2]] :
+// CHECK:                 (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
 
 func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -318,10 +325,10 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
         %5 = std.subview %arg2[%arg3, %arg4][%c2000, %c3000][%c1, %c1] :
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-        linalg.matmul(%3, %4, %5) {__internal_linalg_transform__ = "_promote_first_view_"} :
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>,
-                      memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul %3, %4, %5 {__internal_linalg_transform__ = "_promote_first_view_"} :
+                      (memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                       memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                       memref<?x?xf32, offset: ?, strides: [?, ?]>)
       }
     }
   }
@@ -350,7 +357,10 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK-NOT:     linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK-NOT:     linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
-// CHECK:         linalg.matmul(%[[v0]], %[[s1]], %[[s2]]) : memref<?x?xf32>, memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:         linalg.matmul %[[v0]], %[[s1]], %[[s2]] :
+// CHECK:           (memref<?x?xf32>,
+// CHECK:            memref<?x?xf32, #[[$STRIDED_2D]]>,
+// CHECK:            memref<?x?xf32, #[[$STRIDED_2D]]>)
 
 func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   %c2000 = constant 2000 : index
@@ -377,8 +387,8 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
                                  %arg1: memref<?x?xf32>,
                                  %arg2: memref<?x?xf32>) {
-  linalg.matmul(%arg0, %arg1, %arg2) {__internal_linalg_transform__ = "par__with_perm__"}
-    : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  linalg.matmul %arg0, %arg1, %arg2 {__internal_linalg_transform__ = "par__with_perm__"}
+    : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
   return
 }
 // CHECK-LABEL: func @tile_permute_parallel_loop
