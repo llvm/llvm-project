@@ -65,13 +65,16 @@ struct AP32 {
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#elif defined(__x86_64__) || defined(__powerpc64__)
+#elif defined(__x86_64__) || defined(__powerpc64__) || defined(__s390x__)
 # if SANITIZER_FUCHSIA
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 # elif defined(__powerpc64__)
 const uptr kAllocatorSpace = 0xa0000000000ULL;
 const uptr kAllocatorSize  = 0x20000000000ULL;  // 2T.
+#elif defined(__s390x__)
+const uptr kAllocatorSpace = 0x40000000000ULL;
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 # else
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
