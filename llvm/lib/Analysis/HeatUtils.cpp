@@ -36,6 +36,19 @@ static const std::string heatPalette[heatSize] = {
     "#d24b40", "#d0473d", "#cc403a", "#ca3b37", "#c53334", "#c32e31", "#be242e",
     "#bb1b2c", "#b70d28"};
 
+uint64_t
+getNumOfCalls(Function &callerFunction, Function &calledFunction) {
+  uint64_t counter = 0;
+  for (User *U : calledFunction.users()) {
+    if (auto CI = dyn_cast<CallInst>(U)) {
+      if (CI->getCaller() == (&callerFunction)) {
+          counter += 1;
+      }
+    }
+  }
+  return counter;
+}
+
 uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI) {
   uint64_t maxFreq = 0;
   for (const BasicBlock &BB : F) {
