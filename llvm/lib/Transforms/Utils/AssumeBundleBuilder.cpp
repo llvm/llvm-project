@@ -48,39 +48,6 @@ bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   }
 }
 
-/// This function will try to transform the given knowledge into a more
-/// canonical one. the canonical knowledge maybe the given one.
-RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK, Module *M) {
-  switch (RK.AttrKind) {
-  default:
-    return RK;
-  case Attribute::NonNull:
-    RK.WasOn = GetUnderlyingObject(RK.WasOn, M->getDataLayout());
-    return RK;
-  case Attribute::Alignment: {
-    Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {
-      if (auto *GEP = dyn_cast<GEPOperator>(Strip))
-        RK.ArgValue =
-            MinAlign(RK.ArgValue,
-                     GEP->getMaxPreservedAlignment(M->getDataLayout()).value());
-    });
-    RK.WasOn = V;
-    return RK;
-  }
-  case Attribute::Dereferenceable:
-  case Attribute::DereferenceableOrNull: {
-    int64_t Offset = 0;
-    Value *V = GetPointerBaseWithConstantOffset(
-        RK.WasOn, Offset, M->getDataLayout(), /*AllowNonInBounds*/ false);
-    if (Offset < 0)
-      return RK;
-    RK.ArgValue = RK.ArgValue + Offset;
-    RK.WasOn = V;
-  }
-  }
-  return RK;
-}
-
 /// This class contain all knowledge that have been gather while building an
 /// llvm.assume and the function to manipulate it.
 struct AssumeBuilderState {
@@ -88,16 +55,16 @@ struct AssumeBuilderState {
 
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
   SmallMapVector<MapKey, unsigned, 8> AssumedKnowledgeMap;
-  Instruction *InstBeingRemoved = nullptr;
+  Instruction *InsertBeforeInstruction = nullptr;
   AssumptionCache* AC = nullptr;
   DominatorTree* DT = nullptr;
 
   AssumeBuilderState(Module *M, Instruction *I = nullptr,
                      AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr)
-      : M(M), InstBeingRemoved(I), AC(AC), DT(DT) {}
+      : M(M), InsertBeforeInstruction(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingRemoved || !RK.WasOn)
+    if (!InsertBeforeInstruction || !AC || !RK.WasOn)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
@@ -105,12 +72,12 @@ struct AssumeBuilderState {
         RK.WasOn, {RK.AttrKind}, AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
-          if (!isValidAssumeForContext(Assume, InstBeingRemoved, DT))
+          if (!isValidAssumeForContext(Assume, InsertBeforeInstruction, DT))
             return false;
           if (RKOther.ArgValue >= RK.ArgValue) {
             HasBeenPreserved = true;
             return true;
-          } else if (isValidAssumeForContext(InstBeingRemoved, Assume,
+          } else if (isValidAssumeForContext(InsertBeforeInstruction, Assume,
                                              DT)) {
             HasBeenPreserved = true;
             IntrinsicInst *Intr = cast<IntrinsicInst>(Assume);
@@ -125,41 +92,8 @@ struct AssumeBuilderState {
     return HasBeenPreserved;
   }
 
-  bool isKnowledgeWorthPreserving(RetainedKnowledge RK) {
-    if (!RK)
-      return false;
-    if (!RK.WasOn)
-      return true;
-    if (RK.WasOn->getType()->isPointerTy()) {
-      Value *UnderlyingPtr = GetUnderlyingObject(RK.WasOn, M->getDataLayout());
-      if (isa<AllocaInst>(UnderlyingPtr) || isa<GlobalValue>(UnderlyingPtr))
-        return false;
-    }
-    if (auto *Arg = dyn_cast<Argument>(RK.WasOn)) {
-      if (Arg->hasAttribute(RK.AttrKind) &&
-          (!Attribute::doesAttrKindHaveArgument(RK.AttrKind) ||
-           Arg->getAttribute(RK.AttrKind).getValueAsInt() >= RK.ArgValue))
-        return false;
-      return true;
-    }
-    if (auto *Inst = dyn_cast<Instruction>(RK.WasOn))
-      if (wouldInstructionBeTriviallyDead(Inst)) {
-        if (RK.WasOn->use_empty())
-          return false;
-        Use *SingleUse = RK.WasOn->getSingleUndroppableUse();
-        if (SingleUse && SingleUse->getUser() == InstBeingRemoved)
-          return false;
-      }
-    return true;
-  }
-
   void addKnowledge(RetainedKnowledge RK) {
-    RK = canonicalizedKnowledge(RK, M);
-
-    if (!isKnowledgeWorthPreserving(RK))
-      return;
-
-    if (tryToPreserveWithoutAddingAssume(RK))
+    if (RK.AttrKind == Attribute::None || tryToPreserveWithoutAddingAssume(RK))
       return;
     MapKey Key{RK.WasOn, RK.AttrKind};
     auto Lookup = AssumedKnowledgeMap.find(Key);

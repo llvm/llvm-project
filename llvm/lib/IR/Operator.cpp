@@ -31,33 +31,6 @@ Type *GEPOperator::getResultElementType() const {
   return cast<GetElementPtrConstantExpr>(this)->getResultElementType();
 }
 
-Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
-  /// compute the worse possible offset for every level of the GEP et accumulate
-  /// the minimum alignment into Result.
-
-  Align Result = Align(llvm::Value::MaximumAlignment);
-  for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
-       GTI != GTE; ++GTI) {
-    int64_t Offset = 1;
-    ConstantInt *OpC = dyn_cast<ConstantInt>(GTI.getOperand());
-
-    if (StructType *STy = GTI.getStructTypeOrNull()) {
-      const StructLayout *SL = DL.getStructLayout(STy);
-      Offset = SL->getElementOffset(OpC->getZExtValue());
-    } else {
-      assert(GTI.isSequential() && "should be sequencial");
-      /// If the index isn't know we take 1 because it is the index that will
-      /// give the worse alignment of the offset.
-      int64_t ElemCount = 1;
-      if (OpC)
-        ElemCount = OpC->getZExtValue();
-      Offset = DL.getTypeAllocSize(GTI.getIndexedType()) * ElemCount;
-    }
-    Result = Align(MinAlign(Offset, Result.value()));
-  }
-  return Result;
-}
-
 bool GEPOperator::accumulateConstantOffset(
     const DataLayout &DL, APInt &Offset,
     function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {

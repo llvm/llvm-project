@@ -76,7 +76,7 @@ define i32 @test2(i32** %0, i32* %1, i32 %2, i32 %3) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32*, i32** [[TMP12]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TMP13]], i64 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP1]], i64 12), "align"(i32* [[TMP13]], i64 4), "dereferenceable"(i32* [[TMP13]], i64 4), "nonnull"(i32* [[TMP13]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP11]], i64 4), "dereferenceable"(i32* [[TMP11]], i64 4), "nonnull"(i32* [[TMP11]]), "align"(i32* [[TMP14]], i64 4), "dereferenceable"(i32* [[TMP14]], i64 4), "nonnull"(i32* [[TMP14]]) ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32*, i32** [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32*, i32** [[TMP16]], align 8
@@ -303,7 +303,7 @@ define i32 @test7(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test7
 ; CHECK-SAME: (i32* align 4 dereferenceable(4) [[P:%.*]])
 ; CHECK-NEXT:    [[P1:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "nonnull"(i32* [[P]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "align"(i8* [[P1]], i64 4), "nonnull"(i8* [[P1]]) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %p1 = bitcast i32* %p to i8*

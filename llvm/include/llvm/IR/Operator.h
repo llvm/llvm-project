@@ -545,9 +545,6 @@ public:
       });
   }
 
-  /// Compute the maximum alignment that this GEP is garranteed to preserve.
-  Align getMaxPreservedAlignment(const DataLayout &DL) const;
-
   /// Accumulate the constant address offset of this GEP if possible.
   ///
   /// This routine accepts an APInt into which it will try to accumulate the
