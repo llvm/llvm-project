@@ -200,7 +200,7 @@ public:
 //===----------------------------------------------------------------------===//
 // Small runtime support "lib" for vector.print lowering during codegen.
 //===----------------------------------------------------------------------===//
-extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i1(bool b);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i1(int b);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i32(int32_t i);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_i64(int64_t l);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_f32(float f);
