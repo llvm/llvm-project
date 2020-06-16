@@ -1,4 +1,4 @@
-//===-- Implementation of truncf function ---------------------------------===//
+//===-- Basic operations on floating point numbers --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/common.h"
-#include "utils/FPUtil/NearestIntegerOperations.h"
+#include "FloatOperations.h"
 
 namespace __llvm_libc {
+namespace fputil {
 
-float LLVM_LIBC_ENTRYPOINT(truncf)(float x) { return fputil::trunc(x); }
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T abs(T x) {
+  return valueFromBits(absBits(x));
+}
 
+} // namespace fputil
 } // namespace __llvm_libc
