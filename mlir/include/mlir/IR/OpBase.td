@@ -1684,6 +1684,9 @@ class SingleBlockImplicitTerminator<string op>
 class HasParent<string op>
     : ParamNativeOpTrait<"HasParent", op>;
 
+class ParentOneOf<list<string> ops>
+    : ParamNativeOpTrait<"HasParent", StrJoin<ops>.result>;
+
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
 // attribute content is used.

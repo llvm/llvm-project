@@ -439,10 +439,18 @@ def BroadcastableOp : TEST_Op<"broadcastable", [ResultsBroadcastableShape]> {
   let results = (outs AnyTensor);
 }
 
-// There the "HasParent" trait.
-def ParentOp : TEST_Op<"parent">;
+// HasParent trait
+def ParentOp : TEST_Op<"parent"> {
+    let regions = (region AnyRegion);
+}
 def ChildOp : TEST_Op<"child", [HasParent<"ParentOp">]>;
 
+// ParentOneOf trait
+def ParentOp1 : TEST_Op<"parent1"> {
+  let regions = (region AnyRegion);
+}
+def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
+                                [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
 
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",
