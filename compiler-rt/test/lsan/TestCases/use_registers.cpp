@@ -43,6 +43,10 @@ void *registers_thread_func(void *arg) {
       :
       : "r" (p)
       );
+#elif defined(__s390x__)
+  asm("lgr %%r10, %0"
+      :
+      : "r"(p));
 #else
 #error "Test is not supported on this architecture."
 #endif
