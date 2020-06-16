@@ -9,9 +9,8 @@ declare void @usef(<4 x float>)
 
 define <16 x i1> @ins0_ins0_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ins0_ins0_i8(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <16 x i8> undef, i8 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <16 x i8> undef, i8 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <16 x i8> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x i1> undef, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <16 x i1> [[R]]
 ;
   %i0 = insertelement <16 x i8> undef, i8 %x, i32 0
@@ -24,9 +23,8 @@ define <16 x i1> @ins0_ins0_i8(i8 %x, i8 %y) {
 
 define <8 x i1> @ins5_ins5_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ins5_ins5_i16(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <8 x i16> undef, i16 [[X:%.*]], i8 5
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <8 x i16> undef, i16 [[Y:%.*]], i32 5
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <8 x i16> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp sgt i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i1> undef, i1 [[R_SCALAR]], i64 5
 ; CHECK-NEXT:    ret <8 x i1> [[R]]
 ;
   %i0 = insertelement <8 x i16> undef, i16 %x, i8 5
@@ -39,9 +37,8 @@ define <8 x i1> @ins5_ins5_i16(i16 %x, i16 %y) {
 
 define <2 x i1> @ins1_ins1_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: @ins1_ins1_i64(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[X:%.*]], i64 1
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> <i64 1, i64 -1>, i64 [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = icmp sle <2 x i64> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp sle i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 false>, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i0 = insertelement <2 x i64> zeroinitializer, i64 %x, i64 1
@@ -54,9 +51,8 @@ define <2 x i1> @ins1_ins1_i64(i64 %x, i64 %y) {
 
 define <2 x i1> @ins0_ins0_f64(double %x, double %y) {
 ; CHECK-LABEL: @ins0_ins0_f64(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x double> undef, double [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ninf uge <2 x double> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp nnan ninf uge double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %i0 = insertelement <2 x double> undef, double %x, i32 0
@@ -84,9 +80,8 @@ define <16 x i1> @ins1_ins0_i8(i8 %x, i8 %y) {
 
 define <4 x i1> @ins0_ins0_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_i32(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <4 x i32> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> undef, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %i0 = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
@@ -101,8 +96,8 @@ define <4 x i1> @ins0_ins0_i32_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_i32_use(
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    call void @use(<4 x i32> [[I0]])
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <4 x i32> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ugt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> undef, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %i0 = insertelement <4 x i32> undef, i32 %x, i32 0
@@ -116,10 +111,10 @@ define <4 x i1> @ins0_ins0_i32_use(i32 %x, i32 %y) {
 
 define <4 x i1> @ins1_ins1_f32_use(float %x, float %y) {
 ; CHECK-LABEL: @ins1_ins1_f32_use(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 1
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 1
 ; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp ogt float [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %i0 = insertelement <4 x float> undef, float %x, i32 1
@@ -150,8 +145,8 @@ define <4 x i1> @ins2_ins2_f32_uses(float %x, float %y) {
 
 define <2 x i1> @constant_op1_i64(i64 %x) {
 ; CHECK-LABEL: @constant_op1_i64(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i64> [[INS]], <i64 42, i64 undef>
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ne i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> undef, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
@@ -161,14 +156,16 @@ define <2 x i1> @constant_op1_i64(i64 %x) {
 
 define <2 x i1> @constant_op1_i64_not_undef_lane(i64 %x) {
 ; CHECK-LABEL: @constant_op1_i64_not_undef_lane(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp sge <2 x i64> [[INS]], <i64 42, i64 -42>
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp sge i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %r = icmp sge <2 x i64> %ins, <i64 42, i64 -42>
   ret <2 x i1> %r
 }
+
+; negative test - load prevents the transform
 
 define <2 x i1> @constant_op1_i64_load(i64* %p) {
 ; CHECK-LABEL: @constant_op1_i64_load(
@@ -185,8 +182,8 @@ define <2 x i1> @constant_op1_i64_load(i64* %p) {
 
 define <4 x i1> @constant_op0_i32(i32 %x) {
 ; CHECK-LABEL: @constant_op0_i32(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> <i32 undef, i32 -42, i32 undef, i32 undef>, [[INS]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ult i32 -42, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %ins = insertelement <4 x i32> undef, i32 %x, i32 1
@@ -196,8 +193,8 @@ define <4 x i1> @constant_op0_i32(i32 %x) {
 
 define <4 x i1> @constant_op0_i32_not_undef_lane(i32 %x) {
 ; CHECK-LABEL: @constant_op0_i32_not_undef_lane(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ule <4 x i32> <i32 1, i32 42, i32 42, i32 -42>, [[INS]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = icmp ule i32 42, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %ins = insertelement <4 x i32> undef, i32 %x, i32 1
@@ -207,8 +204,8 @@ define <4 x i1> @constant_op0_i32_not_undef_lane(i32 %x) {
 
 define <2 x i1> @constant_op0_f64(double %x) {
 ; CHECK-LABEL: @constant_op0_f64(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = fcmp fast olt <2 x double> <double 4.200000e+01, double undef>, [[INS]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp fast olt double 4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> zeroinitializer, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -218,8 +215,8 @@ define <2 x i1> @constant_op0_f64(double %x) {
 
 define <2 x i1> @constant_op0_f64_not_undef_lane(double %x) {
 ; CHECK-LABEL: @constant_op0_f64_not_undef_lane(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ueq <2 x double> <double 4.200000e+01, double -4.200000e+01>, [[INS]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp nnan ueq double -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> <i1 true, i1 true>, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 1
@@ -229,8 +226,8 @@ define <2 x i1> @constant_op0_f64_not_undef_lane(double %x) {
 
 define <2 x i1> @constant_op1_f64(double %x) {
 ; CHECK-LABEL: @constant_op1_f64(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = fcmp one <2 x double> [[INS]], <double undef, double 4.200000e+01>
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp one double [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i1> zeroinitializer, i1 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 1
@@ -240,14 +237,16 @@ define <2 x i1> @constant_op1_f64(double %x) {
 
 define <4 x i1> @constant_op1_f32_not_undef_lane(float %x) {
 ; CHECK-LABEL: @constant_op1_f32_not_undef_lane(
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = fcmp uge <4 x float> [[INS]], <float 4.200000e+01, float -4.200000e+01, float 0.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fcmp uge float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i1 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %ins = insertelement <4 x float> undef, float %x, i32 0
   %r = fcmp uge <4 x float> %ins, <float 42.0, float -42.0, float 0.0, float 1.0>
   ret <4 x i1> %r
 }
+
+; negative test - select prevents the transform
 
 define <4 x float> @vec_select_use1(<4 x float> %x, <4 x float> %y, i32 %a, i32 %b) {
 ; CHECK-LABEL: @vec_select_use1(
@@ -263,6 +262,8 @@ define <4 x float> @vec_select_use1(<4 x float> %x, <4 x float> %y, i32 %a, i32 
   %r = select <4 x i1> %cond, <4 x float> %x, <4 x float> %y
   ret <4 x float> %r
 }
+
+; negative test - select prevents the transform
 
 define <4 x float> @vec_select_use2(<4 x float> %x, <4 x float> %y, float %a) {
 ; CHECK-LABEL: @vec_select_use2(
