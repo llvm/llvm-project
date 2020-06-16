@@ -4357,7 +4357,7 @@ def : Pat<(v2f32 (fmul DPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
             (i32 0))>;
 def : Pat<(v4f16 (fmul DPR:$Rn, (ARMvdup (f16 HPR:$Rm)))),
           (VMULslhd DPR:$Rn,
-            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), (f16 HPR:$Rm), ssub_0),
             (i32 0))>;
 def : Pat<(v4f32 (fmul QPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
           (VMULslfq QPR:$Rn,
@@ -4365,7 +4365,7 @@ def : Pat<(v4f32 (fmul QPR:$Rn, (ARMvdup (f32 SPR:$Rm)))),
             (i32 0))>;
 def : Pat<(v8f16 (fmul QPR:$Rn, (ARMvdup (f16 HPR:$Rm)))),
           (VMULslhq QPR:$Rn,
-            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), (f16 HPR:$Rm), ssub_0),
             (i32 0))>;
 }
 
@@ -6492,9 +6492,9 @@ def : Pat<(v4f32 (insertelt QPR:$src1, SPR:$src2, imm:$src3)),
           (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS QPR:$src1, QPR_VFP2)),
                                 SPR:$src2, (SSubReg_f32_reg imm:$src3))>;
 
-def : Pat<(insertelt (v4f16 DPR:$src1), HPR:$src2, imm:$lane),
+def : Pat<(insertelt (v4f16 DPR:$src1), (f16 HPR:$src2), imm:$lane),
           (v4f16 (VSETLNi16 DPR:$src1, (VMOVRH $src2), imm:$lane))>;
-def : Pat<(insertelt (v8f16 QPR:$src1), HPR:$src2, imm:$lane),
+def : Pat<(insertelt (v8f16 QPR:$src1), (f16 HPR:$src2), imm:$lane),
           (v8f16 (INSERT_SUBREG QPR:$src1,
                    (v4i16 (VSETLNi16 (v4i16 (EXTRACT_SUBREG QPR:$src1,
                                       (DSubReg_i16_reg imm:$lane))),
@@ -6638,18 +6638,18 @@ def : Pat<(v4f32 (ARMvduplane (v4f32 QPR:$src), imm:$lane)),
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
 
-def : Pat<(v4f16 (ARMvdup HPR:$src)),
+def : Pat<(v4f16 (ARMvdup (f16 HPR:$src))),
           (v4f16 (VDUPLN16d (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
-                             HPR:$src, ssub_0), (i32 0)))>;
+                             (f16 HPR:$src), ssub_0), (i32 0)))>;
 def : Pat<(v2f32 (ARMvdup (f32 SPR:$src))),
           (v2f32 (VDUPLN32d (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v4f32 (ARMvdup (f32 SPR:$src))),
           (v4f32 (VDUPLN32q (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
-def : Pat<(v8f16 (ARMvdup HPR:$src)),
+def : Pat<(v8f16 (ARMvdup (f16 HPR:$src))),
           (v8f16 (VDUPLN16q (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
-                             HPR:$src, ssub_0), (i32 0)))>;
+                             (f16 HPR:$src), ssub_0), (i32 0)))>;
 }
 
 //   VMOVN    : Vector Narrowing Move
