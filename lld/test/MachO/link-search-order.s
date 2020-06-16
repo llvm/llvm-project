@@ -10,7 +10,7 @@
 # RUN: llvm-ar --format=darwin crs %t/libgoodbye.a %t/goodbye.o
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -arch x86_64 -o %t/test -Z -L%t -lhello -lgoodbye %t/test.o
+# RUN: lld -flavor darwinnew -arch x86_64 -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z -L%t -lhello -lgoodbye -lSystem %t/test.o
 #
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck %s
 

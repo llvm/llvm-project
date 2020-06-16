@@ -398,16 +398,6 @@ DylibFile::DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
     reexported.push_back(make<DylibFile>(document, umbrella));
 }
 
-DylibFile::DylibFile() : InputFile(DylibKind, MemoryBufferRef()) {}
-
-DylibFile *DylibFile::createLibSystemMock() {
-  auto *file = make<DylibFile>();
-  file->mb = MemoryBufferRef("", "/usr/lib/libSystem.B.dylib");
-  file->dylibName = "/usr/lib/libSystem.B.dylib";
-  file->symbols.push_back(symtab->addDylib("dyld_stub_binder", file));
-  return file;
-}
-
 ArchiveFile::ArchiveFile(std::unique_ptr<llvm::object::Archive> &&f)
     : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
   for (const object::Archive::Symbol &sym : file->symbols())
