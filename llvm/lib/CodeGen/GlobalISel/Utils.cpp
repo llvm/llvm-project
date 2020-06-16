@@ -399,51 +399,56 @@ APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
 Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
                                         const Register Op2,
                                         const MachineRegisterInfo &MRI) {
-  auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
   auto MaybeOp2Cst = getConstantVRegVal(Op2, MRI);
-  if (MaybeOp1Cst && MaybeOp2Cst) {
-    LLT Ty = MRI.getType(Op1);
-    APInt C1(Ty.getSizeInBits(), *MaybeOp1Cst, true);
-    APInt C2(Ty.getSizeInBits(), *MaybeOp2Cst, true);
-    switch (Opcode) {
-    default:
+  if (!MaybeOp2Cst)
+    return None;
+
+  auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
+  if (!MaybeOp1Cst)
+    return None;
+
+  LLT Ty = MRI.getType(Op1);
+  APInt C1(Ty.getSizeInBits(), *MaybeOp1Cst, true);
+  APInt C2(Ty.getSizeInBits(), *MaybeOp2Cst, true);
+  switch (Opcode) {
+  default:
+    break;
+  case TargetOpcode::G_ADD:
+    return C1 + C2;
+  case TargetOpcode::G_AND:
+    return C1 & C2;
+  case TargetOpcode::G_ASHR:
+    return C1.ashr(C2);
+  case TargetOpcode::G_LSHR:
+    return C1.lshr(C2);
+  case TargetOpcode::G_MUL:
+    return C1 * C2;
+  case TargetOpcode::G_OR:
+    return C1 | C2;
+  case TargetOpcode::G_SHL:
+    return C1 << C2;
+  case TargetOpcode::G_SUB:
+    return C1 - C2;
+  case TargetOpcode::G_XOR:
+    return C1 ^ C2;
+  case TargetOpcode::G_UDIV:
+    if (!C2.getBoolValue())
       break;
-    case TargetOpcode::G_ADD:
-      return C1 + C2;
-    case TargetOpcode::G_AND:
-      return C1 & C2;
-    case TargetOpcode::G_ASHR:
-      return C1.ashr(C2);
-    case TargetOpcode::G_LSHR:
-      return C1.lshr(C2);
-    case TargetOpcode::G_MUL:
-      return C1 * C2;
-    case TargetOpcode::G_OR:
-      return C1 | C2;
-    case TargetOpcode::G_SHL:
-      return C1 << C2;
-    case TargetOpcode::G_SUB:
-      return C1 - C2;
-    case TargetOpcode::G_XOR:
-      return C1 ^ C2;
-    case TargetOpcode::G_UDIV:
-      if (!C2.getBoolValue())
-        break;
-      return C1.udiv(C2);
-    case TargetOpcode::G_SDIV:
-      if (!C2.getBoolValue())
-        break;
-      return C1.sdiv(C2);
-    case TargetOpcode::G_UREM:
-      if (!C2.getBoolValue())
-        break;
-      return C1.urem(C2);
-    case TargetOpcode::G_SREM:
-      if (!C2.getBoolValue())
-        break;
-      return C1.srem(C2);
-    }
+    return C1.udiv(C2);
+  case TargetOpcode::G_SDIV:
+    if (!C2.getBoolValue())
+      break;
+    return C1.sdiv(C2);
+  case TargetOpcode::G_UREM:
+    if (!C2.getBoolValue())
+      break;
+    return C1.urem(C2);
+  case TargetOpcode::G_SREM:
+    if (!C2.getBoolValue())
+      break;
+    return C1.srem(C2);
   }
+
   return None;
 }
 
