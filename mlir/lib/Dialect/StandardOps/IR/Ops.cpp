@@ -1308,7 +1308,7 @@ static LogicalResult verify(DimOp op) {
 }
 
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
-  auto index = operands[1].dyn_cast<IntegerAttr>();
+  auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
 
   // All forms of folding require a known index.
   if (!index)
