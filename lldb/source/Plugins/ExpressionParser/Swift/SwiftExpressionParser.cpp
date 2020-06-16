@@ -1723,7 +1723,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // part of the parse from the staging area in the external lookup
   // object into the SwiftPersistentExpressionState.
   swift::ModuleDecl *module = &parsed_expr->module;
-  parsed_expr->ast_context.LoadedModules.insert({module->getName(), module});
+  parsed_expr->ast_context.addLoadedModule(module);
   swift_ast_ctx->CacheModule(module);
   if (m_sc.target_sp) {
     auto *persistent_state =
