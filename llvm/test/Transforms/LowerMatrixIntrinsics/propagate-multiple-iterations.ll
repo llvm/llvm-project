@@ -73,9 +73,9 @@ define <16 x double> @backpropagation_iterations(<16 x double>* %A.Ptr, <16 x do
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x double> [[TMP39]], <8 x double> [[TMP40]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x double> [[TMP41]]
 ;
-  %A = load <16 x double>, <16 x double>* %A.Ptr
+  %A = load <16 x double>, <16 x double>* %A.Ptr, align 8
   %A.trans = tail call <16 x double> @llvm.matrix.transpose.v16f64(<16 x double> %A, i32 4, i32 4)
-  %B = load <16 x double>, <16 x double>* %B.Ptr
+  %B = load <16 x double>, <16 x double>* %B.Ptr, align 8
   %Mul = fmul <16 x double> %A, %B
   ret <16 x double> %Mul
 }

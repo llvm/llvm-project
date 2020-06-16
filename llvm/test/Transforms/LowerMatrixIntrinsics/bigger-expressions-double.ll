@@ -237,11 +237,11 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ;
 
 entry:
-  %a = load <9 x double>, <9 x double>* %A.Ptr
-  %b = load <9 x double>, <9 x double>* %B.Ptr
+  %a = load <9 x double>, <9 x double>* %A.Ptr, align 8
+  %b = load <9 x double>, <9 x double>* %B.Ptr, align 8
   %a.trans  = call <9 x double> @llvm.matrix.transpose(<9 x double> %a, i32 3, i32 3)
   %c = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %a.trans, <9 x double> %b, i32 3, i32 3, i32 3)
-  store <9 x double> %c, <9 x double>* %C.Ptr
+  store <9 x double> %c, <9 x double>* %C.Ptr, align 8
   ret void
 }
 
@@ -501,13 +501,13 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <9 x double>, <9 x double>* %A.Ptr
-  %b = load <9 x double>, <9 x double>* %B.Ptr
+  %a = load <9 x double>, <9 x double>* %A.Ptr, align 8
+  %b = load <9 x double>, <9 x double>* %B.Ptr, align 8
   %a.trans  = call <9 x double> @llvm.matrix.transpose(<9 x double> %a, i32 3, i32 3)
   %mult = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %a.trans, <9 x double> %b, i32 3, i32 3, i32 3)
-  %c = load <9 x double>, <9 x double>* %C.Ptr
+  %c = load <9 x double>, <9 x double>* %C.Ptr, align 8
   %res = fadd <9 x double> %c, %mult
 
-  store <9 x double> %res, <9 x double>* %C.Ptr
+  store <9 x double> %res, <9 x double>* %C.Ptr, align 8
   ret void
 }
