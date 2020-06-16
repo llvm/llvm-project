@@ -460,18 +460,33 @@ SymbolCache::findLineTable(uint16_t Modi) const {
         continue;
 
       std::vector<LineTableEntry> Entries;
+
+      // If there are column numbers, then they should be in a parallel stream
+      // to the line numbers.
+      auto ColIt = Group.Columns.begin();
+      auto ColsEnd = Group.Columns.end();
+
       for (const LineNumberEntry &LN : Group.LineNumbers) {
-        LineInfo Line(LN.Flags);
         uint64_t VA =
             Session.getVAFromSectOffset(RelocSegment, RelocOffset + LN.Offset);
-        Entries.push_back({VA, Line, Group.NameIndex, false});
+        LineInfo Line(LN.Flags);
+        uint32_t ColNum = 0;
+
+        if (Lines.hasColumnInfo() && ColIt != ColsEnd) {
+          ColNum = ColIt->StartColumn;
+          ++ColIt;
+        }
+        Entries.push_back({VA, Line, ColNum, Group.NameIndex, false});
       }
 
       // Add a terminal entry line to mark the end of this subsection.
-      LineInfo LastLine(Group.LineNumbers.back().Flags);
       uint64_t VA = Session.getVAFromSectOffset(
           RelocSegment, RelocOffset + Lines.header()->CodeSize);
-      Entries.push_back({VA, LastLine, Group.NameIndex, true});
+      LineInfo LastLine(Group.LineNumbers.back().Flags);
+      uint32_t ColNum =
+          (Lines.hasColumnInfo()) ? Group.Columns.back().StartColumn : 0;
+      Entries.push_back({VA, LastLine, ColNum, Group.NameIndex, true});
+
       EntryList.push_back(Entries);
     }
   }
@@ -571,8 +586,8 @@ SymbolCache::findLineNumbersByVA(uint64_t VA, uint32_t Length) const {
     auto ChecksumIter =
         ExpectedChecksums->getArray().at(LineIter->FileNameIndex);
     uint32_t SrcFileId = getOrCreateSourceFile(*ChecksumIter);
-    NativeLineNumber LineNum(Session, LineIter->Line, LineSect, LineOff,
-                             LineLength, SrcFileId);
+    NativeLineNumber LineNum(Session, LineIter->Line, LineIter->ColumnNumber,
+                             LineSect, LineOff, LineLength, SrcFileId);
     LineNumbers.push_back(LineNum);
     ++LineIter;
   }
