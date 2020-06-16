@@ -45992,7 +45992,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 
     if (IsSEXT0 && IsVZero1) {
       assert(VT == Op0.getOperand(0).getValueType() &&
-             "Uexpected operand type");
+             "Unexpected operand type");
       if (TmpCC == ISD::SETGT)
         return DAG.getConstant(0, DL, VT);
       if (TmpCC == ISD::SETLE)
