@@ -284,12 +284,12 @@ entry:
 
 true:
   %a.add = fadd <6 x double> %a, %a
-  store <6 x double> %a.add, <6 x double>* %A
+  store <6 x double> %a.add, <6 x double>* %A, align 8
   br label %end
 
 false:
   %b.add = fadd <6 x double> %b, %b
-  store <6 x double> %b.add, <6 x double>* %B
+  store <6 x double> %b.add, <6 x double>* %B, align 8
   br label %end
 
 end:
