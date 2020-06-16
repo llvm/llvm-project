@@ -112,7 +112,7 @@ TEST(ModuleTest, setProfileSummary) {
   std::unique_ptr<Module> M = parseAssemblyString(IRString, Err, Context);
   auto *PS = ProfileSummary::getFromMD(M->getProfileSummary(/*IsCS*/ false));
   EXPECT_NE(nullptr, PS);
-  EXPECT_EQ(false, PS->isPartialProfile());
+  EXPECT_FALSE(PS->isPartialProfile());
   PS->setPartialProfile(true);
   M->setProfileSummary(PS->getMD(Context), ProfileSummary::PSK_Sample);
   delete PS;
