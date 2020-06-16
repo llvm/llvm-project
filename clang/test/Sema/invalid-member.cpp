@@ -13,3 +13,9 @@ class Y {
 };
 // Should be able to evaluate sizeof without crashing.
 static_assert(sizeof(Y) == 1, "No valid members");
+
+class Z {
+  int array[sizeof(invalid())]; // expected-error {{use of undeclared identifier}}
+};
+// Should be able to evaluate sizeof without crashing.
+static_assert(sizeof(Z) == 1, "No valid members");
