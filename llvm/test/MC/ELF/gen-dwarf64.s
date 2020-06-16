@@ -1,13 +1,15 @@
 ## This checks that llvm-mc is able to produce 64-bit debug info.
 
 # RUN: llvm-mc -g -dwarf-version 5 -dwarf64 -triple x86_64 %s -filetype=obj -o %t5.o
-# RUN: llvm-readobj -r %t5.o | FileCheck --check-prefixes=REL,REL5 %s
+# RUN: llvm-readobj -r %t5.o | FileCheck --check-prefixes=REL,REL5 %s --implicit-check-not="R_{{.*}} .debug_"
 # RUN: llvm-dwarfdump -v %t5.o | FileCheck --check-prefixes=DUMP,DUMP5 %s
 
 ## The references to other debug info sections are 64-bit, as required for DWARF64.
 # REL:         Section ({{[0-9]+}}) .rela.debug_info {
 # REL-NEXT:      R_X86_64_64 .debug_abbrev 0x0
 # REL-NEXT:      R_X86_64_64 .debug_line 0x0
+# REL:         Section ({{[0-9]+}}) .rela.debug_aranges {
+# REL-NEXT:      R_X86_64_64 .debug_info 0x0
 # REL5:        Section ({{[0-9]+}}) .rela.debug_line {
 # REL5-NEXT:     R_X86_64_64 .debug_line_str 0x0
 # REL5-NEXT:     R_X86_64_64 .debug_line_str 0x
@@ -18,6 +20,11 @@
 # DUMP5-NEXT:   DW_AT_stmt_list [DW_FORM_sec_offset] (0x0000000000000000)
 # DUMP:       DW_TAG_label [2]
 # DUMP-NEXT:    DW_AT_name [DW_FORM_string] ("foo")
+
+# DUMP:       .debug_aranges contents:
+# DUMP-NEXT:  Address Range Header: length = 0x0000000000000034, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
+# DUMP-NEXT:  [0x0000000000000000,  0x0000000000000001)
+# DUMP-EMPTY:
 
 # DUMP:       .debug_line contents:
 # DUMP-NEXT:  debug_line[0x00000000]

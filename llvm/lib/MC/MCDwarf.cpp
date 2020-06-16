@@ -875,9 +875,13 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
 
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfARangesSection());
 
+  unsigned UnitLengthBytes =
+      dwarf::getUnitLengthFieldByteSize(context.getDwarfFormat());
+  unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(context.getDwarfFormat());
+
   // This will be the length of the .debug_aranges section, first account for
   // the size of each item in the header (see below where we emit these items).
-  int Length = 4 + 2 + 4 + 1 + 1;
+  int Length = UnitLengthBytes + 2 + OffsetSize + 1 + 1;
 
   // Figure the padding after the header before the table of address and size
   // pairs who's values are PointerSize'ed.
@@ -895,17 +899,21 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   Length += 2 * AddrSize;
 
   // Emit the header for this section.
-  // The 4 byte length not including the 4 byte value for the length.
-  MCOS->emitInt32(Length - 4);
+  if (context.getDwarfFormat() == dwarf::DWARF64)
+    // The DWARF64 mark.
+    MCOS->emitInt32(dwarf::DW_LENGTH_DWARF64);
+  // The 4 (8 for DWARF64) byte length not including the length of the unit
+  // length field itself.
+  MCOS->emitIntValue(Length - UnitLengthBytes, OffsetSize);
   // The 2 byte version, which is 2.
   MCOS->emitInt16(2);
-  // The 4 byte offset to the compile unit in the .debug_info from the start
-  // of the .debug_info.
+  // The 4 (8 for DWARF64) byte offset to the compile unit in the .debug_info
+  // from the start of the .debug_info.
   if (InfoSectionSymbol)
-    MCOS->emitSymbolValue(InfoSectionSymbol, 4,
+    MCOS->emitSymbolValue(InfoSectionSymbol, OffsetSize,
                           asmInfo->needsDwarfSectionOffsetDirective());
   else
-    MCOS->emitInt32(0);
+    MCOS->emitIntValue(0, OffsetSize);
   // The 1 byte size of an address.
   MCOS->emitInt8(AddrSize);
   // The 1 byte size of a segment descriptor, we use a value of zero.
