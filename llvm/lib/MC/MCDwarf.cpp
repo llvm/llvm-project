@@ -50,8 +50,14 @@ MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
       S.getContext().createTempSymbol("debug_list_header_start", true, true);
   MCSymbol *End =
       S.getContext().createTempSymbol("debug_list_header_end", true, true);
+  auto DwarfFormat = S.getContext().getDwarfFormat();
+  if (DwarfFormat == dwarf::DWARF64) {
+    S.AddComment("DWARF64 mark");
+    S.emitInt32(dwarf::DW_LENGTH_DWARF64);
+  }
   S.AddComment("Length");
-  S.emitAbsoluteSymbolDiff(End, Start, 4);
+  S.emitAbsoluteSymbolDiff(End, Start,
+                           dwarf::getDwarfOffsetByteSize(DwarfFormat));
   S.emitLabel(Start);
   S.AddComment("Version");
   S.emitInt16(S.getContext().getDwarfVersion());
@@ -1014,9 +1020,9 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 
   if (RangesSymbol) {
     // There are multiple sections containing code, so we must use
-    // .debug_ranges/.debug_rnglists. AT_ranges, the 4 byte offset from the
+    // .debug_ranges/.debug_rnglists. AT_ranges, the 4/8 byte offset from the
     // start of the .debug_ranges/.debug_rnglists.
-    MCOS->emitSymbolValue(RangesSymbol, 4);
+    MCOS->emitSymbolValue(RangesSymbol, OffsetSize);
   } else {
     // If we only have one non-empty code section, we can use the simpler
     // AT_low_pc and AT_high_pc attributes.
