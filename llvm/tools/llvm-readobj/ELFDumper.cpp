@@ -1082,6 +1082,9 @@ ELFDumper<ELFT>::getRelocationTarget(const Elf_Shdr *SymTab,
         Obj->getSection(Sym, SymTab, ShndxTable);
     if (!SecOrErr)
       return SecOrErr.takeError();
+    // A section symbol describes the section at index 0.
+    if (*SecOrErr == nullptr)
+      return std::make_pair(Sym, "");
 
     Expected<StringRef> NameOrErr = Obj->getSectionName(*SecOrErr);
     if (!NameOrErr)
