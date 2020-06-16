@@ -372,7 +372,7 @@ class AArch64PostLegalizerCombinerInfo : public CombinerInfo {
   MachineDominatorTree *MDT;
 
 public:
-  AArch64GenPostLegalizerCombinerHelper Generated;
+  AArch64GenPostLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
   AArch64PostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                    GISelKnownBits *KB,
@@ -380,7 +380,7 @@ public:
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!Generated.parseCommandLineOption())
+    if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -394,6 +394,7 @@ bool AArch64PostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   const auto *LI =
       MI.getParent()->getParent()->getSubtarget().getLegalizerInfo();
   CombinerHelper Helper(Observer, B, KB, MDT, LI);
+  AArch64GenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg);
   return Generated.tryCombineAll(Observer, MI, B, Helper);
 }
 
