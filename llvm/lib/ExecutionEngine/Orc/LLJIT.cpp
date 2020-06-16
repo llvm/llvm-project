@@ -52,7 +52,9 @@ Error LLJITBuilderState::prepareForConstruction() {
 
   // If the client didn't configure any linker options then auto-configure the
   // JIT linker.
-  if (!CreateObjectLinkingLayer) {
+  if (!CreateObjectLinkingLayer && JTMB->getCodeModel() == None &&
+      JTMB->getRelocationModel() == None) {
+
     auto &TT = JTMB->getTargetTriple();
     if (TT.isOSBinFormatMachO() &&
         (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64)) {
