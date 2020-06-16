@@ -512,6 +512,7 @@ class LineConsumer {
   StringRef Remaining;
 
 public:
+  LineConsumer() = default;
   LineConsumer(StringRef Filename) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(Filename);
@@ -615,11 +616,11 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   llvm::sort(Filenames);
 
   for (StringRef Filename : Filenames) {
-    auto AllLines = LineConsumer(Filename);
-
+    auto AllLines =
+        Options.Intermediate ? LineConsumer() : LineConsumer(Filename);
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
     std::unique_ptr<raw_ostream> CovStream;
-    if (Options.NoOutput)
+    if (Options.NoOutput || Options.Intermediate)
       CovStream = std::make_unique<raw_null_ostream>();
     else if (!Options.UseStdout)
       CovStream = openCoveragePath(CoveragePath);
@@ -721,6 +722,51 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     SourceInfo &source = sources[file.filenameToIdx.find(Filename)->second];
     source.name = CoveragePath;
     source.coverage = FileCoverage;
+  }
+
+  if (Options.Intermediate && !Options.NoOutput) {
+    // gcov 7.* unexpectedly create multiple .gcov files, which was fixed in 8.0
+    // (PR GCC/82702). We create just one file.
+    std::string outputPath(sys::path::filename(MainFilename));
+    std::error_code ec;
+    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_Text);
+    if (ec) {
+      errs() << ec.message() << "\n";
+      return;
+    }
+
+    for (const SourceInfo &source : sources) {
+      os << "file:" << source.filename << '\n';
+      for (const GCOVFunction *f : source.functions)
+        os << "function:" << f->startLine << ',' << f->getEntryCount() << ','
+           << f->Name << '\n';
+      const LineData &line = LineInfo[source.filename];
+      for (uint32_t lineNum = 0; lineNum != line.LastLine; ++lineNum) {
+        BlockLines::const_iterator blocksIt = line.Blocks.find(lineNum);
+        if (blocksIt == line.Blocks.end())
+          continue;
+        const BlockVector &blocks = blocksIt->second;
+        // GCC 8 (r254259) added third third field for Ada:
+        // lcount:<line>,<count>,<has_unexecuted_blocks>
+        // We don't need the third field.
+        os << "lcount:" << (lineNum + 1) << ','
+           << GCOVBlock::getLineCount(blocks) << '\n';
+
+        if (!Options.BranchInfo)
+          continue;
+        for (const GCOVBlock *block : blocks) {
+          if (block->getLastLine() != lineNum + 1 ||
+              block->getNumDstEdges() < 2)
+            continue;
+          for (const GCOVArc *arc : block->dsts()) {
+            const char *type = block->getCount()
+                                   ? arc->Count ? "taken" : "nottaken"
+                                   : "notexec";
+            os << "branch:" << (lineNum + 1) << ',' << type << '\n';
+          }
+        }
+      }
+    }
   }
 
   if (!Options.UseStdout) {
@@ -833,7 +879,7 @@ void FileInfo::printFileCoverage(raw_ostream &OS) const {
     const GCOVCoverage &Coverage = source.coverage;
     OS << "File '" << Coverage.Name << "'\n";
     printCoverage(OS, Coverage);
-    if (!Options.NoOutput)
+    if (!Options.NoOutput && !Options.Intermediate)
       OS << "Creating '" << source.name << "'\n";
     OS << "\n";
   }
