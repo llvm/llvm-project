@@ -9,12 +9,18 @@ stripped down variant.
 Example usage:
 $ generate-test-checks.py foo.mlir
 $ mlir-opt foo.mlir -transformation | generate-test-checks.py
+$ mlir-opt foo.mlir -transformation | generate-test-checks.py --source foo.mlir
+$ mlir-opt foo.mlir -transformation | generate-test-checks.py --source foo.mlir -i
+$ mlir-opt foo.mlir -transformation | generate-test-checks.py --source foo.mlir -i --source_delim_regex='gpu.func @'
 
-The script will heuristically insert CHECK/CHECK-LABEL commands for each line
+The script will heuristically generate CHECK/CHECK-LABEL commands for each line
 within the file. By default this script will also try to insert string
-substitution blocks for all SSA value names. The script is designed to make
-adding checks to a test case fast, it is *not* designed to be authoritative
-about what constitutes a good test!
+substitution blocks for all SSA value names. If --source file is specified, the
+script will attempt to insert the generated CHECKs to the source file by looking
+for line positions matched by --source_delim_regex.
+
+The script is designed to make adding checks to a test case fast, it is *not*
+designed to be authoritative about what constitutes a good test!
 """
 
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -56,9 +62,11 @@ class SSAVariableNamer:
   def pop_name_scope(self):
     self.scopes.pop()
 
+  # Return the level of nesting (number of pushed scopes).
   def num_scopes(self):
     return len(self.scopes)
 
+  # Reset the counter.
   def clear_counter(self):
     self.name_counter = 0
 
@@ -93,15 +101,19 @@ def process_line(line_chunks, variable_namer):
   return output_line.rstrip() + '\n'
 
 
+# Process the source file lines. The source file doesn't have to be .mlir.
 def process_source_lines(source_lines, note, args):
   source_split_re = re.compile(args.source_delim_regex)
 
   source_segments = [[]]
   for line in source_lines:
+    # Remove previous note.
     if line == note:
       continue
+    # Remove previous CHECK lines.
     if line.find(args.check_prefix) != -1:
       continue
+    # Segment the file based on --source_delim_regex.
     if source_split_re.search(line):
       source_segments.append([])
 
