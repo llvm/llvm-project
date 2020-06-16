@@ -281,15 +281,10 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
 }
 
 /// Replace pseudo store instructions that pass arguments through the stack with
-/// real instructions. If insertPushes is true then all instructions are
-/// replaced with push instructions, otherwise regular std instructions are
-/// inserted.
+/// real instructions.
 static void fixStackStores(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI,
-                           const TargetInstrInfo &TII, bool insertPushes) {
-  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-
+                           const TargetInstrInfo &TII, Register FP) {
   // Iterate through the BB until we hit a call instruction or we reach the end.
   for (auto I = MI, E = MBB.end(); I != E && !I->isCall();) {
     MachineBasicBlock::iterator NextMI = std::next(I);
@@ -304,29 +299,6 @@ static void fixStackStores(MachineBasicBlock &MBB,
 
     assert(MI.getOperand(0).getReg() == AVR::SP &&
            "Invalid register, should be SP!");
-    if (insertPushes) {
-      // Replace this instruction with a push.
-      Register SrcReg = MI.getOperand(2).getReg();
-      bool SrcIsKill = MI.getOperand(2).isKill();
-
-      // We can't use PUSHWRr here because when expanded the order of the new
-      // instructions are reversed from what we need. Perform the expansion now.
-      if (Opcode == AVR::STDWSPQRr) {
-        BuildMI(MBB, I, MI.getDebugLoc(), TII.get(AVR::PUSHRr))
-            .addReg(TRI.getSubReg(SrcReg, AVR::sub_hi),
-                    getKillRegState(SrcIsKill));
-        BuildMI(MBB, I, MI.getDebugLoc(), TII.get(AVR::PUSHRr))
-            .addReg(TRI.getSubReg(SrcReg, AVR::sub_lo),
-                    getKillRegState(SrcIsKill));
-      } else {
-        BuildMI(MBB, I, MI.getDebugLoc(), TII.get(AVR::PUSHRr))
-            .addReg(SrcReg, getKillRegState(SrcIsKill));
-      }
-
-      MI.eraseFromParent();
-      I = NextMI;
-      continue;
-    }
 
     // Replace this instruction with a regular store. Use Y as the base
     // pointer since it is guaranteed to contain a copy of SP.
@@ -334,7 +306,7 @@ static void fixStackStores(MachineBasicBlock &MBB,
         (Opcode == AVR::STDWSPQRr) ? AVR::STDWPtrQRr : AVR::STDPtrQRr;
 
     MI.setDesc(TII.get(STOpc));
-    MI.getOperand(0).setReg(AVR::R29R28);
+    MI.getOperand(0).setReg(FP);
 
     I = NextMI;
   }
@@ -350,7 +322,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   // function entry. Delete the call frame pseudo and replace all pseudo stores
   // with real store instructions.
   if (hasReservedCallFrame(MF)) {
-    fixStackStores(MBB, MI, TII, false);
+    fixStackStores(MBB, MI, TII, AVR::R29R28);
     return MBB.erase(MI);
   }
 
@@ -358,17 +330,36 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
   unsigned int Opcode = MI->getOpcode();
   int Amount = TII.getFrameSize(*MI);
 
-  // Adjcallstackup does not need to allocate stack space for the call, instead
-  // we insert push instructions that will allocate the necessary stack.
-  // For adjcallstackdown we convert it into an 'adiw reg, <amt>' handling
-  // the read and write of SP in I/O space.
+  // ADJCALLSTACKUP and ADJCALLSTACKDOWN are converted to adiw/subi
+  // instructions to read and write the stack pointer in I/O space.
   if (Amount != 0) {
     assert(getStackAlign() == Align(1) && "Unsupported stack alignment");
 
     if (Opcode == TII.getCallFrameSetupOpcode()) {
-      fixStackStores(MBB, MI, TII, true);
+      // Update the stack pointer.
+      // In many cases this can be done far more efficiently by pushing the
+      // relevant values directly to the stack. However, doing that correctly
+      // (in the right order, possibly skipping some empty space for undef
+      // values, etc) is tricky and thus left to be optimized in the future.
+      BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
+
+      MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
+                              .addReg(AVR::R31R30, RegState::Kill)
+                              .addImm(Amount);
+      New->getOperand(3).setIsDead();
+
+      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
+          .addReg(AVR::R31R30, RegState::Kill);
+
+      // Make sure the remaining stack stores are converted to real store
+      // instructions.
+      fixStackStores(MBB, MI, TII, AVR::R31R30);
     } else {
       assert(Opcode == TII.getCallFrameDestroyOpcode());
+
+      // Note that small stack changes could be implemented more efficiently
+      // with a few pop instructions instead of the 8-9 instructions now
+      // required.
 
       // Select the best opcode to adjust SP based on the offset size.
       unsigned addOpcode;
