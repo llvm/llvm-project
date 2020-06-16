@@ -37,6 +37,7 @@ STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
 STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarBO, "Number of scalar binops formed");
+STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
@@ -312,18 +313,31 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
   return true;
 }
 
-/// Match a vector binop instruction with inserted scalar operands and convert
-/// to scalar binop followed by insertelement.
-static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
+/// Match a vector binop or compare instruction with at least one inserted
+/// scalar operand and convert to scalar binop/cmp followed by insertelement.
+static bool scalarizeBinopOrCmp(Instruction &I,
+                                const TargetTransformInfo &TTI) {
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   Value *Ins0, *Ins1;
-  if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))))
+  if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
+      !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1))))
     return false;
+
+  // Do not convert the vector condition of a vector select into a scalar
+  // condition. That may cause problems for codegen because of differences in
+  // boolean formats and register-file transfers.
+  // TODO: Can we account for that in the cost model?
+  bool IsCmp = Pred != CmpInst::Predicate::BAD_ICMP_PREDICATE;
+  if (IsCmp)
+    for (User *U : I.users())
+      if (match(U, m_Select(m_Specific(&I), m_Value(), m_Value())))
+        return false;
 
   // Match against one or both scalar values being inserted into constant
   // vectors:
-  // vec_bo VecC0, (inselt VecC1, V1, Index)
-  // vec_bo (inselt VecC0, V0, Index), VecC1
-  // vec_bo (inselt VecC0, V0, Index), (inselt VecC1, V1, Index)
+  // vec_op VecC0, (inselt VecC1, V1, Index)
+  // vec_op (inselt VecC0, V0, Index), VecC1
+  // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index)
   // TODO: Deal with mismatched index constants and variable indexes?
   Constant *VecC0 = nullptr, *VecC1 = nullptr;
   Value *V0 = nullptr, *V1 = nullptr;
@@ -360,9 +374,15 @@ static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
          (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy()) &&
          "Unexpected types for insert into binop");
 
-  Instruction::BinaryOps Opcode = cast<BinaryOperator>(&I)->getOpcode();
-  int ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
-  int VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
+  unsigned Opcode = I.getOpcode();
+  int ScalarOpCost, VectorOpCost;
+  if (IsCmp) {
+    ScalarOpCost = TTI.getCmpSelInstrCost(Opcode, ScalarTy);
+    VectorOpCost = TTI.getCmpSelInstrCost(Opcode, VecTy);
+  } else {
+    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
+  }
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -378,18 +398,26 @@ static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
   if (OldCost < NewCost)
     return false;
 
-  // vec_bo (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
-  // inselt NewVecC, (scalar_bo V0, V1), Index
-  ++NumScalarBO;
-  IRBuilder<> Builder(&I);
+  // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
+  // inselt NewVecC, (scalar_op V0, V1), Index
+  if (IsCmp)
+    ++NumScalarCmp;
+  else
+    ++NumScalarBO;
 
   // For constant cases, extract the scalar element, this should constant fold.
+  IRBuilder<> Builder(&I);
   if (IsConst0)
     V0 = ConstantExpr::getExtractElement(VecC0, Builder.getInt64(Index));
   if (IsConst1)
     V1 = ConstantExpr::getExtractElement(VecC1, Builder.getInt64(Index));
 
-  Value *Scalar = Builder.CreateBinOp(Opcode, V0, V1, I.getName() + ".scalar");
+  Value *Scalar =
+      IsCmp ? Opcode == Instruction::FCmp ? Builder.CreateFCmp(Pred, V0, V1)
+                                          : Builder.CreateICmp(Pred, V0, V1)
+            : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, V0, V1);
+
+  Scalar->setName(I.getName() + ".scalar");
 
   // All IR flags are safe to back-propagate. There is no potential for extra
   // poison to be created by the scalar instruction.
@@ -397,7 +425,8 @@ static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
     ScalarInst->copyIRFlags(&I);
 
   // Fold the vector constants in the original vectors into a new base vector.
-  Constant *NewVecC = ConstantExpr::get(Opcode, VecC0, VecC1);
+  Constant *NewVecC = IsCmp ? ConstantExpr::getCompare(Pred, VecC0, VecC1)
+                            : ConstantExpr::get(Opcode, VecC0, VecC1);
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
   I.replaceAllUsesWith(Insert);
   Insert->takeName(&I);
@@ -425,7 +454,7 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
         continue;
       MadeChange |= foldExtractExtract(I, TTI);
       MadeChange |= foldBitcastShuf(I, TTI);
-      MadeChange |= scalarizeBinop(I, TTI);
+      MadeChange |= scalarizeBinopOrCmp(I, TTI);
     }
   }
 
