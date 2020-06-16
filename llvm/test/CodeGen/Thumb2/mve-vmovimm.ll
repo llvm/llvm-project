@@ -514,3 +514,75 @@ entry:
   %o = or <8 x i16> %i, <i16 -1, i16 0, i16 -1, i16 -1, i16 -1, i16 0, i16 -1, i16 -1>
   ret <8 x i16> %o
 }
+
+define arm_aapcs_vfpcc <4 x i32> @i1and_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECKLE-LABEL: i1and_vmov:
+; CHECKLE:       @ %bb.0: @ %entry
+; CHECKLE-NEXT:    cmp r0, #0
+; CHECKLE-NEXT:    mov.w r1, #15
+; CHECKLE-NEXT:    cset r0, eq
+; CHECKLE-NEXT:    and r0, r0, #1
+; CHECKLE-NEXT:    rsbs r0, r0, #0
+; CHECKLE-NEXT:    ands r0, r1
+; CHECKLE-NEXT:    vmsr p0, r0
+; CHECKLE-NEXT:    vpsel q0, q0, q1
+; CHECKLE-NEXT:    bx lr
+;
+; CHECKBE-LABEL: i1and_vmov:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    cmp r0, #0
+; CHECKBE-NEXT:    mov.w r1, #15
+; CHECKBE-NEXT:    cset r0, eq
+; CHECKBE-NEXT:    vrev64.32 q2, q1
+; CHECKBE-NEXT:    and r0, r0, #1
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    rsbs r0, r0, #0
+; CHECKBE-NEXT:    ands r0, r1
+; CHECKBE-NEXT:    vmsr p0, r0
+; CHECKBE-NEXT:    vpsel q1, q1, q2
+; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = icmp eq i32 %c, zeroinitializer
+  %broadcast.splatinsert1967 = insertelement <4 x i1> undef, i1 %c1, i32 0
+  %broadcast.splat1968 = shufflevector <4 x i1> %broadcast.splatinsert1967, <4 x i1> undef, <4 x i32> zeroinitializer
+  %l699 = and <4 x i1> %broadcast.splat1968, <i1 true, i1 false, i1 false, i1 false>
+  %s = select <4 x i1> %l699, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}
+
+define arm_aapcs_vfpcc <4 x i32> @i1or_vmov(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECKLE-LABEL: i1or_vmov:
+; CHECKLE:       @ %bb.0: @ %entry
+; CHECKLE-NEXT:    cmp r0, #0
+; CHECKLE-NEXT:    mov.w r1, #15
+; CHECKLE-NEXT:    cset r0, eq
+; CHECKLE-NEXT:    and r0, r0, #1
+; CHECKLE-NEXT:    rsbs r0, r0, #0
+; CHECKLE-NEXT:    orrs r0, r1
+; CHECKLE-NEXT:    vmsr p0, r0
+; CHECKLE-NEXT:    vpsel q0, q0, q1
+; CHECKLE-NEXT:    bx lr
+;
+; CHECKBE-LABEL: i1or_vmov:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    cmp r0, #0
+; CHECKBE-NEXT:    mov.w r1, #15
+; CHECKBE-NEXT:    cset r0, eq
+; CHECKBE-NEXT:    vrev64.32 q2, q1
+; CHECKBE-NEXT:    and r0, r0, #1
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    rsbs r0, r0, #0
+; CHECKBE-NEXT:    orrs r0, r1
+; CHECKBE-NEXT:    vmsr p0, r0
+; CHECKBE-NEXT:    vpsel q1, q1, q2
+; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %c1 = icmp eq i32 %c, zeroinitializer
+  %broadcast.splatinsert1967 = insertelement <4 x i1> undef, i1 %c1, i32 0
+  %broadcast.splat1968 = shufflevector <4 x i1> %broadcast.splatinsert1967, <4 x i1> undef, <4 x i32> zeroinitializer
+  %l699 = or <4 x i1> %broadcast.splat1968, <i1 true, i1 false, i1 false, i1 false>
+  %s = select <4 x i1> %l699, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %s
+}
