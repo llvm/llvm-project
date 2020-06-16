@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
 
 ; Make sure the promoted trunc doesn't get a debug location associated.
 ; CHECK: %promoted = trunc i32 %or to i16
