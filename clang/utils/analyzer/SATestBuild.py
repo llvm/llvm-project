@@ -44,9 +44,9 @@ variable. It should contain a comma separated list.
 """
 import CmpRuns
 import SATestUtils
+from ProjectMap import ProjectInfo, ProjectMap
 
 import argparse
-import csv
 import glob
 import logging
 import math
@@ -59,9 +59,11 @@ import threading
 import time
 
 from queue import Queue
+# mypy has problems finding InvalidFileException in the module
+# and this is we can shush that false positive
+from plistlib import InvalidFileException  # type:ignore
 from subprocess import CalledProcessError, check_call
-from typing import (cast, Dict, Iterable, IO, List, NamedTuple, Optional,
-                    Tuple, TYPE_CHECKING)
+from typing import Dict, IO, List, NamedTuple, Optional, TYPE_CHECKING
 
 
 ###############################################################################
@@ -104,9 +106,6 @@ CLANG = cc_candidate
 
 # Number of jobs.
 MAX_JOBS = int(math.ceil(multiprocessing.cpu_count() * 0.75))
-
-# Project map stores info about all the "registered" projects.
-PROJECT_MAP_FILE = "projectMap.csv"
 
 # Names of the project specific scripts.
 # The script that downloads the project.
@@ -187,18 +186,6 @@ class StreamToLogger:
 ###############################################################################
 
 
-def get_project_map_path(should_exist: bool = True) -> str:
-    project_map_path = os.path.join(os.path.abspath(os.curdir),
-                                    PROJECT_MAP_FILE)
-
-    if should_exist and not os.path.exists(project_map_path):
-        stderr(f"Error: Cannot find the project map file {project_map_path}"
-               f"\nRunning script for the wrong directory?\n")
-        sys.exit(1)
-
-    return project_map_path
-
-
 def run_cleanup_script(directory: str, build_log_file: IO):
     """
     Run pre-processing script if any.
@@ -268,12 +255,11 @@ def apply_patch(directory: str, build_log_file: IO):
         sys.exit(1)
 
 
-class ProjectInfo(NamedTuple):
+class TestInfo(NamedTuple):
     """
     Information about a project and settings for its analysis.
     """
-    name: str
-    build_mode: int
+    project: ProjectInfo
     override_compiler: bool = False
     extra_analyzer_config: str = ""
     is_reference_build: bool = False
@@ -287,9 +273,9 @@ class ProjectInfo(NamedTuple):
 # It is a common workaround for this situation:
 # https://mypy.readthedocs.io/en/stable/common_issues.html#using-classes-that-are-generic-in-stubs-but-not-at-runtime
 if TYPE_CHECKING:
-    ProjectQueue = Queue[ProjectInfo]  # this is only processed by mypy
+    TestQueue = Queue[TestInfo]  # this is only processed by mypy
 else:
-    ProjectQueue = Queue  # this will be executed at runtime
+    TestQueue = Queue  # this will be executed at runtime
 
 
 class RegressionTester:
@@ -306,25 +292,24 @@ class RegressionTester:
         self.strictness = strictness
 
     def test_all(self) -> bool:
-        projects_to_test: List[ProjectInfo] = []
+        projects_to_test: List[TestInfo] = []
 
-        with open(get_project_map_path(), "r") as map_file:
-            validate_project_file(map_file)
+        project_map = ProjectMap()
 
-            # Test the projects.
-            for proj_name, proj_build_mode in get_projects(map_file):
-                projects_to_test.append(
-                    ProjectInfo(proj_name, int(proj_build_mode),
-                                self.override_compiler,
-                                self.extra_analyzer_config,
-                                self.regenerate, self.strictness))
+        # Test the projects.
+        for project in project_map.projects:
+            projects_to_test.append(
+                TestInfo(project,
+                         self.override_compiler,
+                         self.extra_analyzer_config,
+                         self.regenerate, self.strictness))
         if self.jobs <= 1:
             return self._single_threaded_test_all(projects_to_test)
         else:
             return self._multi_threaded_test_all(projects_to_test)
 
     def _single_threaded_test_all(self,
-                                  projects_to_test: List[ProjectInfo]) -> bool:
+                                  projects_to_test: List[TestInfo]) -> bool:
         """
         Run all projects.
         :return: whether tests have passed.
@@ -336,7 +321,7 @@ class RegressionTester:
         return success
 
     def _multi_threaded_test_all(self,
-                                 projects_to_test: List[ProjectInfo]) -> bool:
+                                 projects_to_test: List[TestInfo]) -> bool:
         """
         Run each project in a separate thread.
 
@@ -345,7 +330,7 @@ class RegressionTester:
 
         :return: whether tests have passed.
         """
-        tasks_queue = ProjectQueue()
+        tasks_queue = TestQueue()
 
         for project_info in projects_to_test:
             tasks_queue.put(project_info)
@@ -370,13 +355,12 @@ class ProjectTester:
     """
     A component aggregating testing for one project.
     """
-    def __init__(self, project_info: ProjectInfo):
-        self.project_name = project_info.name
-        self.build_mode = project_info.build_mode
-        self.override_compiler = project_info.override_compiler
-        self.extra_analyzer_config = project_info.extra_analyzer_config
-        self.is_reference_build = project_info.is_reference_build
-        self.strictness = project_info.strictness
+    def __init__(self, test_info: TestInfo):
+        self.project = test_info.project
+        self.override_compiler = test_info.override_compiler
+        self.extra_analyzer_config = test_info.extra_analyzer_config
+        self.is_reference_build = test_info.is_reference_build
+        self.strictness = test_info.strictness
 
     def test(self) -> bool:
         """
@@ -384,7 +368,11 @@ class ProjectTester:
         :return tests_passed: Whether tests have passed according
         to the :param strictness: criteria.
         """
-        stdout(f" \n\n--- Building project {self.project_name}\n")
+        if not self.project.enabled:
+            stdout(f" \n\n--- Skipping disabled project {self.project.name}\n")
+            return True
+
+        stdout(f" \n\n--- Building project {self.project.name}\n")
 
         start_time = time.time()
 
@@ -405,13 +393,13 @@ class ProjectTester:
         else:
             passed = run_cmp_results(project_dir, self.strictness)
 
-        stdout(f"Completed tests for project {self.project_name} "
+        stdout(f"Completed tests for project {self.project.name} "
                f"(time: {time.time() - start_time:.2f}).\n")
 
         return passed
 
     def get_project_dir(self) -> str:
-        return os.path.join(os.path.abspath(os.curdir), self.project_name)
+        return os.path.join(os.path.abspath(os.curdir), self.project.name)
 
     def get_output_dir(self) -> str:
         if self.is_reference_build:
@@ -441,7 +429,7 @@ class ProjectTester:
 
         # Build and analyze the project.
         with open(build_log_path, "w+") as build_log_file:
-            if self.build_mode == 1:
+            if self.project.mode == 1:
                 download_and_patch(directory, build_log_file)
                 run_cleanup_script(directory, build_log_file)
                 self.scan_build(directory, output_dir, build_log_file)
@@ -451,7 +439,7 @@ class ProjectTester:
             if self.is_reference_build:
                 run_cleanup_script(directory, build_log_file)
                 normalize_reference_results(directory, output_dir,
-                                            self.build_mode)
+                                            self.project.mode)
 
         stdout(f"Build complete (time: {time.time() - time_start:.2f}). "
                f"See the log for more details: {build_log_path}\n")
@@ -549,7 +537,7 @@ class ProjectTester:
         prefix += " -Xclang -analyzer-config "
         prefix += f"-Xclang {self.generate_config()} "
 
-        if self.build_mode == 2:
+        if self.project.mode == 2:
             prefix += "-std=c++11 "
 
         plist_path = os.path.join(directory, output_dir, "date")
@@ -601,7 +589,7 @@ class ProjectTester:
 
 
 class TestProjectThread(threading.Thread):
-    def __init__(self, tasks_queue: ProjectQueue,
+    def __init__(self, tasks_queue: TestQueue,
                  results_differ: threading.Event,
                  failure_flag: threading.Event):
         """
@@ -621,13 +609,13 @@ class TestProjectThread(threading.Thread):
     def run(self):
         while not self.tasks_queue.empty():
             try:
-                project_info = self.tasks_queue.get()
+                test_info = self.tasks_queue.get()
 
-                Logger = logging.getLogger(project_info.name)
+                Logger = logging.getLogger(test_info.project.name)
                 LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
                 LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
 
-                tester = ProjectTester(project_info)
+                tester = ProjectTester(test_info)
                 if not tester.test():
                     self.results_differ.set()
 
@@ -841,7 +829,7 @@ def clean_up_empty_plists(output_dir: str):
                 os.remove(plist)
                 continue
 
-        except plistlib.InvalidFileException as e:
+        except InvalidFileException as e:
             stderr(f"Error parsing plist file {plist}: {str(e)}")
             continue
 
@@ -854,36 +842,6 @@ def clean_up_empty_folders(output_dir: str):
     for subdir in subdirs:
         if not os.listdir(subdir):
             os.removedirs(subdir)
-
-
-def get_projects(map_file: IO) -> Iterable[Tuple[str, str]]:
-    """
-    Iterate over all projects defined in the project file handler `map_file`
-    from the start.
-    """
-    map_file.seek(0)
-    # TODO: csv format is not very readable, change it to JSON
-    for project_info in csv.reader(map_file):
-        if SATestUtils.is_comment_csv_line(project_info):
-            continue
-        # suppress mypy error
-        yield cast(Tuple[str, str], project_info)
-
-
-def validate_project_file(map_file: IO):
-    """
-    Validate project file.
-    """
-    for project_info in get_projects(map_file):
-        if len(project_info) != 2:
-            stderr("Error: Rows in the project map file "
-                   "should have 2 entries.")
-            raise Exception()
-
-        if project_info[1] not in ('0', '1', '2'):
-            stderr("Error: Second entry in the project map file should be 0"
-                   " (single file), 1 (project), or 2(single file c++11).")
-            raise Exception()
 
 
 if __name__ == "__main__":

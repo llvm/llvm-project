@@ -43,12 +43,10 @@ the Repository Directory.
                                               > changes_for_analyzer.patch
 """
 import SATestBuild
+from ProjectMap import ProjectMap, ProjectInfo
 
-import csv
 import os
 import sys
-
-from typing import IO
 
 
 def add_new_project(name: str, build_mode: int):
@@ -57,9 +55,10 @@ def add_new_project(name: str, build_mode: int):
     :param name: is a short string used to identify a project.
     """
 
-    project_info = SATestBuild.ProjectInfo(name, build_mode,
-                                           is_reference_build=True)
-    tester = SATestBuild.ProjectTester(project_info)
+    project_info = ProjectInfo(name, build_mode)
+    test_info = SATestBuild.TestInfo(project_info,
+                                     is_reference_build=True)
+    tester = SATestBuild.ProjectTester(test_info)
 
     project_dir = tester.get_project_dir()
     if not os.path.exists(project_dir):
@@ -70,33 +69,20 @@ def add_new_project(name: str, build_mode: int):
     tester.test()
 
     # Add the project name to the project map.
-    project_map_path = SATestBuild.get_project_map_path(should_exist=False)
+    project_map = ProjectMap(should_exist=False)
 
-    if os.path.exists(project_map_path):
-        file_mode = "r+"
+    if is_existing_project(project_map, name):
+        print(f"Warning: Project with name '{name}' already exists.",
+              file=sys.stdout)
+        print("Reference output has been regenerated.", file=sys.stdout)
     else:
-        print("Warning: Creating the project map file!")
-        file_mode = "w+"
-
-    with open(project_map_path, file_mode) as map_file:
-        if is_existing_project(map_file, name):
-            print(f"Warning: Project with name '{name}' already exists.",
-                  file=sys.stdout)
-            print("Reference output has been regenerated.", file=sys.stdout)
-        else:
-            map_writer = csv.writer(map_file)
-            map_writer.writerow((name, build_mode))
-            print(f"The project map is updated: {project_map_path}")
+        project_map.projects.append(project_info)
+        project_map.save()
 
 
-def is_existing_project(map_file: IO, project_name: str) -> bool:
-    map_reader = csv.reader(map_file)
-
-    for raw_info in map_reader:
-        if project_name == raw_info[0]:
-            return True
-
-    return False
+def is_existing_project(project_map: ProjectMap, project_name: str) -> bool:
+    return any(existing_project.name == project_name
+               for existing_project in project_map.projects)
 
 
 # TODO: Use argparse
