@@ -3261,34 +3261,9 @@ void CodeGenFunction::EmitOMPForSimdDirective(const OMPForSimdDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, &HasLastprivates](CodeGenFunction &CGF,
                                           PrePostActionTy &) {
-    if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
-                     [](const OMPReductionClause *C) {
-                       return C->getModifier() == OMPC_REDUCTION_inscan;
-                     })) {
-      const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
-        OMPLocalDeclMapRAII Scope(CGF);
-        OMPLoopScope LoopScope(CGF, S);
-        return CGF.EmitScalarExpr(S.getNumIterations());
-      };
-      const auto &&FirstGen = [&S](CodeGenFunction &CGF) {
-        (void)CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                         emitForLoopBounds,
-                                         emitDispatchForLoopBounds);
-        // Emit an implicit barrier at the end.
-        CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
-                                                   OMPD_for);
-      };
-      const auto &&SecondGen = [&S, &HasLastprivates](CodeGenFunction &CGF) {
-        HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                     emitForLoopBounds,
-                                                     emitDispatchForLoopBounds);
-      };
-      emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
-    } else {
-      HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
-                                                   emitForLoopBounds,
-                                                   emitDispatchForLoopBounds);
-    }
+    HasLastprivates = CGF.EmitOMPWorksharingLoop(S, S.getEnsureUpperBound(),
+                                                 emitForLoopBounds,
+                                                 emitDispatchForLoopBounds);
   };
   {
     auto LPCRegion =
