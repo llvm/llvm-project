@@ -1617,8 +1617,9 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
 bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
   if (!MOP.isReg())
     return false;
-  int64_t Cst;
-  return mi_match(MOP.getReg(), MRI, m_ICst(Cst)) && Cst == C;
+  // MIPatternMatch doesn't let us look through G_ZEXT etc.
+  auto ValAndVReg = getConstantVRegValWithLookThrough(MOP.getReg(), MRI);
+  return ValAndVReg && ValAndVReg->Value == C;
 }
 
 bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
