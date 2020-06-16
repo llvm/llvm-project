@@ -11,11 +11,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSourceFile.h"
 
 #include <memory>
 #include <vector>
@@ -50,6 +53,10 @@ class SymbolCache {
   /// appear in the PDB file.
   std::vector<SymIndexId> Compilands;
 
+  /// List of source files, indexed by unique source file index.
+  mutable std::vector<std::unique_ptr<NativeSourceFile>> SourceFiles;
+  mutable DenseMap<uint32_t, SymIndexId> FileNameOffsetToId;
+
   /// Map from global symbol offset to SymIndexId.
   DenseMap<uint32_t, SymIndexId> GlobalOffsetToSymbolId;
 
@@ -62,6 +69,18 @@ class SymbolCache {
       IntervalMap<uint64_t, uint16_t, 8, IntervalMapHalfOpenInfo<uint64_t>>;
   IMap::Allocator IMapAllocator;
   IMap AddrToModuleIndex;
+
+  Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
+
+  struct LineTableEntry {
+    uint64_t Addr;
+    codeview::LineInfo Line;
+    uint32_t FileNameIndex;
+    bool IsTerminalEntry;
+  };
+
+  std::vector<LineTableEntry> findLineTable(uint16_t Modi) const;
+  mutable DenseMap<uint16_t, std::vector<LineTableEntry>> LineTable;
 
   SymIndexId createSymbolPlaceholder() {
     SymIndexId Id = Cache.size();
@@ -93,10 +112,6 @@ class SymbolCache {
                                                             uint32_t Offset);
   std::unique_ptr<PDBSymbol> findPublicSymbolBySectOffset(uint32_t Sect,
                                                           uint32_t Offset);
-
-  void parseSectionContribs();
-  Optional<uint16_t> getModuleIndexForAddr(uint32_t Sect,
-                                           uint32_t Offset) const;
 
 public:
   SymbolCache(NativeSession &Session, DbiStream *Dbi);
@@ -151,6 +166,9 @@ public:
   std::unique_ptr<PDBSymbol>
   findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type);
 
+  std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbersByVA(uint64_t VA, uint32_t Length) const;
+
   std::unique_ptr<PDBSymbolCompiland> getOrCreateCompiland(uint32_t Index);
   uint32_t getNumCompilands() const;
 
@@ -162,6 +180,13 @@ public:
   ConcreteT &getNativeSymbolById(SymIndexId SymbolId) const {
     return static_cast<ConcreteT &>(getNativeSymbolById(SymbolId));
   }
+
+  std::unique_ptr<IPDBSourceFile> getSourceFileById(SymIndexId FileId) const;
+  SymIndexId
+  getOrCreateSourceFile(const codeview::FileChecksumEntry &Checksum) const;
+
+  void parseSectionContribs();
+  Optional<uint16_t> getModuleIndexForAddr(uint64_t Addr) const;
 };
 
 } // namespace pdb

@@ -52,12 +52,15 @@ add_pdb_impl_folder(Native
   Native/NativeCompilandSymbol.cpp
   Native/NativeEnumGlobals.cpp
   Native/NativeEnumInjectedSources.cpp
+  Native/NativeEnumLineNumbers.cpp
   Native/NativeEnumModules.cpp
   Native/NativeEnumTypes.cpp
   Native/NativeExeSymbol.cpp
   Native/NativeFunctionSymbol.cpp
+  Native/NativeLineNumber.cpp
   Native/NativePublicSymbol.cpp
   Native/NativeRawSymbol.cpp
+  Native/NativeSourceFile.cpp
   Native/NativeSymbolEnumerator.cpp
   Native/NativeTypeArray.cpp
   Native/NativeTypeBuiltin.cpp
