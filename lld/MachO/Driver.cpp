@@ -389,14 +389,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   if (!orderFile.empty())
     parseOrderFile(orderFile);
 
-  // dyld requires us to load libSystem. Since we may run tests on non-OSX
-  // systems which do not have libSystem, we mock it out here.
-  // TODO: Replace this with a stub tbd file once we have TAPI support.
-  if (StringRef(getenv("LLD_IN_TEST")) == "1" &&
-      config->outputType == MH_EXECUTE) {
-    inputFiles.push_back(DylibFile::createLibSystemMock());
-  }
-
   if (config->outputType == MH_EXECUTE && !isa<Defined>(config->entry)) {
     error("undefined symbol: " + config->entry->getName());
     return false;
