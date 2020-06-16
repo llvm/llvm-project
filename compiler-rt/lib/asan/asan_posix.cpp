@@ -17,6 +17,7 @@
 #include "asan_internal.h"
 #include "asan_interceptors.h"
 #include "asan_mapping.h"
+#include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -24,6 +25,7 @@
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -37,7 +39,31 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ReportDeadlySignal(sig);
 }
 
-bool PlatformUnpoisonStacks() { return false; }
+bool PlatformUnpoisonStacks() {
+  stack_t signal_stack;
+  CHECK_EQ(0, sigaltstack(nullptr, &signal_stack));
+  uptr sigalt_bottom = (uptr)signal_stack.ss_sp;
+  uptr sigalt_top = (uptr)((char *)signal_stack.ss_sp + signal_stack.ss_size);
+  // If we're executing on the signal alternate stack AND the Linux flag
+  // SS_AUTODISARM was used, then we cannot get the signal alternate stack
+  // bounds from sigaltstack -- sigaltstack's output looks just as if no
+  // alternate stack has ever been set up.
+  // We're always unpoisoning the signal alternate stack to support jumping
+  // between the default stack and signal alternate stack.
+  if (signal_stack.ss_flags != SS_DISABLE)
+    UnpoisonStack(sigalt_bottom, sigalt_top, "sigalt");
+
+  if (signal_stack.ss_flags != SS_ONSTACK)
+    return false;
+
+  // Since we're on the signal altnerate stack, we cannot find the DEFAULT
+  // stack bottom using a local variable.
+  uptr default_bottom, tls_addr, tls_size, stack_size;
+  GetThreadStackAndTls(/*main=*/false, &default_bottom, &stack_size, &tls_addr,
+                       &tls_size);
+  UnpoisonStack(default_bottom, default_bottom + stack_size, "default");
+  return true;
+}
 
 // ---------------------- TSD ---------------- {{{1
 
