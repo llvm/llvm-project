@@ -444,24 +444,76 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
     EXPECT_EQ(SkippedFiles[I].kind(), tok::header_name);
   }
 
+  TU.AdditionalFiles["a.h"] = "";
+  TU.AdditionalFiles["b.h"] = "";
+  TU.AdditionalFiles["c.h"] = "";
   // Make sure replay logic works with patched preambles.
-  TU.Code = "";
-  StoreDiags Diags;
+  llvm::StringLiteral Baseline = R"cpp(
+    #include "a.h"
+    #include "c.h")cpp";
   MockFSProvider FS;
+  TU.Code = Baseline.str();
   auto Inputs = TU.inputs(FS);
-  auto CI = buildCompilerInvocation(Inputs, Diags);
-  auto EmptyPreamble =
-      buildPreamble(testPath(TU.Filename), *CI, Inputs, true, nullptr);
-  ASSERT_TRUE(EmptyPreamble);
-  TU.Code = "#include <a.h>";
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  // First make sure we don't crash on various modifications to the preamble.
+  llvm::StringLiteral Cases[] = {
+      // clang-format off
+      // New include in middle.
+      R"cpp(
+        #include "a.h"
+        #include "b.h"
+        #include "c.h")cpp",
+      // New include at top.
+      R"cpp(
+        #include "b.h"
+        #include "a.h"
+        #include "c.h")cpp",
+      // New include at bottom.
+      R"cpp(
+        #include "a.h"
+        #include "c.h"
+        #include "b.h")cpp",
+      // Same size with a missing include.
+      R"cpp(
+        #include "a.h"
+        #include "b.h")cpp",
+      // Smaller with no new includes.
+      R"cpp(
+        #include "a.h")cpp",
+      // Smaller with a new includes.
+      R"cpp(
+        #include "b.h")cpp",
+      // clang-format on
+  };
+  for (llvm::StringLiteral Case : Cases) {
+    TU.Code = Case.str();
+
+    IgnoreDiagnostics Diags;
+    auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
+    auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
+                                       std::move(CI), {}, BaselinePreamble);
+    ASSERT_TRUE(PatchedAST);
+    EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
+  }
+
+  // Then ensure correctness by making sure includes were seen only once.
+  // Note that we first see the includes from the patch, as preamble includes
+  // are replayed after exiting the built-in file.
   Includes.clear();
+  TU.Code = R"cpp(
+    #include "a.h"
+    #include "b.h")cpp";
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
-                                     std::move(CI), {}, EmptyPreamble);
+                                     std::move(CI), {}, BaselinePreamble);
   ASSERT_TRUE(PatchedAST);
-  // Make sure includes were seen only once.
+  EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
   EXPECT_THAT(Includes,
               ElementsAre(WithFileName(testPath("__preamble_patch__.h")),
-                          WithFileName("a.h")));
+                          WithFileName("b.h"), WithFileName("a.h")));
 }
 
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {
