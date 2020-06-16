@@ -292,8 +292,13 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 let isCommutable = 1 in {
 
 let mayRaiseFPException = 0 in {
+let SubtargetPredicate = HasMadMacF32Insts in {
 def V_MAD_LEGACY_F32 : VOP3Inst <"v_mad_legacy_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
 def V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, fmad>;
+} // End SubtargetPredicate = HasMadMacInsts
+
+let SubtargetPredicate = HasNoMadMacF32Insts in
+def V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
 }
 
 def V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
@@ -1019,6 +1024,10 @@ defm V_MQSAD_PK_U16_U8 : VOP3_Real_gfx6_gfx7_gfx10<0x173>;
 defm V_TRIG_PREOP_F64  : VOP3_Real_gfx6_gfx7_gfx10<0x174>;
 defm V_DIV_SCALE_F32   : VOP3be_Real_gfx6_gfx7_gfx10<0x16d>;
 defm V_DIV_SCALE_F64   : VOP3be_Real_gfx6_gfx7_gfx10<0x16e>;
+
+// NB: Same opcode as v_mad_legacy_f32
+let DecoderNamespace = "GFX10_B" in
+defm V_FMA_LEGACY_F32  : VOP3_Real_gfx10<0x140>;
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).

@@ -56,7 +56,7 @@ struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    gpu::ShuffleOpOperandAdaptor adaptor(operands);
+    gpu::ShuffleOpAdaptor adaptor(operands);
 
     auto dialect = typeConverter.getDialect();
     auto valueTy = adaptor.value().getType().cast<LLVM::LLVMType>();

@@ -28,6 +28,7 @@ def SIEncodingFamily {
   int GFX9 = 5;
   int GFX10 = 6;
   int SDWA10 = 7;
+  int GFX10_B = 8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -51,6 +52,10 @@ def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
 >;
 
 def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIatomic_csub : SDNode<"AMDGPUISD::ATOMIC_LOAD_CSUB", SDTAtomic2,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
@@ -197,6 +202,7 @@ def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
 def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
 def SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
 def SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
+def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
 def SIbuffer_atomic_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_FADD", f32>;
 def SIbuffer_atomic_pk_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_PK_FADD", v2f16>;
 
@@ -304,6 +310,10 @@ class isPackedType<ValueType SrcVT> {
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
+
+let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_global").AddrSpaces in {
+defm atomic_csub_global : binary_atomic_op<SIatomic_csub>;
+}
 
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
@@ -658,6 +668,7 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
 
 defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
+defm atomic_load_csub : SIAtomicM0Glue2 <"LOAD_CSUB", 1>;
 defm atomic_inc : SIAtomicM0Glue2 <"INC", 1>;
 defm atomic_dec : SIAtomicM0Glue2 <"DEC", 1>;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
@@ -1374,6 +1385,7 @@ def HWREG {
   int FLAT_SCR_HI = 21;
   int XNACK_MASK = 22;
   int POPS_PACKER = 25;
+  int SHADER_CYCLES = 29;
 }
 
 class getHwRegImm<int Reg, int Offset = 0, int Size = 32> {

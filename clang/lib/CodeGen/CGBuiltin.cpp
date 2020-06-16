@@ -589,7 +589,9 @@ static WidthAndSignedness
 getIntegerWidthAndSignedness(const clang::ASTContext &context,
                              const clang::QualType Type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
-  unsigned Width = Type->isBooleanType() ? 1 : context.getTypeInfo(Type).Width;
+  unsigned Width = Type->isBooleanType()  ? 1
+                   : Type->isExtIntType() ? context.getIntWidth(Type)
+                                          : context.getTypeInfo(Type).Width;
   bool Signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
@@ -8039,6 +8041,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isGatherPrefetch())
     return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isUndef())
+    return UndefValue::get(Ty);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);

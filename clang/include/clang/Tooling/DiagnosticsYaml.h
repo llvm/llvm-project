@@ -77,7 +77,6 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
 
     std::string DiagnosticName;
     clang::tooling::DiagnosticMessage Message;
-    llvm::StringMap<clang::tooling::Replacements> Fix;
     SmallVector<clang::tooling::DiagnosticMessage, 1> Notes;
     clang::tooling::Diagnostic::Level DiagLevel;
     std::string BuildDirectory;
@@ -90,9 +89,9 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
     Io.mapRequired("DiagnosticName", Keys->DiagnosticName);
     Io.mapRequired("DiagnosticMessage", Keys->Message);
     Io.mapOptional("Notes", Keys->Notes);
+    Io.mapOptional("Level", Keys->DiagLevel);
+    Io.mapOptional("BuildDirectory", Keys->BuildDirectory);
     Io.mapOptional("Ranges", Keys->Ranges);
-
-    // FIXME: Export properly all the different fields.
   }
 };
 
@@ -104,6 +103,14 @@ template <> struct MappingTraits<clang::tooling::TranslationUnitDiagnostics> {
     Io.mapRequired("Diagnostics", Doc.Diagnostics);
   }
 };
+
+template <> struct ScalarEnumerationTraits<clang::tooling::Diagnostic::Level> {
+  static void enumeration(IO &IO, clang::tooling::Diagnostic::Level &Value) {
+    IO.enumCase(Value, "Warning", clang::tooling::Diagnostic::Warning);
+    IO.enumCase(Value, "Error", clang::tooling::Diagnostic::Error);
+  }
+};
+
 } // end namespace yaml
 } // end namespace llvm
 

@@ -23,9 +23,23 @@ class FunctionDecl;
 class CXXMethodDecl;
 class Expr;
 
+/// This function de-facto defines a set of transformations that we consider
+/// safe (in heuristical sense). These transformation if passed a safe value as
+/// an input should provide a safe value (or an object that provides safe
+/// values).
+///
+/// For more context see Static Analyzer checkers documentation - specifically
+/// webkit.UncountedCallArgsChecker checker. Whitelist of transformations:
+/// - constructors of ref-counted types (including factory methods)
+/// - getters of ref-counted types
+/// - member overloaded operators
+/// - casts
+/// - unary operators like ``&`` or ``*``
+///
 /// If passed expression is of type uncounted pointer/reference we try to find
-/// the origin of this pointer. Example: Origin can be a local variable, nullptr
-/// constant or this-pointer.
+/// the "origin" of the pointer value.
+/// Origin can be for example a local variable, nullptr, constant or
+/// this-pointer.
 ///
 /// Certain subexpression nodes represent transformations that don't affect
 /// where the memory address originates from. We try to traverse such

@@ -218,26 +218,26 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   // do for now.
   open_flags |= O_CLOEXEC;
 #endif
-  if (!m_pty->OpenFirstAvailableMaster(open_flags, nullptr, 0)) {
+  if (!m_pty->OpenFirstAvailablePrimary(open_flags, nullptr, 0)) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "PTY::OpenFirstAvailableMaster failed");
+                                   "PTY::OpenFirstAvailablePrimary failed");
   }
-  const FileSpec slave_file_spec(m_pty->GetSlaveName(nullptr, 0));
+  const FileSpec secondary_file_spec(m_pty->GetSecondaryName(nullptr, 0));
 
-  // Only use the slave tty if we don't have anything specified for
+  // Only use the secondary tty if we don't have anything specified for
   // input and don't have an action for stdin
   if (GetFileActionForFD(STDIN_FILENO) == nullptr)
-    AppendOpenFileAction(STDIN_FILENO, slave_file_spec, true, false);
+    AppendOpenFileAction(STDIN_FILENO, secondary_file_spec, true, false);
 
-  // Only use the slave tty if we don't have anything specified for
+  // Only use the secondary tty if we don't have anything specified for
   // output and don't have an action for stdout
   if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
-    AppendOpenFileAction(STDOUT_FILENO, slave_file_spec, false, true);
+    AppendOpenFileAction(STDOUT_FILENO, secondary_file_spec, false, true);
 
-  // Only use the slave tty if we don't have anything specified for
+  // Only use the secondary tty if we don't have anything specified for
   // error and don't have an action for stderr
   if (GetFileActionForFD(STDERR_FILENO) == nullptr)
-    AppendOpenFileAction(STDERR_FILENO, slave_file_spec, false, true);
+    AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
 }
 

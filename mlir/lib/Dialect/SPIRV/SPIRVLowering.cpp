@@ -657,10 +657,9 @@ spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetAttr) {
       new SPIRVConversionTarget(targetAttr));
   SPIRVConversionTarget *targetPtr = target.get();
   target->addDynamicallyLegalDialect<SPIRVDialect>(
-      Optional<ConversionTarget::DynamicLegalityCallbackFn>(
-          // We need to capture the raw pointer here because it is stable:
-          // target will be destroyed once this function is returned.
-          [targetPtr](Operation *op) { return targetPtr->isLegalOp(op); }));
+      // We need to capture the raw pointer here because it is stable:
+      // target will be destroyed once this function is returned.
+      [targetPtr](Operation *op) { return targetPtr->isLegalOp(op); });
   return target;
 }
 

@@ -615,7 +615,6 @@ private:
 
   lldb::ThreadPlanTracerSP m_tracer_sp;
 
-private:
   ThreadPlan(const ThreadPlan &) = delete;
   const ThreadPlan &operator=(const ThreadPlan &) = delete;
 };

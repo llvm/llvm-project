@@ -936,6 +936,11 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
   // Extend the byte value to the larger type, and then multiply by a magic
   // value 0x010101... in order to replicate it across every byte.
+  // Unless it's zero, in which case just emit a larger G_CONSTANT 0.
+  if (ValVRegAndVal && ValVRegAndVal->Value == 0) {
+    return MIB.buildConstant(Ty, 0).getReg(0);
+  }
+
   LLT ExtType = Ty.getScalarType();
   auto ZExt = MIB.buildZExtOrTrunc(ExtType, Val);
   if (NumBits > 8) {
@@ -1612,8 +1617,9 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
 bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
   if (!MOP.isReg())
     return false;
-  int64_t Cst;
-  return mi_match(MOP.getReg(), MRI, m_ICst(Cst)) && Cst == C;
+  // MIPatternMatch doesn't let us look through G_ZEXT etc.
+  auto ValAndVReg = getConstantVRegValWithLookThrough(MOP.getReg(), MRI);
+  return ValAndVReg && ValAndVReg->Value == C;
 }
 
 bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
@@ -1667,6 +1673,38 @@ bool CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildUndef(MI.getOperand(0));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::matchSimplifyAddToSub(
+    MachineInstr &MI, std::tuple<Register, Register> &MatchInfo) {
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register &NewLHS = std::get<0>(MatchInfo);
+  Register &NewRHS = std::get<1>(MatchInfo);
+
+  // Helper lambda to check for opportunities for
+  // ((0-A) + B) -> B - A
+  // (A + (0-B)) -> A - B
+  auto CheckFold = [&](Register &MaybeSub, Register &MaybeNewLHS) {
+    int64_t Cst;
+    if (!mi_match(MaybeSub, MRI, m_GSub(m_ICst(Cst), m_Reg(NewRHS))) ||
+        Cst != 0)
+      return false;
+    NewLHS = MaybeNewLHS;
+    return true;
+  };
+
+  return CheckFold(LHS, RHS) || CheckFold(RHS, LHS);
+}
+
+bool CombinerHelper::applySimplifyAddToSub(
+    MachineInstr &MI, std::tuple<Register, Register> &MatchInfo) {
+  Builder.setInstr(MI);
+  Register SubLHS, SubRHS;
+  std::tie(SubLHS, SubRHS) = MatchInfo;
+  Builder.buildSub(MI.getOperand(0).getReg(), SubLHS, SubRHS);
   MI.eraseFromParent();
   return true;
 }

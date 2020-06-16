@@ -75,3 +75,14 @@ func @binary_ops(%lhs : !shape.size, %rhs : !shape.size) {
   // CHECK-NEXT: muli %[[LHS]], %[[RHS]] : index
   return
 }
+
+// -----
+
+// Convert `const_size` to `constant` op.
+// CHECK-LABEL: @size_const
+func @size_const() -> !shape.size {
+  %c1 = shape.const_size 1
+  return %c1 : !shape.size
+}
+// CHECK: %[[C1:.*]] = constant 1 : index
+// CHECK: return %[[C1]] : index

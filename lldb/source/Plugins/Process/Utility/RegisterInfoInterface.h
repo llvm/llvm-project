@@ -61,7 +61,6 @@ public:
     return nullptr;
   }
 
-public:
   // FIXME make private.
   lldb_private::ArchSpec m_target_arch;
 };

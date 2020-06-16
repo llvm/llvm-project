@@ -2128,7 +2128,7 @@ private:
   bool hasFnAttrOnCalledFunction(StringRef Kind) const;
 
   template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
-    if (Attrs.hasAttribute(AttributeList::FunctionIndex, Kind))
+    if (Attrs.hasFnAttribute(Kind))
       return true;
 
     // Operand bundles override attributes on the called function, but don't

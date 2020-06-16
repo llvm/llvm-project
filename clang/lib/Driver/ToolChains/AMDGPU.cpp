@@ -27,7 +27,9 @@ void RocmInstallationDetector::scanLibDevicePath() {
   const StringRef Suffix(".bc");
 
   std::error_code EC;
-  for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
+  for (llvm::vfs::directory_iterator
+           LI = D.getVFS().dir_begin(LibDevicePath, EC),
+           LE;
        !EC && LI != LE; LI = LI.increment(EC)) {
     StringRef FilePath = LI->path();
     StringRef FileName = llvm::sys::path::filename(FilePath);
@@ -141,11 +143,12 @@ RocmInstallationDetector::RocmInstallationDetector(
     LibDevicePath = LibPathEnv;
   }
 
+  auto &FS = D.getVFS();
   if (!LibDevicePath.empty()) {
     // Maintain compatability with HIP flag/envvar pointing directly at the
     // bitcode library directory. This points directly at the library path instead
     // of the rocm root installation.
-    if (!D.getVFS().exists(LibDevicePath))
+    if (!FS.exists(LibDevicePath))
       return;
 
     scanLibDevicePath();
@@ -155,7 +158,7 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
-    if (InstallPath.empty() || !D.getVFS().exists(InstallPath))
+    if (InstallPath.empty() || !FS.exists(InstallPath))
       continue;
 
     // The install path situation in old versions of ROCm is a real mess, and
@@ -170,8 +173,6 @@ RocmInstallationDetector::RocmInstallationDetector(
     // BinPath = InstallPath + "/bin";
     llvm::sys::path::append(IncludePath, InstallPath, "include");
     llvm::sys::path::append(LibDevicePath, InstallPath, "amdgcn", "bitcode");
-
-    auto &FS = D.getVFS();
 
     // We don't need the include path for OpenCL, since clang already ships with
     // the default header.

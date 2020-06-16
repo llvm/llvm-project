@@ -21346,9 +21346,44 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
   return true;
 }
 
+// Helper function for comparing all bits of a vector against zero.
+static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
+                                  const X86Subtarget &Subtarget,
+                                  SelectionDAG &DAG, X86::CondCode &X86CC) {
+  EVT VT = V.getValueType();
+
+  // Quit if less than 128-bits or not splittable to 128/256-bit vector.
+  if (VT.getSizeInBits() < 128 || !isPowerOf2_32(VT.getSizeInBits()))
+    return SDValue();
+
+  X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
+
+  // Split down to 128/256-bit vector.
+  unsigned TestSize = Subtarget.hasAVX() ? 256 : 128;
+  while (VT.getSizeInBits() > TestSize) {
+    auto Split = DAG.SplitVector(V, DL);
+    VT = Split.first.getValueType();
+    V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+  }
+
+  bool UsePTEST = Subtarget.hasSSE41();
+  if (UsePTEST) {
+    MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+    V = DAG.getBitcast(TestVT, V);
+    return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
+  }
+
+  V = DAG.getBitcast(MVT::v16i8, V);
+  V = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, V,
+                  getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
+  V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
+  return DAG.getNode(X86ISD::CMP, DL, MVT::i32, V,
+                     DAG.getConstant(0xFFFF, DL, MVT::i32));
+}
+
 // Check whether an OR'd tree is PTEST-able, or if we can fallback to
 // CMP(MOVMSK(PCMPEQB(X,0))).
-static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
+static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
                                       const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG, SDValue &X86CC) {
   assert(Op.getOpcode() == ISD::OR && "Only check OR'd tree.");
@@ -21357,44 +21392,37 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     return SDValue();
 
   SmallVector<SDValue, 8> VecIns;
-  if (!matchScalarReduction(Op, ISD::OR, VecIns))
-    return SDValue();
+  if (matchScalarReduction(Op, ISD::OR, VecIns)) {
+    EVT VT = VecIns[0].getValueType();
+    assert(llvm::all_of(VecIns,
+                        [VT](SDValue V) { return VT == V.getValueType(); }) &&
+           "Reduction source vector mismatch");
 
-  // Quit if not 128/256-bit vector.
-  EVT VT = VecIns[0].getValueType();
-  if (!VT.is128BitVector() && !VT.is256BitVector())
-    return SDValue();
+    // Quit if less than 128-bits or not splittable to 128/256-bit vector.
+    if (VT.getSizeInBits() < 128 || !isPowerOf2_32(VT.getSizeInBits()))
+      return SDValue();
 
-  SDLoc DL(Op);
-  bool UsePTEST = Subtarget.hasSSE41();
-  MVT TestVT =
-      VT.is128BitVector() ? (UsePTEST ? MVT::v2i64 : MVT::v16i8) : MVT::v4i64;
+    SDLoc DL(Op);
 
-  // Cast all vectors into TestVT for PTEST/PCMPEQ.
-  for (unsigned i = 0, e = VecIns.size(); i < e; ++i)
-    VecIns[i] = DAG.getBitcast(TestVT, VecIns[i]);
+    // If more than one full vector is evaluated, OR them first before PTEST.
+    for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1;
+         Slot += 2, e += 1) {
+      // Each iteration will OR 2 nodes and append the result until there is
+      // only 1 node left, i.e. the final OR'd value of all vectors.
+      SDValue LHS = VecIns[Slot];
+      SDValue RHS = VecIns[Slot + 1];
+      VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
+    }
 
-  // If more than one full vector is evaluated, OR them first before PTEST.
-  for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1; Slot += 2, e += 1) {
-    // Each iteration will OR 2 nodes and append the result until there is only
-    // 1 node left, i.e. the final OR'd value of all vectors.
-    SDValue LHS = VecIns[Slot];
-    SDValue RHS = VecIns[Slot + 1];
-    VecIns.push_back(DAG.getNode(ISD::OR, DL, TestVT, LHS, RHS));
+    X86::CondCode CCode;
+    if (SDValue V =
+            LowerVectorAllZero(DL, VecIns.back(), CC, Subtarget, DAG, CCode)) {
+      X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
+      return V;
+    }
   }
 
-  X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE,
-                                DL, MVT::i8);
-
-  if (UsePTEST)
-    return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(),
-                       VecIns.back());
-
-  SDValue Result = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, VecIns.back(),
-                               getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
-  Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
-  return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
-                     DAG.getConstant(0xFFFF, DL, MVT::i32));
+  return SDValue();
 }
 
 /// return true if \c Op has a use that doesn't just read flags.
@@ -22546,7 +22574,7 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
   // TODO: We could do AND tree with all 1s as well by using the C flag.
   if (Op0.getOpcode() == ISD::OR && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue CmpZ = LowerVectorAllZeroTest(Op0, CC, Subtarget, DAG, X86CC))
+    if (SDValue CmpZ = MatchVectorAllZeroTest(Op0, CC, Subtarget, DAG, X86CC))
       return CmpZ;
   }
 
@@ -41966,6 +41994,17 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
+  unsigned FPOpcode;
+  switch (Opcode) {
+  default: llvm_unreachable("Unexpected input node for FP logic conversion");
+  case ISD::AND: FPOpcode = X86ISD::FAND; break;
+  case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
+  case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
+  }
+  return FPOpcode;
+}
+
 /// If both input operands of a logic op are being cast from floating point
 /// types, try to convert this into a floating point logic node to avoid
 /// unnecessary moves from SSE to integer registers.
@@ -41990,16 +42029,43 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
         (Subtarget.hasSSE2() && N00Type == MVT::f64)))
     return SDValue();
 
-  unsigned FPOpcode;
-  switch (N->getOpcode()) {
-  default: llvm_unreachable("Unexpected input node for FP logic conversion");
-  case ISD::AND: FPOpcode = X86ISD::FAND; break;
-  case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
-  case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
-  }
-
+  unsigned FPOpcode = convertIntLogicToFPLogicOpcode(N->getOpcode());
   SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
   return DAG.getBitcast(VT, FPLogic);
+}
+
+// Attempt to fold BITOP(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(BITOP(X,Y))
+// to reduce XMM->GPR traffic.
+static SDValue combineBitOpWithMOVMSK(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
+         "Unexpected bit opcode");
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Both operands must be single use MOVMSK.
+  if (N0.getOpcode() != X86ISD::MOVMSK || !N0.hasOneUse() ||
+      N1.getOpcode() != X86ISD::MOVMSK || !N1.hasOneUse())
+    return SDValue();
+
+  SDValue Vec0 = N0.getOperand(0);
+  SDValue Vec1 = N1.getOperand(0);
+  EVT VecVT0 = Vec0.getValueType();
+  EVT VecVT1 = Vec1.getValueType();
+
+  // Both MOVMSK operands must be from vectors of the same size and same element
+  // size, but its OK for a fp/int diff.
+  if (VecVT0.getSizeInBits() != VecVT1.getSizeInBits() ||
+      VecVT0.getScalarSizeInBits() != VecVT1.getScalarSizeInBits())
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned VecOpc =
+      VecVT0.isFloatingPoint() ? convertIntLogicToFPLogicOpcode(Opc) : Opc;
+  SDValue Result =
+      DAG.getNode(VecOpc, DL, VecVT0, Vec0, DAG.getBitcast(VecVT0, Vec1));
+  return DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
 }
 
 /// If this is a zero/all-bits result that is bitwise-anded with a low bits
@@ -42347,6 +42413,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineScalarAndWithMaskSetcc(N, DAG, Subtarget))
     return V;
 
+  if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
+    return R;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -42693,6 +42762,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -44706,6 +44778,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
     return Cmp;
+
+  if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -49139,7 +49214,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::FR64XRegClass);
         return std::make_pair(0U, &X86::FR64RegClass);
-      // TODO: Handle i128 in FR128RegClass after it is tested well.
+      case MVT::i128:
+        if (Subtarget.is64Bit()) {
+          if (VConstraint && Subtarget.hasVLX())
+            return std::make_pair(0U, &X86::VR128XRegClass);
+          return std::make_pair(0U, &X86::VR128RegClass);
+        }
+        break;
       // Vector types and fp128.
       case MVT::f128:
       case MVT::v16i8:
@@ -49439,8 +49520,7 @@ bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // integer division, leaving the division as-is is a loss even in terms of
   // size, because it will have to be scalarized, while the alternative code
   // sequence can be performed in vector form.
-  bool OptSize =
-      Attr.hasAttribute(AttributeList::FunctionIndex, Attribute::MinSize);
+  bool OptSize = Attr.hasFnAttribute(Attribute::MinSize);
   return OptSize && !VT.isVector();
 }
 

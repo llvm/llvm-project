@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -39,6 +40,9 @@ class StackColoring {
   /// Each bit in the BitVector represents the liveness property
   /// for a different stack slot.
   struct BlockLifetimeInfo {
+    explicit BlockLifetimeInfo(unsigned Size)
+        : Begin(Size), End(Size), LiveIn(Size), LiveOut(Size) {}
+
     /// Which slots BEGINs in each basic block.
     BitVector Begin;
 
@@ -55,39 +59,42 @@ class StackColoring {
 public:
   /// This class represents a set of interesting instructions where an alloca is
   /// live.
-  struct LiveRange {
-    BitVector bv;
+  class LiveRange {
+    BitVector Bits;
+    friend raw_ostream &operator<<(raw_ostream &OS,
+                                   const StackColoring::LiveRange &R);
 
-    void SetMaximum(int size) { bv.resize(size); }
-    void AddRange(unsigned start, unsigned end) { bv.set(start, end); }
+  public:
+    LiveRange(unsigned Size, bool Set = false) : Bits(Size, Set) {}
+    void addRange(unsigned Start, unsigned End) { Bits.set(Start, End); }
 
-    bool Overlaps(const LiveRange &Other) const {
-      return bv.anyCommon(Other.bv);
+    bool overlaps(const LiveRange &Other) const {
+      return Bits.anyCommon(Other.Bits);
     }
 
-    void Join(const LiveRange &Other) { bv |= Other.bv; }
+    void join(const LiveRange &Other) { Bits |= Other.Bits; }
   };
 
 private:
-  Function &F;
+  const Function &F;
 
   /// Maps active slots (per bit) for each basic block.
-  using LivenessMap = DenseMap<BasicBlock *, BlockLifetimeInfo>;
+  using LivenessMap = DenseMap<const BasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
   /// Number of interesting instructions.
   int NumInst = -1;
 
   /// Numeric ids for interesting instructions.
-  DenseMap<Instruction *, unsigned> InstructionNumbering;
+  DenseMap<const IntrinsicInst *, unsigned> InstructionNumbering;
 
   /// A range [Start, End) of instruction ids for each basic block.
   /// Instructions inside each BB have monotonic and consecutive ids.
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
 
-  ArrayRef<AllocaInst *> Allocas;
+  ArrayRef<const AllocaInst *> Allocas;
   unsigned NumAllocas;
-  DenseMap<AllocaInst *, unsigned> AllocaNumbering;
+  DenseMap<const AllocaInst *, unsigned> AllocaNumbering;
 
   /// LiveRange for allocas.
   SmallVector<LiveRange, 8> LiveRanges;
@@ -95,7 +102,6 @@ private:
   /// The set of allocas that have at least one lifetime.start. All other
   /// allocas get LiveRange that corresponds to the entire function.
   BitVector InterestingAllocas;
-  SmallVector<Instruction *, 8> Markers;
 
   struct Marker {
     unsigned AllocaNo;
@@ -103,59 +109,55 @@ private:
   };
 
   /// List of {InstNo, {AllocaNo, IsStart}} for each BB, ordered by InstNo.
-  DenseMap<BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>> BBMarkers;
+  DenseMap<const BasicBlock *, SmallVector<std::pair<unsigned, Marker>, 4>>
+      BBMarkers;
 
-  void dumpAllocas();
-  void dumpBlockLiveness();
-  void dumpLiveRanges();
+  void dumpAllocas() const;
+  void dumpBlockLiveness() const;
+  void dumpLiveRanges() const;
 
-  bool readMarker(Instruction *I, bool *IsStart);
   void collectMarkers();
   void calculateLocalLiveness();
   void calculateLiveIntervals();
 
 public:
-  StackColoring(Function &F, ArrayRef<AllocaInst *> Allocas)
-      : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {}
+  StackColoring(const Function &F, ArrayRef<const AllocaInst *> Allocas);
 
   void run();
-  void removeAllMarkers();
+  std::vector<const IntrinsicInst *> getMarkers() const;
 
   /// Returns a set of "interesting" instructions where the given alloca is
   /// live. Not all instructions in a function are interesting: we pick a set
   /// that is large enough for LiveRange::Overlaps to be correct.
-  const LiveRange &getLiveRange(AllocaInst *AI);
+  const LiveRange &getLiveRange(const AllocaInst *AI) const;
 
   /// Returns a live range that represents an alloca that is live throughout the
   /// entire function.
-  LiveRange getFullLiveRange() {
+  LiveRange getFullLiveRange() const {
     assert(NumInst >= 0);
-    LiveRange R;
-    R.SetMaximum(NumInst);
-    R.AddRange(0, NumInst);
-    return R;
+    return LiveRange(NumInst, true);
   }
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
   OS << "{";
-  int idx = V.find_first();
-  bool first = true;
-  while (idx >= 0) {
-    if (!first) {
+  int Idx = V.find_first();
+  bool First = true;
+  while (Idx >= 0) {
+    if (!First) {
       OS << ", ";
     }
-    first = false;
-    OS << idx;
-    idx = V.find_next(idx);
+    First = false;
+    OS << Idx;
+    Idx = V.find_next(Idx);
   }
   OS << "}";
   return OS;
 }
 
-static inline raw_ostream &operator<<(raw_ostream &OS,
-                                      const StackColoring::LiveRange &R) {
-  return OS << R.bv;
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const StackColoring::LiveRange &R) {
+  return OS << R.Bits;
 }
 
 } // end namespace safestack

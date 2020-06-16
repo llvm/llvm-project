@@ -453,10 +453,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FLOG10, MVT::f16, Custom);
   }
 
-  // v_mad_f32 does not support denormals. We report it as unconditionally
-  // legal, and the context where it is formed will disallow it when fp32
-  // denormals are enabled.
-  setOperationAction(ISD::FMAD, MVT::f32, Legal);
+  if (Subtarget->hasMadMacF32Insts())
+    setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
   if (!Subtarget->hasBFI()) {
     // fcopysign can be done in a single instruction with BFI.
@@ -1128,6 +1126,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (!Vol->isZero())
       Info.flags |= MachineMemOperand::MOVolatile;
 
+    return true;
+  }
+  case Intrinsic::amdgcn_global_atomic_csub: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MOStore |
+                 MachineMemOperand::MODereferenceable |
+                 MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -4283,7 +4292,8 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
   // v_mad_f32/v_mac_f32 do not support denormals.
   EVT VT = N->getValueType(0);
   if (VT == MVT::f32)
-    return !hasFP32Denormals(DAG.getMachineFunction());
+    return Subtarget->hasMadMacF32Insts() &&
+           !hasFP32Denormals(DAG.getMachineFunction());
   if (VT == MVT::f16) {
     return Subtarget->hasMadF16() &&
            !hasFP64FP16Denormals(DAG.getMachineFunction());
@@ -6859,6 +6869,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_swap:
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_buffer_atomic_sub:
+  case Intrinsic::amdgcn_buffer_atomic_csub:
   case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_buffer_atomic_umin:
   case Intrinsic::amdgcn_buffer_atomic_smax:
@@ -6900,6 +6911,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_buffer_atomic_sub:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_SUB;
+      break;
+    case Intrinsic::amdgcn_buffer_atomic_csub:
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_CSUB;
       break;
     case Intrinsic::amdgcn_buffer_atomic_smin:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_SMIN;
@@ -7148,6 +7162,18 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_global_atomic_csub: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Ops[] = {
+      M->getOperand(0), // Chain
+      M->getOperand(2), // Ptr
+      M->getOperand(3)  // Value
+    };
+
+    return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_LOAD_CSUB, SDLoc(Op),
+                                   M->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
   }
 
   default:

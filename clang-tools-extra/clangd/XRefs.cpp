@@ -1225,6 +1225,14 @@ declToTypeHierarchyItem(ASTContext &Ctx, const NamedDecl &ND,
 
   THI.uri = URIForFile::canonicalize(*FilePath, *TUPath);
 
+  // Compute the SymbolID and store it in the 'data' field.
+  // This allows typeHierarchy/resolve to be used to
+  // resolve children of items returned in a previous request
+  // for parents.
+  if (auto ID = getSymbolID(&ND)) {
+    THI.data = ID->str();
+  }
+
   return THI;
 }
 

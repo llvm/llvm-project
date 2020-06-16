@@ -20,12 +20,21 @@
 // TILE-234-DAG: #[[$bound_map_3:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
 // TILE-234-DAG: #[[$bound_map_4:.*]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
 
+//   TILE-2-DAG: #[[$bound_map_static:.*]] = affine_map<(d0) -> (2, -d0 + 10)>
+//  TILE-02-DAG: #[[$bound_map_static:.*]] = affine_map<(d0) -> (2, -d0 + 12)>
+// TILE-002-DAG: #[[$bound_map_static:.*]] = affine_map<(d0) -> (2, -d0 + 16)>
+
 //   TILE-2-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 //  TILE-02-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 // TILE-234-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 
-func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.matmul(%arg0, %arg1, %arg2) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
+func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+             %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+             %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+  linalg.matmul %arg0, %arg1, %arg2 :
+    (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+     memref<?x?xf32, offset: ?, strides: [?, 1]>,
+     memref<?x?xf32, offset: ?, strides: [?, 1]>)
   return
 }
 // TILE-2-LABEL: func @matmul(
@@ -41,7 +50,10 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-2:   %[[szK:.*]] = affine.min #[[$bound_map]](%[[I]])[%[[localK]]]
 //       TILE-2:   %[[N:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-2:   %[[sCi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[szK]], %[[N]]] [1, 1] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
-//       TILE-2:   linalg.matmul(%[[sAi]], %{{.*}}, %[[sCi]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       TILE-2:   linalg.matmul %[[sAi]], %{{.*}}, %[[sCi]] :
+//       TILE-2:     (memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-2:      memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-2:      memref<?x?xf32, #[[$strided2D]]>)
 
 // TILE-02-LABEL: func @matmul(
 //       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
@@ -56,7 +68,10 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-02:   %[[localK:.*]] = dim %{{.*}}, %c1
 //       TILE-02:   %[[szK:.*]] = affine.min #[[$bound_map]](%[[J]])[%[[localK]]]
 //       TILE-02:   %[[sCj:.*]] = subview %{{.*}}[0, %[[J]]] [%[[M]], %[[szK]]] [1, 1] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
-//       TILE-02:   linalg.matmul(%{{.*}}, %[[sBj]], %[[sCj]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       TILE-02:   linalg.matmul %{{.*}}, %[[sBj]], %[[sCj]] :
+//       TILE-02:     (memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-02:      memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-02:      memref<?x?xf32, #[[$strided2D]]>)
 
 // TILE-002-LABEL: func @matmul(
 //       TILE-002-DAG: %[[C0:.*]] = constant 0 : index
@@ -71,7 +86,10 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-002:   %[[szK:.*]] = affine.min #[[$bound_map]](%[[K]])[%[[localK]]]
 //       TILE-002:   %[[N:.*]] = dim %{{.*}}, %c1 : memref<?x?xf32, #[[$strided2D]]>
 //       TILE-002:   %[[sBj:.*]] = subview %{{.*}}[%[[K]], 0] [%[[szK]], %[[N]]] [1, 1] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
-//       TILE-002:   linalg.matmul(%[[sAj]], %[[sBj]], %{{.*}}) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       TILE-002:   linalg.matmul %[[sAj]], %[[sBj]], %{{.*}} :
+//       TILE-002:     (memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-002:      memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-002:      memref<?x?xf32, #[[$strided2D]]>)
 
 // TILE-234-LABEL: func @matmul(
 //       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
@@ -100,14 +118,22 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //       TILE-234:        %[[szN:.*]] = affine.min #[[$bound_map_3]](%[[J]])[%[[localN]]]
 //       TILE-234:        %[[sCij:.*]] = subview %{{.*}}[%[[I]], %[[J]]] [%[[szM]], %[[szN]]] [1, 1] : memref<?x?xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
 //
-//       TILE-234:        linalg.matmul(%[[sAik]], %[[sBkj]], %[[sCij]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       TILE-234:        linalg.matmul %[[sAik]], %[[sBkj]], %[[sCij]] :
+//       TILE-234:          (memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-234:           memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-234:           memref<?x?xf32, #[[$strided2D]]>)
 
 // When the buffer shapes are known at compile time, it is possible to avoid
 // the "min" in subview size computation. This test uses buffer sizes divisible
 // by respective tile sizes (M=10 divisble by 2, N=12 divisible by 2 and 3,
 // K=16 divisble by 2 and 4).
-func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>, %arg1: memref<16x12xf32, offset: ?, strides: [?, 1]>, %arg2: memref<10x12xf32, offset: ?, strides: [?, 1]>) {
-  linalg.matmul(%arg0, %arg1, %arg2) : memref<10x16xf32, offset: ?, strides: [?, 1]>, memref<16x12xf32, offset: ?, strides: [?, 1]>, memref<10x12xf32, offset: ?, strides: [?, 1]>
+func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>,
+                    %arg1: memref<16x12xf32, offset: ?, strides: [?, 1]>,
+                    %arg2: memref<10x12xf32, offset: ?, strides: [?, 1]>) {
+  linalg.matmul %arg0, %arg1, %arg2 :
+    (memref<10x16xf32, offset: ?, strides: [?, 1]>,
+     memref<16x12xf32, offset: ?, strides: [?, 1]>,
+     memref<10x12xf32, offset: ?, strides: [?, 1]>)
   return
 }
 // TILE-2-LABEL: func @matmul_static(
@@ -118,33 +144,39 @@ func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>, %arg1:
 //       TILE-2-DAG: %[[C2:.*]] = constant 2 : index
 //       TILE-2-DAG: %[[M:.*]] = constant 10 : index
 //       TILE-2: scf.for %[[I:.*]] = %{{.*}} to %[[M]] step %{{.*}} {
-//       TILE-2:   %[[MIN2:.*]] = affine.min #map2(%[[I]])
+//       TILE-2:   %[[MIN2:.*]] = affine.min #[[$bound_map_static]](%[[I]])
 //       TILE-2:   %[[sAi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[MIN2]], 16] [1, 1] : memref<10x16xf32, #[[$strided2D]]> to memref<?x16xf32, #[[$strided2D]]>
-//       TILE-2:   %[[MIN22:.*]] = affine.min #map2(%[[I]])
+//       TILE-2:   %[[MIN22:.*]] = affine.min #[[$bound_map_static]](%[[I]])
 //       TILE-2:   %[[sCi:.*]] = subview %{{.*}}[%[[I]], 0] [%[[MIN22]], 12] [1, 1] : memref<10x12xf32, #[[$strided2D]]> to memref<?x12xf32, #[[$strided2D]]>
-//       TILE-2:   linalg.matmul(%[[sAi]], %{{.*}}, %[[sCi]])
+//       TILE-2:   linalg.matmul %[[sAi]], %{{.*}}, %[[sCi]]
 
 // TILE-02-LABEL: func @matmul_static(
 //       TILE-02-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-02-DAG: %[[C2:.*]] = constant 2 : index
 //       TILE-02-DAG: %[[N:.*]] = constant 12 : index
 //       TILE-02: scf.for %[[J:.*]] = %{{.*}} to %[[N]] step %{{.*}} {
-//       TILE-02:   %[[MIN2:.*]] = affine.min #map2(%[[J]])
+//       TILE-02:   %[[MIN2:.*]] = affine.min #[[$bound_map_static]](%[[J]])
 //       TILE-02:   %[[sBj:.*]] = subview %{{.*}}[0, %[[J]]] [16, %[[MIN2]]] [1, 1] : memref<16x12xf32, #[[$strided2D]]> to memref<16x?xf32, #[[$strided2D]]>
-//       TILE-02:   %[[MIN22:.*]] = affine.min #map2(%[[J]])
+//       TILE-02:   %[[MIN22:.*]] = affine.min #[[$bound_map_static]](%[[J]])
 //       TILE-02:   %[[sCj:.*]] = subview %{{.*}}[0, %[[J]]] [10, %[[MIN22]]] [1, 1] : memref<10x12xf32, #[[$strided2D]]> to memref<10x?xf32, #[[$strided2D]]>
-//       TILE-02:   linalg.matmul(%{{.*}}, %[[sBj]], %[[sCj]]) : memref<10x16xf32, #[[$strided2D]]>, memref<16x?xf32, #[[$strided2D]]>, memref<10x?xf32, #[[$strided2D]]>
+//       TILE-02:   linalg.matmul %{{.*}}, %[[sBj]], %[[sCj]] :
+//       TILE-02:     (memref<10x16xf32, #[[$strided2D]]>,
+//       TILE-02:      memref<16x?xf32, #[[$strided2D]]>,
+//       TILE-02:      memref<10x?xf32, #[[$strided2D]]>)
 
 // TILE-002-LABEL: func @matmul_static(
 //       TILE-002-DAG: %[[C0:.*]] = constant 0 : index
 //       TILE-002-DAG: %[[C2:.*]] = constant 2 : index
 //       TILE-002-DAG: %[[C16:.*]] = constant 16 : index
 //       TILE-002: scf.for %[[K:.*]] = %{{.*}}{{.*}} to %[[C16]] step %{{.*}} {
-//       TILE-002:   %[[MIN2:.*]] = affine.min #map2(%[[K]])
+//       TILE-002:   %[[MIN2:.*]] = affine.min #[[$bound_map_static]](%[[K]])
 //       TILE-002:   %[[sAj:.*]] = subview %{{.*}}[0, %[[K]]] [10, %[[MIN2]]] [1, 1] : memref<10x16xf32, #[[$strided2D]]> to memref<10x?xf32, #[[$strided2D]]>
-//       TILE-002:   %[[MIN22:.*]] = affine.min #map2(%[[K]])
+//       TILE-002:   %[[MIN22:.*]] = affine.min #[[$bound_map_static]](%[[K]])
 //       TILE-002:   %[[sBj:.*]] = subview %{{.*}}[%[[K]], 0] [%[[MIN22]], 12] [1, 1] : memref<16x12xf32, #[[$strided2D]]> to memref<?x12xf32, #[[$strided2D]]>
-//       TILE-002:   linalg.matmul(%[[sAj]], %[[sBj]], %{{.*}}) : memref<10x?xf32, #[[$strided2D]]>, memref<?x12xf32, #[[$strided2D]]>, memref<10x12xf32, #[[$strided2D]]>
+//       TILE-002:   linalg.matmul %[[sAj]], %[[sBj]], %{{.*}} :
+//       TILE-002:     (memref<10x?xf32, #[[$strided2D]]>,
+//       TILE-002:      memref<?x12xf32, #[[$strided2D]]>,
+//       TILE-002:      memref<10x12xf32, #[[$strided2D]]>)
 
 // TILE-234-LABEL: func @matmul_static(
 //       TILE-234-DAG: %[[C0:.*]] = constant 0 : index
@@ -161,7 +193,10 @@ func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>, %arg1:
 //       TILE-234:        %[[sBkj:.*]] = subview %{{.*}}[%[[K]], %[[J]]] [%{{.*}}, %{{.*}}] [1, 1] : memref<16x12xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
 //       TILE-234:        %[[sCij:.*]] = subview %{{.*}}[%[[I]], %[[J]]] [%{{.*}}, %{{.*}}] [1, 1] : memref<10x12xf32, #[[$strided2D]]> to memref<?x?xf32, #[[$strided2D]]>
 //
-//       TILE-234:        linalg.matmul(%[[sAik]], %[[sBkj]], %[[sCij]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D]]>
+//       TILE-234:        linalg.matmul %[[sAik]], %[[sBkj]], %[[sCij]] :
+//       TILE-234:          (memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-234:           memref<?x?xf32, #[[$strided2D]]>,
+//       TILE-234:           memref<?x?xf32, #[[$strided2D]]>)
 
 func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<?xf32, offset: ?, strides: [1]>) {
   linalg.matvec(%arg0, %arg1, %arg2) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?xf32, offset: ?, strides: [1]>, memref<?xf32, offset: ?, strides: [1]>

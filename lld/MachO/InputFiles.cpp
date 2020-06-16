@@ -178,6 +178,7 @@ void InputFile::parseRelocations(const section_64 &sec,
     Reloc r;
     r.type = rel.r_type;
     r.pcrel = rel.r_pcrel;
+    r.length = rel.r_length;
     uint64_t rawAddend = target->getImplicitAddend(mb, sec, rel);
 
     if (rel.r_extern) {

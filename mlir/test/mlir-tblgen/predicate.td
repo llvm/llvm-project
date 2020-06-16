@@ -32,7 +32,7 @@ def OpF : NS_Op<"op_for_int_min_val", []> {
   let arguments = (ins Confined<I32Attr, [IntMinValue<10>]>:$attr);
 }
 
-// CHECK-LABEL: OpFOperandAdaptor::verify
+// CHECK-LABEL: OpFAdaptor::verify
 // CHECK:       (tblgen_attr.cast<IntegerAttr>().getInt() >= 10)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 10"
 
@@ -40,7 +40,7 @@ def OpFX : NS_Op<"op_for_int_max_val", []> {
   let arguments = (ins Confined<I32Attr, [IntMaxValue<10>]>:$attr);
 }
 
-// CHECK-LABEL: OpFXOperandAdaptor::verify
+// CHECK-LABEL: OpFXAdaptor::verify
 // CHECK:       (tblgen_attr.cast<IntegerAttr>().getInt() <= 10)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose maximum value is 10"
 
@@ -48,7 +48,7 @@ def OpG : NS_Op<"op_for_arr_min_count", []> {
   let arguments = (ins Confined<ArrayAttr, [ArrayMinCount<8>]>:$attr);
 }
 
-// CHECK-LABEL: OpGOperandAdaptor::verify
+// CHECK-LABEL: OpGAdaptor::verify
 // CHECK:       (tblgen_attr.cast<ArrayAttr>().size() >= 8)
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: array attribute with at least 8 elements"
 
@@ -56,7 +56,7 @@ def OpH : NS_Op<"op_for_arr_value_at_index", []> {
   let arguments = (ins Confined<ArrayAttr, [IntArrayNthElemEq<0, 8>]>:$attr);
 }
 
-// CHECK-LABEL: OpHOperandAdaptor::verify
+// CHECK-LABEL: OpHAdaptor::verify
 // CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() == 8)))))
 // CHECK-SAME:  "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8"
 
@@ -64,7 +64,7 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
   let arguments = (ins Confined<ArrayAttr, [IntArrayNthElemMinValue<0, 8>]>:$attr);
 }
 
-// CHECK-LABEL: OpIOperandAdaptor::verify
+// CHECK-LABEL: OpIAdaptor::verify
 // CHECK: (((tblgen_attr.cast<ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<ArrayAttr>()[0].cast<IntegerAttr>().getInt() >= 8)))))
 // CHECK-SAME: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
 
@@ -80,7 +80,7 @@ def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
   );
 }
 
-// CHECK-LABEL: OpJOperandAdaptor::verify
+// CHECK-LABEL: OpJAdaptor::verify
 // CHECK:      llvm::is_splat(llvm::map_range(
 // CHECK-SAME:   llvm::ArrayRef<unsigned>({0, 2, 3}),
 // CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))

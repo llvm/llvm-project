@@ -848,9 +848,8 @@ to access them. For example, for a binary arithmetic operation, it may provide
 `.lhs()` to access the first operand and `.rhs()` to access the second operand.
 
 The operand adaptor class lives in the same namespace as the operation class,
-and has the name of the operation followed by `OperandAdaptor`. A template
-declaration `OperandAdaptor<>` is provided to look up the operand adaptor for
-the given operation.
+and has the name of the operation followed by `Adaptor` as well as an alias
+`Adaptor` inside the op class.
 
 Operand adaptors can be used in function templates that also process operations:
 
@@ -862,7 +861,7 @@ std::pair<Value, Value> zip(BinaryOpTy &&op) {
 
 void process(AddOp op, ArrayRef<Value> newOperands) {
   zip(op);
-  zip(OperandAdaptor<AddOp>(newOperands));
+  zip(Adaptor<AddOp>(newOperands));
   /*...*/
 }
 ```

@@ -283,7 +283,8 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   if (Opcode == AArch64::SPACE) {
-    O << '\t' << MAI.getCommentString() << " SPACE";
+    O << '\t' << MAI.getCommentString() << " SPACE "
+      << MI->getOperand(1).getImm();
     printAnnotation(O, Annot);
     return;
   }

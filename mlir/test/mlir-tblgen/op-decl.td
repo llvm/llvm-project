@@ -47,9 +47,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // CHECK-LABEL: NS::AOp declarations
 
-// CHECK: class AOpOperandAdaptor {
+// CHECK: class AOpAdaptor {
 // CHECK: public:
-// CHECK:   AOpOperandAdaptor(ValueRange values
+// CHECK:   AOpAdaptor(ValueRange values
 // CHECK:   ValueRange getODSOperands(unsigned index);
 // CHECK:   Value a();
 // CHECK:   ValueRange b();
@@ -63,7 +63,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK-NOT: OpTrait::IsIsolatedFromAbove
 // CHECK: public:
 // CHECK:   using Op::Op;
-// CHECK:   using OperandAdaptor = AOpOperandAdaptor;
+// CHECK:   using Adaptor = AOpAdaptor;
 // CHECK:   static StringRef getOperationName();
 // CHECK:   Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   Value a();
@@ -105,7 +105,7 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
   );
 }
 
-// CHECK-LABEL: AttrSizedOperandOpOperandAdaptor(
+// CHECK-LABEL: AttrSizedOperandOpAdaptor(
 // CHECK-SAME:    ValueRange values
 // CHECK-SAME:    DictionaryAttr attrs
 // CHECK:  ValueRange a();

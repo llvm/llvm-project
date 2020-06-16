@@ -102,17 +102,17 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
-  ASSERT_TRUE(term.OpenFirstAvailableMaster(O_RDWR, nullptr, 0));
-  ASSERT_TRUE(term.OpenSlave(O_RDWR | O_NOCTTY, nullptr, 0));
+  ASSERT_TRUE(term.OpenFirstAvailablePrimary(O_RDWR, nullptr, 0));
+  ASSERT_TRUE(term.OpenSecondary(O_RDWR | O_NOCTTY, nullptr, 0));
   auto conn = std::make_unique<ConnectionFileDescriptor>(
-      term.ReleaseMasterFileDescriptor(), true);
+      term.ReleasePrimaryFileDescriptor(), true);
 
   Status error;
   MainLoop loop;
   auto handle =
       loop.RegisterReadObject(conn->GetReadObject(), make_callback(), error);
   ASSERT_TRUE(error.Success());
-  term.CloseSlaveFileDescriptor();
+  term.CloseSecondaryFileDescriptor();
 
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);

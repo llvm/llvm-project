@@ -78,7 +78,11 @@ const char* const IdSymbolic[] = {
   "HW_REG_XNACK_MASK",
   nullptr, // HW_ID1, no predictable values
   nullptr, // HW_ID2, no predictable values
-  "HW_REG_POPS_PACKER"
+  "HW_REG_POPS_PACKER",
+  nullptr,
+  nullptr,
+  nullptr,
+  "HW_REG_SHADER_CYCLES"
 };
 
 } // namespace Hwreg

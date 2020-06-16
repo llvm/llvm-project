@@ -229,6 +229,11 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   unsigned getSpillTarget() const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
+  int16_t getFMAOpIdxInfo(unsigned Opcode) const;
+  void reassociateFMA(MachineInstr &Root, MachineCombinerPattern Pattern,
+                      SmallVectorImpl<MachineInstr *> &InsInstrs,
+                      SmallVectorImpl<MachineInstr *> &DelInstrs,
+                      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
   virtual void anchor();
 
 protected:
@@ -308,6 +313,20 @@ public:
     return true;
   }
 
+  /// When getMachineCombinerPatterns() finds patterns, this function generates
+  /// the instructions that could replace the original code sequence
+  void genAlternativeCodeSequence(
+      MachineInstr &Root, MachineCombinerPattern Pattern,
+      SmallVectorImpl<MachineInstr *> &InsInstrs,
+      SmallVectorImpl<MachineInstr *> &DelInstrs,
+      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+
+  /// Return true when there is potentially a faster code sequence for a fma
+  /// chain ending in \p Root. All potential patterns are output in the \p
+  /// P array.
+  bool getFMAPatterns(MachineInstr &Root,
+                      SmallVectorImpl<MachineCombinerPattern> &P) const;
+
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in <Root>. All potential patterns are
   /// output in the <Pattern> array.
@@ -316,6 +335,16 @@ public:
       SmallVectorImpl<MachineCombinerPattern> &P) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+
+  /// On PowerPC, we try to reassociate FMA chain which will increase
+  /// instruction size. Set extension resource length limit to 1 for edge case.
+  /// Resource Length is calculated by scaled resource usage in getCycles().
+  /// Because of the division in getCycles(), it returns different cycles due to
+  /// legacy scaled resource usage. So new resource length may be same with
+  /// legacy or 1 bigger than legacy.
+  /// We need to execlude the 1 bigger case even the resource length is not
+  /// perserved for more FMA chain reassociations on PowerPC.
+  int getExtendResourceLenLimit() const override { return 1; }
 
   void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
                              MachineInstr &NewMI1,

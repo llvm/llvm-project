@@ -166,6 +166,9 @@ def function32_op : Operand<i32>;
 let OperandType = "OPERAND_OFFSET32" in
 def offset32_op : Operand<i32>;
 
+let OperandType = "OPERAND_OFFSET64" in
+def offset64_op : Operand<i64>;
+
 let OperandType = "OPERAND_P2ALIGN" in {
 def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
@@ -195,6 +198,19 @@ def getStackOpcode : InstrMapping {
   let FilterClass = "StackRel";
   let RowFields = ["BaseName"];
   let ColFields = ["StackBased"];
+  let KeyCol = ["false"];
+  let ValueCols = [["true"]];
+}
+
+//===----------------------------------------------------------------------===//
+// WebAssembly 32 to 64-bit instruction mapping
+//===----------------------------------------------------------------------===//
+
+class Wasm64Rel;
+def getWasm64Opcode : InstrMapping {
+  let FilterClass = "Wasm64Rel";
+  let RowFields = ["Wasm32Name"];
+  let ColFields = ["IsWasm64"];
   let KeyCol = ["false"];
   let ValueCols = [["true"]];
 }

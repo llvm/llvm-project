@@ -63,8 +63,8 @@ private:
   bool performCallSlotOptzn(Instruction *cpy, Value *cpyDst, Value *cpySrc,
                             uint64_t cpyLen, Align cpyAlign, CallInst *C);
   bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
-  bool processMemSetMemCpyDependence(MemCpyInst *M, MemSetInst *MDep);
-  bool performMemCpyToMemSetOptzn(MemCpyInst *M, MemSetInst *MDep);
+  bool processMemSetMemCpyDependence(MemCpyInst *MemCpy, MemSetInst *MemSet);
+  bool performMemCpyToMemSetOptzn(MemCpyInst *MemCpy, MemSetInst *MemSet);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);

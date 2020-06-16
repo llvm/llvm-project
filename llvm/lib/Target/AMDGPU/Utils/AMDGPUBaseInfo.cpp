@@ -311,7 +311,7 @@ unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
   if (!isGFX10(*STI))
     return 10;
-  return 20;
+  return hasGFX10_3Insts(*STI) ? 16 : 20;
 }
 
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
@@ -441,12 +441,21 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  if (hasGFX10_3Insts(*STI))
+    return IsWave32 ? 16 : 8;
+
   return IsWave32 ? 8 : 4;
 }
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
                                 Optional<bool> EnableWavefrontSize32) {
-  return getVGPRAllocGranule(STI, EnableWavefrontSize32);
+
+  bool IsWave32 = EnableWavefrontSize32 ?
+      *EnableWavefrontSize32 :
+      STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  return IsWave32 ? 8 : 4;
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
@@ -732,13 +741,16 @@ static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
     return ID_SYMBOLIC_FIRST_GFX9_;
   else if (isGFX9(STI))
     return ID_SYMBOLIC_FIRST_GFX10_;
+  else if (isGFX10(STI) && !isGFX10_BEncoding(STI))
+    return ID_SYMBOLIC_FIRST_GFX1030_;
   else
     return ID_SYMBOLIC_LAST_;
 }
 
 bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI) {
-  return ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
-         IdSymbolic[Id];
+  return
+    ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
+    IdSymbolic[Id] && (Id != ID_XNACK_MASK || !AMDGPU::isGFX10_BEncoding(STI));
 }
 
 bool isValidHwreg(int64_t Id) {
@@ -974,6 +986,14 @@ bool isGFX10(const MCSubtargetInfo &STI) {
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
+}
+
+bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding];
+}
+
+bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {

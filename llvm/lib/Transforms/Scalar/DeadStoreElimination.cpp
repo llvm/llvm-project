@@ -1150,6 +1150,52 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
   return false;
 }
 
+static Constant *
+tryToMergePartialOverlappingStores(StoreInst *Earlier, StoreInst *Later,
+                                   int64_t InstWriteOffset,
+                                   int64_t DepWriteOffset, const DataLayout &DL,
+                                   AliasAnalysis *AA, DominatorTree *DT) {
+
+  if (Earlier && isa<ConstantInt>(Earlier->getValueOperand()) &&
+      DL.typeSizeEqualsStoreSize(Earlier->getValueOperand()->getType()) &&
+      Later && isa<ConstantInt>(Later->getValueOperand()) &&
+      DL.typeSizeEqualsStoreSize(Later->getValueOperand()->getType()) &&
+      memoryIsNotModifiedBetween(Earlier, Later, AA, DL, DT)) {
+    // If the store we find is:
+    //   a) partially overwritten by the store to 'Loc'
+    //   b) the later store is fully contained in the earlier one and
+    //   c) they both have a constant value
+    //   d) none of the two stores need padding
+    // Merge the two stores, replacing the earlier store's value with a
+    // merge of both values.
+    // TODO: Deal with other constant types (vectors, etc), and probably
+    // some mem intrinsics (if needed)
+
+    APInt EarlierValue =
+        cast<ConstantInt>(Earlier->getValueOperand())->getValue();
+    APInt LaterValue = cast<ConstantInt>(Later->getValueOperand())->getValue();
+    unsigned LaterBits = LaterValue.getBitWidth();
+    assert(EarlierValue.getBitWidth() > LaterValue.getBitWidth());
+    LaterValue = LaterValue.zext(EarlierValue.getBitWidth());
+
+    // Offset of the smaller store inside the larger store
+    unsigned BitOffsetDiff = (InstWriteOffset - DepWriteOffset) * 8;
+    unsigned LShiftAmount = DL.isBigEndian() ? EarlierValue.getBitWidth() -
+                                                   BitOffsetDiff - LaterBits
+                                             : BitOffsetDiff;
+    APInt Mask = APInt::getBitsSet(EarlierValue.getBitWidth(), LShiftAmount,
+                                   LShiftAmount + LaterBits);
+    // Clear the bits we'll be replacing, then OR with the smaller
+    // store, shifted appropriately.
+    APInt Merged = (EarlierValue & ~Mask) | (LaterValue << LShiftAmount);
+    LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Earlier: " << *Earlier
+                      << "\n  Later: " << *Later
+                      << "\n  Merged Value: " << Merged << '\n');
+    return ConstantInt::get(Earlier->getValueOperand()->getType(), Merged);
+  }
+  return nullptr;
+}
+
 static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                                 MemoryDependenceResults *MD, DominatorTree *DT,
                                 const TargetLibraryInfo *TLI) {
@@ -1297,51 +1343,11 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                    OR == OW_PartialEarlierWithFullLater) {
           auto *Earlier = dyn_cast<StoreInst>(DepWrite);
           auto *Later = dyn_cast<StoreInst>(Inst);
-          if (Earlier && isa<ConstantInt>(Earlier->getValueOperand()) &&
-              DL.typeSizeEqualsStoreSize(
-                  Earlier->getValueOperand()->getType()) &&
-              Later && isa<ConstantInt>(Later->getValueOperand()) &&
-              DL.typeSizeEqualsStoreSize(
-                  Later->getValueOperand()->getType()) &&
-              memoryIsNotModifiedBetween(Earlier, Later, AA, DL, DT)) {
-            // If the store we find is:
-            //   a) partially overwritten by the store to 'Loc'
-            //   b) the later store is fully contained in the earlier one and
-            //   c) they both have a constant value
-            //   d) none of the two stores need padding
-            // Merge the two stores, replacing the earlier store's value with a
-            // merge of both values.
-            // TODO: Deal with other constant types (vectors, etc), and probably
-            // some mem intrinsics (if needed)
-
-            APInt EarlierValue =
-                cast<ConstantInt>(Earlier->getValueOperand())->getValue();
-            APInt LaterValue =
-                cast<ConstantInt>(Later->getValueOperand())->getValue();
-            unsigned LaterBits = LaterValue.getBitWidth();
-            assert(EarlierValue.getBitWidth() > LaterValue.getBitWidth());
-            LaterValue = LaterValue.zext(EarlierValue.getBitWidth());
-
-            // Offset of the smaller store inside the larger store
-            unsigned BitOffsetDiff = (InstWriteOffset - DepWriteOffset) * 8;
-            unsigned LShiftAmount =
-                DL.isBigEndian()
-                    ? EarlierValue.getBitWidth() - BitOffsetDiff - LaterBits
-                    : BitOffsetDiff;
-            APInt Mask =
-                APInt::getBitsSet(EarlierValue.getBitWidth(), LShiftAmount,
-                                  LShiftAmount + LaterBits);
-            // Clear the bits we'll be replacing, then OR with the smaller
-            // store, shifted appropriately.
-            APInt Merged =
-                (EarlierValue & ~Mask) | (LaterValue << LShiftAmount);
-            LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Earlier: " << *DepWrite
-                              << "\n  Later: " << *Inst
-                              << "\n  Merged Value: " << Merged << '\n');
-
+          if (Constant *C = tryToMergePartialOverlappingStores(
+                  Earlier, Later, InstWriteOffset, DepWriteOffset, DL, AA,
+                  DT)) {
             auto *SI = new StoreInst(
-                ConstantInt::get(Earlier->getValueOperand()->getType(), Merged),
-                Earlier->getPointerOperand(), false, Earlier->getAlign(),
+                C, Earlier->getPointerOperand(), false, Earlier->getAlign(),
                 Earlier->getOrdering(), Earlier->getSyncScopeID(), DepWrite);
 
             unsigned MDToKeep[] = {LLVMContext::MD_dbg, LLVMContext::MD_tbaa,
@@ -1945,9 +1951,9 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     // Check if we're storing a value that we just loaded.
     if (auto *Load = dyn_cast<LoadInst>(SI->getOperand(0))) {
       if (storeIsNoop(MSSA, Load, KillingDef)) {
-        State.deleteDeadInstruction(SI);
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *SI
                           << '\n');
+        State.deleteDeadInstruction(SI);
         NumNoopStores++;
         MadeChange = true;
         continue;
@@ -2057,6 +2063,28 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       auto &IOL = Iter.first->second;
       OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
                                        InstWriteOffset, NI, IOL, AA, &F);
+
+      if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
+        auto *Earlier = dyn_cast<StoreInst>(NI);
+        auto *Later = dyn_cast<StoreInst>(SI);
+        if (Constant *Merged = tryToMergePartialOverlappingStores(
+                Earlier, Later, InstWriteOffset, DepWriteOffset, DL, &AA,
+                &DT)) {
+
+          // Update stored value of earlier store to merged constant.
+          Earlier->setOperand(0, Merged);
+          ++NumModifiedStores;
+          MadeChange = true;
+
+          // Remove later store and remove any outstanding overlap intervals for
+          // the updated store.
+          State.deleteDeadInstruction(Later);
+          auto I = State.IOLs.find(Earlier->getParent());
+          if (I != State.IOLs.end())
+            I->second.erase(Earlier);
+          break;
+        }
+      }
 
       ToCheck.insert(NextDef->getDefiningAccess());
       if (OR == OW_Complete) {

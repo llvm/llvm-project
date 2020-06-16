@@ -286,4 +286,24 @@ body:             |
     %op:_(s32) = G_SUB %x(s32), %cst
     $w0 = COPY %op(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            look_through_zext
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: look_through_zext
+    ; CHECK: liveins: $x0
+    ; CHECK: %zero:_(s8) = G_CONSTANT i8 0
+    ; CHECK: %zext_zero:_(s64) = G_ZEXT %zero(s8)
+    ; CHECK: $x0 = COPY %zext_zero(s64)
+    ; CHECK: RET_ReallyLR implicit $x0
+    %zero:_(s8) = G_CONSTANT i8 0
+    %zext_zero:_(s64) = G_ZEXT %zero(s8)
+    %c:_(s64) = G_CONSTANT i64 72340172838076673
+    %mul:_(s64) = G_MUL %c, %zext_zero
+    $x0 = COPY %mul(s64)
+    RET_ReallyLR implicit $x0
 ...

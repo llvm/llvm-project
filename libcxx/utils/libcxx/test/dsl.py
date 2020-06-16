@@ -12,6 +12,7 @@ import lit.util
 import os
 import pipes
 import platform
+import re
 import tempfile
 
 def _memoize(f):
@@ -30,15 +31,22 @@ def _executeScriptInternal(test, commands):
   """
   parsedCommands = libcxx.test.newformat.parseScript(test, preamble=commands)
 
-  class FakeLitConfig(object):
-    def __init__(self):
-      self.isWindows = platform.system() == 'Windows'
-      self.maxIndividualTestTime = 0
-  litConfig = FakeLitConfig()
+  litConfig = lit.LitConfig.LitConfig(
+    progname='lit',
+    path=[],
+    quiet=False,
+    useValgrind=False,
+    valgrindLeakCheck=False,
+    valgrindArgs=[],
+    noExecute=False,
+    debug=False,
+    isWindows=platform.system() == 'Windows',
+    params={})
   _, tmpBase = libcxx.test.newformat._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())
-  if not os.path.exists(execDir):
-    os.makedirs(execDir)
+  for d in (execDir, os.path.dirname(tmpBase)):
+    if not os.path.exists(d):
+      os.makedirs(d)
   res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
   if isinstance(res, lit.Test.Result):
     res = ('', '', 127, None)
@@ -69,11 +77,42 @@ def sourceBuilds(config, source):
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
     out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "mkdir -p %T",
       "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
     ])
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
+
+def programOutput(config, program, args=[]):
+  """
+  Compiles a program for the test target, run it on the test target and return
+  the output.
+
+  If the program fails to compile or run, None is returned instead. Note that
+  execution of the program is done through the %{exec} substitution, which means
+  that the program may be run on a remote host depending on what %{exec} does.
+  """
+  with _makeConfigTest(config) as test:
+    with open(test.getSourcePath(), 'w') as source:
+      source.write(program)
+    try:
+      _, _, exitCode, _ = _executeScriptInternal(test, [
+        "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
+      ])
+      if exitCode != 0:
+        return None
+
+      out, err, exitCode, _ = _executeScriptInternal(test, [
+        "%{{exec}} %t.exe {}".format(' '.join(args))
+      ])
+      if exitCode != 0:
+        return None
+
+      actualOut = re.search("command output:\n(.+)\n$", out, flags=re.DOTALL)
+      actualOut = actualOut.group(1) if actualOut else ""
+      return actualOut
+
+    finally:
+      _executeScriptInternal(test, ['rm %t.exe'])
 
 def hasCompileFlag(config, flag):
   """
@@ -96,22 +135,14 @@ def hasLocale(config, locale):
   %{exec} -- this means that the command may be executed on a remote host
   depending on the %{exec} substitution.
   """
-  with _makeConfigTest(config) as test:
-    with open(test.getSourcePath(), 'w') as source:
-      source.write("""
-      #include <locale.h>
-      int main(int, char** argv) {
-        if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
-        else                                      return 1;
-      }
-      """)
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "mkdir -p %T",
-      "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
-      "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
-    ])
-    _executeScriptInternal(test, ['rm %t.exe'])
-    return exitCode == 0
+  program = """
+    #include <locale.h>
+    int main(int, char** argv) {
+      if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
+      else                                      return 1;
+    }
+  """
+  return programOutput(config, program, args=[pipes.quote(locale)]) != None
 
 def compilerMacros(config, flags=''):
   """
@@ -220,6 +251,8 @@ class Feature(object):
       config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
 
     name = self._name(config) if callable(self._name) else self._name
+    if not isinstance(name, str):
+      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
     config.available_features.add(name)
 
 

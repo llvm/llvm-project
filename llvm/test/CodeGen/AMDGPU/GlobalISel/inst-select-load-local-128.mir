@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=hawaii -mattr=+enable-ds128 -run-pass=instruction-select -verify-machineinstrs  -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX7-DS128 %s
+# RUN: llc -amdgpu-global-isel-new-legality -march=amdgcn -mcpu=hawaii -mattr=+enable-ds128 -run-pass=instruction-select -verify-machineinstrs  -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX7-DS128 %s
 
 ---
 

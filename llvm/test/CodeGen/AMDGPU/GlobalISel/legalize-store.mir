@@ -327,16 +327,18 @@ body: |
     ; SI-LABEL: name: test_store_global_96
     ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; SI: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4
-    ; SI: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
-    ; SI: G_STORE [[EXTRACT]](s64), [[COPY1]](p1) :: (store 8, align 16, addrspace 1)
+    ; SI: [[BITCAST:%[0-9]+]]:_(<3 x s32>) = G_BITCAST [[COPY]](s96)
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT [[BITCAST]](<3 x s32>), 0
+    ; SI: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[BITCAST]](<3 x s32>), 64
+    ; SI: G_STORE [[EXTRACT]](<2 x s32>), [[COPY1]](p1) :: (store 8, align 16, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
     ; SI: G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p1) :: (store 4 + 8, align 8, addrspace 1)
     ; VI-LABEL: name: test_store_global_96
     ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4
-    ; VI: G_STORE [[COPY]](s96), [[COPY1]](p1) :: (store 12, align 16, addrspace 1)
+    ; VI: [[BITCAST:%[0-9]+]]:_(<3 x s32>) = G_BITCAST [[COPY]](s96)
+    ; VI: G_STORE [[BITCAST]](<3 x s32>), [[COPY1]](p1) :: (store 12, align 16, addrspace 1)
     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(p1) = COPY $vgpr3_vgpr4
 
@@ -352,11 +354,13 @@ body: |
     ; SI-LABEL: name: test_store_global_i128
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; SI: G_STORE [[COPY1]](s128), [[COPY]](p1) :: (store 16, addrspace 1)
+    ; SI: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](s128)
+    ; SI: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store 16, addrspace 1)
     ; VI-LABEL: name: test_store_global_i128
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; VI: G_STORE [[COPY1]](s128), [[COPY]](p1) :: (store 16, addrspace 1)
+    ; VI: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](s128)
+    ; VI: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store 16, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s128) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
     G_STORE %1, %0 :: (store 16, addrspace 1)
@@ -393,15 +397,13 @@ body: |
     ; SI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; SI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
     ; SI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
-    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[INSERT]](<4 x s8>)
-    ; SI: G_STORE [[BITCAST]](s32), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; SI: G_STORE [[INSERT]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; VI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
     ; VI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
-    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[INSERT]](<4 x s8>)
-    ; VI: G_STORE [[BITCAST]](s32), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; VI: G_STORE [[INSERT]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<3 x s8>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store 3, addrspace 1, align 4)

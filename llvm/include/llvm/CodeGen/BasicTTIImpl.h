@@ -834,8 +834,7 @@ public:
   }
 
   unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
-    // Branches are assumed to be predicted.
-    return 0;
+    return BaseT::getCFInstrCost(Opcode, CostKind);
   }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,

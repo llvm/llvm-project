@@ -19,11 +19,8 @@
 // CHECK-NOT: "-disable-O0-optnone"
 // CHECK-NOT: "-disable-O0-noinline"
 // CHECK-NOT: "-debug-info-kind=line-tables-only"
-// CHECK: {{.*}}llc{{.*}}"-mtriple=amdgcn-amd-amdhsa"
 // CHECK-NOT: "-disable-O0-optnone"
 // CHECK-NOT: "-disable-O0-noinline"
-// CHECK-DAG: "-amdgpu-spill-cfi-saved-regs"
-// CHECK-DAG: "-disable-dwarf-locations"
 // CHECK-NOT: "-disable-O0-optnone"
 // CHECK-NOT: "-disable-O0-noinline"
 // CHECK-LABEL: clang-offload-bundler

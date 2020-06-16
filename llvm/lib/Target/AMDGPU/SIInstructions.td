@@ -669,6 +669,7 @@ defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
 defm SI_SPILL_S96  : SI_SPILL_SGPR <SReg_96>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
 defm SI_SPILL_S160 : SI_SPILL_SGPR <SReg_160>;
+defm SI_SPILL_S192 : SI_SPILL_SGPR <SReg_192>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
@@ -720,6 +721,7 @@ defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
 defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128>;
 defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
+defm SI_SPILL_V192 : SI_SPILL_VGPR <VReg_192>;
 defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
@@ -933,6 +935,7 @@ class FMADModsPat<ValueType Ty, Instruction inst, SDPatternOperator mad_opr>
   $src2_mod, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+let SubtargetPredicate = HasMadMacF32Insts in
 def : FMADModsPat<f32, V_MAD_F32, AMDGPUfmad_ftz>;
 def : FMADModsPat<f16, V_MAD_F16, AMDGPUfmad_ftz> {
   let SubtargetPredicate = Has16BitInsts;

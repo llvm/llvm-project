@@ -175,6 +175,39 @@ func @failedHasParent_wrong_parent() {
 
 // -----
 
+// CHECK: succeededParentOneOf
+func @succeededParentOneOf() {
+  "test.parent"() ({
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededParent1OneOf
+func @succeededParent1OneOf() {
+  "test.parent1"() ({
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+  return
+}
+
+// -----
+
+func @failedParentOneOf_wrong_parent1() {
+  "some.otherop"() ({
+    // expected-error@+1 {{'test.child_with_parent_one_of' op expects parent op to be one of 'test.parent, test.parent1'}}
+    "test.child_with_parent_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+   }) : () -> ()
+}
+
+
+// -----
+
 func @failedSingleBlockImplicitTerminator_empty_block() {
    // expected-error@+1 {{'test.SingleBlockImplicitTerminator' op expects a non-empty block}}
   "test.SingleBlockImplicitTerminator"() ({

@@ -46,9 +46,9 @@ StringRef InputChunk::getComdatName() const {
 
 void InputChunk::verifyRelocTargets() const {
   for (const WasmRelocation &rel : relocations) {
-    uint32_t existingValue;
+    uint64_t existingValue;
     unsigned bytesRead = 0;
-    uint32_t offset = rel.Offset - getInputSectionOffset();
+    auto offset = rel.Offset - getInputSectionOffset();
     const uint8_t *loc = data().data() + offset;
     switch (rel.Type) {
     case R_WASM_TYPE_INDEX_LEB:
@@ -56,20 +56,26 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
+    case R_WASM_MEMORY_ADDR_LEB64:
       existingValue = decodeULEB128(loc, &bytesRead);
       break;
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
+    case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
-      existingValue = static_cast<uint32_t>(decodeSLEB128(loc, &bytesRead));
+    case R_WASM_MEMORY_ADDR_REL_SLEB64:
+      existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
       break;
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
     case R_WASM_GLOBAL_INDEX_I32:
-      existingValue = static_cast<uint32_t>(read32le(loc));
+      existingValue = read32le(loc);
+      break;
+    case R_WASM_MEMORY_ADDR_I64:
+      existingValue = read64le(loc);
       break;
     default:
       llvm_unreachable("unknown relocation type");
@@ -80,7 +86,7 @@ void InputChunk::verifyRelocTargets() const {
 
     if (rel.Type != R_WASM_GLOBAL_INDEX_LEB &&
         rel.Type != R_WASM_GLOBAL_INDEX_I32) {
-      uint32_t expectedValue = file->calcExpectedValue(rel);
+      auto expectedValue = file->calcExpectedValue(rel);
       if (expectedValue != existingValue)
         warn("unexpected existing value for " + relocTypeToString(rel.Type) +
              ": existing=" + Twine(existingValue) +
@@ -108,7 +114,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
 
   for (const WasmRelocation &rel : relocations) {
     uint8_t *loc = buf + rel.Offset + off;
-    uint32_t value = file->calcNewValue(rel);
+    auto value = file->calcNewValue(rel);
     LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(rel.Type));
     if (rel.Type != R_WASM_TYPE_INDEX_LEB)
       LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
@@ -124,11 +130,18 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_MEMORY_ADDR_LEB:
       encodeULEB128(value, loc, 5);
       break;
+    case R_WASM_MEMORY_ADDR_LEB64:
+      encodeULEB128(value, loc, 10);
+      break;
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
+      break;
+    case R_WASM_MEMORY_ADDR_SLEB64:
+    case R_WASM_MEMORY_ADDR_REL_SLEB64:
+      encodeSLEB128(static_cast<int64_t>(value), loc, 10);
       break;
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
@@ -136,6 +149,9 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_SECTION_OFFSET_I32:
     case R_WASM_GLOBAL_INDEX_I32:
       write32le(loc, value);
+      break;
+    case R_WASM_MEMORY_ADDR_I64:
+      write64le(loc, value);
       break;
     default:
       llvm_unreachable("unknown relocation type");
@@ -181,17 +197,19 @@ void InputFunction::setTableIndex(uint32_t index) {
 // Write a relocation value without padding and return the number of bytes
 // witten.
 static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
-                                     uint32_t value) {
+                                     uint64_t value) {
   switch (rel.Type) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_EVENT_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_LEB64:
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
-    return encodeSLEB128(static_cast<int32_t>(value), buf);
+  case R_WASM_MEMORY_ADDR_SLEB64:
+    return encodeSLEB128(static_cast<int64_t>(value), buf);
   default:
     llvm_unreachable("unexpected relocation type");
   }
@@ -207,13 +225,16 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
     return 5;
+  case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_MEMORY_ADDR_SLEB64:
+    return 10;
   default:
     llvm_unreachable("unexpected relocation type");
   }
 }
 
-static unsigned getRelocWidth(const WasmRelocation &rel, uint32_t value) {
-  uint8_t buf[5];
+static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
+  uint8_t buf[10];
   return writeCompressedReloc(buf, rel, value);
 }
 

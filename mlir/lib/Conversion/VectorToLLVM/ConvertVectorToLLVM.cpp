@@ -176,7 +176,7 @@ replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
                                  LLVMTypeConverter &typeConverter, Location loc,
                                  TransferWriteOp xferOp,
                                  ArrayRef<Value> operands, Value dataPtr) {
-  auto adaptor = TransferWriteOpOperandAdaptor(operands);
+  auto adaptor = TransferWriteOpAdaptor(operands);
   rewriter.replaceOpWithNewOp<LLVM::StoreOp>(xferOp, adaptor.vector(), dataPtr);
   return success();
 }
@@ -190,21 +190,21 @@ replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
   if (failed(getVectorTransferAlignment(typeConverter, xferOp, align)))
     return failure();
 
-  auto adaptor = TransferWriteOpOperandAdaptor(operands);
+  auto adaptor = TransferWriteOpAdaptor(operands);
   rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
       xferOp, adaptor.vector(), dataPtr, mask,
       rewriter.getI32IntegerAttr(align));
   return success();
 }
 
-static TransferReadOpOperandAdaptor
-getTransferOpAdapter(TransferReadOp xferOp, ArrayRef<Value> operands) {
-  return TransferReadOpOperandAdaptor(operands);
+static TransferReadOpAdaptor getTransferOpAdapter(TransferReadOp xferOp,
+                                                  ArrayRef<Value> operands) {
+  return TransferReadOpAdaptor(operands);
 }
 
-static TransferWriteOpOperandAdaptor
-getTransferOpAdapter(TransferWriteOp xferOp, ArrayRef<Value> operands) {
-  return TransferWriteOpOperandAdaptor(operands);
+static TransferWriteOpAdaptor getTransferOpAdapter(TransferWriteOp xferOp,
+                                                   ArrayRef<Value> operands) {
+  return TransferWriteOpAdaptor(operands);
 }
 
 namespace {
@@ -222,7 +222,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto matmulOp = cast<vector::MatmulOp>(op);
-    auto adaptor = vector::MatmulOpOperandAdaptor(operands);
+    auto adaptor = vector::MatmulOpAdaptor(operands);
     rewriter.replaceOpWithNewOp<LLVM::MatrixMultiplyOp>(
         op, typeConverter.convertType(matmulOp.res().getType()), adaptor.lhs(),
         adaptor.rhs(), matmulOp.lhs_rows(), matmulOp.lhs_columns(),
@@ -244,7 +244,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto transOp = cast<vector::FlatTransposeOp>(op);
-    auto adaptor = vector::FlatTransposeOpOperandAdaptor(operands);
+    auto adaptor = vector::FlatTransposeOpAdaptor(operands);
     rewriter.replaceOpWithNewOp<LLVM::MatrixTransposeOp>(
         transOp, typeConverter.convertType(transOp.res().getType()),
         adaptor.matrix(), transOp.rows(), transOp.columns());
@@ -337,7 +337,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::ShuffleOpOperandAdaptor(operands);
+    auto adaptor = vector::ShuffleOpAdaptor(operands);
     auto shuffleOp = cast<vector::ShuffleOp>(op);
     auto v1Type = shuffleOp.getV1VectorType();
     auto v2Type = shuffleOp.getV2VectorType();
@@ -394,7 +394,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::ExtractElementOpOperandAdaptor(operands);
+    auto adaptor = vector::ExtractElementOpAdaptor(operands);
     auto extractEltOp = cast<vector::ExtractElementOp>(op);
     auto vectorType = extractEltOp.getVectorType();
     auto llvmType = typeConverter.convertType(vectorType.getElementType());
@@ -420,7 +420,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::ExtractOpOperandAdaptor(operands);
+    auto adaptor = vector::ExtractOpAdaptor(operands);
     auto extractOp = cast<vector::ExtractOp>(op);
     auto vectorType = extractOp.getVectorType();
     auto resultType = extractOp.getResult().getType();
@@ -488,7 +488,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::FMAOpOperandAdaptor(operands);
+    auto adaptor = vector::FMAOpAdaptor(operands);
     vector::FMAOp fmaOp = cast<vector::FMAOp>(op);
     VectorType vType = fmaOp.getVectorType();
     if (vType.getRank() != 1)
@@ -509,7 +509,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto adaptor = vector::InsertElementOpOperandAdaptor(operands);
+    auto adaptor = vector::InsertElementOpAdaptor(operands);
     auto insertEltOp = cast<vector::InsertElementOp>(op);
     auto vectorType = insertEltOp.getDestVectorType();
     auto llvmType = typeConverter.convertType(vectorType);
@@ -535,7 +535,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto adaptor = vector::InsertOpOperandAdaptor(operands);
+    auto adaptor = vector::InsertOpAdaptor(operands);
     auto insertOp = cast<vector::InsertOp>(op);
     auto sourceType = insertOp.getSourceType();
     auto destVectorType = insertOp.getDestVectorType();
@@ -967,7 +967,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto printOp = cast<vector::PrintOp>(op);
-    auto adaptor = vector::PrintOpOperandAdaptor(operands);
+    auto adaptor = vector::PrintOpAdaptor(operands);
     Type printType = printOp.getPrintType();
 
     if (typeConverter.convertType(printType) == nullptr)

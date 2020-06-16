@@ -20,6 +20,8 @@
 using namespace llvm;
 
 JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
+  assert(GV.hasName() && "Can't get flags for anonymous symbol");
+
   JITSymbolFlags Flags = JITSymbolFlags::None;
   if (GV.hasWeakLinkage() || GV.hasLinkOnceLinkage())
     Flags |= JITSymbolFlags::Weak;
@@ -33,6 +35,16 @@ JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
   else if (isa<GlobalAlias>(GV) &&
            isa<Function>(cast<GlobalAlias>(GV).getAliasee()))
     Flags |= JITSymbolFlags::Callable;
+
+  // Check for a linker-private-global-prefix on the symbol name, in which
+  // case it must be marked as non-exported.
+  if (auto *M = GV.getParent()) {
+    const auto &DL = M->getDataLayout();
+    StringRef LPGP = DL.getLinkerPrivateGlobalPrefix();
+    if (!LPGP.empty() && GV.getName().front() == '\01' &&
+        GV.getName().substr(1).startswith(LPGP))
+      Flags &= ~JITSymbolFlags::Exported;
+  }
 
   return Flags;
 }

@@ -13,6 +13,7 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
@@ -102,6 +103,9 @@ public:
   }
   ComplexPairTy VisitExpr(Expr *S);
   ComplexPairTy VisitConstantExpr(ConstantExpr *E) {
+    if (llvm::Constant *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E))
+      return ComplexPairTy(Result->getAggregateElement(0U),
+                           Result->getAggregateElement(1U));
     return Visit(E->getSubExpr());
   }
   ComplexPairTy VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr());}

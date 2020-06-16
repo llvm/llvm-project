@@ -207,6 +207,15 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ShapeToSCF
+//===----------------------------------------------------------------------===//
+
+def ConvertShapeToSCF : FunctionPass<"convert-shape-to-scf"> {
+  let summary = "Convert operations from the shape dialect to the SCF dialect";
+  let constructor = "mlir::createConvertShapeToSCFPass()";
+}
+
+//===----------------------------------------------------------------------===//
 // SPIRVToLLVM
 //===----------------------------------------------------------------------===//
 

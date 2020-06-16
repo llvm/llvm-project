@@ -3002,6 +3002,7 @@ Error BitcodeReader::globalCleanup() {
     return error("Malformed global initializer set");
 
   // Look for intrinsic functions which need to be upgraded at some point
+  // and functions that need to have their function attributes upgraded.
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
@@ -3012,6 +3013,8 @@ Error BitcodeReader::globalCleanup() {
       // loaded in the same LLVMContext (LTO scenario). In this case we should
       // remangle intrinsics names as well.
       RemangledIntrinsics[&F] = Remangled.getValue();
+    // Look for functions that rely on old function attribute behavior.
+    UpgradeFunctionAttributes(F);
   }
 
   // Look for global variables which need to be renamed.
@@ -5375,6 +5378,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
       stripTBAA(F->getParent());
     }
   }
+
+  // Look for functions that rely on old function attribute behavior.
+  UpgradeFunctionAttributes(*F);
 
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.

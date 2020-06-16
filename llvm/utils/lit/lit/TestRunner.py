@@ -1463,9 +1463,9 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     except ValueError as e:
         return lit.Test.Result(Test.UNRESOLVED, str(e))
     script = parsed['RUN:'] or []
-    test.xfails = parsed['XFAIL:'] or []
-    test.requires = parsed['REQUIRES:'] or []
-    test.unsupported = parsed['UNSUPPORTED:'] or []
+    test.xfails += parsed['XFAIL:'] or []
+    test.requires += parsed['REQUIRES:'] or []
+    test.unsupported += parsed['UNSUPPORTED:'] or []
     if parsed['ALLOW_RETRIES:']:
         test.allowed_retries = parsed['ALLOW_RETRIES:'][0]
 

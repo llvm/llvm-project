@@ -13,6 +13,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1010 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1011 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1011 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1012 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1012 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1030 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1030 %s
 
 // GFX600-NOT: "target-features"
 // GFX601-NOT: "target-features"
@@ -24,5 +25,6 @@
 // GFX1010: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
 // GFX1011: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
 // GFX1012: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
+// GFX1030: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
 
 kernel void test() {}

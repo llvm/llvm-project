@@ -269,6 +269,8 @@ static CombinerObjective getCombinerObjective(MachineCombinerPattern P) {
   case MachineCombinerPattern::REASSOC_AX_YB:
   case MachineCombinerPattern::REASSOC_XA_BY:
   case MachineCombinerPattern::REASSOC_XA_YB:
+  case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
+  case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
     return CombinerObjective::MustReduceDepth;
   default:
     return CombinerObjective::Default;

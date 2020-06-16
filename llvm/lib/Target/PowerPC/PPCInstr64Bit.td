@@ -960,6 +960,69 @@ def : InstAlias<"xnop", (XORI8 X0, X0, 0)>;
 def : InstAlias<"cntlzw $rA, $rS", (CNTLZW8 g8rc:$rA, g8rc:$rS)>;
 def : InstAlias<"cntlzw. $rA, $rS", (CNTLZW8_rec g8rc:$rA, g8rc:$rS)>;
 
+def : InstAlias<"mtxer $Rx", (MTSPR8 1, g8rc:$Rx)>;
+def : InstAlias<"mfxer $Rx", (MFSPR8 g8rc:$Rx, 1)>;
+
+def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
+def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
+
+def : InstAlias<"mfrtcu $Rx", (MFSPR8 g8rc:$Rx, 4)>;
+def : InstAlias<"mfrtcl $Rx", (MFSPR8 g8rc:$Rx, 5)>;
+
+def : InstAlias<"mtlr $Rx", (MTSPR8 8, g8rc:$Rx)>;
+def : InstAlias<"mflr $Rx", (MFSPR8 g8rc:$Rx, 8)>;
+
+def : InstAlias<"mtctr $Rx", (MTSPR8 9, g8rc:$Rx)>;
+def : InstAlias<"mfctr $Rx", (MFSPR8 g8rc:$Rx, 9)>;
+
+def : InstAlias<"mtuamr $Rx", (MTSPR8 13, g8rc:$Rx)>;
+def : InstAlias<"mfuamr $Rx", (MFSPR8 g8rc:$Rx, 13)>;
+
+def : InstAlias<"mtdscr $Rx", (MTSPR8 17, g8rc:$Rx)>;
+def : InstAlias<"mfdscr $Rx", (MFSPR8 g8rc:$Rx, 17)>;
+
+def : InstAlias<"mtdsisr $Rx", (MTSPR8 18, g8rc:$Rx)>;
+def : InstAlias<"mfdsisr $Rx", (MFSPR8 g8rc:$Rx, 18)>;
+
+def : InstAlias<"mtdar $Rx", (MTSPR8 19, g8rc:$Rx)>;
+def : InstAlias<"mfdar $Rx", (MFSPR8 g8rc:$Rx, 19)>;
+
+def : InstAlias<"mtdec $Rx", (MTSPR8 22, g8rc:$Rx)>;
+def : InstAlias<"mfdec $Rx", (MFSPR8 g8rc:$Rx, 22)>;
+
+def : InstAlias<"mtsdr1 $Rx", (MTSPR8 25, g8rc:$Rx)>;
+def : InstAlias<"mfsdr1 $Rx", (MFSPR8 g8rc:$Rx, 25)>;
+
+def : InstAlias<"mtsrr0 $Rx", (MTSPR8 26, g8rc:$Rx)>;
+def : InstAlias<"mfsrr0 $Rx", (MFSPR8 g8rc:$Rx, 26)>;
+
+def : InstAlias<"mtsrr1 $Rx", (MTSPR8 27, g8rc:$Rx)>;
+def : InstAlias<"mfsrr1 $Rx", (MFSPR8 g8rc:$Rx, 27)>;
+
+def : InstAlias<"mtcfar $Rx", (MTSPR8 28, g8rc:$Rx)>;
+def : InstAlias<"mfcfar $Rx", (MFSPR8 g8rc:$Rx, 28)>;
+
+def : InstAlias<"mtamr $Rx", (MTSPR8 29, g8rc:$Rx)>;
+def : InstAlias<"mfamr $Rx", (MFSPR8 g8rc:$Rx, 29)>;
+
+foreach SPRG = 0-3 in {
+  def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
+  def : InstAlias<"mfsprg"#SPRG#" $RT", (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
+  def : InstAlias<"mfsprg "#SPRG#", $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+  def : InstAlias<"mfsprg"#SPRG#" $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+}
+
+def : InstAlias<"mfasr $RT", (MFSPR8 g8rc:$RT, 280)>;
+def : InstAlias<"mtasr $RT", (MTSPR8 280, g8rc:$RT)>;
+
+def : InstAlias<"mttbl $Rx", (MTSPR8 284, g8rc:$Rx)>;
+def : InstAlias<"mttbu $Rx", (MTSPR8 285, g8rc:$Rx)>;
+
+def : InstAlias<"mfpvr $RT", (MFSPR8 g8rc:$RT, 287)>;
+
+def : InstAlias<"mfspefscr $Rx", (MFSPR8 g8rc:$Rx, 512)>;
+def : InstAlias<"mtspefscr $Rx", (MTSPR8 512, g8rc:$Rx)>;
+
 //===----------------------------------------------------------------------===//
 // Load/Store instructions.
 //

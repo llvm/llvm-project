@@ -469,8 +469,6 @@ public:
 
   const char *GetScriptInterpreterPtyName();
 
-  int GetMasterFileDescriptor();
-
   virtual llvm::Expected<unsigned>
   GetMaxPositionalArgumentsForCallable(const llvm::StringRef &callable_name) {
     return llvm::createStringError(

@@ -21,6 +21,13 @@ class Target;
 Target &getTheWebAssemblyTarget32();
 Target &getTheWebAssemblyTarget64();
 
+namespace WebAssembly {
+
+int getStackOpcode(unsigned short Opcode);
+int getWasm64Opcode(unsigned short Opcode);
+
+} // namespace WebAssembly
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_WEBASSEMBLY_TARGETINFO_WEBASSEMBLYTARGETINFO_H

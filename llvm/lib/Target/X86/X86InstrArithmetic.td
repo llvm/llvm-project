@@ -1408,7 +1408,7 @@ let isCompare = 1 in {
 
 // Patterns to match a relocImm into the immediate field.
 def : Pat<(X86testpat GR8:$src1, relocImm8_su:$src2),
-          (TEST8ri addr:$src1, relocImm8_su:$src2)>;
+          (TEST8ri GR8:$src1, relocImm8_su:$src2)>;
 def : Pat<(X86testpat GR16:$src1, relocImm16_su:$src2),
           (TEST16ri GR16:$src1, relocImm16_su:$src2)>;
 def : Pat<(X86testpat GR32:$src1, relocImm32_su:$src2),

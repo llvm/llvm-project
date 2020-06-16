@@ -111,6 +111,48 @@ static bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
+/// sources of the shuffle are different.
+static Optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
+                                                      unsigned NumElts) {
+  // Look for the first non-undef element.
+  auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
+  if (FirstRealElt == M.end())
+    return None;
+
+  // Use APInt to handle overflow when calculating expected element.
+  unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
+  APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1);
+
+  // The following shuffle indices must be the successive elements after the
+  // first real element.
+  if (any_of(
+          make_range(std::next(FirstRealElt), M.end()),
+          [&ExpectedElt](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
+    return None;
+
+  // The index of an EXT is the first element if it is not UNDEF.
+  // Watch out for the beginning UNDEFs. The EXT index should be the expected
+  // value of the first element.  E.g.
+  // <-1, -1, 3, ...> is treated as <1, 2, 3, ...>.
+  // <-1, -1, 0, 1, ...> is treated as <2*NumElts-2, 2*NumElts-1, 0, 1, ...>.
+  // ExpectedElt is the last mask index plus 1.
+  uint64_t Imm = ExpectedElt.getZExtValue();
+  bool ReverseExt = false;
+
+  // There are two difference cases requiring to reverse input vectors.
+  // For example, for vector <4 x i32> we have the following cases,
+  // Case 1: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, -1, 0>)
+  // Case 2: shufflevector(<4 x i32>,<4 x i32>,<-1, -1, 7, 0>)
+  // For both cases, we finally use mask <5, 6, 7, 0>, which requires
+  // to reverse two input vectors.
+  if (Imm < NumElts)
+    ReverseExt = true;
+  else
+    Imm -= NumElts;
+  return std::make_pair(ReverseExt, Imm);
+}
+
 /// Determines if \p M is a shuffle vector mask for a UZP of \p NumElts.
 /// Whether or not G_UZP1 or G_UZP2 should be used is stored in \p WhichResult.
 static bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
@@ -271,12 +313,47 @@ static bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+static bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     ShuffleVectorPseudo &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  Register Dst = MI.getOperand(0).getReg();
+  auto ExtInfo = getExtMask(MI.getOperand(3).getShuffleMask(),
+                            MRI.getType(Dst).getNumElements());
+  if (!ExtInfo)
+    return false;
+  bool ReverseExt;
+  uint64_t Imm;
+  std::tie(ReverseExt, Imm) = *ExtInfo;
+  Register V1 = MI.getOperand(1).getReg();
+  Register V2 = MI.getOperand(2).getReg();
+  if (ReverseExt)
+    std::swap(V1, V2);
+  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
+  Imm *= ExtFactor;
+  MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V2, Imm});
+  return true;
+}
+
 /// Replace a G_SHUFFLE_VECTOR instruction with a pseudo.
 /// \p Opc is the opcode to use. \p MI is the G_SHUFFLE_VECTOR.
 static bool applyShuffleVectorPseudo(MachineInstr &MI,
                                      ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
   MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
+  MI.eraseFromParent();
+  return true;
+}
+
+/// Replace a G_SHUFFLE_VECTOR instruction with G_EXT.
+/// Special-cased because the constant operand must be emitted as a G_CONSTANT
+/// for the imported tablegen patterns to work.
+static bool applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
+  MachineIRBuilder MIRBuilder(MI);
+  // Tablegen patterns expect an i32 G_CONSTANT as the final op.
+  auto Cst =
+      MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
+  MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
+                        {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   MI.eraseFromParent();
   return true;
 }

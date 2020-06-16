@@ -383,14 +383,14 @@ class X86VMemOperand<RegisterClass RC, string printMethod,
   let MIOperandInfo = (ops ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
 }
 
-def anymem : X86MemOperand<"printanymem">;
+def anymem : X86MemOperand<"printMemReference">;
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),
                            (X86fcmp node:$lhs, node:$rhs)]>;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
 // restrict to only unsized memory.
-def opaquemem : X86MemOperand<"printopaquemem">;
+def opaquemem : X86MemOperand<"printMemReference">;
 
 def i8mem   : X86MemOperand<"printbytemem",   X86Mem8AsmOperand>;
 def i16mem  : X86MemOperand<"printwordmem",  X86Mem16AsmOperand>;
@@ -764,14 +764,14 @@ def i64u8imm : Operand<i64> {
 }
 
 def lea64_32mem : Operand<i32> {
-  let PrintMethod = "printanymem";
+  let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86MemAsmOperand;
 }
 
 // Memory operands that use 64-bit pointers in both ILP32 and LP64.
 def lea64mem : Operand<i64> {
-  let PrintMethod = "printanymem";
+  let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);
   let ParserMatchClass = X86MemAsmOperand;
 }

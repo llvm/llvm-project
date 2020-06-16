@@ -18,6 +18,7 @@
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -95,6 +96,10 @@ static cl::opt<bool>
     SafeStackUsePointerAddress("safestack-use-pointer-address",
                                   cl::init(false), cl::Hidden);
 
+// Disabled by default due to PR32143.
+static cl::opt<bool> ClColoring("safe-stack-coloring",
+                                cl::desc("enable safe stack coloring"),
+                                cl::Hidden, cl::init(false));
 
 namespace {
 
@@ -493,8 +498,17 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   DIBuilder DIB(*F.getParent());
 
   StackColoring SSC(F, StaticAllocas);
-  SSC.run();
-  SSC.removeAllMarkers();
+  static const StackColoring::LiveRange NoColoringRange(1, true);
+  if (ClColoring)
+    SSC.run();
+
+  for (auto *I : SSC.getMarkers()) {
+    auto *Op = dyn_cast<Instruction>(I->getOperand(1));
+    const_cast<IntrinsicInst *>(I)->eraseFromParent();
+    // Remove the operand bitcast, too, if it has no more uses left.
+    if (Op && Op->use_empty())
+      Op->eraseFromParent();
+  }
 
   // Unsafe stack always grows down.
   StackLayout SSL(StackAlignment);
@@ -528,7 +542,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     unsigned Align =
         std::max((unsigned)DL.getPrefTypeAlignment(Ty), AI->getAlignment());
 
-    SSL.addObject(AI, Size, Align, SSC.getLiveRange(AI));
+    SSL.addObject(AI, Size, Align,
+                  ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
   }
 
   SSL.computeLayout();
