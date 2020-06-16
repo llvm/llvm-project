@@ -3534,10 +3534,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 2, AArch64::LD1Twov16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 2, AArch64::LD1Twov4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 2, AArch64::LD1Twov8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3561,10 +3561,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 3, AArch64::LD1Threev16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 3, AArch64::LD1Threev4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 3, AArch64::LD1Threev8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3588,10 +3588,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 4, AArch64::LD1Fourv16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 4, AArch64::LD1Fourv4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 4, AArch64::LD1Fourv8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3615,10 +3615,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 2, AArch64::LD2Twov16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 2, AArch64::LD2Twov4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 2, AArch64::LD2Twov8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3642,10 +3642,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 3, AArch64::LD3Threev16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 3, AArch64::LD3Threev4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 3, AArch64::LD3Threev8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3669,10 +3669,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 4, AArch64::LD4Fourv16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 4, AArch64::LD4Fourv4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 4, AArch64::LD4Fourv8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3696,10 +3696,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 2, AArch64::LD2Rv16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 2, AArch64::LD2Rv4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 2, AArch64::LD2Rv8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3723,10 +3723,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 3, AArch64::LD3Rv16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 3, AArch64::LD3Rv4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 3, AArch64::LD3Rv8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3750,10 +3750,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectLoad(Node, 4, AArch64::LD4Rv16b, AArch64::qsub0);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
         SelectLoad(Node, 4, AArch64::LD4Rv4h, AArch64::dsub0);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
         SelectLoad(Node, 4, AArch64::LD4Rv8h, AArch64::qsub0);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3775,7 +3775,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectLoadLane(Node, 2, AArch64::LD2i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectLoadLane(Node, 2, AArch64::LD2i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -3793,7 +3793,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectLoadLane(Node, 3, AArch64::LD3i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectLoadLane(Node, 3, AArch64::LD3i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -3811,7 +3811,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectLoadLane(Node, 4, AArch64::LD4i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectLoadLane(Node, 4, AArch64::LD4i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -3947,10 +3947,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 2, AArch64::ST1Twov16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 2, AArch64::ST1Twov4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 2, AArch64::ST1Twov8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -3975,10 +3977,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 3, AArch64::ST1Threev16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 3, AArch64::ST1Threev4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 3, AArch64::ST1Threev8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4003,10 +4007,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 4, AArch64::ST1Fourv16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 4, AArch64::ST1Fourv4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 4, AArch64::ST1Fourv8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4031,10 +4037,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 2, AArch64::ST2Twov16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 2, AArch64::ST2Twov4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 2, AArch64::ST2Twov8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4059,10 +4067,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 3, AArch64::ST3Threev16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 3, AArch64::ST3Threev4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 3, AArch64::ST3Threev8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4087,10 +4097,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v16i8) {
         SelectStore(Node, 4, AArch64::ST4Fourv16b);
         return;
-      } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+      } else if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+                 VT == MVT::v4bf16) {
         SelectStore(Node, 4, AArch64::ST4Fourv4h);
         return;
-      } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+      } else if (VT == MVT::v8i16 || VT == MVT::v8f16 ||
+                 VT == MVT::v8bf16) {
         SelectStore(Node, 4, AArch64::ST4Fourv8h);
         return;
       } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4113,7 +4125,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectStoreLane(Node, 2, AArch64::ST2i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectStoreLane(Node, 2, AArch64::ST2i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4132,7 +4144,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectStoreLane(Node, 3, AArch64::ST3i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectStoreLane(Node, 3, AArch64::ST3i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4151,7 +4163,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectStoreLane(Node, 4, AArch64::ST4i8);
         return;
       } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-                 VT == MVT::v8f16) {
+                 VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
         SelectStoreLane(Node, 4, AArch64::ST4i16);
         return;
       } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4235,10 +4247,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 2, AArch64::LD2Twov16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 2, AArch64::LD2Twov4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 2, AArch64::LD2Twov8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4263,10 +4275,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 3, AArch64::LD3Threev16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 3, AArch64::LD3Threev4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 3, AArch64::LD3Threev8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4291,10 +4303,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 4, AArch64::LD4Fourv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 4, AArch64::LD4Fourv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 4, AArch64::LD4Fourv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4319,10 +4331,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 2, AArch64::LD1Twov16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 2, AArch64::LD1Twov4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 2, AArch64::LD1Twov8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4347,10 +4359,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 3, AArch64::LD1Threev16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 3, AArch64::LD1Threev4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 3, AArch64::LD1Threev8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4375,10 +4387,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 4, AArch64::LD1Fourv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 4, AArch64::LD1Fourv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 4, AArch64::LD1Fourv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4403,10 +4415,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 1, AArch64::LD1Rv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 1, AArch64::LD1Rv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 1, AArch64::LD1Rv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4431,10 +4443,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 2, AArch64::LD2Rv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 2, AArch64::LD2Rv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 2, AArch64::LD2Rv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4459,10 +4471,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 3, AArch64::LD3Rv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 3, AArch64::LD3Rv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 3, AArch64::LD3Rv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4487,10 +4499,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostLoad(Node, 4, AArch64::LD4Rv16b_POST, AArch64::qsub0);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostLoad(Node, 4, AArch64::LD4Rv4h_POST, AArch64::dsub0);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16  || VT == MVT::v8bf16) {
       SelectPostLoad(Node, 4, AArch64::LD4Rv8h_POST, AArch64::qsub0);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4513,7 +4525,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostLoadLane(Node, 1, AArch64::LD1i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostLoadLane(Node, 1, AArch64::LD1i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4532,7 +4544,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostLoadLane(Node, 2, AArch64::LD2i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostLoadLane(Node, 2, AArch64::LD2i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4551,7 +4563,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostLoadLane(Node, 3, AArch64::LD3i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostLoadLane(Node, 3, AArch64::LD3i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4570,7 +4582,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostLoadLane(Node, 4, AArch64::LD4i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostLoadLane(Node, 4, AArch64::LD4i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4592,10 +4604,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 2, AArch64::ST2Twov16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 2, AArch64::ST2Twov4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
       SelectPostStore(Node, 2, AArch64::ST2Twov8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4621,10 +4633,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 3, AArch64::ST3Threev16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 3, AArch64::ST3Threev4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
       SelectPostStore(Node, 3, AArch64::ST3Threev8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4650,10 +4662,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 4, AArch64::ST4Fourv16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 4, AArch64::ST4Fourv4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
       SelectPostStore(Node, 4, AArch64::ST4Fourv8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4679,10 +4691,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 2, AArch64::ST1Twov16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 2, AArch64::ST1Twov4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
       SelectPostStore(Node, 2, AArch64::ST1Twov8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4708,10 +4720,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 3, AArch64::ST1Threev16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 3, AArch64::ST1Threev4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16 ) {
       SelectPostStore(Node, 3, AArch64::ST1Threev8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4737,10 +4749,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     } else if (VT == MVT::v16i8) {
       SelectPostStore(Node, 4, AArch64::ST1Fourv16b_POST);
       return;
-    } else if (VT == MVT::v4i16 || VT == MVT::v4f16) {
+    } else if (VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16) {
       SelectPostStore(Node, 4, AArch64::ST1Fourv4h_POST);
       return;
-    } else if (VT == MVT::v8i16 || VT == MVT::v8f16) {
+    } else if (VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8bf16) {
       SelectPostStore(Node, 4, AArch64::ST1Fourv8h_POST);
       return;
     } else if (VT == MVT::v2i32 || VT == MVT::v2f32) {
@@ -4764,7 +4776,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostStoreLane(Node, 2, AArch64::ST2i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostStoreLane(Node, 2, AArch64::ST2i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4784,7 +4796,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostStoreLane(Node, 3, AArch64::ST3i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostStoreLane(Node, 3, AArch64::ST3i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
@@ -4804,7 +4816,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectPostStoreLane(Node, 4, AArch64::ST4i8_POST);
       return;
     } else if (VT == MVT::v8i16 || VT == MVT::v4i16 || VT == MVT::v4f16 ||
-               VT == MVT::v8f16) {
+               VT == MVT::v8f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16) {
       SelectPostStoreLane(Node, 4, AArch64::ST4i16_POST);
       return;
     } else if (VT == MVT::v4i32 || VT == MVT::v2i32 || VT == MVT::v4f32 ||
