@@ -841,6 +841,13 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
     OS << Indent << "return false;\n";
 }
 
+static void emitAdditionalHelperMethodArguments(raw_ostream &OS,
+                                                Record *Combiner) {
+  for (Record *Arg : Combiner->getValueAsListOfDefs("AdditionalArguments"))
+    OS << ",\n    " << Arg->getValueAsString("Type")
+       << Arg->getValueAsString("Name");
+}
+
 void GICombinerEmitter::run(raw_ostream &OS) {
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (StopAfterParse) {
@@ -901,9 +908,10 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  bool tryCombineAll(\n"
      << "    GISelChangeObserver &Observer,\n"
      << "    MachineInstr &MI,\n"
-     << "    MachineIRBuilder &B,\n"
-     << "    CombinerHelper &Helper) const;\n"
-     << "};\n\n";
+     << "    MachineIRBuilder &B";
+  emitAdditionalHelperMethodArguments(OS, Combiner);
+  OS << ") const;\n";
+  OS << "};\n\n";
 
   emitNameMatcher(OS);
 
@@ -958,8 +966,9 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   OS << "bool " << getClassName() << "::tryCombineAll(\n"
      << "    GISelChangeObserver &Observer,\n"
      << "    MachineInstr &MI,\n"
-     << "    MachineIRBuilder &B,\n"
-     << "    CombinerHelper &Helper) const {\n"
+     << "    MachineIRBuilder &B";
+  emitAdditionalHelperMethodArguments(OS, Combiner);
+  OS << ") const {\n"
      << "  MachineBasicBlock *MBB = MI.getParent();\n"
      << "  MachineFunction *MF = MBB->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"
