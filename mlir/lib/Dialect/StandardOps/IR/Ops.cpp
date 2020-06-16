@@ -1703,8 +1703,8 @@ struct ExtractElementFromTensorFromElements
     if (extract.indices().size() != 1)
       return failure();
 
-    auto tensor_from_elements =
-        dyn_cast<TensorFromElementsOp>(extract.aggregate().getDefiningOp());
+    auto tensor_from_elements = dyn_cast_or_null<TensorFromElementsOp>(
+        extract.aggregate().getDefiningOp());
     if (tensor_from_elements == nullptr)
       return failure();
 
