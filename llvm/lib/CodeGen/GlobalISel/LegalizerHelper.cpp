@@ -2057,9 +2057,10 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       // TODO: Probably should be zext
       widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
       Observer.changedInstr(MI);
+      return Legalized;
     }
 
-    return Legalized;
+    return UnableToLegalize;
   }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FMUL:
