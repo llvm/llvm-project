@@ -244,6 +244,22 @@ def OP_SUDOT_LNQ
     : Op<(call "vusdot", $p0,
           (cast "8", "U", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)), $p1)>;
 
+def OP_BFDOT_LN
+    : Op<(call "vbfdot", $p0, $p1,
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "float32x2_t", $p2), $p3)))>;
+
+def OP_BFDOT_LNQ
+    : Op<(call "vbfdot", $p0, $p1,
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "float32x4_t", $p2), $p3)))>;
+
+def OP_BFMLALB_LN
+    : Op<(call "vbfmlalb", $p0, $p1,
+          (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+
+def OP_BFMLALT_LN
+    : Op<(call "vbfmlalt", $p0, $p1,
+          (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+
 //===----------------------------------------------------------------------===//
 // Auxiliary Instructions
 //===----------------------------------------------------------------------===//
@@ -1845,6 +1861,25 @@ let ArchGuard = "defined(__ARM_FEATURE_MATMUL_INT8)" in {
       def VSUDOT_LANEQ  : SOpInst<"vsudot_laneq", "..(<<)(<<QU)I", "iQi", OP_SUDOT_LNQ>;
     }
   }
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
+  def VDOT_BF : SInst<"vbfdot", "..BB", "fQf">;
+  def VDOT_LANE_BF : SOpInst<"vbfdot_lane", "..B(Bq)I", "fQf", OP_BFDOT_LN>;
+  def VDOT_LANEQ_BF : SOpInst<"vbfdot_laneq", "..B(BQ)I", "fQf", OP_BFDOT_LNQ> {
+    let isLaneQ = 1;
+  }
+
+  def VFMMLA_BF : SInst<"vbfmmla", "..BB", "Qf">;
+
+  def VFMLALB_BF : SInst<"vbfmlalb", "..BB", "Qf">;
+  def VFMLALT_BF : SInst<"vbfmlalt", "..BB", "Qf">;
+
+  def VFMLALB_LANE_BF : SOpInst<"vbfmlalb_lane", "..B(Bq)I", "Qf", OP_BFMLALB_LN>;
+  def VFMLALB_LANEQ_BF : SOpInst<"vbfmlalb_laneq", "..B(BQ)I", "Qf", OP_BFMLALB_LN>;
+
+  def VFMLALT_LANE_BF : SOpInst<"vbfmlalt_lane", "..B(Bq)I", "Qf", OP_BFMLALT_LN>;
+  def VFMLALT_LANEQ_BF : SOpInst<"vbfmlalt_laneq", "..B(BQ)I", "Qf", OP_BFMLALT_LN>;
 }
 
 // v8.3-A Vector complex addition intrinsics
