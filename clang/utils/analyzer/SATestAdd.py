@@ -45,18 +45,18 @@ the Repository Directory.
 import SATestBuild
 from ProjectMap import ProjectMap, ProjectInfo
 
+import argparse
 import os
 import sys
 
 
-def add_new_project(name: str, build_mode: int):
+def add_new_project(project: ProjectInfo):
     """
     Add a new project for testing: build it and add to the Project Map file.
     :param name: is a short string used to identify a project.
     """
 
-    project_info = ProjectInfo(name, build_mode)
-    test_info = SATestBuild.TestInfo(project_info,
+    test_info = SATestBuild.TestInfo(project,
                                      is_reference_build=True)
     tester = SATestBuild.ProjectTester(test_info)
 
@@ -71,37 +71,55 @@ def add_new_project(name: str, build_mode: int):
     # Add the project name to the project map.
     project_map = ProjectMap(should_exist=False)
 
-    if is_existing_project(project_map, name):
-        print(f"Warning: Project with name '{name}' already exists.",
+    if is_existing_project(project_map, project):
+        print(f"Warning: Project with name '{project.name}' already exists.",
               file=sys.stdout)
         print("Reference output has been regenerated.", file=sys.stdout)
     else:
-        project_map.projects.append(project_info)
+        project_map.projects.append(project)
         project_map.save()
 
 
-def is_existing_project(project_map: ProjectMap, project_name: str) -> bool:
-    return any(existing_project.name == project_name
+def is_existing_project(project_map: ProjectMap, project: ProjectInfo) -> bool:
+    return any(existing_project.name == project.name
                for existing_project in project_map.projects)
 
 
-# TODO: Use argparse
 # TODO: Add an option not to build.
 # TODO: Set the path to the Repository directory.
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
-        print("Add a new project for testing to the analyzer"
-              "\nUsage: ", sys.argv[0],
-              "project_ID <mode>\n"
-              "mode: 0 for single file project, "
-              "1 for scan_build, "
-              "2 for single file c++11 project", file=sys.stderr)
-        sys.exit(-1)
+    parser = argparse.ArgumentParser()
 
-    build_mode = 1
-    if len(sys.argv) >= 3:
-        build_mode = int(sys.argv[2])
+    parser.add_argument("name", nargs=1, help="Name of the new project")
+    parser.add_argument("--mode", action="store", default=1, type=int,
+                        choices=[0, 1, 2],
+                        help="Build mode: 0 for single file project, "
+                        "1 for scan_build, "
+                        "2 for single file c++11 project")
+    parser.add_argument("--source", action="store", default="script",
+                        choices=["script", "git", "zip"],
+                        help=f"Source type of the new project: "
+                        f"'git' for getting from git "
+                        f"(please provide --origin and --commit), "
+                        f"'zip' for unpacking source from a zip file, "
+                        f"'script' for downloading source by running "
+                        f"a custom script {SATestBuild.DOWNLOAD_SCRIPT}")
+    parser.add_argument("--origin", action="store", default="",
+                        help="Origin link for a git repository")
+    parser.add_argument("--commit", action="store", default="",
+                        help="Git hash for a commit to checkout")
 
-    assert((build_mode == 0) | (build_mode == 1) | (build_mode == 2))
+    args = parser.parse_args()
 
-    add_new_project(sys.argv[1], build_mode)
+    if args.source == "git" and (args.origin == "" or args.commit == ""):
+        parser.error(
+            "Please provide both --origin and --commit if source is 'git'")
+
+    if args.source != "git" and (args.origin != "" or args.commit != ""):
+        parser.error("Options --origin and --commit don't make sense when "
+                     "source is not 'git'")
+
+    project = ProjectInfo(args.name[0], args.mode, args.source, args.origin,
+                          args.commit)
+
+    add_new_project(project)
