@@ -37,6 +37,8 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ReportDeadlySignal(sig);
 }
 
+bool PlatformUnpoisonStacks() { return false; }
+
 // ---------------------- TSD ---------------- {{{1
 
 #if SANITIZER_NETBSD && !ASAN_DYNAMIC
