@@ -9,6 +9,8 @@
 # RUN: llvm-dwarfdump -v %t5.o | FileCheck --check-prefixes=DUMP,DUMP5 %s
 
 ## The references to other debug info sections are 64-bit, as required for DWARF64.
+# REL:         Section ({{[0-9]+}}) .rela.debug_frame {
+# REL-NEXT:      R_X86_64_64 .debug_frame 0x0
 # REL:         Section ({{[0-9]+}}) .rela.debug_info {
 # REL-NEXT:      R_X86_64_64 .debug_abbrev 0x0
 # REL-NEXT:      R_X86_64_64 .debug_line 0x0
@@ -41,6 +43,20 @@
 # DUMP-NEXT:    DW_AT_name [DW_FORM_string] ("foo")
 # DUMP:       DW_TAG_label [2]
 # DUMP-NEXT:    DW_AT_name [DW_FORM_string] ("bar")
+
+# DUMP:       .debug_frame contents:
+# DUMP:       00000000 {{([[:xdigit:]]{16})}} ffffffffffffffff CIE
+# DUMP-NEXT:    Format: DWARF64
+# DUMP:       {{([[:xdigit:]]{8})}} {{([[:xdigit:]]{16})}} 0000000000000000 FDE cie=00000000 pc=00000000...00000001
+# DUMP-NEXT:    Format: DWARF64
+
+## Even though the debug info sections are in the 64-bit format,
+## .eh_frame is still generated as 32-bit.
+# DUMP:       .eh_frame contents:
+# DUMP:       00000000 {{([[:xdigit:]]{8})}} 00000000 CIE
+# DUMP-NEXT:    Format: DWARF32
+# DUMP:       {{([[:xdigit:]]{8})}} {{([[:xdigit:]]{8})}} {{([[:xdigit:]]{8})}} FDE cie=00000000 pc=00000000...00000001
+# DUMP-NEXT:    Format: DWARF32
 
 # DUMP:       .debug_aranges contents:
 # DUMP-NEXT:  Address Range Header: length = 0x0000000000000044, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
@@ -76,10 +92,14 @@
 # DUMP5-NEXT: 0x0000001e: [DW_RLE_start_length]: 0x0000000000000000, 0x0000000000000001 => [0x0000000000000000, 0x0000000000000001)
 # DUMP5-NEXT: 0x00000028: [DW_RLE_end_of_list ]
 
+    .cfi_sections .eh_frame, .debug_frame
+
     .section .foo, "ax", @progbits
 foo:
     nop
 
     .section .bar, "ax", @progbits
 bar:
+    .cfi_startproc
     nop
+    .cfi_endproc
