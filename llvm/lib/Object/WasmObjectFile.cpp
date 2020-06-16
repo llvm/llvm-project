@@ -184,6 +184,14 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   case wasm::WASM_OPCODE_GLOBAL_GET:
     Expr.Value.Global = readULEB128(Ctx);
     break;
+  case wasm::WASM_OPCODE_REF_NULL: {
+    wasm::ValType Ty = static_cast<wasm::ValType>(readULEB128(Ctx));
+    if (Ty != wasm::ValType::EXTERNREF) {
+      return make_error<GenericBinaryError>("Invalid type for ref.null",
+                                            object_error::parse_failed);
+    }
+    break;
+  }
   default:
     return make_error<GenericBinaryError>("Invalid opcode in init_expr",
                                           object_error::parse_failed);
