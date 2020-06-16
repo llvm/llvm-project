@@ -8265,6 +8265,29 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
     return Builder.CreateMul(NumEls, Builder.CreateCall(F));
   }
+
+  case SVE::BI__builtin_sve_svtbl2_u8:
+  case SVE::BI__builtin_sve_svtbl2_s8:
+  case SVE::BI__builtin_sve_svtbl2_u16:
+  case SVE::BI__builtin_sve_svtbl2_s16:
+  case SVE::BI__builtin_sve_svtbl2_u32:
+  case SVE::BI__builtin_sve_svtbl2_s32:
+  case SVE::BI__builtin_sve_svtbl2_u64:
+  case SVE::BI__builtin_sve_svtbl2_s64:
+  case SVE::BI__builtin_sve_svtbl2_f16:
+  case SVE::BI__builtin_sve_svtbl2_f32:
+  case SVE::BI__builtin_sve_svtbl2_f64: {
+    SVETypeFlags TF(Builtin->TypeModifier);
+    auto VTy = cast<llvm::VectorType>(getSVEType(TF));
+    auto TupleTy = llvm::VectorType::get(VTy->getElementType(),
+                                         VTy->getElementCount() * 2);
+    Function *FExtr =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_tuple_get, {VTy, TupleTy});
+    Value *V0 = Builder.CreateCall(FExtr, {Ops[0], Builder.getInt32(0)});
+    Value *V1 = Builder.CreateCall(FExtr, {Ops[0], Builder.getInt32(1)});
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, VTy);
+    return Builder.CreateCall(F, {V0, V1, Ops[1]});
+  }
   }
 
   /// Should not happen
