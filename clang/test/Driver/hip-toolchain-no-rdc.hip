@@ -7,10 +7,28 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld \
+// RUN:   -fuse-ld=lld -nogpuinc \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck -check-prefixes=CHECK,LINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu -fno-gpu-rdc \
+// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
+// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
+// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
+// RUN:   -fuse-ld=lld -nogpuinc -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
+
+// RUN: touch %T/a.o
+// RUN: touch %T/b.o
+// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN:   --hip-link --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   -fuse-ld=lld -nogpuinc \
+// RUN:   %T/a.o %T/b.o \
+// RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
 //
 // Compile device code in a.cu to code object for gfx803.
@@ -19,10 +37,11 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
-// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
+// CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
+// CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_803:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
@@ -40,10 +59,11 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
-// CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
+// CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_900:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -77,10 +97,11 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
-// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
+// CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
+// CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_B_803:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
@@ -98,10 +119,11 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
-// CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
+// CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
+// CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_B_900:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
@@ -132,5 +154,14 @@
 // Link host objects.
 //
 
-// CHECK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
-// CHECK-NOT: "-T" "{{.*}}.lk"
+// LINK-NOT: llvm-link
+// LINK-NOT: opt
+// LINK-NOT: llc
+// LINK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
+// LINK-NOT: "-T" "{{.*}}.lk"
+
+// LKONLY-NOT: llvm-link
+// LKONLY-NOT: opt
+// LKONLY-NOT: llc
+// LKONLY: [[LD:".*ld.*"]] {{.*}} "{{.*/a.o}}" "{{.*/b.o}}"
+// LKONLY-NOT: "-T" "{{.*}}.lk"
