@@ -105,6 +105,16 @@ int gcovMain(int argc, const char *argv[]) {
                             cl::desc("Show coverage for each function"));
   cl::alias FuncSummaryA("function-summaries", cl::aliasopt(FuncSummary));
 
+  // Supported by gcov 4.9~8. gcov 9 (GCC r265587) removed --intermediate-format
+  // and -i was changed to mean --json-format. We consider this format still
+  // useful and support -i.
+  cl::opt<bool> Intermediate(
+      "intermediate-format", cl::init(false),
+      cl::desc("Output .gcov in intermediate text format"));
+  cl::alias IntermediateA("i", cl::desc("Alias for --intermediate-format"),
+                          cl::Grouping, cl::NotHidden,
+                          cl::aliasopt(Intermediate));
+
   cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
                          cl::desc("Do not output any .gcov files"));
   cl::alias NoOutputA("no-output", cl::aliasopt(NoOutput));
@@ -144,8 +154,8 @@ int gcovMain(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
-                        PreservePaths, UncondBranch, LongNames, NoOutput,
-                        UseStdout, HashFilenames);
+                        PreservePaths, UncondBranch, Intermediate, LongNames,
+                        NoOutput, UseStdout, HashFilenames);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,
