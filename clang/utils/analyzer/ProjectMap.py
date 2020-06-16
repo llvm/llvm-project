@@ -118,4 +118,17 @@ class ProjectMap:
 
     @staticmethod
     def _convert_infos_to_dicts(projects: List[ProjectInfo]) -> List[JSON]:
-        return [project._asdict() for project in projects]
+        return [ProjectMap._convert_info_to_dict(project)
+                for project in projects]
+
+    @staticmethod
+    def _convert_info_to_dict(project: ProjectInfo) -> JSON:
+        whole_dict = project._asdict()
+        defaults = project._field_defaults
+
+        # there is no need in serializing fields with default values
+        for field, default_value in defaults.items():
+            if whole_dict[field] == default_value:
+                del whole_dict[field]
+
+        return whole_dict
