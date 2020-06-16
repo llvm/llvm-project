@@ -3519,7 +3519,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
   Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
   Fields[2].Str = RelocName.c_str();
 
-  if (Sym && (!SymbolName.empty() || Sym->getValue() != 0))
+  if (Sym)
     Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
 
   Fields[4].Str = std::string(SymbolName);
@@ -4312,7 +4312,7 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> *Obj, StringRef FileName,
   if (!ErrOrName)
     return WarnAndReturn(Sym, toString(ErrOrName.takeError()));
 
-  return {Sym, maybeDemangle(*ErrOrName)};
+  return {Sym == FirstSym ? nullptr : Sym, maybeDemangle(*ErrOrName)};
 }
 } // namespace
 

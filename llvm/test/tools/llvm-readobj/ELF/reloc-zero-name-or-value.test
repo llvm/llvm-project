@@ -1,30 +1,33 @@
-# Show that the value field is omitted if a symbol has no name or value, but is
-# printed if one is present. Test for both static and dynamic relocation
-# printing.
+## Show that the value field is omitted when a relocation does not reference a symbol.
+## In other cases, particularly when a symbol has a zero value or when it has an empty
+## name, we print it. Test for both static and dynamic relocation printing.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf --relocations --dyn-relocations %t | FileCheck %s
 
-# CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 4 entries:
+# CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 5 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
-# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 678
+# CHECK-NEXT: 0000000000000000  0000000400000000 R_X86_64_NONE          0000000000000000 2
 
-# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 4 entries:
+# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 5 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
-# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 678
+# CHECK-NEXT: 0000000000000000  0000000400000000 R_X86_64_NONE          0000000000000000 2
 
-# CHECK:      'RELA' relocation section at offset {{.*}} contains 96 bytes:
+# CHECK:      'RELA' relocation section at offset {{.*}} contains 120 bytes:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
-# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 678
+# CHECK-NEXT: 0000000000000000  0000000400000000 R_X86_64_NONE          0000000000000000 2
 
 --- !ELF
 FileHeader:
@@ -56,6 +59,11 @@ Sections:
         Addend: 0x678
         Type:   R_X86_64_NONE
         Symbol: 3
+## References a symbol with a zero value and an empty name.
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 2
+        Symbol: 4
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Flags: [SHF_ALLOC]
@@ -65,7 +73,7 @@ Sections:
       - Tag: DT_RELA
         Value: 0x1100
       - Tag: DT_RELASZ
-        Value: 96
+        Value: 120
       - Tag: DT_RELAENT
         Value: 24
       - Tag: DT_NULL
@@ -92,6 +100,11 @@ Sections:
         Addend: 0x678
         Type:   R_X86_64_NONE
         Symbol: 3
+## References a symbol with a zero value and an empty name.
+      - Offset: 0
+        Type: R_X86_64_NONE
+        Addend: 2
+        Symbol: 4
 Symbols:
   - Name:    sym
     Value:   0
@@ -102,6 +115,9 @@ Symbols:
     Binding: STB_GLOBAL
   - Type:  STT_SECTION
     Index: 0
+  - Value:   0x0
+    Section: .text
+    Binding: STB_GLOBAL
 DynamicSymbols:
   - Name:    sym
     Value:   0
@@ -112,6 +128,9 @@ DynamicSymbols:
     Binding: STB_GLOBAL
   - Type:  STT_SECTION
     Index: 0
+  - Value:   0x0
+    Section: .text
+    Binding: STB_GLOBAL
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
