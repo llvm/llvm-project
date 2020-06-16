@@ -8,6 +8,7 @@
 # REL:         Section ({{[0-9]+}}) .rela.debug_info {
 # REL-NEXT:      R_X86_64_64 .debug_abbrev 0x0
 # REL-NEXT:      R_X86_64_64 .debug_line 0x0
+# REL5-NEXT:     R_X86_64_64 .debug_rnglists 0x14
 # REL:         Section ({{[0-9]+}}) .rela.debug_aranges {
 # REL-NEXT:      R_X86_64_64 .debug_info 0x0
 # REL5:        Section ({{[0-9]+}}) .rela.debug_line {
@@ -18,11 +19,17 @@
 # DUMP-NEXT:  0x00000000: Compile Unit: {{.*}} format = DWARF64
 # DUMP:       DW_TAG_compile_unit [1] *
 # DUMP5-NEXT:   DW_AT_stmt_list [DW_FORM_sec_offset] (0x0000000000000000)
+# DUMP5-NEXT:   DW_AT_ranges [DW_FORM_sec_offset] (0x0000000000000014
+# DUMP-NEXT:      [0x0000000000000000, 0x0000000000000001) ".foo"
+# DUMP-NEXT:      [0x0000000000000000, 0x0000000000000001) ".bar")
 # DUMP:       DW_TAG_label [2]
 # DUMP-NEXT:    DW_AT_name [DW_FORM_string] ("foo")
+# DUMP:       DW_TAG_label [2]
+# DUMP-NEXT:    DW_AT_name [DW_FORM_string] ("bar")
 
 # DUMP:       .debug_aranges contents:
-# DUMP-NEXT:  Address Range Header: length = 0x0000000000000034, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
+# DUMP-NEXT:  Address Range Header: length = 0x0000000000000044, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
+# DUMP-NEXT:  [0x0000000000000000,  0x0000000000000001)
 # DUMP-NEXT:  [0x0000000000000000,  0x0000000000000001)
 # DUMP-EMPTY:
 
@@ -40,6 +47,17 @@
 # DUMP5-NEXT: 0x00000000: "[[DIR]]"
 # DUMP5-NEXT: 0x[[FILEOFF]]: "[[FILE]]"
 
+# DUMP5:      .debug_rnglists contents:
+# DUMP5-NEXT: 0x00000000: range list header: length = 0x000000000000001d, format = DWARF64, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# DUMP5-NEXT: ranges:
+# DUMP5-NEXT: 0x00000014: [DW_RLE_start_length]: 0x0000000000000000, 0x0000000000000001 => [0x0000000000000000, 0x0000000000000001)
+# DUMP5-NEXT: 0x0000001e: [DW_RLE_start_length]: 0x0000000000000000, 0x0000000000000001 => [0x0000000000000000, 0x0000000000000001)
+# DUMP5-NEXT: 0x00000028: [DW_RLE_end_of_list ]
+
     .section .foo, "ax", @progbits
 foo:
+    nop
+
+    .section .bar, "ax", @progbits
+bar:
     nop
