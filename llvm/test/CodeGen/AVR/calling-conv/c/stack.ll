@@ -11,15 +11,15 @@ define void @ret_void_args_i64_i64_i32(i64 %a, i64 %b, i32 %c) {
   ; CHECK-NEXT: in      r29, 62
 
   ; Load the top two bytes from the 32-bit int.
-  ; CHECK-NEXT: ldd     r24, Y+5
-  ; CHECK-NEXT: ldd     r25, Y+6
+  ; CHECK-NEXT: ldd     r24, Y+7
+  ; CHECK-NEXT: ldd     r25, Y+8
   ; Store the top two bytes of the 32-bit int to memory.
   ; CHECK-NEXT: sts     7, r25
   ; CHECK-NEXT: sts     6, r24
 
   ; Load the bottom two bytes from the 32-bit int.
-  ; CHECK-NEXT: ldd     r24, Y+3
-  ; CHECK-NEXT: ldd     r25, Y+4
+  ; CHECK-NEXT: ldd     r24, Y+5
+  ; CHECK-NEXT: ldd     r25, Y+6
   ; Store the bottom two bytes of the 32-bit int to memory.
   ; CHECK-NEXT: sts     5, r25
   ; CHECK-NEXT: sts     4, r24
