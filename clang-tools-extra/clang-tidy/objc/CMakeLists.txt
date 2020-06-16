@@ -14,10 +14,14 @@ add_clang_library(clangTidyObjCModule
   SuperSelfCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyObjCModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyUtils
   )

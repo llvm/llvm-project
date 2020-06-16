@@ -11,11 +11,6 @@ add_clang_library(clangTidyHICPPModule
   SignedBitwiseCheck.cpp
 
   LINK_LIBS
-  clangAST
-  clangASTMatchers
-  clangBasic
-  clangLex
-  clangSerialization
   clangTidy
   clangTidyBugproneModule
   clangTidyCppCoreGuidelinesModule
@@ -25,4 +20,13 @@ add_clang_library(clangTidyHICPPModule
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyHICPPModule
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangLex
+  clangSerialization
   )
