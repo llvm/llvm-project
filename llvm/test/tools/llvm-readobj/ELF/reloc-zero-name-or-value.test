@@ -5,23 +5,26 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf --relocations --dyn-relocations %t | FileCheck %s
 
-# CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 3 entries:
+# CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 4 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
 
-# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 3 entries:
+# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 4 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
 
-# CHECK:      'RELA' relocation section at offset {{.*}} contains 72 bytes:
+# CHECK:      'RELA' relocation section at offset {{.*}} contains 96 bytes:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE                           678
 
 --- !ELF
 FileHeader:
@@ -49,6 +52,10 @@ Sections:
         Type: R_X86_64_NONE
         Addend: 0x456
         Symbol: 2
+      - Offset: 0
+        Addend: 0x678
+        Type:   R_X86_64_NONE
+        Symbol: 3
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Flags: [SHF_ALLOC]
@@ -58,7 +65,7 @@ Sections:
       - Tag: DT_RELA
         Value: 0x1100
       - Tag: DT_RELASZ
-        Value: 72
+        Value: 96
       - Tag: DT_RELAENT
         Value: 24
       - Tag: DT_NULL
@@ -81,6 +88,10 @@ Sections:
         Type: R_X86_64_NONE
         Addend: 0x456
         Symbol: 2
+      - Offset: 0
+        Addend: 0x678
+        Type:   R_X86_64_NONE
+        Symbol: 3
 Symbols:
   - Name:    sym
     Value:   0
@@ -89,6 +100,8 @@ Symbols:
   - Value:   0x123
     Section: .text
     Binding: STB_GLOBAL
+  - Type:  STT_SECTION
+    Index: 0
 DynamicSymbols:
   - Name:    sym
     Value:   0
@@ -97,6 +110,8 @@ DynamicSymbols:
   - Value:   0x123
     Section: .text
     Binding: STB_GLOBAL
+  - Type:  STT_SECTION
+    Index: 0
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
