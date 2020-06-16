@@ -233,7 +233,7 @@ class AMDGPUPostLegalizerCombinerInfo : public CombinerInfo {
   MachineDominatorTree *MDT;
 
 public:
-  AMDGPUGenPostLegalizerCombinerHelper Generated;
+  AMDGPUGenPostLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
   AMDGPUPostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                   const AMDGPULegalizerInfo *LI,
@@ -241,7 +241,7 @@ public:
       : CombinerInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!Generated.parseCommandLineOption())
+    if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -253,6 +253,7 @@ bool AMDGPUPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, KB, MDT);
+  AMDGPUGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg);
 
   if (Generated.tryCombineAll(Observer, MI, B, Helper))
     return true;

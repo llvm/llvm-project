@@ -42,14 +42,14 @@ class AMDGPUPreLegalizerCombinerInfo : public CombinerInfo {
   MachineDominatorTree *MDT;
 
 public:
-  AMDGPUGenPreLegalizerCombinerHelper Generated;
+  AMDGPUGenPreLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
   AMDGPUPreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!Generated.parseCommandLineOption())
+    if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -61,6 +61,7 @@ bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, KB, MDT);
+  AMDGPUGenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg);
 
   if (Generated.tryCombineAll(Observer, MI, B, Helper))
     return true;

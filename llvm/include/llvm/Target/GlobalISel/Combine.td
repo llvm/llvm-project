@@ -40,6 +40,9 @@ class GICombinerHelper<string classname, list<GICombine> rules>
   // The name of a run-time compiler option that will be generated to disable
   // specific rules within this combiner.
   string DisableRuleOption = ?;
+  // The state class to inherit from (if any). The generated helper will inherit
+  // from this class and will forward arguments to its constructors.
+  string StateClass = "";
   // Any additional arguments that should be appended to the tryCombine*().
   list<GICombinerHelperArg> AdditionalArguments =
       [GICombinerHelperArg<"CombinerHelper &", "Helper">];
