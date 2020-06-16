@@ -87,7 +87,7 @@ define <8 x double> @load_fadd_transpose(<8 x double>* %A.Ptr, <8 x double> %b) 
 
 
 entry:
-  %a = load <8 x double>, <8 x double>* %A.Ptr
+  %a = load <8 x double>, <8 x double>* %A.Ptr, align 8
   %add = fadd <8 x double> %a, %b
   %c  = call <8 x double> @llvm.matrix.transpose(<8 x double> %add, i32 2, i32 4)
   ret <8 x double> %c

@@ -136,16 +136,16 @@ define void @multiply_sub_add_2x3_3x2(<6 x double>* %a.ptr, <6 x double>* %b.ptr
 ; RM-NEXT:    ret void
 ;
 entry:
-  %a = load <6 x double>, <6 x double>* %a.ptr
-  %b = load <6 x double>, <6 x double>* %b.ptr
+  %a = load <6 x double>, <6 x double>* %a.ptr, align 8
+  %b = load <6 x double>, <6 x double>* %b.ptr, align 8
   %add = fadd <6 x double> %a, %a
-  store <6 x double> %add, <6 x double>* %a.ptr
+  store <6 x double> %add, <6 x double>* %a.ptr, align 8
   %sub = fsub <6 x double> %b, <double 1.0, double 1.0, double 1.0, double 1.0, double 1.0, double 1.0>
-  store <6 x double> %sub, <6 x double>* %b.ptr
+  store <6 x double> %sub, <6 x double>* %b.ptr, align 8
   %mul = call <4 x double> @llvm.matrix.multiply.v4f64.v6f64.v6f64(<6 x double> %add, <6 x double> %sub, i32 2, i32 3, i32 2)
-  %c = load <4 x double>, <4 x double>* %c.ptr
+  %c = load <4 x double>, <4 x double>* %c.ptr, align 8
   %res = fsub <4 x double> %c, %mul
-  store <4 x double> %res, <4 x double>* %c.ptr
+  store <4 x double> %res, <4 x double>* %c.ptr, align 8
   ret void
 }
 
