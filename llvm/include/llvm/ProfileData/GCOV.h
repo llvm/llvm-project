@@ -98,7 +98,6 @@ public:
     } else if (magic == "adcg") {
       de = DataExtractor(buf.substr(4), true, 0);
     } else {
-      errs() << "unexpected file type: " << magic << "\n";
       return false;
     }
     return true;
