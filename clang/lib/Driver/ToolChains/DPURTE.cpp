@@ -168,6 +168,11 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
       std::string arg(TCArgs.getArgString(EachArg));
       if (arg.find("-D") == 0) {
         const char *symbol_and_value = &(arg.c_str())[2];
+        if (*symbol_and_value == '\0') {
+          std::string next_arg(TCArgs.getArgString(++EachArg));
+          symbol_and_value = next_arg.c_str();
+        }
+
         uint32_t tasklet_id, tasklet_stack_size;
         if (sscanf(symbol_and_value, NR_TASKLETS_FMT, &nr_running_tasklets) ==
             1) {
