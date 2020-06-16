@@ -107,6 +107,9 @@ static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Insn,
                                      uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
+                              uint64_t Address, const void *Decoder);
+
 #include "AVRGenDisassemblerTables.inc"
 
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn,
@@ -147,6 +150,14 @@ static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Field,
   // Call targets need to be shifted left by one so this needs a custom
   // decoder.
   Inst.addOperand(MCOperand::createImm(Field << 1));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn,
+                              uint64_t Address, const void *Decoder) {
+  unsigned d = fieldFromInstruction(Insn, 4, 5);
+  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
   return MCDisassembler::Success;
 }
 

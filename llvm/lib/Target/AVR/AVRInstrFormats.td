@@ -148,6 +148,8 @@ class FRd<bits<4> opcode, bits<7> f, dag outs, dag ins, string asmstr,
   let Inst{11-9} = f{6-4};
   let Inst{8-4} = d;
   let Inst{3-0} = f{3-0};
+
+  let DecoderMethod = "decodeFRd";
 }
 
 //===----------------------------------------------------------------------===//
