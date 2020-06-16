@@ -54,14 +54,21 @@ struct ShapeToShapeLowering
 } // namespace
 
 void ShapeToShapeLowering::runOnFunction() {
+  MLIRContext &ctx = getContext();
+
   OwningRewritePatternList patterns;
-  patterns.insert<NumElementsOpConverter>(&getContext());
+  populateShapeRewritePatterns(&ctx, patterns);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<ShapeDialect>();
   target.addIllegalOp<NumElementsOp>();
   if (failed(mlir::applyPartialConversion(getFunction(), target, patterns)))
     signalPassFailure();
+}
+
+void mlir::populateShapeRewritePatterns(MLIRContext *context,
+                                        OwningRewritePatternList &patterns) {
+  patterns.insert<NumElementsOpConverter>(context);
 }
 
 std::unique_ptr<Pass> mlir::createShapeToShapeLowering() {
