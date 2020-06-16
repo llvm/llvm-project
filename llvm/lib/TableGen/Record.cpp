@@ -1030,7 +1030,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case MUL: Result = LHSv *  RHSv; break;
       case AND: Result = LHSv &  RHSv; break;
       case OR: Result = LHSv | RHSv; break;
-      case SHL: Result = LHSv << RHSv; break;
+      case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
       case SRA: Result = LHSv >> RHSv; break;
       case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
       }
