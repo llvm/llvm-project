@@ -459,10 +459,6 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
   auto linalgOp = cast<ConcreteOpTy>(op);
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  auto nPar = linalgOp.getNumParallelLoops();
-  auto nRed = linalgOp.getNumReductionLoops();
-  auto nWin = linalgOp.getNumWindowLoops();
-  auto nLoops = nPar + nRed + nWin;
   auto mapsRange =
       linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
@@ -475,15 +471,14 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
     return LinalgLoops();
   }
 
-  SmallVector<Value, 4> allIvs(nLoops);
+  SmallVector<Value, 4> allIvs;
   auto loopRanges =
       emitLoopRanges(scope.getBuilderRef(), scope.getLocation(), invertedMap,
                      getViewSizes(builder, linalgOp));
-  assert(loopRanges.size() == allIvs.size());
   GenerateLoopNest<LoopTy>::doit(
-      allIvs, loopRanges, linalgOp.iterator_types().getValue(), [&] {
-        SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
-        emitScalarImplementation<IndexedValueTy>(allIvValues, linalgOp);
+      loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
+        allIvs.append(ivs.begin(), ivs.end());
+        emitScalarImplementation<IndexedValueTy>(allIvs, linalgOp);
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
