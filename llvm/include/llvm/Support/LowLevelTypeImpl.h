@@ -39,14 +39,14 @@ class raw_ostream;
 class LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
-  static LLT scalar(unsigned SizeInBits) {
+  static constexpr LLT scalar(unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid scalar size");
     return LLT{/*isPointer=*/false, /*isVector=*/false, /*NumElements=*/0,
                SizeInBits, /*AddressSpace=*/0};
   }
 
   /// Get a low-level pointer in the given address space.
-  static LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
+  static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
     return LLT{/*isPointer=*/true, /*isVector=*/false, /*NumElements=*/0,
                SizeInBits, AddressSpace};
@@ -54,7 +54,7 @@ public:
 
   /// Get a low-level vector of some number of elements and element width.
   /// \p NumElements must be at least 2.
-  static LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits) {
+  static constexpr LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits) {
     assert(NumElements > 1 && "invalid number of vector elements");
     assert(ScalarSizeInBits > 0 && "invalid vector element size");
     return LLT{/*isPointer=*/false, /*isVector=*/true, NumElements,
@@ -62,7 +62,7 @@ public:
   }
 
   /// Get a low-level vector of some number of elements and element type.
-  static LLT vector(uint16_t NumElements, LLT ScalarTy) {
+  static constexpr LLT vector(uint16_t NumElements, LLT ScalarTy) {
     assert(NumElements > 1 && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
     return LLT{ScalarTy.isPointer(), /*isVector=*/true, NumElements,
@@ -70,33 +70,34 @@ public:
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
+  static constexpr LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
     return NumElements == 1 ? ScalarTy : LLT::vector(NumElements, ScalarTy);
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
+  static constexpr LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
     return scalarOrVector(NumElements, LLT::scalar(ScalarSize));
   }
 
-  explicit LLT(bool isPointer, bool isVector, uint16_t NumElements,
-               unsigned SizeInBits, unsigned AddressSpace) {
+  explicit constexpr LLT(bool isPointer, bool isVector, uint16_t NumElements,
+                         unsigned SizeInBits, unsigned AddressSpace)
+    : LLT() {
     init(isPointer, isVector, NumElements, SizeInBits, AddressSpace);
   }
-  explicit LLT() : IsPointer(false), IsVector(false), RawData(0) {}
+  explicit constexpr LLT() : IsPointer(false), IsVector(false), RawData(0) {}
 
   explicit LLT(MVT VT);
 
-  bool isValid() const { return RawData != 0; }
+  constexpr bool isValid() const { return RawData != 0; }
 
-  bool isScalar() const { return isValid() && !IsPointer && !IsVector; }
+  constexpr bool isScalar() const { return isValid() && !IsPointer && !IsVector; }
 
-  bool isPointer() const { return isValid() && IsPointer && !IsVector; }
+  constexpr bool isPointer() const { return isValid() && IsPointer && !IsVector; }
 
-  bool isVector() const { return isValid() && IsVector; }
+  constexpr bool isVector() const { return isValid() && IsVector; }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
-  uint16_t getNumElements() const {
+  constexpr uint16_t getNumElements() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
     if (!IsPointer)
       return getFieldValue(VectorElementsFieldInfo);
@@ -105,7 +106,7 @@ public:
   }
 
   /// Returns the total size of the type. Must only be called on sized types.
-  unsigned getSizeInBits() const {
+  constexpr unsigned getSizeInBits() const {
     if (isPointer() || isScalar())
       return getScalarSizeInBits();
     return getScalarSizeInBits() * getNumElements();
@@ -113,17 +114,17 @@ public:
 
   /// Returns the total size of the type in bytes, i.e. number of whole bytes
   /// needed to represent the size in bits. Must only be called on sized types.
-  unsigned getSizeInBytes() const {
+  constexpr unsigned getSizeInBytes() const {
     return (getSizeInBits() + 7) / 8;
   }
 
-  LLT getScalarType() const {
+  constexpr LLT getScalarType() const {
     return isVector() ? getElementType() : *this;
   }
 
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element type. Otherwise, return the new element type.
-  LLT changeElementType(LLT NewEltTy) const {
+  constexpr LLT changeElementType(LLT NewEltTy) const {
     return isVector() ? LLT::vector(getNumElements(), NewEltTy) : NewEltTy;
   }
 
@@ -157,9 +158,9 @@ public:
     return scalar(getSizeInBits() / Factor);
   }
 
-  bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
+  constexpr bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
 
-  unsigned getScalarSizeInBits() const {
+  constexpr unsigned getScalarSizeInBits() const {
     assert(RawData != 0 && "Invalid Type");
     if (!IsVector) {
       if (!IsPointer)
@@ -174,7 +175,7 @@ public:
     }
   }
 
-  unsigned getAddressSpace() const {
+  constexpr unsigned getAddressSpace() const {
     assert(RawData != 0 && "Invalid Type");
     assert(IsPointer && "cannot get address space of non-pointer type");
     if (!IsVector)
@@ -184,7 +185,7 @@ public:
   }
 
   /// Returns the vector's element type. Only valid for vector types.
-  LLT getElementType() const {
+  constexpr LLT getElementType() const {
     assert(isVector() && "cannot get element type of scalar/aggregate");
     if (IsPointer)
       return pointer(getAddressSpace(), getScalarSizeInBits());
@@ -201,12 +202,12 @@ public:
   }
 #endif
 
-  bool operator==(const LLT &RHS) const {
+  constexpr bool operator==(const LLT &RHS) const {
     return IsPointer == RHS.IsPointer && IsVector == RHS.IsVector &&
            RHS.RawData == RawData;
   }
 
-  bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
+  constexpr bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
 
   friend struct DenseMapInfo<LLT>;
   friend class GISelInstProfileBuilder;
@@ -257,23 +258,24 @@ private:
   uint64_t IsVector : 1;
   uint64_t RawData : 62;
 
-  static uint64_t getMask(const BitFieldInfo FieldInfo) {
+  static constexpr uint64_t getMask(const BitFieldInfo FieldInfo) {
     const int FieldSizeInBits = FieldInfo[0];
     return (((uint64_t)1) << FieldSizeInBits) - 1;
   }
-  static uint64_t maskAndShift(uint64_t Val, uint64_t Mask, uint8_t Shift) {
+  static constexpr uint64_t maskAndShift(uint64_t Val, uint64_t Mask, uint8_t Shift) {
     assert(Val <= Mask && "Value too large for field");
     return (Val & Mask) << Shift;
   }
-  static uint64_t maskAndShift(uint64_t Val, const BitFieldInfo FieldInfo) {
+  static constexpr uint64_t maskAndShift(uint64_t Val, const BitFieldInfo FieldInfo) {
     return maskAndShift(Val, getMask(FieldInfo), FieldInfo[1]);
   }
-  uint64_t getFieldValue(const BitFieldInfo FieldInfo) const {
+
+  constexpr uint64_t getFieldValue(const BitFieldInfo FieldInfo) const {
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  void init(bool IsPointer, bool IsVector, uint16_t NumElements,
-            unsigned SizeInBits, unsigned AddressSpace) {
+  constexpr void init(bool IsPointer, bool IsVector, uint16_t NumElements,
+                      unsigned SizeInBits, unsigned AddressSpace) {
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     if (!IsVector) {
@@ -295,7 +297,7 @@ private:
     }
   }
 
-  uint64_t getUniqueRAWLLTData() const {
+  constexpr uint64_t getUniqueRAWLLTData() const {
     return ((uint64_t)RawData) << 2 | ((uint64_t)IsPointer) << 1 |
            ((uint64_t)IsVector);
   }
