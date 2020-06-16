@@ -49214,7 +49214,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::FR64XRegClass);
         return std::make_pair(0U, &X86::FR64RegClass);
-      // TODO: Handle i128 in FR128RegClass after it is tested well.
+      case MVT::i128:
+        if (Subtarget.is64Bit()) {
+          if (VConstraint && Subtarget.hasVLX())
+            return std::make_pair(0U, &X86::VR128XRegClass);
+          return std::make_pair(0U, &X86::VR128RegClass);
+        }
+        break;
       // Vector types and fp128.
       case MVT::f128:
       case MVT::v16i8:
