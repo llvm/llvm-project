@@ -1472,33 +1472,34 @@ void mlir::collapseParallelLoops(
   // value. The remainders then determine based on that range, which iteration
   // of the original induction value this represents. This is a normalized value
   // that is un-normalized already by the previous logic.
-  auto newPloop = outsideBuilder.create<scf::ParallelOp>(loc, lowerBounds,
-                                                         upperBounds, steps);
-  OpBuilder insideBuilder(newPloop.region());
-  for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
-    Value previous = newPloop.getBody()->getArgument(i);
-    unsigned numberCombinedDimensions = combinedDimensions[i].size();
-    // Iterate over all except the last induction value.
-    for (unsigned j = 0, e = numberCombinedDimensions - 1; j < e; ++j) {
-      unsigned idx = combinedDimensions[i][j];
+  auto newPloop = outsideBuilder.create<scf::ParallelOp>(
+      loc, lowerBounds, upperBounds, steps,
+      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs) {
+        for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
+          Value previous = ploopIVs[i];
+          unsigned numberCombinedDimensions = combinedDimensions[i].size();
+          // Iterate over all except the last induction value.
+          for (unsigned j = 0, e = numberCombinedDimensions - 1; j < e; ++j) {
+            unsigned idx = combinedDimensions[i][j];
 
-      // Determine the current induction value's current loop iteration
-      Value iv = insideBuilder.create<SignedRemIOp>(loc, previous,
-                                                    normalizedUpperBounds[idx]);
-      replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                 loops.region());
+            // Determine the current induction value's current loop iteration
+            Value iv = insideBuilder.create<SignedRemIOp>(
+                loc, previous, normalizedUpperBounds[idx]);
+            replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
+                                       loops.region());
 
-      // Remove the effect of the current induction value to prepare for the
-      // next value.
-      previous = insideBuilder.create<SignedDivIOp>(
-          loc, previous, normalizedUpperBounds[idx + 1]);
-    }
+            // Remove the effect of the current induction value to prepare for
+            // the next value.
+            previous = insideBuilder.create<SignedDivIOp>(
+                loc, previous, normalizedUpperBounds[idx + 1]);
+          }
 
-    // The final induction value is just the remaining value.
-    unsigned idx = combinedDimensions[i][numberCombinedDimensions - 1];
-    replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), previous,
-                               loops.region());
-  }
+          // The final induction value is just the remaining value.
+          unsigned idx = combinedDimensions[i][numberCombinedDimensions - 1];
+          replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
+                                     previous, loops.region());
+        }
+      });
 
   // Replace the old loop with the new loop.
   loops.getBody()->back().erase();
