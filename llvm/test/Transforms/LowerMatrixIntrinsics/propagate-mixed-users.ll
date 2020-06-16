@@ -43,7 +43,7 @@ define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    ret <8 x double> [[TMP19]]
 ;
   %transposed = call <8 x double> @llvm.matrix.transpose(<8 x double> %in, i32 4, i32 2)
-  store <8 x double> %transposed, <8 x double>* %Ptr
+  store <8 x double> %transposed, <8 x double>* %Ptr, align 8
   call void @foo(<8 x double> %transposed)
   ret <8 x double> %transposed
 }
