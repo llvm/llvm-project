@@ -65,11 +65,11 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
     // Clear the filename to make it clear we didn't read anything.
     GCDA = "-";
   } else {
-    GCOVBuffer GCDA_GB(GCDA_Buff.get().get());
-    if (!GF.readGCDA(GCDA_GB)) {
+    GCOVBuffer gcda_buf(GCDA_Buff.get().get());
+    if (!gcda_buf.readGCDAFormat())
+      errs() << GCDA << ":not a gcov data file\n";
+    else if (!GF.readGCDA(gcda_buf))
       errs() << "Invalid .gcda File!\n";
-      return;
-    }
   }
 
   if (DumpGCOV)
