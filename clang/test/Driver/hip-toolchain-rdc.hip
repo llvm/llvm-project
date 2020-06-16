@@ -37,7 +37,8 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: {{".*lld.*"}} {{.*}} "-o" "[[IMG_DEV1:.*.out]]" [[A_BC1]] [[B_BC1]]
+// CHECK: {{".*lld.*"}} {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK-SAME: "-o" "[[IMG_DEV1:.*.out]]" [[A_BC1]] [[B_BC1]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
@@ -62,7 +63,8 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: {{".*lld.*"}} {{.*}} "-o" "[[IMG_DEV2:.*.out]]" [[A_BC2]] [[B_BC2]]
+// CHECK: {{".*lld.*"}} {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK-SAME: "-o" "[[IMG_DEV2:.*.out]]" [[A_BC2]] [[B_BC2]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"

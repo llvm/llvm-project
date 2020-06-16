@@ -23,8 +23,10 @@
 // CHECK-NOT: llvm-link
 // CHECK-NOT: opt
 // CHECK-NOT: llc
-// CHECK: "{{.*lld.*}}" {{.*}} "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
-// CHECK: "{{.*lld.*}}" {{.*}} "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx906" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
+// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
+// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx906" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
 // OUT: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=executable.hipfb"
 // OUT: "{{.*ld.*}}" {{.*}} "-o" "executable" {{.*}} "-T" "executable.lk"
 // NOUT: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=a.out.hipfb"
