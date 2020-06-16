@@ -617,7 +617,7 @@ public:
 
   /// Get the note's descriptor as StringRef
   StringRef getDescAsStringRef() const {
-    auto &Desc = getDesc();
+    ArrayRef<uint8_t> Desc = getDesc();
     return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
   }
 
