@@ -812,10 +812,10 @@ private:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-    case TargetOpcode::G_UNMERGE_VALUES:
-      return MI.getOperand(MI.getNumOperands() - 1).getReg();
     case TargetOpcode::G_EXTRACT:
       return MI.getOperand(1).getReg();
+    case TargetOpcode::G_UNMERGE_VALUES:
+      return MI.getOperand(MI.getNumOperands() - 1).getReg();
     default:
       llvm_unreachable("Not a legalization artifact happen");
     }
