@@ -47,6 +47,7 @@
 #include "AllocationState.h"
 #include "InterCheckerAPI.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
@@ -1037,9 +1038,44 @@ void MallocChecker::checkKernelMalloc(const CallEvent &Call,
   C.addTransition(State);
 }
 
-void MallocChecker::checkRealloc(const CallEvent &Call,
-                                 CheckerContext &C,
+static bool isStandardRealloc(const CallEvent &Call) {
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(Call.getDecl());
+  assert(FD);
+  ASTContext &AC = FD->getASTContext();
+
+  if (isa<CXXMethodDecl>(FD))
+    return false;
+
+  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
+         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
+         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
+             AC.getSizeType();
+}
+
+static bool isGRealloc(const CallEvent &Call) {
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(Call.getDecl());
+  assert(FD);
+  ASTContext &AC = FD->getASTContext();
+
+  if (isa<CXXMethodDecl>(FD))
+    return false;
+
+  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
+         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
+         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
+             AC.UnsignedLongTy;
+}
+
+void MallocChecker::checkRealloc(const CallEvent &Call, CheckerContext &C,
                                  bool ShouldFreeOnFail) const {
+  // HACK: CallDescription currently recognizes non-standard realloc functions
+  // as standard because it doesn't check the type, or wether its a non-method
+  // function. This should be solved by making CallDescription smarter.
+  // Mind that this came from a bug report, and all other functions suffer from
+  // this.
+  // https://bugs.llvm.org/show_bug.cgi?id=46253
+  if (!isStandardRealloc(Call) && !isGRealloc(Call))
+    return;
   ProgramStateRef State = C.getState();
   State = ReallocMemAux(C, Call, ShouldFreeOnFail, State, AF_Malloc);
   State = ProcessZeroAllocCheck(Call, 1, State);
