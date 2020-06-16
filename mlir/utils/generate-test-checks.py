@@ -90,7 +90,7 @@ def process_line(line_chunks, variable_namer):
     # Append the non named group.
     output_line += chunk[len(ssa_name):]
 
-  return output_line + '\n'
+  return output_line.rstrip() + '\n'
 
 
 def process_source_lines(source_lines, note, args):
