@@ -387,6 +387,31 @@ int main(int argc, char **argv) {
     return 1;
   }
   Ctx.setDwarfVersion(DwarfVersion);
+  if (MCOptions.Dwarf64) {
+    // The 64-bit DWARF format was introduced in DWARFv3.
+    if (DwarfVersion < 3) {
+      errs() << ProgName
+             << ": the 64-bit DWARF format is not supported for DWARF versions "
+                "prior to 3\n";
+      return 1;
+    }
+    // 32-bit targets don't support DWARF64, which requires 64-bit relocations.
+    if (MAI->getCodePointerSize() < 8) {
+      errs() << ProgName
+             << ": the 64-bit DWARF format is only supported for 64-bit "
+                "targets\n";
+      return 1;
+    }
+    // If needsDwarfSectionOffsetDirective is true, we would eventually call
+    // MCStreamer::emitSymbolValue() with IsSectionRelative = true, but that
+    // is supported only for 4-byte long references.
+    if (MAI->needsDwarfSectionOffsetDirective()) {
+      errs() << ProgName << ": the 64-bit DWARF format is not supported for "
+             << TheTriple.normalize() << "\n";
+      return 1;
+    }
+    Ctx.setDwarfFormat(dwarf::DWARF64);
+  }
   if (!DwarfDebugFlags.empty())
     Ctx.setDwarfDebugFlags(StringRef(DwarfDebugFlags));
   if (!DwarfDebugProducer.empty())

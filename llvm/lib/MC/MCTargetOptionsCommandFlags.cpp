@@ -38,6 +38,7 @@ using namespace llvm;
 MCOPT_EXP(bool, RelaxAll)
 MCOPT(bool, IncrementalLinkerCompatible)
 MCOPT(int, DwarfVersion)
+MCOPT(bool, Dwarf64)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
@@ -65,6 +66,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
   static cl::opt<int> DwarfVersion("dwarf-version", cl::desc("Dwarf version"),
                                    cl::init(0));
   MCBINDOPT(DwarfVersion);
+
+  static cl::opt<bool> Dwarf64(
+      "dwarf64",
+      cl::desc("Generate debugging info in the 64-bit DWARF format"));
+  MCBINDOPT(Dwarf64);
 
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
@@ -97,6 +103,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
   Options.MCRelaxAll = getRelaxAll();
   Options.MCIncrementalLinkerCompatible = getIncrementalLinkerCompatible();
+  Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
   Options.ABIName = getABIName();
