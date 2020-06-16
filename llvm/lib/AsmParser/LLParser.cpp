@@ -6964,9 +6964,11 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   CI->setTailCallKind(TCK);
   CI->setCallingConv(CC);
   if (FMF.any()) {
-    if (!isa<FPMathOperator>(CI))
+    if (!isa<FPMathOperator>(CI)) {
+      CI->deleteValue();
       return Error(CallLoc, "fast-math-flags specified for call without "
                    "floating-point scalar or vector return type");
+    }
     CI->setFastMathFlags(FMF);
   }
   CI->setAttributes(PAL);
