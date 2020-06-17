@@ -1051,7 +1051,9 @@ class Negator final {
   using Result = std::pair<ArrayRef<Instruction *> /*NewInstructions*/,
                            Value * /*NegatedRoot*/>;
 
-  LLVM_NODISCARD Value *visit(Value *V, unsigned Depth);
+  LLVM_NODISCARD Value *visitImpl(Value *V, unsigned Depth);
+
+  LLVM_NODISCARD Value *negate(Value *V, unsigned Depth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
