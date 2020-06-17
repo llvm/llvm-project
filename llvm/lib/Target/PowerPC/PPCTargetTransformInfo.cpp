@@ -293,7 +293,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
         if (F->getIntrinsicID() != Intrinsic::not_intrinsic) {
           switch (F->getIntrinsicID()) {
           default: continue;
-          // If we have a call to ppc_is_decremented_ctr_nonzero, or ppc_mtctr
+          // If we have a call to loop_decrement or set_loop_iterations,
           // we're definitely using CTR.
           case Intrinsic::set_loop_iterations:
           case Intrinsic::loop_decrement:
