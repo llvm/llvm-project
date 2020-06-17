@@ -142,35 +142,45 @@ bool AArch64SLSHardening::hardenReturnsAndBRs(MachineBasicBlock &MBB) const {
 
 static const char SLSBLRNamePrefix[] = "__llvm_slsblr_thunk_";
 
-static std::array<const char *, 29> SLSBLRThunkNames{{
-    "__llvm_slsblr_thunk_x0",  "__llvm_slsblr_thunk_x1",
-    "__llvm_slsblr_thunk_x2",  "__llvm_slsblr_thunk_x3",
-    "__llvm_slsblr_thunk_x4",  "__llvm_slsblr_thunk_x5",
-    "__llvm_slsblr_thunk_x6",  "__llvm_slsblr_thunk_x7",
-    "__llvm_slsblr_thunk_x8",  "__llvm_slsblr_thunk_x9",
-    "__llvm_slsblr_thunk_x10", "__llvm_slsblr_thunk_x11",
-    "__llvm_slsblr_thunk_x12", "__llvm_slsblr_thunk_x13",
-    "__llvm_slsblr_thunk_x14", "__llvm_slsblr_thunk_x15",
-    // X16 and X17 are deliberately missing, as the mitigation requires those
-    // register to not be used in BLR. See comment in ConvertBLRToBL for more
-    // details.
-    "__llvm_slsblr_thunk_x18", "__llvm_slsblr_thunk_x19",
-    "__llvm_slsblr_thunk_x20", "__llvm_slsblr_thunk_x21",
-    "__llvm_slsblr_thunk_x22", "__llvm_slsblr_thunk_x23",
-    "__llvm_slsblr_thunk_x24", "__llvm_slsblr_thunk_x25",
-    "__llvm_slsblr_thunk_x26", "__llvm_slsblr_thunk_x27",
-    "__llvm_slsblr_thunk_x28", "__llvm_slsblr_thunk_x29",
-    // X30 is deliberately missing, for similar reasons as X16 and X17 are
-    // missing.
-    "__llvm_slsblr_thunk_x31",
-}};
-static std::array<unsigned, 29> SLSBLRThunkRegs{{
-    AArch64::X0,  AArch64::X1,  AArch64::X2,  AArch64::X3,  AArch64::X4,
-    AArch64::X5,  AArch64::X6,  AArch64::X7,  AArch64::X8,  AArch64::X9,
-    AArch64::X10, AArch64::X11, AArch64::X12, AArch64::X13, AArch64::X14,
-    AArch64::X15, AArch64::X18, AArch64::X19, AArch64::X20, AArch64::X21,
-    AArch64::X22, AArch64::X23, AArch64::X24, AArch64::X25, AArch64::X26,
-    AArch64::X27, AArch64::X28, AArch64::FP,  AArch64::XZR}};
+static const struct ThunkNameAndReg {
+  const char* Name;
+  Register Reg;
+} SLSBLRThunks[] = {
+  { "__llvm_slsblr_thunk_x0",  AArch64::X0},
+  { "__llvm_slsblr_thunk_x1",  AArch64::X1},
+  { "__llvm_slsblr_thunk_x2",  AArch64::X2},
+  { "__llvm_slsblr_thunk_x3",  AArch64::X3},
+  { "__llvm_slsblr_thunk_x4",  AArch64::X4},
+  { "__llvm_slsblr_thunk_x5",  AArch64::X5},
+  { "__llvm_slsblr_thunk_x6",  AArch64::X6},
+  { "__llvm_slsblr_thunk_x7",  AArch64::X7},
+  { "__llvm_slsblr_thunk_x8",  AArch64::X8},
+  { "__llvm_slsblr_thunk_x9",  AArch64::X9},
+  { "__llvm_slsblr_thunk_x10",  AArch64::X10},
+  { "__llvm_slsblr_thunk_x11",  AArch64::X11},
+  { "__llvm_slsblr_thunk_x12",  AArch64::X12},
+  { "__llvm_slsblr_thunk_x13",  AArch64::X13},
+  { "__llvm_slsblr_thunk_x14",  AArch64::X14},
+  { "__llvm_slsblr_thunk_x15",  AArch64::X15},
+  // X16 and X17 are deliberately missing, as the mitigation requires those
+  // register to not be used in BLR. See comment in ConvertBLRToBL for more
+  // details.
+  { "__llvm_slsblr_thunk_x18",  AArch64::X18},
+  { "__llvm_slsblr_thunk_x19",  AArch64::X19},
+  { "__llvm_slsblr_thunk_x20",  AArch64::X20},
+  { "__llvm_slsblr_thunk_x21",  AArch64::X21},
+  { "__llvm_slsblr_thunk_x22",  AArch64::X22},
+  { "__llvm_slsblr_thunk_x23",  AArch64::X23},
+  { "__llvm_slsblr_thunk_x24",  AArch64::X24},
+  { "__llvm_slsblr_thunk_x25",  AArch64::X25},
+  { "__llvm_slsblr_thunk_x26",  AArch64::X26},
+  { "__llvm_slsblr_thunk_x27",  AArch64::X27},
+  { "__llvm_slsblr_thunk_x28",  AArch64::X28},
+  { "__llvm_slsblr_thunk_x29",  AArch64::FP},
+  // X30 is deliberately missing, for similar reasons as X16 and X17 are
+  // missing.
+  { "__llvm_slsblr_thunk_x31",  AArch64::XZR},
+};
 
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
@@ -189,22 +199,18 @@ void SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI) {
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in BLR instructions in this
   // function. But would that be a worthwhile optimization?
-  for (StringRef Name : SLSBLRThunkNames)
-    createThunkFunction(MMI, Name);
+  for (auto T : SLSBLRThunks)
+    createThunkFunction(MMI, T.Name);
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
   assert(MF.getName().startswith(getThunkPrefix()));
-  int Index = -1;
-  for (int i = 0; i < (int)SLSBLRThunkNames.size(); ++i)
-    if (MF.getName() == SLSBLRThunkNames[i]) {
-      Index = i;
-      break;
-    }
-  assert(Index != -1);
-  Register ThunkReg = SLSBLRThunkRegs[Index];
+  auto ThunkIt = llvm::find_if(
+      SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
+  assert(ThunkIt != std::end(SLSBLRThunks));
+  Register ThunkReg = ThunkIt->Reg;
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
@@ -317,8 +323,10 @@ AArch64SLSHardening::ConvertBLRToBL(MachineBasicBlock &MBB,
   // for the future when LLVM can start producing BLRA* instructions.
   MachineFunction &MF = *MBBI->getMF();
   MCContext &Context = MBB.getParent()->getContext();
-  MCSymbol *Sym = Context.getOrCreateSymbol("__llvm_slsblr_thunk_x" +
-                                            utostr(Reg - AArch64::X0));
+  auto ThunkIt =
+      llvm::find_if(SLSBLRThunks, [Reg](auto T) { return T.Reg == Reg; });
+  assert (ThunkIt != std::end(SLSBLRThunks));
+  MCSymbol *Sym = Context.getOrCreateSymbol(ThunkIt->Name);
 
   MachineInstr *BL = BuildMI(MBB, MBBI, DL, TII->get(BLOpcode)).addSym(Sym);
 
