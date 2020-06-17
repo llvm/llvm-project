@@ -240,6 +240,16 @@ TemplateDecl *Decl::getDescribedTemplate() const {
   return nullptr;
 }
 
+const TemplateParameterList *Decl::getDescribedTemplateParams() const {
+  if (auto *TD = getDescribedTemplate())
+    return TD->getTemplateParameters();
+  if (auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(this))
+    return CTPSD->getTemplateParameters();
+  if (auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(this))
+    return VTPSD->getTemplateParameters();
+  return nullptr;
+}
+
 bool Decl::isTemplated() const {
   // A declaration is dependent if it is a template or a template pattern, or
   // is within (lexcially for a friend, semantically otherwise) a dependent
@@ -248,7 +258,29 @@ bool Decl::isTemplated() const {
   if (auto *AsDC = dyn_cast<DeclContext>(this))
     return AsDC->isDependentContext();
   auto *DC = getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
-  return DC->isDependentContext() || isTemplateDecl() || getDescribedTemplate();
+  return DC->isDependentContext() || isTemplateDecl() ||
+         getDescribedTemplateParams();
+}
+
+unsigned Decl::getTemplateDepth() const {
+  if (auto *DC = dyn_cast<DeclContext>(this))
+    if (DC->isFileContext())
+      return 0;
+
+  if (auto *TPL = getDescribedTemplateParams())
+    return TPL->getDepth() + 1;
+
+  // If this is a dependent lambda, there might be an enclosing variable
+  // template. In this case, the next step is not the parent DeclContext (or
+  // even a DeclContext at all).
+  auto *RD = dyn_cast<CXXRecordDecl>(this);
+  if (RD && RD->isDependentLambda())
+    if (Decl *Context = RD->getLambdaContextDecl())
+      return Context->getTemplateDepth();
+
+  const DeclContext *DC =
+      getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
+  return cast<Decl>(DC)->getTemplateDepth();
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
