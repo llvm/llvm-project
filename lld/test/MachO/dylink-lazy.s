@@ -13,7 +13,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink-lazy.o
 # RUN: lld -flavor darwinnew -arch x86_64 -o %t/dylink-lazy \
-# RUN:   -L%S/Inputs/MacOSX.sdk/usr/lib \-L%t -lhello -lgoodbye %t/dylink-lazy.o
+# RUN:   -L%S/Inputs/MacOSX.sdk/usr/lib -L%t -lhello -lgoodbye %t/dylink-lazy.o -lSystem
 
 ## When looking at the __stubs section alone, we are unable to easily tell which
 ## symbol each entry points to. So we call objdump twice in order to get the
