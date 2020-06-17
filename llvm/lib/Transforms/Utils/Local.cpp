@@ -1985,6 +1985,11 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
   NewCall->setAttributes(II->getAttributes());
   NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
+
+  // If the invoke had profile metadata, drop it.
+  if (NewCall->hasMetadata(LLVMContext::MD_prof))
+    NewCall->setMetadata(LLVMContext::MD_prof, nullptr);
+
   return NewCall;
 }
 
