@@ -6962,6 +6962,10 @@ void ScalarEvolution::forgetValue(Value *V) {
   }
 }
 
+void ScalarEvolution::forgetLoopDispositions(const Loop *L) {
+  LoopDispositions.clear();
+}
+
 /// Get the exact loop backedge taken count considering all loop exits. A
 /// computable result can only be returned for loops with all exiting blocks
 /// dominating the latch. howFarToZero assumes that the limit of each loop test
