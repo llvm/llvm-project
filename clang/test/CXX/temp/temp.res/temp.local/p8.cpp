@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
 
 namespace N { 
   enum { C };
@@ -51,63 +52,3 @@ void N::Y::f(D) {
   D d;
 }
 
-// Ensure we properly interleave the searches within classes and template parameter lists.
-namespace SearchClassBetweenTemplateParameterLists {
-  int AA, BB; // none of the below lookups should ever consider these
-
-  template<typename T> struct A {
-    using AA = void;
-    template<typename U> struct B {
-      using BB = void;
-      void f(U);
-      void g(U);
-      void h(T);
-      void i(T);
-      template<typename V> void j(V);
-      template<typename V> void k(U);
-    };
-  };
-
-  // Search order for the below is:
-  // 1) template parameter scope of the function itself (if any)
-  // 2) class of which function is a member
-  // 3) template parameter scope of inner class
-  // 4) class of which class is a member
-  // 5) template parameter scope of outer class
-
-  // OK, 'AA' found in (3)
-  template<typename T> template<typename AA>
-  void A<T>::B<AA>::f(AA) {
-    AA aa;
-  }
-
-  // error, 'BB' found in (2)
-  template<typename T> template<typename BB>
-  void A<T>::B<BB>::g(BB) { // expected-error {{does not match}}
-    BB bb; // expected-error {{incomplete type}}
-  }
-
-  // error, 'AA' found in (4)
-  template<typename AA> template<typename U>
-  void A<AA>::B<U>::h(AA) { // expected-error {{does not match}}
-    AA aa; // expected-error {{incomplete type}}
-  }
-
-  // error, 'BB' found in (2)
-  template<typename BB> template<typename U>
-  void A<BB>::B<U>::i(BB) { // expected-error {{does not match}}
-    BB bb; // expected-error {{incomplete type}}
-  }
-
-  // OK, 'BB' found in (1)
-  template<typename T> template<typename U> template<typename BB>
-  void A<T>::B<U>::j(BB) {
-    BB bb;
-  }
-
-  // error, 'BB' found in (2)
-  template<typename T> template<typename BB> template<typename V>
-  void A<T>::B<BB>::k(V) { // expected-error {{does not match}}
-    BB bb; // expected-error {{incomplete type}}
-  }
-}
