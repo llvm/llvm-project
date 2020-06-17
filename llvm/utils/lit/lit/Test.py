@@ -1,6 +1,5 @@
 import itertools
 import os
-from xml.sax.saxutils import quoteattr
 from json import JSONEncoder
 
 from lit.BooleanExpression import BooleanExpression
@@ -10,35 +9,50 @@ from lit.BooleanExpression import BooleanExpression
 class ResultCode(object):
     """Test result codes."""
 
+    # All result codes (including user-defined ones) in declaration order
+    _all_codes = []
+
+    @staticmethod
+    def all_codes():
+        return ResultCode._all_codes
+
     # We override __new__ and __getnewargs__ to ensure that pickling still
     # provides unique ResultCode objects in any particular instance.
     _instances = {}
-    def __new__(cls, name, isFailure):
+
+    def __new__(cls, name, label, isFailure):
         res = cls._instances.get(name)
         if res is None:
             cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
         return res
-    def __getnewargs__(self):
-        return (self.name, self.isFailure)
 
-    def __init__(self, name, isFailure):
+    def __getnewargs__(self):
+        return (self.name, self.label, self.isFailure)
+
+    def __init__(self, name, label, isFailure):
         self.name = name
+        self.label = label
         self.isFailure = isFailure
+        ResultCode._all_codes.append(self)
 
     def __repr__(self):
         return '%s%r' % (self.__class__.__name__,
                          (self.name, self.isFailure))
 
-PASS        = ResultCode('PASS', False)
-FLAKYPASS   = ResultCode('FLAKYPASS', False)
-XFAIL       = ResultCode('XFAIL', False)
-FAIL        = ResultCode('FAIL', True)
-XPASS       = ResultCode('XPASS', True)
-UNRESOLVED  = ResultCode('UNRESOLVED', True)
-UNSUPPORTED = ResultCode('UNSUPPORTED', False)
-TIMEOUT     = ResultCode('TIMEOUT', True)
-SKIPPED     = ResultCode('SKIPPED', False)
-EXCLUDED    = ResultCode('EXCLUDED', False)
+
+# Successes
+EXCLUDED    = ResultCode('EXCLUDED',    'Excluded', False)
+SKIPPED     = ResultCode('SKIPPED',     'Skipped', False)
+UNSUPPORTED = ResultCode('UNSUPPORTED', 'Unsupported', False)
+PASS        = ResultCode('PASS',        'Passed', False)
+FLAKYPASS   = ResultCode('FLAKYPASS',   'Passed With Retry', False)
+XFAIL       = ResultCode('XFAIL',       'Expectedly Failed', False)
+# Failures
+UNRESOLVED  = ResultCode('UNRESOLVED',  'Unresolved', True)
+TIMEOUT     = ResultCode('TIMEOUT',     'Timed Out', True)
+FAIL        = ResultCode('FAIL',        'Failed', True)
+XPASS       = ResultCode('XPASS',       'Unexpectedly Passed', True)
+
 
 # Test metric values.
 
