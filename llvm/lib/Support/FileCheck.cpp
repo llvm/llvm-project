@@ -230,6 +230,58 @@ Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
   }
 }
 
+Expected<ExpressionValue> llvm::operator*(const ExpressionValue &LeftOperand,
+                                          const ExpressionValue &RightOperand) {
+  // -A * -B == A * B
+  if (LeftOperand.isNegative() && RightOperand.isNegative())
+    return LeftOperand.getAbsolute() * RightOperand.getAbsolute();
+
+  // A * -B == -B * A
+  if (RightOperand.isNegative())
+    return RightOperand * LeftOperand;
+
+  assert(!RightOperand.isNegative() && "Unexpected negative operand!");
+
+  // Result will be negative and can underflow.
+  if (LeftOperand.isNegative()) {
+    auto Result = LeftOperand.getAbsolute() * RightOperand.getAbsolute();
+    if (!Result)
+      return Result;
+
+    return ExpressionValue(0) - *Result;
+  }
+
+  // Result will be positive and can overflow.
+  uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
+  uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+  Optional<uint64_t> Result =
+      checkedMulUnsigned<uint64_t>(LeftValue, RightValue);
+  if (!Result)
+    return make_error<OverflowError>();
+
+  return ExpressionValue(*Result);
+}
+
+Expected<ExpressionValue> llvm::operator/(const ExpressionValue &LeftOperand,
+                                          const ExpressionValue &RightOperand) {
+  // -A / -B == A / B
+  if (LeftOperand.isNegative() && RightOperand.isNegative())
+    return LeftOperand.getAbsolute() / RightOperand.getAbsolute();
+
+  // Check for divide by zero.
+  if (RightOperand == ExpressionValue(0))
+    return make_error<OverflowError>();
+
+  // Result will be negative and can underflow.
+  if (LeftOperand.isNegative() || RightOperand.isNegative())
+    return ExpressionValue(0) -
+           cantFail(LeftOperand.getAbsolute() / RightOperand.getAbsolute());
+
+  uint64_t LeftValue = cantFail(LeftOperand.getUnsignedValue());
+  uint64_t RightValue = cantFail(RightOperand.getUnsignedValue());
+  return ExpressionValue(LeftValue / RightValue);
+}
+
 Expected<ExpressionValue> llvm::max(const ExpressionValue &LeftOperand,
                                     const ExpressionValue &RightOperand) {
   if (LeftOperand.isNegative() && RightOperand.isNegative()) {
@@ -592,8 +644,10 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
 
   auto OptFunc = StringSwitch<Optional<binop_eval_t>>(FuncName)
                      .Case("add", operator+)
+                     .Case("div", operator/)
                      .Case("max", max)
                      .Case("min", min)
+                     .Case("mul", operator*)
                      .Case("sub", operator-)
                      .Default(None);
 
