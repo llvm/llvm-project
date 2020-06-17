@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify -Wno-defaulted-function-deleted -include %s %s
+// RxN: %clang_cc1 -std=c++2a -verify -Wno-defaulted-function-deleted -include %s %s
 //
 // RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t.pch
 // RUN: %clang_cc1 -std=c++2a -include-pch %t.pch %s -verify

@@ -66,7 +66,6 @@ class SourceManager;
 class Stmt;
 class StoredDeclsMap;
 class TemplateDecl;
-class TemplateParameterList;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
 
@@ -863,10 +862,6 @@ public:
   // within the scope of a template parameter).
   bool isTemplated() const;
 
-  /// Determine the number of levels of template parameter surrounding this
-  /// declaration.
-  unsigned getTemplateDepth() const;
-
   /// isDefinedOutsideFunctionOrMethod - This predicate returns true if this
   /// scoped decl is defined outside the current function or method.  This is
   /// roughly global variables and functions, but also handles enums (which
@@ -1043,15 +1038,7 @@ public:
 
   /// If this is a declaration that describes some template, this
   /// method returns that template declaration.
-  ///
-  /// Note that this returns nullptr for partial specializations, because they
-  /// are not modeled as TemplateDecls. Use getDescribedTemplateParams to handle
-  /// those cases.
   TemplateDecl *getDescribedTemplate() const;
-
-  /// If this is a declaration that describes some template or partial
-  /// specialization, this returns the corresponding template parameter list.
-  const TemplateParameterList *getDescribedTemplateParams() const;
 
   /// Returns the function itself, or the templated function if this is a
   /// function template.
