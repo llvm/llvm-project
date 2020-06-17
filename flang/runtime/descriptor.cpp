@@ -43,38 +43,31 @@ void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
 void Descriptor::Establish(TypeCategory c, int kind, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
     bool addendum) {
-  std::size_t elementBytes = kind;
-  if (c == TypeCategory::Complex) {
-    elementBytes *= 2;
-  }
-  Terminator terminator{__FILE__, __LINE__};
-  RUNTIME_CHECK(terminator,
-      ISO::CFI_establish(&raw_, p, attribute, TypeCode(c, kind).raw(),
-          elementBytes, rank, extent) == CFI_SUCCESS);
-  raw_.f18Addendum = addendum;
-  DescriptorAddendum *a{Addendum()};
-  RUNTIME_CHECK(terminator, addendum == (a != nullptr));
-  if (a) {
-    new (a) DescriptorAddendum{};
-  }
+  Establish(TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute,
+      addendum);
+}
+
+void Descriptor::Establish(int characterKind, std::size_t characters, void *p,
+    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
+    bool addendum) {
+  Establish(TypeCode{TypeCategory::Character, characterKind},
+      characterKind * characters, p, rank, extent, attribute, addendum);
 }
 
 void Descriptor::Establish(const DerivedType &dt, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  Terminator terminator{__FILE__, __LINE__};
-  RUNTIME_CHECK(terminator,
-      ISO::CFI_establish(&raw_, p, attribute, CFI_type_struct, dt.SizeInBytes(),
-          rank, extent) == CFI_SUCCESS);
-  raw_.f18Addendum = true;
+  Establish(
+      CFI_type_struct, dt.SizeInBytes(), p, rank, extent, attribute, true);
   DescriptorAddendum *a{Addendum()};
-  RUNTIME_CHECK(terminator, a);
+  Terminator terminator{__FILE__, __LINE__};
+  RUNTIME_CHECK(terminator, a != nullptr);
   new (a) DescriptorAddendum{&dt};
 }
 
 OwningPtr<Descriptor> Descriptor::Create(TypeCode t, std::size_t elementBytes,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute) {
-  std::size_t bytes{SizeInBytes(rank, true)};
+    ISO::CFI_attribute_t attribute, int derivedTypeLenParameters) {
+  std::size_t bytes{SizeInBytes(rank, true, derivedTypeLenParameters)};
   Terminator terminator{__FILE__, __LINE__};
   Descriptor *result{
       reinterpret_cast<Descriptor *>(AllocateMemoryOrCrash(terminator, bytes))};
@@ -84,22 +77,21 @@ OwningPtr<Descriptor> Descriptor::Create(TypeCode t, std::size_t elementBytes,
 
 OwningPtr<Descriptor> Descriptor::Create(TypeCategory c, int kind, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  std::size_t bytes{SizeInBytes(rank, true)};
-  Terminator terminator{__FILE__, __LINE__};
-  Descriptor *result{
-      reinterpret_cast<Descriptor *>(AllocateMemoryOrCrash(terminator, bytes))};
-  result->Establish(c, kind, p, rank, extent, attribute, true);
-  return OwningPtr<Descriptor>{result};
+  return Create(
+      TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute);
+}
+
+OwningPtr<Descriptor> Descriptor::Create(int characterKind,
+    SubscriptValue characters, void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute) {
+  return Create(TypeCode{TypeCategory::Character, characterKind},
+      characterKind * characters, p, rank, extent, attribute);
 }
 
 OwningPtr<Descriptor> Descriptor::Create(const DerivedType &dt, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  std::size_t bytes{SizeInBytes(rank, true, dt.lenParameters())};
-  Terminator terminator{__FILE__, __LINE__};
-  Descriptor *result{
-      reinterpret_cast<Descriptor *>(AllocateMemoryOrCrash(terminator, bytes))};
-  result->Establish(dt, p, rank, extent, attribute);
-  return OwningPtr<Descriptor>{result};
+  return Create(TypeCode{CFI_type_struct}, dt.SizeInBytes(), p, rank, extent,
+      attribute, dt.lenParameters());
 }
 
 std::size_t Descriptor::SizeInBytes() const {
@@ -117,9 +109,8 @@ std::size_t Descriptor::Elements() const {
   return elements;
 }
 
-int Descriptor::Allocate(
-    const SubscriptValue lb[], const SubscriptValue ub[], std::size_t charLen) {
-  int result{ISO::CFI_allocate(&raw_, lb, ub, charLen)};
+int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
+  int result{ISO::CFI_allocate(&raw_, lb, ub, ElementBytes())};
   if (result == CFI_SUCCESS) {
     // TODO: derived type initialization
   }

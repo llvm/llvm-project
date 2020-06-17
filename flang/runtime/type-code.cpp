@@ -60,8 +60,16 @@ TypeCode::TypeCode(TypeCategory f, int kind) {
     }
     break;
   case TypeCategory::Character:
-    if (kind == 1) {
+    switch (kind) {
+    case 1:
       raw_ = CFI_type_char;
+      break;
+    case 2:
+      raw_ = CFI_type_char16_t;
+      break;
+    case 4:
+      raw_ = CFI_type_char32_t;
+      break;
     }
     break;
   case TypeCategory::Logical:
