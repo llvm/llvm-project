@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SafeStackColoring.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
