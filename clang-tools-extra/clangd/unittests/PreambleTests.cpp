@@ -70,11 +70,11 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   // We don't run PP directly over the patch cotents to test production
   // behaviour.
   auto Bounds = Lexer::ComputePreamble(ModifiedContents, *CI->getLangOpts());
-  auto Clang = prepareCompilerInstance(
-      std::move(CI), &BaselinePreamble->Preamble,
-      llvm::MemoryBuffer::getMemBufferCopy(
-          ModifiedContents.slice(0, Bounds.Size).str()),
-      PI.FSProvider->view(PI.CompileCommand.Directory), Diags);
+  auto Clang =
+      prepareCompilerInstance(std::move(CI), &BaselinePreamble->Preamble,
+                              llvm::MemoryBuffer::getMemBufferCopy(
+                                  ModifiedContents.slice(0, Bounds.Size).str()),
+                              PI.TFS->view(PI.CompileCommand.Directory), Diags);
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     ADD_FAILURE() << "failed begin source file";
@@ -518,12 +518,12 @@ TEST(PreamblePatch, ModifiedBounds) {
 
     Annotations Modified(Case.Modified);
     TU.Code = Modified.code().str();
-    MockFS FSProvider;
-    auto PP = PreamblePatch::create(testPath(TU.Filename),
-                                    TU.inputs(FSProvider), *BaselinePreamble);
+    MockFS FS;
+    auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(FS),
+                                    *BaselinePreamble);
 
     IgnoreDiagnostics Diags;
-    auto CI = buildCompilerInvocation(TU.inputs(FSProvider), Diags);
+    auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
     ASSERT_TRUE(CI);
 
     const auto ExpectedBounds =

@@ -41,7 +41,7 @@ public:
   /// for compile_commands.json in all parent directories of each file.
   /// If UseDirBasedCDB is false, compile commands are not read from disk.
   // FIXME: Clean up signature around CDBs.
-  ClangdLSPServer(Transport &Transp, const ThreadsafeFS &FSProvider,
+  ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
                   const clangd::CodeCompleteOptions &CCOpts,
                   const clangd::RenameOptions &RenameOpts,
                   llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
@@ -207,7 +207,7 @@ private:
     notify("$/progress", Params);
   }
 
-  const ThreadsafeFS &FSProvider;
+  const ThreadsafeFS &TFS;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
   /// Options used for rename.

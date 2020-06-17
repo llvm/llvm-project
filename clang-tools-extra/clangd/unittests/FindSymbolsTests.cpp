@@ -51,14 +51,14 @@ ClangdServer::Options optsForTests() {
 
 class WorkspaceSymbolsTest : public ::testing::Test {
 public:
-  WorkspaceSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {
+  WorkspaceSymbolsTest() : Server(CDB, FS, optsForTests()) {
     // Make sure the test root directory is created.
-    FSProvider.Files[testPath("unused")] = "";
+    FS.Files[testPath("unused")] = "";
     CDB.ExtraClangFlags = {"-xc++"};
   }
 
 protected:
-  MockFS FSProvider;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server;
   int Limit = 0;
@@ -307,10 +307,10 @@ TEST_F(WorkspaceSymbolsTest, TempSpecs) {
 namespace {
 class DocumentSymbolsTest : public ::testing::Test {
 public:
-  DocumentSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {}
+  DocumentSymbolsTest() : Server(CDB, FS, optsForTests()) {}
 
 protected:
-  MockFS FSProvider;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server;
 

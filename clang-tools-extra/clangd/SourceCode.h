@@ -168,7 +168,7 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
 /// though the latter may have been overridden in main()!
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const ThreadsafeFS &FSProvider);
+                                          const ThreadsafeFS &TFS);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>

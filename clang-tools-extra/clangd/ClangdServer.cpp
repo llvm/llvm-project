@@ -130,9 +130,9 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 }
 
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
-                           const ThreadsafeFS &FSProvider, const Options &Opts,
+                           const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : FSProvider(FSProvider),
+    : TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
@@ -163,7 +163,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
     BackgroundIdx = std::make_unique<BackgroundIndex>(
-        Context::current().clone(), FSProvider, CDB,
+        Context::current().clone(), TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
             [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
         std::max(Opts.AsyncThreadsCount, 1u),
@@ -185,12 +185,12 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   // FIXME: call tidy options builder on the worker thread, it can do IO.
   if (GetClangTidyOptions)
     Opts.ClangTidyOpts =
-        GetClangTidyOptions(*FSProvider.view(/*CWD=*/llvm::None), File);
+        GetClangTidyOptions(*TFS.view(/*CWD=*/llvm::None), File);
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
-  Inputs.FSProvider = &FSProvider;
+  Inputs.TFS = &TFS;
   Inputs.Contents = std::string(Contents);
   Inputs.Version = Version.str();
   Inputs.ForceRebuild = ForceRebuild;
@@ -237,7 +237,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
         }
       }
     }
-    ParseInputs ParseInput{IP->Command, &FSProvider, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
     ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
     ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
@@ -284,7 +284,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
       return CB(llvm::createStringError(llvm::inconvertibleErrorCode(),
                                         "Failed to parse includes"));
 
-    ParseInputs ParseInput{IP->Command, &FSProvider, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
     ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
     ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
@@ -321,7 +321,7 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
     return CursorPos.takeError();
   auto Style = format::getStyle(format::DefaultFormatStyle, File,
                                 format::DefaultFallbackStyle, Code,
-                                FSProvider.view(/*CWD=*/llvm::None).get());
+                                TFS.view(/*CWD=*/llvm::None).get());
   if (!Style)
     return Style.takeError();
 
@@ -398,7 +398,7 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
 
     if (Opts.WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         *InpAST->Inputs.FSProvider);
+                                         *InpAST->Inputs.TFS);
       llvm::Error Err = llvm::Error::success();
       for (auto &E : *Edits)
         Err =
@@ -499,7 +499,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       for (auto &It : (*Effect)->ApplyEdits) {
         Edit &E = It.second;
         format::FormatStyle Style =
-            getFormatStyleForFile(File, E.InitialCode, FSProvider);
+            getFormatStyleForFile(File, E.InitialCode, TFS);
         if (llvm::Error Err = reformatEdit(E, Style))
           elog("Failed to format {0}: {1}", It.first(), std::move(Err));
       }
@@ -550,7 +550,7 @@ void ClangdServer::switchSourceHeader(
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
   if (auto CorrespondingFile = getCorrespondingHeaderOrSource(
-          std::string(Path), FSProvider.view(llvm::None)))
+          std::string(Path), TFS.view(llvm::None)))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
@@ -565,7 +565,7 @@ llvm::Expected<tooling::Replacements>
 ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
                          llvm::ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
-  format::FormatStyle Style = getFormatStyleForFile(File, Code, FSProvider);
+  format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
   tooling::Replacements IncludeReplaces =
       format::sortIncludes(Style, Code, Ranges, File);
   auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
@@ -598,7 +598,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     if (!InpAST)
       return CB(InpAST.takeError());
     format::FormatStyle Style = getFormatStyleForFile(
-        File, InpAST->Inputs.Contents, *InpAST->Inputs.FSProvider);
+        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS);
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
