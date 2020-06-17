@@ -2034,7 +2034,7 @@ class TestBase(Base):
             # Assert that all targets are deleted.
             assert self.dbg.GetNumTargets() == 0
             # Assert that the global module cache is empty.
-            assert lldb.SBModule.GetNumberAllocatedModules() == 0
+            # (rdar://problem/64424164) assert lldb.SBModule.GetNumberAllocatedModules() == 0
 
         # Do this last, to make sure it's in reverse order from how we setup.
         Base.tearDown(self)
