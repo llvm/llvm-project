@@ -39,7 +39,7 @@ LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
 }
 
 void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
-                            const StackColoring::LiveRange &Range) {
+                            const StackLifetime::LiveRange &Range) {
   StackObjects.push_back({V, Size, Alignment, Range});
   ObjectAlignments[V] = Alignment;
   MaxAlignment = std::max(MaxAlignment, Alignment);
@@ -96,7 +96,7 @@ void StackLayout::layoutObject(StackObject &Obj) {
     if (Start > LastRegionEnd) {
       LLVM_DEBUG(dbgs() << "  Creating gap region: " << LastRegionEnd << " .. "
                         << Start << "\n");
-      Regions.emplace_back(LastRegionEnd, Start, StackColoring::LiveRange(0));
+      Regions.emplace_back(LastRegionEnd, Start, StackLifetime::LiveRange(0));
       LastRegionEnd = Start;
     }
     LLVM_DEBUG(dbgs() << "  Creating new region: " << LastRegionEnd << " .. "
