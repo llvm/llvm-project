@@ -784,15 +784,21 @@ Error DWARFDebugLine::LineTable::parse(
 
       // Tolerate zero-length; assume length is correct and soldier on.
       if (Len == 0) {
-        if (Verbose)
+        if (Cursor && Verbose)
           *OS << "Badly formed extended line op (length 0)\n";
-        if (!Cursor)
+        if (!Cursor) {
+          if (Verbose)
+            *OS << "\n";
           RecoverableErrorHandler(Cursor.takeError());
+        }
         *OffsetPtr = Cursor.tell();
         continue;
       }
 
       uint8_t SubOpcode = TableData.getU8(Cursor);
+      // OperandOffset will be the same as ExtOffset, if it was not possible to
+      // read the SubOpcode.
+      uint64_t OperandOffset = Cursor.tell();
       if (Verbose)
         *OS << LNExtendedString(SubOpcode);
       switch (SubOpcode) {
@@ -805,6 +811,9 @@ Error DWARFDebugLine::LineTable::parse(
         // address is that of the byte after the last target machine instruction
         // of the sequence.
         State.Row.EndSequence = true;
+        // No need to test the Cursor is valid here, since it must be to get
+        // into this code path - if it were invalid, the default case would be
+        // followed.
         if (Verbose) {
           *OS << "\n";
           OS->indent(12);
@@ -858,7 +867,7 @@ Error DWARFDebugLine::LineTable::parse(
               TableData.setAddressSize(ExtractorAddressSize);
           }
 
-          if (Verbose)
+          if (Cursor && Verbose)
             *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address.Address);
         }
         break;
@@ -893,7 +902,7 @@ Error DWARFDebugLine::LineTable::parse(
           FileEntry.ModTime = TableData.getULEB128(Cursor);
           FileEntry.Length = TableData.getULEB128(Cursor);
           Prologue.FileNames.push_back(FileEntry);
-          if (Verbose)
+          if (Cursor && Verbose)
             *OS << " (" << Name << ", dir=" << FileEntry.DirIdx << ", mod_time="
                 << format("(0x%16.16" PRIx64 ")", FileEntry.ModTime)
                 << ", length=" << FileEntry.Length << ")";
@@ -902,12 +911,12 @@ Error DWARFDebugLine::LineTable::parse(
 
       case DW_LNE_set_discriminator:
         State.Row.Discriminator = TableData.getULEB128(Cursor);
-        if (Verbose)
+        if (Cursor && Verbose)
           *OS << " (" << State.Row.Discriminator << ")";
         break;
 
       default:
-        if (Verbose)
+        if (Cursor && Verbose)
           *OS << format("Unrecognized extended op 0x%02.02" PRIx8, SubOpcode)
               << format(" length %" PRIx64, Len);
         // Len doesn't include the zero opcode byte or the length itself, but
@@ -926,6 +935,23 @@ Error DWARFDebugLine::LineTable::parse(
             "unexpected line op length at offset 0x%8.8" PRIx64
             " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx64,
             ExtOffset, Len, Cursor.tell() - ExtOffset));
+      if (!Cursor && Verbose) {
+        DWARFDataExtractor::Cursor ByteCursor(OperandOffset);
+        uint8_t Byte = TableData.getU8(ByteCursor);
+        if (ByteCursor) {
+          *OS << " (<parsing error>";
+          do {
+            *OS << format(" %2.2" PRIx8, Byte);
+            Byte = TableData.getU8(ByteCursor);
+          } while (ByteCursor);
+          *OS << ")";
+        }
+
+        // The only parse failure in this case should be if the end was reached.
+        // In that case, throw away the error, as the main Cursor's error will
+        // be sufficient.
+        consumeError(ByteCursor.takeError());
+      }
       *OffsetPtr = End;
     } else if (Opcode < Prologue.OpcodeBase) {
       if (Verbose)
