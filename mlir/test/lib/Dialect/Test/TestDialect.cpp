@@ -174,6 +174,28 @@ TestBranchOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestFoldToCallOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
+  using OpRewritePattern<FoldToCallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FoldToCallOp op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<CallOp>(op, ArrayRef<Type>(), op.calleeAttr(),
+                                        ValueRange());
+    return success();
+  }
+};
+} // end anonymous namespace
+
+void FoldToCallOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<FoldToCallOpPattern>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // Test IsolatedRegionOp - parse passthrough region arguments.
 //===----------------------------------------------------------------------===//
 
