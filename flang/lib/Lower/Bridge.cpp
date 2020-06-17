@@ -755,23 +755,27 @@ private:
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    info.stepValue = info.stepExpr.has_value()
-                         ? genFIRLoopIndex(*info.stepExpr, type)
-                         : info.isStructured()
-                               ? builder->create<mlir::ConstantIndexOp>(loc, 1)
-                               : builder->createIntegerConstant(
-                                     loc, info.loopVariableType, 1);
+    info.stepValue =
+        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
+        : info.isStructured()
+            ? builder->create<mlir::ConstantIndexOp>(loc, 1)
+            : builder->createIntegerConstant(loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
     // Structured loop - generate fir.loop.
     if (info.isStructured()) {
+      // Perform the default initial assignment of the DO variable.
+      auto lowerVal =
+          builder->createConvert(loc, info.loopVariableType, lowerValue);
+      builder->create<fir::StoreOp>(loc, lowerVal, info.loopVariable);
       info.insertionPoint = builder->saveInsertionPoint();
       info.doLoop = builder->create<fir::LoopOp>(loc, lowerValue, upperValue,
                                                  info.stepValue);
       builder->setInsertionPointToStart(info.doLoop.getBody());
-      // Always store iteration ssa-value to the LCV to avoid missing any
-      // aliasing of the LCV.
+      // Always store iteration ssa-value to the DO variable to avoid missing
+      // any aliasing. Note that this assignment can only happen when executing
+      // an iteration of the loop.
       auto lcv = builder->createConvert(loc, info.loopVariableType,
                                         info.doLoop.getInductionVar());
       builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
