@@ -31,6 +31,7 @@ class XRayArgs {
   bool XRayAlwaysEmitTypedEvents = false;
   bool XRayRT = true;
   bool XRayIgnoreLoops = false;
+  bool XRayOmitFunctionIndex = false;
 
 public:
   /// Parses the XRay arguments from an argument list.

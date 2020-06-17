@@ -110,6 +110,9 @@ CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 ///< Set when -fxray-ignore-loops is enabled.
 CODEGENOPT(XRayIgnoreLoops , 1, 0)
 
+///< Set with -fno-xray-function-index to omit the index section.
+CODEGENOPT(XRayOmitFunctionIndex , 1, 0)
+
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.

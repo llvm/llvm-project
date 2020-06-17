@@ -105,6 +105,10 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
                    options::OPT_fno_xray_ignore_loops, false))
     XRayIgnoreLoops = true;
 
+  if (!Args.hasFlag(options::OPT_fxray_function_index,
+                    options::OPT_fno_xray_function_index, true))
+    XRayOmitFunctionIndex = true;
+
   auto Bundles =
       Args.getAllArgValues(options::OPT_fxray_instrumentation_bundle);
   if (Bundles.empty())
@@ -203,6 +207,9 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
 
   if (XRayIgnoreLoops)
     CmdArgs.push_back("-fxray-ignore-loops");
+
+  if (XRayOmitFunctionIndex)
+    CmdArgs.push_back("-fno-xray-function-index");
 
   CmdArgs.push_back(Args.MakeArgString(Twine(XRayInstructionThresholdOption) +
                                        Twine(InstructionThreshold)));
