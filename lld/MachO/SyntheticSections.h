@@ -53,7 +53,7 @@ public:
   MachHeaderSection();
   void addLoadCommand(LoadCommand *);
   bool isHidden() const override { return true; }
-  size_t getSize() const override;
+  uint64_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 
 private:
@@ -67,7 +67,7 @@ class PageZeroSection : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
-  size_t getSize() const override { return PageZeroSize; }
+  uint64_t getSize() const override { return PageZeroSize; }
   uint64_t getFileSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
 };
@@ -84,7 +84,7 @@ public:
 
   bool isNeeded() const override { return !entries.empty(); }
 
-  size_t getSize() const override { return entries.size() * WordSize; }
+  uint64_t getSize() const override { return entries.size() * WordSize; }
 
   void writeTo(uint8_t *buf) const override {
     // Nothing to write, GOT contains all zeros at link time; it's populated at
@@ -102,7 +102,7 @@ class BindingSection : public SyntheticSection {
 public:
   BindingSection();
   void finalizeContents();
-  size_t getSize() const override { return contents.size(); }
+  uint64_t getSize() const override { return contents.size(); }
   // Like other sections in __LINKEDIT, the binding section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
@@ -138,7 +138,7 @@ public:
 class StubsSection : public SyntheticSection {
 public:
   StubsSection();
-  size_t getSize() const override;
+  uint64_t getSize() const override;
   bool isNeeded() const override { return !entries.empty(); }
   void writeTo(uint8_t *buf) const override;
 
@@ -153,7 +153,7 @@ private:
 class StubHelperSection : public SyntheticSection {
 public:
   StubHelperSection();
-  size_t getSize() const override;
+  uint64_t getSize() const override;
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 
@@ -169,13 +169,13 @@ public:
 class ImageLoaderCacheSection : public InputSection {
 public:
   ImageLoaderCacheSection();
-  size_t getSize() const override { return WordSize; }
+  uint64_t getSize() const override { return WordSize; }
 };
 
 class LazyPointerSection : public SyntheticSection {
 public:
   LazyPointerSection();
-  size_t getSize() const override;
+  uint64_t getSize() const override;
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 };
@@ -184,7 +184,7 @@ class LazyBindingSection : public SyntheticSection {
 public:
   LazyBindingSection();
   void finalizeContents();
-  size_t getSize() const override { return contents.size(); }
+  uint64_t getSize() const override { return contents.size(); }
   uint32_t encode(const DylibSymbol &);
   // Like other sections in __LINKEDIT, the lazy binding section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
@@ -203,7 +203,7 @@ class ExportSection : public SyntheticSection {
 public:
   ExportSection();
   void finalizeContents();
-  size_t getSize() const override { return size; }
+  uint64_t getSize() const override { return size; }
   // Like other sections in __LINKEDIT, the export section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
@@ -221,7 +221,7 @@ public:
   StringTableSection();
   // Returns the start offset of the added string.
   uint32_t addString(StringRef);
-  size_t getSize() const override { return size; }
+  uint64_t getSize() const override { return size; }
   // Like other sections in __LINKEDIT, the string table section is special: its
   // offsets are recorded in the LC_SYMTAB load command, instead of in section
   // headers.
@@ -246,7 +246,7 @@ public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
   size_t getNumSymbols() const { return symbols.size(); }
-  size_t getSize() const override;
+  uint64_t getSize() const override;
   // Like other sections in __LINKEDIT, the symtab section is special: its
   // offsets are recorded in the LC_SYMTAB load command, instead of in section
   // headers.
