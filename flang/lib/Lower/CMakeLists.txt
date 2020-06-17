@@ -10,9 +10,8 @@ add_flang_library(FortranLower
 
   DEPENDS
   FIROpsIncGen
-  MLIROpAsmInterfaceIncGen
   MLIRControlFlowInterfaces
-  MLIRLinalgStructuredOpsInterfaceIncGen
+  MLIRLinalgOps
 
   LINK_COMPONENTS
   Support
