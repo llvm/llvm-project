@@ -1,0 +1,241 @@
+## Test that yaml2obj emits .debug_abbrev section.
+
+## a) Generate the .debug_abbrev section from the "DWARF" entry.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-readobj --sections --section-data %t1.o | \
+# RUN:   FileCheck -DSIZE=38 -DADDRALIGN=1 %s --check-prefixes=SHDR,CONTENT
+
+#         SHDR: Index: 1
+#    SHDR-NEXT: Name: .debug_abbrev (1)
+#    SHDR-NEXT: Type: SHT_PROGBITS (0x1)
+#    SHDR-NEXT: Flags [ (0x0)
+#    SHDR-NEXT: ]
+#    SHDR-NEXT: Address: 0x0
+#    SHDR-NEXT: Offset: 0x40
+#    SHDR-NEXT: Size: [[SIZE]]
+#    SHDR-NEXT: Link: 0
+#    SHDR-NEXT: Info: 0
+#    SHDR-NEXT: AddressAlignment: [[ADDRALIGN]]
+#    SHDR-NEXT: EntrySize: 0
+# CONTENT-NEXT: SectionData (
+# CONTENT-NEXT:   000: 01110125                                     0E130503
+##                     ^-       abbreviation code   ULEB128         ^-       DW_FORM_strp   ULEB128
+##                       ^-     DW_TAG_compile_unit ULEB128           ^-     DW_AT_language ULEB128
+##                         ^-   DW_CHILDREN_yes     1-byte              ^-   DW_FORM_data2  ULEB128
+##                           ^- DW_AT_producer      ULEB128               ^- DW_AT_name     ULEB128
+##
+##     CONTENT:         1A000002                                    2E011101
+##                      ^-       DW_AT_strx        ULEB128          ^-       DW_TAG_subprogram ULEB128
+##                        ^---   terminating entry                    ^-     DW_CHILDREN_yes   1-byte
+##                            ^- abbreviation code ULEB128              ^-   DW_AT_low_pc      ULEB128
+##                                                                        ^- DW_FORM_addr      ULEB128
+##
+# CONTENT-NEXT:   0010: 121B0000                                    03060081
+##                      ^-       DW_AT_high_pc ULEB128              ^-       abbreviation code ULEB128
+##                        ^-     DW_FORM_addrx ULEB128                ^-     Tag: value        UELB128
+##                          ^--- terminating entry                      ^-   DW_CHILDREN_no    1-byte
+##                                                                        ^- DW_AT_call_pc     ULEB128 (0x81)
+##
+#      CONTENT:         01810104                                    02A04021
+##                      --                                          ^-       Form: reserved         ULEB128
+##                        ^---   Form: invalid       ULEB128 (0x81)   ^---   Attribute: reserved    ULEB128 (0x2020)
+##                            ^- Attribute: reserved ULEB128              ^- DW_FORM_implicit_const ULEB128
+##
+# CONTENT-NEXT:   0020: CEC2F105                                    0000
+##                      ^------- Value SLEB128 (12345678)           ^--- terminating entry
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Code:     1
+      Tag:      DW_TAG_compile_unit
+      Children: DW_CHILDREN_yes
+      Attributes:
+        - Attribute: DW_AT_producer
+          Form:      DW_FORM_strp
+        - Attribute: DW_AT_language
+          Form:      DW_FORM_data2
+        - Attribute: DW_AT_name
+          Form:      DW_FORM_strx
+    - Code:     2
+      Tag:      DW_TAG_subprogram
+      Children: DW_CHILDREN_yes
+      Attributes:
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_addr
+        - Attribute: DW_AT_high_pc
+          Form:      DW_FORM_addrx
+    - Code:     3
+      ## Test a reserved tag value.
+      Tag:      0x06
+      Children: DW_CHILDREN_no
+      Attributes:
+          ## Test an attribute value that is more than one byte.
+        - Attribute: DW_AT_call_pc
+          ## Test a form value that is more than one byte.
+          Form:      0x81
+          ## Test a reserved attribute value.
+        - Attribute: 0x04
+          ## Test a reserved form value.
+          Form:      0x02
+        - Attribute: 0x2020
+          ## Test one special attribute form DW_FORM_implicit_const,
+          ## who is followed by a SLEB128 value.
+          Form:      DW_FORM_implicit_const
+          Value:     12345678
+
+## b) Generate the .debug_abbrev section from raw section content.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-readobj --sections --section-data %t2.o | \
+# RUN:   FileCheck -DADDRALIGN=0 -DSIZE=3 %s --check-prefixes=SHDR,ARBITRARY-CONTENT
+
+# ARBITRARY-CONTENT-NEXT: SectionData (
+# ARBITRARY-CONTENT-NEXT:   0000: 112233
+# ARBITRARY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_abbrev
+    Type:    SHT_PROGBITS
+    Content: "112233"
+
+## c) Generate the .debug_abbrev section when the "Size" is specified.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readobj --sections --section-data %t3.o | \
+# RUN:   FileCheck -DSIZE=16 -DADDRALIGN=0 %s --check-prefixes=SHDR,SIZE
+
+# SIZE-NEXT: SectionData (
+# SIZE-NEXT:   0000: 00000000 00000000 00000000 00000000
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_abbrev
+    Type: SHT_PROGBITS
+    Size: 0x10
+
+## d) Test that yaml2obj emits an error message when both the "Size" and the
+## "debug_abbrev" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot specify section '.debug_abbrev' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_abbrev
+    Type: SHT_PROGBITS
+    Size: 0x10
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+
+## e) Test that yaml2obj emits an error message when both the "Content" and the
+## "debug_abbrev" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_abbrev
+    Type:    SHT_PROGBITS
+    Content: "00"
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+
+## f) Test that all the properties can be overridden by the section header when
+## the "debug_abbrev" entry doesn't exist.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6.o
+# RUN: llvm-readelf --sections %t6.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+#      OVERRIDDEN: [Nr] Name          Type   Address          Off    Size   ES Flg Lk Inf Al
+#      OVERRIDDEN: [ 1] .debug_abbrev STRTAB 0000000000002020 000050 000005 01   A  2   1  2
+# OVERRIDDEN-NEXT: [ 2] .sec          STRTAB 0000000000000000 000055 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_abbrev
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 0 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+    Size:         0x05        ## Set the "Size" so that we can reuse the check tag "OVERRIDDEN".
+  - Name:         .sec        ## Linked by .debug_abbrev.
+    Type:         SHT_STRTAB
+
+## g) Test that all the properties can be overridden by the section header when
+## the "debug_abbrev" entry exists.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7.o
+# RUN: llvm-readelf --sections %t7.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_abbrev
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 1 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+  - Name:         .sec        ## Linked by .debug_abbrev.
+    Type:         SHT_STRTAB
+DWARF:
+  debug_abbrev:
+    - Code:       1
+      Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
