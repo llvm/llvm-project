@@ -680,6 +680,15 @@ public:
         Visit(A);
   }
 
+  void VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
+    Visit(E->getParameter());
+  }
+  void VisitSubstNonTypeTemplateParmPackExpr(
+      const SubstNonTypeTemplateParmPackExpr *E) {
+    Visit(E->getParameterPack());
+    Visit(E->getArgumentPack());
+  }
+
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node) {
     if (const VarDecl *CatchParam = Node->getCatchParamDecl())
       Visit(CatchParam);
