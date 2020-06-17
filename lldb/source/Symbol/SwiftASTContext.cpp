@@ -1336,7 +1336,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         bool &found_swift_modules) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   bool found_validation_errors = false;
-  std::string last_sdk_path;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
   auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
@@ -1375,16 +1374,11 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
       StringRef moduleData = buf.substr(0, info.bytes);
       got_serialized_options |=
           DeserializeCompilerFlags(invocation, moduleData, info.name, error);
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "SDK path from module \"%s\" is \"%s\".",
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "SDK path from module \"%s\" was \"%s\".",
                  info.name.str().c_str(),
                  invocation.getSDKPath().str().c_str());
-      if (!last_sdk_path.empty()) {
-        // Always let the more specific SDK path win.
-        if (invocation.getSDKPath() != last_sdk_path)
-          if (last_sdk_path.size() > invocation.getSDKPath().size())
-            invocation.setSDKPath(last_sdk_path);
-      }
-      last_sdk_path = invocation.getSDKPath();
+      // We will deduce a matching SDK path from DWARF later.
+      invocation.setSDKPath("");
     }
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
