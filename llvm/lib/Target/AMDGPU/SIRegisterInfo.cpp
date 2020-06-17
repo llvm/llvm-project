@@ -938,12 +938,12 @@ void SIRegisterInfo::buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI,
     } else {
       SavedExecReg =
           getMatchingSuperReg(getSubReg(SuperReg, SplitParts[FirstPart]),
-                              AMDGPU::sub0, &AMDGPU::SGPR_64RegClass);
+                              AMDGPU::sub0, &AMDGPU::SReg_64_XEXECRegClass);
       // If src/dst is an odd size it is possible subreg0 is not aligned.
       if (!SavedExecReg && NumSubRegs > 2)
         SavedExecReg =
             getMatchingSuperReg(getSubReg(SuperReg, SplitParts[FirstPart + 1]),
-                                AMDGPU::sub0, &AMDGPU::SGPR_64RegClass);
+                                AMDGPU::sub0, &AMDGPU::SReg_64_XEXECRegClass);
     }
 
     assert(SavedExecReg);
