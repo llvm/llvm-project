@@ -140,7 +140,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   SmallVector<Value, 8> handles(blockTypes.size());
   BlockBuilder(&b, op->getRegion(0), blockTypes,
                handles)([&] { regionBuilder(b.getBlock()->getArguments()); });
-  assert(op->getRegion(0).getBlocks().size() == 1);
+  assert(llvm::hasSingleElement(op->getRegion(0)));
   return op;
 }
 
