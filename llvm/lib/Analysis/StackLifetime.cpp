@@ -1,4 +1,4 @@
-//===- SafeStackColoring.cpp - SafeStack frame coloring -------------------===//
+//===- StackLifetime.cpp - Alloca Lifetime Analysis -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,12 +22,11 @@
 #include <tuple>
 
 using namespace llvm;
-using namespace llvm::safestack;
 
-#define DEBUG_TYPE "safestackcoloring"
+#define DEBUG_TYPE "stack-lifetime"
 
-const StackColoring::LiveRange &
-StackColoring::getLiveRange(const AllocaInst *AI) const {
+const StackLifetime::LiveRange &
+StackLifetime::getLiveRange(const AllocaInst *AI) const {
   const auto IT = AllocaNumbering.find(AI);
   assert(IT != AllocaNumbering.end());
   return LiveRanges[IT->second];
@@ -42,7 +41,7 @@ static bool readMarker(const Instruction *I, bool *IsStart) {
   return true;
 }
 
-std::vector<const IntrinsicInst *> StackColoring::getMarkers() const {
+std::vector<const IntrinsicInst *> StackLifetime::getMarkers() const {
   std::vector<const IntrinsicInst *> Markers;
   for (auto &M : InstructionNumbering)
     if (M.getFirst()->isLifetimeStartOrEnd())
@@ -50,7 +49,7 @@ std::vector<const IntrinsicInst *> StackColoring::getMarkers() const {
   return Markers;
 }
 
-void StackColoring::collectMarkers() {
+void StackLifetime::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
       BBMarkerSet;
@@ -143,7 +142,7 @@ void StackColoring::collectMarkers() {
   NumInst = InstNo;
 }
 
-void StackColoring::calculateLocalLiveness() {
+void StackLifetime::calculateLocalLiveness() {
   bool Changed = true;
   while (Changed) {
     Changed = false;
@@ -187,7 +186,7 @@ void StackColoring::calculateLocalLiveness() {
   } // while changed.
 }
 
-void StackColoring::calculateLiveIntervals() {
+void StackLifetime::calculateLiveIntervals() {
   for (auto IT : BlockLiveness) {
     const BasicBlock *BB = IT.getFirst();
     BlockLifetimeInfo &BlockInfo = IT.getSecond();
@@ -237,13 +236,13 @@ void StackColoring::calculateLiveIntervals() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void StackColoring::dumpAllocas() const {
+LLVM_DUMP_METHOD void StackLifetime::dumpAllocas() const {
   dbgs() << "Allocas:\n";
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
     dbgs() << "  " << AllocaNo << ": " << *Allocas[AllocaNo] << "\n";
 }
 
-LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() const {
+LLVM_DUMP_METHOD void StackLifetime::dumpBlockLiveness() const {
   dbgs() << "Block liveness:\n";
   for (auto IT : BlockLiveness) {
     const BasicBlock *BB = IT.getFirst();
@@ -256,14 +255,14 @@ LLVM_DUMP_METHOD void StackColoring::dumpBlockLiveness() const {
   }
 }
 
-LLVM_DUMP_METHOD void StackColoring::dumpLiveRanges() const {
+LLVM_DUMP_METHOD void StackLifetime::dumpLiveRanges() const {
   dbgs() << "Alloca liveness:\n";
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
     dbgs() << "  " << AllocaNo << ": " << LiveRanges[AllocaNo] << "\n";
 }
 #endif
 
-StackColoring::StackColoring(const Function &F,
+StackLifetime::StackLifetime(const Function &F,
                              ArrayRef<const AllocaInst *> Allocas)
     : F(F), Allocas(Allocas), NumAllocas(Allocas.size()) {
   LLVM_DEBUG(dumpAllocas());
@@ -274,7 +273,7 @@ StackColoring::StackColoring(const Function &F,
   collectMarkers();
 }
 
-void StackColoring::run() {
+void StackLifetime::run() {
   LiveRanges.resize(NumAllocas, LiveRange(NumInst));
   for (unsigned I = 0; I < NumAllocas; ++I)
     if (!InterestingAllocas.test(I))
