@@ -150,10 +150,6 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   // it in this generic function.
   if (DestBB->isEHPad()) return nullptr;
 
-  // Don't split the non-fallthrough edge from a callbr.
-  if (isa<CallBrInst>(TI) && SuccNum > 0)
-    return nullptr;
-
   if (Options.IgnoreUnreachableDests &&
       isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
     return nullptr;
@@ -206,13 +202,13 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
 
-  // Branch to the new block, breaking the edge.
-  TI->setSuccessor(SuccNum, NewBB);
-
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
   Function::iterator FBBI = TIBB->getIterator();
   F.getBasicBlockList().insert(++FBBI, NewBB);
+
+  // Branch to the new block, breaking the edge.
+  TI->setSuccessor(SuccNum, NewBB);
 
   // If there are any PHI nodes in DestBB, we need to update them so that they
   // merge incoming values from NewBB instead of from TIBB.
