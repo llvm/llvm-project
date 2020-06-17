@@ -15131,7 +15131,17 @@ matches the element-type of the vector input.
 If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
 reduction will not preserve the associativity of an equivalent scalarized
 counterpart. Otherwise the reduction will be *ordered*, thus implying that
-the operation respects the associativity of a scalarized reduction.
+the operation respects the associativity of a scalarized reduction. That is, the
+reduction begins with the start value and performs an fadd operation with consecutively
+increasing vector element indices. See the following pseudocode:
+
+::
+
+    float ordered_fadd(start_value, input_vector)
+      result = start_value
+      for i = 0 to length(input_vector)
+        result = result + input_vector[i]
+      return result
 
 
 Arguments:
@@ -15192,7 +15202,17 @@ matches the element-type of the vector input.
 If the intrinsic call has the 'reassoc' or 'fast' flags set, then the
 reduction will not preserve the associativity of an equivalent scalarized
 counterpart. Otherwise the reduction will be *ordered*, thus implying that
-the operation respects the associativity of a scalarized reduction.
+the operation respects the associativity of a scalarized reduction. That is, the
+reduction begins with the start value and performs an fmul operation with consecutively
+increasing vector element indices. See the following pseudocode:
+
+::
+
+    float ordered_fmul(start_value, input_vector)
+      result = start_value
+      for i = 0 to length(input_vector)
+        result = result * input_vector[i]
+      return result
 
 
 Arguments:
