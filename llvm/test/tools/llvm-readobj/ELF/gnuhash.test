@@ -229,15 +229,25 @@ ProgramHeaders:
 ## which is one larger than the index of the last dynamic symbol.
 ## For empty tables however, this value is unimportant and can be ignored.
 
-# RUN: yaml2obj --docnum=5 %s -o %t.empty
-# RUN: llvm-readobj --gnu-hash-table %t.empty 2>&1 \
-# RUN:   | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY --implicit-check-not="warning:"
-# RUN: llvm-readelf --gnu-hash-table %t.empty 2>&1 \
-# RUN:   | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY --implicit-check-not="warning:"
+## Case A: set the index of the first symbol in the dynamic symbol table to
+##         the number of dynamic symbols.
+# RUN: yaml2obj --docnum=5 -DSYMNDX=0x1 %s -o %t.empty.1
+# RUN: llvm-readobj --gnu-hash-table %t.empty.1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty.1 -DSYMNDX=1 --check-prefix=EMPTY --implicit-check-not="warning:"
+# RUN: llvm-readelf --gnu-hash-table %t.empty.1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty.1 -DSYMNDX=1 --check-prefix=EMPTY --implicit-check-not="warning:"
+
+## Case B: set the index of the first symbol in the dynamic symbol table to
+##         an arbitrary value that is larger than the number of dynamic symbols.
+# RUN: yaml2obj --docnum=5 -DSYMNDX=0x2 %s -o %t.empty.2
+# RUN: llvm-readobj --gnu-hash-table %t.empty.2 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty.2 -DSYMNDX=2 --check-prefix=EMPTY --implicit-check-not="warning:"
+# RUN: llvm-readelf --gnu-hash-table %t.empty.2 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty.2 -DSYMNDX=2 --check-prefix=EMPTY --implicit-check-not="warning:"
 
 # EMPTY:      GnuHashTable {
 # EMPTY-NEXT:   Num Buckets: 1
-# EMPTY-NEXT:   First Hashed Symbol Index: 1
+# EMPTY-NEXT:   First Hashed Symbol Index: [[SYMNDX]]
 # EMPTY-NEXT:   Num Mask Words: 1
 # EMPTY-NEXT:   Shift Count: 0
 # EMPTY-NEXT:   Bloom Filter: [0x0]
@@ -256,7 +266,7 @@ Sections:
     Type:  SHT_GNU_HASH
     Flags: [ SHF_ALLOC ]
     Header:
-      SymNdx: 0x1
+      SymNdx: [[SYMNDX]]
       Shift2: 0x0
     BloomFilter: [ 0x0 ]
     HashBuckets: [ 0x0 ]

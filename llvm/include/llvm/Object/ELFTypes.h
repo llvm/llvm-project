@@ -539,6 +539,7 @@ struct Elf_GnuHash_Impl {
   }
 
   ArrayRef<Elf_Word> values(unsigned DynamicSymCount) const {
+    assert(DynamicSymCount >= symndx);
     return ArrayRef<Elf_Word>(buckets().end(), DynamicSymCount - symndx);
   }
 };
