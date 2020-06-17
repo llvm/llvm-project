@@ -19,7 +19,7 @@
 namespace llvm {
 
 static const unsigned heatSize = 100;
-static const std::string heatPalette[heatSize] = {
+static const char heatPalette[heatSize][8] = {
     "#3d50c3", "#4055c8", "#4358cb", "#465ecf", "#4961d2", "#4c66d6", "#4f69d9",
     "#536edd", "#5572df", "#5977e3", "#5b7ae5", "#5f7fe8", "#6282ea", "#6687ed",
     "#6a8bef", "#6c8ff1", "#7093f3", "#7396f5", "#779af7", "#7a9df8", "#7ea1fa",
