@@ -332,7 +332,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 namespace llvm {
 
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilTerminates, std::string *ErrMsg) {
+                      bool WaitUntilTerminates, std::string *ErrMsg,
+                      Optional<ProcessStatistics> *ProcStat) {
   struct sigaction Act, Old;
   assert(PI.Pid && "invalid pid to wait on, process not started?");
 
@@ -355,9 +356,12 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   // Parent process: Wait for the child process to terminate.
   int status;
   ProcessInfo WaitResult;
+  rusage Info;
+  if (ProcStat)
+    ProcStat->reset();
 
   do {
-    WaitResult.Pid = waitpid(ChildPid, &status, WaitPidOptions);
+    WaitResult.Pid = wait4(ChildPid, &status, WaitPidOptions, &Info);
   } while (WaitUntilTerminates && WaitResult.Pid == -1 && errno == EINTR);
 
   if (WaitResult.Pid != PI.Pid) {
@@ -393,6 +397,13 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   if (SecondsToWait && !WaitUntilTerminates) {
     alarm(0);
     sigaction(SIGALRM, &Old, nullptr);
+  }
+
+  if (ProcStat) {
+    std::chrono::microseconds UserT = toDuration(Info.ru_utime);
+    std::chrono::microseconds KernelT = toDuration(Info.ru_stime);
+    uint64_t PeakMemory = static_cast<uint64_t>(Info.ru_maxrss);
+    *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
   }
 
   // Return the proper exit status. Detect error conditions
