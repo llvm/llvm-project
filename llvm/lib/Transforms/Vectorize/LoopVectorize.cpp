@@ -6829,11 +6829,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
       IV = IVRecipe->getVPValue();
     }
     VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
-    bool TailFolded = !CM.isScalarEpilogueAllowed();
-    if (TailFolded && CM.TTI.emitGetActiveLaneMask())
-      BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, BTC});
-    else
-      BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
+    BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
     return BlockMaskCache[BB] = BlockMask;
   }
 

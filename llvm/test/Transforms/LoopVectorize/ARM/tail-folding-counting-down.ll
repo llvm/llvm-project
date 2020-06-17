@@ -15,13 +15,9 @@ target triple = "thumbv8.1m.main-arm-unknown-eabihf"
 define dso_local void @sgt_loopguard(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_loopguard(
 ; COMMON:       vector.body:
-
-; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
-; CHECK-TF:     %[[SCALARBTC:.*]] = extractelement <16 x i32> %broadcast.splat, i32 0
-; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %[[SCALARBTC]])
-; CHECK-TF:     llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask
-; CHECK-TF:     llvm.masked.store.v16i8.p0v16i8(<16 x i8> %{{.*}}, <16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask)
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.load
+; CHECK-TF:     masked.store
 entry:
   %cmp5 = icmp sgt i32 %N, 0
   br i1 %cmp5, label %while.body.preheader, label %while.end

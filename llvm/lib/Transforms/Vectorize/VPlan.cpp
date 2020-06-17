@@ -380,20 +380,6 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, V, Part);
     break;
   }
-  case VPInstruction::ActiveLaneMask: {
-    // Get first lane of vector induction variable.
-    Value *VIVElem0 = State.get(getOperand(0), {Part, 0});
-    // Get first lane of backedge-taken-count.
-    Value *ScalarBTC = State.get(getOperand(1), {Part, 0});
-
-    auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = VectorType::get(Int1Ty, State.VF);
-    Instruction *Call = Builder.CreateIntrinsic(
-        Intrinsic::get_active_lane_mask, {PredTy, ScalarBTC->getType()},
-        {VIVElem0, ScalarBTC}, nullptr, "active.lane.mask");
-    State.set(this, Call, Part);
-    break;
-  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -435,10 +421,6 @@ void VPInstruction::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   case VPInstruction::SLPStore:
     O << "combined store";
     break;
-  case VPInstruction::ActiveLaneMask:
-    O << "active lane mask";
-    break;
-
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
