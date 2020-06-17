@@ -2716,6 +2716,35 @@ template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   W.printList("Chains", HashTable->chains());
 }
 
+template <class ELFT>
+static Expected<ArrayRef<typename ELFT::Word>>
+getGnuHashTableChains(const typename ELFT::SymRange DynSymTable,
+                      const typename ELFT::GnuHash *GnuHashTable) {
+  size_t NumSyms = DynSymTable.size();
+  if (!NumSyms)
+    return createError("unable to dump 'Values' for the SHT_GNU_HASH "
+                       "section: the dynamic symbol table is empty");
+
+  if (GnuHashTable->symndx < NumSyms)
+    return GnuHashTable->values(NumSyms);
+
+  // A normal empty GNU hash table section produced by linker might have
+  // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
+  // and have dummy null values in the Bloom filter and in the buckets
+  // vector. It happens because the value of symndx is not important for
+  // dynamic loaders when the GNU hash table is empty. They just skip the
+  // whole object during symbol lookup. In such cases, the symndx value is
+  // irrelevant and we should not report a warning.
+  ArrayRef<typename ELFT::Word> Buckets = GnuHashTable->buckets();
+  if (!llvm::all_of(Buckets, [](typename ELFT::Word V) { return V == 0; }))
+    return createError("the first hashed symbol index (" +
+                       Twine(GnuHashTable->symndx) +
+                       ") is larger than the number of dynamic symbols (" +
+                       Twine(NumSyms) + ")");
+
+  return GnuHashTable->values(NumSyms);
+}
+
 template <typename ELFT>
 void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   DictScope D(W, "GnuHashTable");
@@ -2750,37 +2779,14 @@ void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
     return;
   }
 
-  size_t NumSyms = dynamic_symbols().size();
-  if (!NumSyms) {
-    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
-                              "section: the dynamic symbol table is empty"),
-                  ObjF->getFileName());
+  Expected<ArrayRef<Elf_Word>> Chains =
+      getGnuHashTableChains<ELFT>(dynamic_symbols(), GnuHashTable);
+  if (!Chains) {
+    reportUniqueWarning(Chains.takeError());
     return;
   }
 
-  if (GnuHashTable->symndx >= NumSyms) {
-    // A normal empty GNU hash table section produced by linker might have
-    // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
-    // and have dummy null values in the Bloom filter and in the buckets
-    // vector. It happens because the value of symndx is not important for
-    // dynamic loaders when the GNU hash table is empty. They just skip the
-    // whole object during symbol lookup. In such cases, the symndx value is
-    // irrelevant and we should not report a warning.
-    bool IsEmptyHashTable =
-        llvm::all_of(Buckets, [](Elf_Word V) { return V == 0; });
-
-    if (!IsEmptyHashTable) {
-      reportWarning(
-          createError("the first hashed symbol index (" +
-                      Twine(GnuHashTable->symndx) +
-                      ") is larger than the number of dynamic symbols (" +
-                      Twine(NumSyms) + ")"),
-          ObjF->getFileName());
-      return;
-    }
-  }
-
-  W.printHexList("Values", GnuHashTable->values(NumSyms));
+  W.printHexList("Values", *Chains);
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
