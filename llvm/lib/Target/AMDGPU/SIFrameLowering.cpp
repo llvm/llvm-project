@@ -24,17 +24,6 @@ using namespace llvm;
 #define DEBUG_TYPE "frame-info"
 
 
-static ArrayRef<MCPhysReg> getAllSGPR128(const GCNSubtarget &ST,
-                                         const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 4);
-}
-
-static ArrayRef<MCPhysReg> getAllSGPRs(const GCNSubtarget &ST,
-                                       const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
-}
-
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer. We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during
@@ -344,7 +333,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   // skip over user SGPRs and may leave unused holes.
 
   unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 3) / 4;
-  ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(ST, MF);
+  ArrayRef<MCPhysReg> AllSGPR128s = TRI->getAllSGPR128(MF);
   AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
 
   // Skip the last N reserved elements because they should have already been
@@ -438,7 +427,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // wave offset to a free SGPR.
   Register ScratchWaveOffsetReg;
   if (TRI->isSubRegisterEq(ScratchRsrcReg, PreloadedScratchWaveOffsetReg)) {
-    ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(ST, MF);
+    ArrayRef<MCPhysReg> AllSGPRs = TRI->getAllSGPR32(MF);
     unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
     AllSGPRs = AllSGPRs.slice(
         std::min(static_cast<unsigned>(AllSGPRs.size()), NumPreloaded));
