@@ -25,10 +25,12 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:             [[VAL_17:%.*]] = affine.min #map0([[VAL_11]], [[VAL_2]], [[VAL_15]])
 // CHECK:             [[VAL_18:%.*]] = affine.min #map0([[VAL_12]], [[VAL_3]], [[VAL_16]])
 // CHECK:             scf.parallel ([[VAL_19:%.*]], [[VAL_20:%.*]]) = ([[VAL_10]], [[VAL_10]]) to ([[VAL_17]], [[VAL_18]]) step ([[VAL_4]], [[VAL_5]]) {
-// CHECK:               [[VAL_21:%.*]] = load [[VAL_7]]{{\[}}[[VAL_19]], [[VAL_20]]] : memref<?x?xf32>
-// CHECK:               [[VAL_22:%.*]] = load [[VAL_8]]{{\[}}[[VAL_19]], [[VAL_20]]] : memref<?x?xf32>
-// CHECK:               [[VAL_23:%.*]] = addf [[VAL_21]], [[VAL_22]] : f32
-// CHECK:               store [[VAL_23]], [[VAL_9]]{{\[}}[[VAL_19]], [[VAL_20]]] : memref<?x?xf32>
+// CHECK:               [[VAL_21:%.*]] = addi [[VAL_19]], [[VAL_15]] : index
+// CHECK:               [[VAL_22:%.*]] = addi [[VAL_20]], [[VAL_16]] : index
+// CHECK:               [[VAL_23:%.*]] = load [[VAL_7]]{{\[}}[[VAL_21]], [[VAL_22]]] : memref<?x?xf32>
+// CHECK:               [[VAL_24:%.*]] = load [[VAL_8]]{{\[}}[[VAL_21]], [[VAL_22]]] : memref<?x?xf32>
+// CHECK:               [[VAL_25:%.*]] = addf [[VAL_23]], [[VAL_24]] : f32
+// CHECK:               store [[VAL_25]], [[VAL_9]]{{\[}}[[VAL_21]], [[VAL_22]]] : memref<?x?xf32>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           return
