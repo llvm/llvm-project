@@ -313,9 +313,8 @@ bool TargetTransformInfo::preferPredicateOverEpilogue(
   return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
 }
 
-bool TargetTransformInfo::emitGetActiveLaneMask(Loop *L, LoopInfo *LI,
-    ScalarEvolution &SE, bool TailFolded) const {
-  return TTIImpl->emitGetActiveLaneMask(L, LI, SE, TailFolded);
+bool TargetTransformInfo::emitGetActiveLaneMask() const {
+  return TTIImpl->emitGetActiveLaneMask();
 }
 
 void TargetTransformInfo::getUnrollingPreferences(

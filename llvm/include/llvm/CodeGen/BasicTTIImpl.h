@@ -462,9 +462,8 @@ public:
     return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
   }
 
-  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                             bool TailFold) {
-    return BaseT::emitGetActiveLaneMask(L, LI, SE, TailFold);
+  bool emitGetActiveLaneMask() {
+    return BaseT::emitGetActiveLaneMask();
   }
 
   int getInstructionLatency(const Instruction *I) {
