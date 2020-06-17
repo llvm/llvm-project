@@ -592,6 +592,10 @@ static Option *LookupNearestOption(StringRef Arg,
                                            ie = OptionsMap.end();
        it != ie; ++it) {
     Option *O = it->second;
+    // Do not suggest really hidden options (not shown in any help).
+    if (O->getOptionHiddenFlag() == ReallyHidden)
+      continue;
+
     SmallVector<StringRef, 16> OptionNames;
     O->getExtraOptionNames(OptionNames);
     if (O->hasArgStr())
