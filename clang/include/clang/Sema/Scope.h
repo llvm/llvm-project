@@ -322,21 +322,8 @@ public:
   /// declared in.
   bool isDeclScope(const Decl *D) const { return DeclsInScope.count(D) != 0; }
 
-  /// Get the entity corresponding to this scope.
-  DeclContext *getEntity() const {
-    return isTemplateParamScope() ? nullptr : Entity;
-  }
-
-  /// Get the DeclContext in which to continue unqualified lookup after a
-  /// lookup in this scope.
-  DeclContext *getLookupEntity() const { return Entity; }
-
-  void setEntity(DeclContext *E) {
-    assert(!isTemplateParamScope() &&
-           "entity associated with template param scope");
-    Entity = E;
-  }
-  void setLookupEntity(DeclContext *E) { Entity = E; }
+  DeclContext *getEntity() const { return Entity; }
+  void setEntity(DeclContext *E) { Entity = E; }
 
   /// Determine whether any unrecoverable errors have occurred within this
   /// scope. Note that this may return false even if the scope contains invalid

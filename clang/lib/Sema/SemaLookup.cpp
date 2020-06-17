@@ -1153,14 +1153,73 @@ static bool isNamespaceOrTranslationUnitScope(Scope *S) {
   return false;
 }
 
-/// Find the outer declaration context from this scope. This indicates the
-/// context that we should search up to (exclusive) before considering the
-/// parent of the specified scope.
-static DeclContext *findOuterContext(Scope *S) {
-  for (Scope *OuterS = S->getParent(); OuterS; OuterS = OuterS->getParent())
-    if (DeclContext *DC = OuterS->getLookupEntity())
-      return DC;
-  return nullptr;
+// Find the next outer declaration context from this scope. This
+// routine actually returns the semantic outer context, which may
+// differ from the lexical context (encoded directly in the Scope
+// stack) when we are parsing a member of a class template. In this
+// case, the second element of the pair will be true, to indicate that
+// name lookup should continue searching in this semantic context when
+// it leaves the current template parameter scope.
+static std::pair<DeclContext *, bool> findOuterContext(Scope *S) {
+  DeclContext *DC = S->getEntity();
+  DeclContext *Lexical = nullptr;
+  for (Scope *OuterS = S->getParent(); OuterS;
+       OuterS = OuterS->getParent()) {
+    if (OuterS->getEntity()) {
+      Lexical = OuterS->getEntity();
+      break;
+    }
+  }
+
+  // C++ [temp.local]p8:
+  //   In the definition of a member of a class template that appears
+  //   outside of the namespace containing the class template
+  //   definition, the name of a template-parameter hides the name of
+  //   a member of this namespace.
+  //
+  // Example:
+  //
+  //   namespace N {
+  //     class C { };
+  //
+  //     template<class T> class B {
+  //       void f(T);
+  //     };
+  //   }
+  //
+  //   template<class C> void N::B<C>::f(C) {
+  //     C b;  // C is the template parameter, not N::C
+  //   }
+  //
+  // In this example, the lexical context we return is the
+  // TranslationUnit, while the semantic context is the namespace N.
+  if (!Lexical || !DC || !S->getParent() ||
+      !S->getParent()->isTemplateParamScope())
+    return std::make_pair(Lexical, false);
+
+  // Find the outermost template parameter scope.
+  // For the example, this is the scope for the template parameters of
+  // template<class C>.
+  Scope *OutermostTemplateScope = S->getParent();
+  while (OutermostTemplateScope->getParent() &&
+         OutermostTemplateScope->getParent()->isTemplateParamScope())
+    OutermostTemplateScope = OutermostTemplateScope->getParent();
+
+  // Find the namespace context in which the original scope occurs. In
+  // the example, this is namespace N.
+  DeclContext *Semantic = DC;
+  while (!Semantic->isFileContext())
+    Semantic = Semantic->getParent();
+
+  // Find the declaration context just outside of the template
+  // parameter scope. This is the context in which the template is
+  // being lexically declaration (a namespace context). In the
+  // example, this is the global scope.
+  if (Lexical->isFileContext() && !Lexical->Equals(Semantic) &&
+      Lexical->Encloses(Semantic))
+    return std::make_pair(Semantic, true);
+
+  return std::make_pair(Lexical, false);
 }
 
 namespace {
@@ -1227,11 +1286,13 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   UnqualUsingDirectiveSet UDirs(*this);
   bool VisitedUsingDirectives = false;
   bool LeftStartingScope = false;
+  DeclContext *OutsideOfTemplateParamDC = nullptr;
 
   // When performing a scope lookup, we want to find local extern decls.
   FindLocalExternScope FindLocals(R);
 
   for (; S && !isNamespaceOrTranslationUnitScope(S); S = S->getParent()) {
+    DeclContext *Ctx = S->getEntity();
     bool SearchNamespaceScope = true;
     // Check whether the IdResolver has anything in this scope.
     for (; I != IEnd && S->isDeclScope(*I); ++I) {
@@ -1263,8 +1324,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
     if (!SearchNamespaceScope) {
       R.resolveKind();
       if (S->isClassScope())
-        if (CXXRecordDecl *Record =
-                dyn_cast_or_null<CXXRecordDecl>(S->getEntity()))
+        if (CXXRecordDecl *Record = dyn_cast_or_null<CXXRecordDecl>(Ctx))
           R.setNamingClass(Record);
       return true;
     }
@@ -1278,8 +1338,24 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       return false;
     }
 
-    if (DeclContext *Ctx = S->getLookupEntity()) {
-      DeclContext *OuterCtx = findOuterContext(S);
+    if (!Ctx && S->isTemplateParamScope() && OutsideOfTemplateParamDC &&
+        S->getParent() && !S->getParent()->isTemplateParamScope()) {
+      // We've just searched the last template parameter scope and
+      // found nothing, so look into the contexts between the
+      // lexical and semantic declaration contexts returned by
+      // findOuterContext(). This implements the name lookup behavior
+      // of C++ [temp.local]p8.
+      Ctx = OutsideOfTemplateParamDC;
+      OutsideOfTemplateParamDC = nullptr;
+    }
+
+    if (Ctx) {
+      DeclContext *OuterCtx;
+      bool SearchAfterTemplateScope;
+      std::tie(OuterCtx, SearchAfterTemplateScope) = findOuterContext(S);
+      if (SearchAfterTemplateScope)
+        OutsideOfTemplateParamDC = OuterCtx;
+
       for (; Ctx && !Ctx->Equals(OuterCtx); Ctx = Ctx->getLookupParent()) {
         // We do not directly look into transparent contexts, since
         // those entities will be found in the nearest enclosing
@@ -1404,9 +1480,25 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       return true;
     }
 
-    DeclContext *Ctx = S->getLookupEntity();
+    DeclContext *Ctx = S->getEntity();
+    if (!Ctx && S->isTemplateParamScope() && OutsideOfTemplateParamDC &&
+        S->getParent() && !S->getParent()->isTemplateParamScope()) {
+      // We've just searched the last template parameter scope and
+      // found nothing, so look into the contexts between the
+      // lexical and semantic declaration contexts returned by
+      // findOuterContext(). This implements the name lookup behavior
+      // of C++ [temp.local]p8.
+      Ctx = OutsideOfTemplateParamDC;
+      OutsideOfTemplateParamDC = nullptr;
+    }
+
     if (Ctx) {
-      DeclContext *OuterCtx = findOuterContext(S);
+      DeclContext *OuterCtx;
+      bool SearchAfterTemplateScope;
+      std::tie(OuterCtx, SearchAfterTemplateScope) = findOuterContext(S);
+      if (SearchAfterTemplateScope)
+        OutsideOfTemplateParamDC = OuterCtx;
+
       for (; Ctx && !Ctx->Equals(OuterCtx); Ctx = Ctx->getLookupParent()) {
         // We do not directly look into transparent contexts, since
         // those entities will be found in the nearest enclosing
@@ -3903,12 +3995,14 @@ private:
       }
     }
 
-    DeclContext *Entity = S->getLookupEntity();
-    if (Entity) {
+    // FIXME: C++ [temp.local]p8
+    DeclContext *Entity = nullptr;
+    if (S->getEntity()) {
       // Look into this scope's declaration context, along with any of its
       // parent lookup contexts (e.g., enclosing classes), up to the point
       // where we hit the context stored in the next outer scope.
-      DeclContext *OuterCtx = findOuterContext(S);
+      Entity = S->getEntity();
+      DeclContext *OuterCtx = findOuterContext(S).first; // FIXME
 
       for (DeclContext *Ctx = Entity; Ctx && !Ctx->Equals(OuterCtx);
            Ctx = Ctx->getLookupParent()) {
