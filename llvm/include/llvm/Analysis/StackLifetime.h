@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -55,6 +56,8 @@ class StackLifetime {
   };
 
 public:
+  class LifetimeAnnotationWriter;
+
   /// This class represents a set of interesting instructions where an alloca is
   /// live.
   class LiveRange {
@@ -71,6 +74,8 @@ public:
     }
 
     void join(const LiveRange &Other) { Bits |= Other.Bits; }
+
+    bool test(unsigned Idx) const { return Bits.test(Idx); }
   };
 
 private:
@@ -135,6 +140,8 @@ public:
     assert(NumInst >= 0);
     return LiveRange(NumInst, true);
   }
+
+  void print(raw_ostream &O);
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
@@ -157,6 +164,16 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const StackLifetime::LiveRange &R) {
   return OS << R.Bits;
 }
+
+/// Printer pass for testing.
+class StackLifetimePrinterPass
+    : public PassInfoMixin<StackLifetimePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit StackLifetimePrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 } // end namespace llvm
 
