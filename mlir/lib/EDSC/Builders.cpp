@@ -87,6 +87,59 @@ BlockHandle mlir::edsc::BlockHandle::createInRegion(Region &region,
   return res;
 }
 
+Block *mlir::edsc::createBlock(TypeRange argTypes) {
+  assert(ScopedContext::getContext() != nullptr && "ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+  Block *block = builder.getInsertionBlock();
+  assert(block != nullptr &&
+         "insertion point not set up in the builder within ScopedContext");
+
+  return createBlockInRegion(*block->getParent(), argTypes);
+}
+
+Block *mlir::edsc::createBlockInRegion(Region &region, TypeRange argTypes) {
+  assert(ScopedContext::getContext() != nullptr && "ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+
+  OpBuilder::InsertionGuard guard(builder);
+  return builder.createBlock(&region, {}, argTypes);
+}
+
+void mlir::edsc::appendToBlock(Block *block,
+                               function_ref<void(ValueRange)> builderFn) {
+  assert(ScopedContext::getContext() != nullptr && "ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+
+  OpBuilder::InsertionGuard guard(builder);
+  if (block->empty() || block->back().isKnownNonTerminator())
+    builder.setInsertionPointToEnd(block);
+  else
+    builder.setInsertionPoint(&block->back());
+  builderFn(block->getArguments());
+}
+
+Block *mlir::edsc::buildInNewBlock(TypeRange argTypes,
+                                   function_ref<void(ValueRange)> builderFn) {
+  assert(ScopedContext::getContext() != nullptr && "ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+  Block *block = builder.getInsertionBlock();
+  assert(block != nullptr &&
+         "insertion point not set up in the builder within ScopedContext");
+  return buildInNewBlock(*block->getParent(), argTypes, builderFn);
+}
+
+Block *mlir::edsc::buildInNewBlock(Region &region, TypeRange argTypes,
+                                   function_ref<void(ValueRange)> builderFn) {
+  assert(ScopedContext::getContext() != nullptr && "ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+
+  Block *block = createBlockInRegion(region, argTypes);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(block);
+  builderFn(block->getArguments());
+  return block;
+}
+
 void mlir::edsc::LoopBuilder::operator()(function_ref<void(void)> fun) {
   // Call to `exit` must be explicit and asymmetric (cannot happen in the
   // destructor) because of ordering wrt comma operator.
