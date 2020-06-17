@@ -388,16 +388,30 @@ LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
   ++NumValuesVisitedInThisNegator;
 #endif
 
+#ifndef NDEBUG
+  // We can't ever have a Value with such an address.
+  Value *Placeholder = reinterpret_cast<Value *>(static_cast<uintptr_t>(-1));
+#endif
+
   // Did we already try to negate this value?
   auto NegationsCacheIterator = NegationsCache.find(V);
   if (NegationsCacheIterator != NegationsCache.end()) {
     ++NegatorNumNegationsFoundInCache;
-    return NegationsCacheIterator->second;
+    Value *NegatedV = NegationsCacheIterator->second;
+    assert(NegatedV != Placeholder && "Encountered a cycle during negation.");
+    return NegatedV;
   }
+
+#ifndef NDEBUG
+  // We did not find a cached result for negation of V. While there,
+  // let's temporairly cache a placeholder value, with the idea that if later
+  // during negation we fetch it from cache, we'll know we're in a cycle.
+  NegationsCache[V] = Placeholder;
+#endif
 
   // No luck. Try negating it for real.
   Value *NegatedV = visitImpl(V, Depth);
-  // And cache the result for the future.
+  // And cache the (real) result for the future.
   NegationsCache[V] = NegatedV;
 
   return NegatedV;
