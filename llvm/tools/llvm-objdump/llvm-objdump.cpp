@@ -1429,7 +1429,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         continue;
       }
 
-      auto Status = DisAsm->onSymbolStart(SymbolName, Size,
+      auto Status = DisAsm->onSymbolStart(Symbols[SI], Size,
                                           Bytes.slice(Start, End - Start),
                                           SectionAddr + Start, CommentStream);
       // To have round trippable disassembly, we fall back to decoding the
