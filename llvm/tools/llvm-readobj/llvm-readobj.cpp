@@ -345,8 +345,11 @@ namespace opts {
                            cl::desc("Alias for --elf-hash-histogram"),
                            cl::aliasopt(HashHistogram));
 
-  // --elf-cg-profile
-  cl::opt<bool> CGProfile("elf-cg-profile", cl::desc("Display callgraph profile section"));
+  // --cg-profile
+  cl::opt<bool> CGProfile("cg-profile",
+                          cl::desc("Display callgraph profile section"));
+  cl::alias ELFCGProfile("elf-cg-profile", cl::desc("Alias for --cg-profile"),
+                         cl::aliasopt(CGProfile));
 
   // -addrsig
   cl::opt<bool> Addrsig("addrsig",
