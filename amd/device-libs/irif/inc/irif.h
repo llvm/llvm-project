@@ -136,10 +136,10 @@ extern __attribute__((const, convergent)) uint __llvm_amdgcn_fcmp_i32_f32(float,
 extern __attribute__((const, convergent)) uint __llvm_amdgcn_fcmp_i32_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.i32.f64");
 
 // Buffer Load/Store
-extern __attribute__((pure)) float4 __llvm_amdgcn_raw_buffer_load_format_v4f32(uint4 rsrc, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.raw.buffer.load.format.v4f32");
-extern __attribute__((pure)) half4 __llvm_amdgcn_raw_buffer_load_format_v4f16(uint4 rsrc, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.raw.buffer.load.format.v4f16");
-extern void __llvm_amdgcn_raw_buffer_store_format_v4f32(float4 vdata, uint4 rsrc, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.buffer.raw.store.format.v4f32");
-extern void __llvm_amdgcn_raw_buffer_store_format_v4f16( half4 vdata, uint4 rsrc, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.buffer.raw.store.format.v4f16");
+extern __attribute__((pure)) float4 __llvm_amdgcn_struct_buffer_load_format_v4f32(uint4 rsrc, uint vindex, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.struct.buffer.load.format.v4f32");
+extern __attribute__((pure)) half4 __llvm_amdgcn_struct_buffer_load_format_v4f16(uint4 rsrc, uint vindex, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.struct.buffer.load.format.v4f16");
+extern void __llvm_amdgcn_struct_buffer_store_format_v4f32(float4 vdata, uint4 rsrc, uint vindex, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.buffer.struct.store.format.v4f32");
+extern void __llvm_amdgcn_struct_buffer_store_format_v4f16( half4 vdata, uint4 rsrc, uint vindex, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.buffer.struct.store.format.v4f16");
 
 // Image load, store, sample, gather
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_1d_v4f32_i32(uint ix, uint8 t);
