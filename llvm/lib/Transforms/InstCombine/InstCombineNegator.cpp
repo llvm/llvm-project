@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -68,6 +70,8 @@ STATISTIC(NegatorTimesDepthLimitReached,
 STATISTIC(
     NegatorNumValuesVisited,
     "Negator: Total number of values visited during attempts to sink negation");
+STATISTIC(NegatorNumNegationsFoundInCache,
+          "Negator: How many negations did we retrieve/reuse from cache");
 STATISTIC(NegatorMaxTotalValuesVisited,
           "Negator: Maximal number of values ever visited while attempting to "
           "sink negation");
@@ -384,8 +388,19 @@ LLVM_NODISCARD Value *Negator::negate(Value *V, unsigned Depth) {
   ++NumValuesVisitedInThisNegator;
 #endif
 
-  // Try negating the value.
-  return visitImpl(V, Depth);
+  // Did we already try to negate this value?
+  auto NegationsCacheIterator = NegationsCache.find(V);
+  if (NegationsCacheIterator != NegationsCache.end()) {
+    ++NegatorNumNegationsFoundInCache;
+    return NegationsCacheIterator->second;
+  }
+
+  // No luck. Try negating it for real.
+  Value *NegatedV = visitImpl(V, Depth);
+  // And cache the result for the future.
+  NegationsCache[V] = NegatedV;
+
+  return NegatedV;
 }
 
 LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {

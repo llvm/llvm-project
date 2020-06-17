@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -1035,6 +1036,8 @@ class Negator final {
   const DominatorTree &DT;
 
   const bool IsTrulyNegation;
+
+  SmallDenseMap<Value *, Value *> NegationsCache;
 
   Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
           const DominatorTree &DT, bool IsTrulyNegation);
