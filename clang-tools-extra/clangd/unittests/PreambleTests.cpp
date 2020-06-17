@@ -488,6 +488,51 @@ TEST(TranslatePreamblePatchLocation, Simple) {
   EXPECT_EQ(DecompLoc.first, SM.getMainFileID());
   EXPECT_EQ(SM.getLineNumber(DecompLoc.first, DecompLoc.second), 3U);
 }
+
+TEST(PreamblePatch, ModifiedBounds) {
+  struct {
+    llvm::StringLiteral Baseline;
+    llvm::StringLiteral Modified;
+  } Cases[] = {
+      // Size increased
+      {
+          "",
+          R"cpp(
+            #define FOO
+            FOO)cpp",
+      },
+      // Stayed same
+      {"#define FOO", "#define BAR"},
+      // Got smaller
+      {
+          R"cpp(
+            #define FOO
+            #undef FOO)cpp",
+          "#define FOO"},
+  };
+
+  for (const auto &Case : Cases) {
+    auto TU = TestTU::withCode(Case.Baseline);
+    auto BaselinePreamble = TU.preamble();
+    ASSERT_TRUE(BaselinePreamble);
+
+    Annotations Modified(Case.Modified);
+    TU.Code = Modified.code().str();
+    MockFSProvider FSProvider;
+    auto PP = PreamblePatch::create(testPath(TU.Filename),
+                                    TU.inputs(FSProvider), *BaselinePreamble);
+
+    IgnoreDiagnostics Diags;
+    auto CI = buildCompilerInvocation(TU.inputs(FSProvider), Diags);
+    ASSERT_TRUE(CI);
+
+    const auto ExpectedBounds =
+        Lexer::ComputePreamble(Case.Modified, *CI->getLangOpts());
+    EXPECT_EQ(PP.modifiedBounds().Size, ExpectedBounds.Size);
+    EXPECT_EQ(PP.modifiedBounds().PreambleEndsAtStartOfLine,
+              ExpectedBounds.PreambleEndsAtStartOfLine);
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
