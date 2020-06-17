@@ -234,6 +234,7 @@ def int_amdgcn_div_fixup : Intrinsic<[llvm_anyfloat_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
+// Look Up 2.0 / pi src0 with segment select src1[4:0]
 def int_amdgcn_trig_preop : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]

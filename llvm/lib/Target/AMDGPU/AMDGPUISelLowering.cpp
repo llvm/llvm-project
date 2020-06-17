@@ -4322,7 +4322,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(DIV_FMAS)
   NODE_NAME_CASE(DIV_FIXUP)
   NODE_NAME_CASE(FMAD_FTZ)
-  NODE_NAME_CASE(TRIG_PREOP)
   NODE_NAME_CASE(RCP)
   NODE_NAME_CASE(RSQ)
   NODE_NAME_CASE(RCP_LEGACY)
@@ -4738,7 +4737,6 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   case AMDGPUISD::DIV_SCALE:
   case AMDGPUISD::DIV_FMAS:
   case AMDGPUISD::DIV_FIXUP:
-  case AMDGPUISD::TRIG_PREOP:
     // TODO: Refine on operands.
     return SNaN;
   case AMDGPUISD::SIN_HW:
@@ -4776,6 +4774,7 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
       // TODO: Need is known positive check.
       return false;
     }
+    case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_fdot2:
       // TODO: Refine on operand
       return SNaN;
