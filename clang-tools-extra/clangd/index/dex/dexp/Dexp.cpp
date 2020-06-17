@@ -32,7 +32,7 @@ llvm::cl::opt<std::string> IndexLocation(
 llvm::cl::opt<std::string>
     ExecCommand("c", llvm::cl::desc("Command to execute and then exit"));
 
-static const std::string Overview = R"(
+static constexpr char Overview[] = R"(
 This is an **experimental** interactive tool to process user-provided search
 queries over given symbol collection obtained via clangd-indexer. The
 tool can be used to evaluate search quality of existing index implementations
