@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 using namespace llvm;
 
