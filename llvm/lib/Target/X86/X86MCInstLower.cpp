@@ -1083,26 +1083,23 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 /// target cpu.  15-bytes is the longest single NOP instruction, but some
 /// platforms can't decode the longest forms efficiently.
 static unsigned maxLongNopLength(const X86Subtarget *Subtarget) {
-  uint64_t MaxNopLength = 10;
   if (Subtarget->getFeatureBits()[X86::ProcIntelSLM])
-    MaxNopLength = 7;
-  else if (Subtarget->getFeatureBits()[X86::FeatureFast15ByteNOP])
-    MaxNopLength = 15;
-  else if (Subtarget->getFeatureBits()[X86::FeatureFast11ByteNOP])
-    MaxNopLength = 11;
-  return MaxNopLength;
+    return 7;
+  if (Subtarget->getFeatureBits()[X86::FeatureFast15ByteNOP])
+    return 15;
+  if (Subtarget->getFeatureBits()[X86::FeatureFast11ByteNOP])
+    return 11;
+  if (Subtarget->getFeatureBits()[X86::FeatureNOPL] || Subtarget->is64Bit())
+    return 10;
+  if (Subtarget->is32Bit())
+    return 2;
+  return 1;
 }
 
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes
 /// bytes.  Return the size of nop emitted.
 static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
                         const X86Subtarget *Subtarget) {
-  if (!Subtarget->is64Bit()) {
-    // TODO Do additional checking if the CPU supports multi-byte nops.
-    OS.emitInstruction(MCInstBuilder(X86::NOOP), *Subtarget);
-    return 1;
-  }
-
   // Cap a single nop emission at the profitable value for the target
   NumBytes = std::min(NumBytes, maxLongNopLength(Subtarget));
 
@@ -1342,7 +1339,17 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   CodeEmitter->encodeInstruction(MCI, VecOS, Fixups, getSubtargetInfo());
 
   if (Code.size() < MinSize) {
-    if (MinSize == 2 && Opcode == X86::PUSH64r) {
+    if (MinSize == 2 && Subtarget->is32Bit() &&
+        Subtarget->isTargetWindowsMSVC() &&
+        (Subtarget->getCPU().empty() || Subtarget->getCPU() == "pentium3")) {
+      // For compatibilty reasons, when targetting MSVC, is is important to
+      // generate a 'legacy' NOP in the form of a 8B FF MOV EDI, EDI. Some tools
+      // rely specifically on this pattern to be able to patch a function.
+      // This is only for 32-bit targets, when using /arch:IA32 or /arch:SSE.
+      OutStreamer->emitInstruction(
+          MCInstBuilder(X86::MOV32rr_REV).addReg(X86::EDI).addReg(X86::EDI),
+          *Subtarget);
+    } else if (MinSize == 2 && Opcode == X86::PUSH64r) {
       // This is an optimization that lets us get away without emitting a nop in
       // many cases.
       //
