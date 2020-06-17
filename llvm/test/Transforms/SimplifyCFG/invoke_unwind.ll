@@ -7,15 +7,18 @@ declare void @bar()
 define i32 @test1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT: call void @bar()
+; CHECK-NOT: !prof
 ; CHECK-NEXT: ret i32 0
         invoke void @bar( )
-                        to label %1 unwind label %Rethrow
+                        to label %1 unwind label %Rethrow, !prof !0
         ret i32 0
 Rethrow:
         %exn = landingpad {i8*, i32}
                  catch i8* null
         resume { i8*, i32 } %exn
 }
+
+!0 = !{!"branch_weights", i32 369, i32 0}
 
 define i32 @test2() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-LABEL: @test2(
