@@ -23,7 +23,7 @@ namespace clangd {
 namespace remote {
 namespace {
 
-static const std::string Overview = R"(
+static constexpr char Overview[] = R"(
 This is an experimental remote index implementation. The server opens Dex and
 awaits gRPC lookup requests from the client.
 )";
