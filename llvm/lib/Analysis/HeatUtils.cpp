@@ -62,7 +62,7 @@ uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI) {
 std::string getHeatColor(uint64_t freq, uint64_t maxFreq) {
   if (freq > maxFreq)
     freq = maxFreq;
-  double percent = log2(double(freq)) / log2(maxFreq);
+  double percent = (maxFreq > 0) ? log2(double(freq)) / log2(maxFreq) : 0;
   return getHeatColor(percent);
 }
 
