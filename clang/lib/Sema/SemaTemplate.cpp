@@ -51,8 +51,7 @@ unsigned Sema::getTemplateDepth(Scope *S) const {
 
   // Each template parameter scope represents one level of template parameter
   // depth.
-  for (Scope *TempParamScope = S->getTemplateParamParent();
-       TempParamScope && !Depth;
+  for (Scope *TempParamScope = S->getTemplateParamParent(); TempParamScope;
        TempParamScope = TempParamScope->getParent()->getTemplateParamParent()) {
     ++Depth;
   }
