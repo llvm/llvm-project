@@ -160,7 +160,7 @@ int foo(int n) {
 // CHECK: [[EXIT]]
 // CHECK: ret void
 
-// CHECK: define {{.*}}void [[T2:@__omp_offloading_.+foo.+l200]](i[[SZ:32|64]] [[ARG1:%[a-zA-Z_]+]], i[[SZ:32|64]] [[ID:%[a-zA-Z_]+]])
+// CHECK: define {{.*}}void [[T2:@__omp_offloading_.+foo.+l200]](i[[SZ:32|64]] [[ARG1:%[a-zA-Z_]+]])
 // CHECK: [[AA_ADDR:%.+]] = alloca i[[SZ]],
 // CHECK: store i[[SZ]] [[ARG1]], i[[SZ]]* [[AA_ADDR]],
 // CHECK: [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
@@ -200,7 +200,7 @@ int foo(int n) {
 #pragma omp target if (1)
   {
     aa += 1;
-    id = aa;
+    aa += 2;
   }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l310}}_worker()
