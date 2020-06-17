@@ -1081,6 +1081,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.XRayInstructionThreshold =
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.XRayIgnoreLoops = Args.hasArg(OPT_fxray_ignore_loops);
+  Opts.XRayOmitFunctionIndex = Args.hasArg(OPT_fno_xray_function_index);
 
   auto XRayInstrBundles =
       Args.getAllArgValues(OPT_fxray_instrumentation_bundle);

@@ -1281,6 +1281,12 @@ defm xray_always_emit_typedevents : OptInFFlag<"xray-always-emit-typedevents",
 defm xray_ignore_loops : OptInFFlag<"xray-ignore-loops",
   "Don't instrument functions with loops unless they also meet the minimum function size">;
 
+def fxray_function_index : Flag<["-"], "fxray-function-index">,
+  Group<f_Group>, Flags<[CC1Option]>;
+def fno_xray_function_index : Flag<["-"], "fno-xray-function-index">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Omit the xray index section to reduce binary size at the expense of single-function patching performance">;
+
 def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>,
   HelpText<"Tells clang to add the link dependencies for XRay.">;

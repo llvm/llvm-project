@@ -118,6 +118,8 @@ bool getEnableDebugEntryValues();
 
 bool getForceDwarfFrameSection();
 
+bool getXRayOmitFunctionIndex();
+
 /// Create this object with static storage to register codegen-related command
 /// line options.
 struct RegisterCodeGenFlags {
