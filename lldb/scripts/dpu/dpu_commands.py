@@ -305,7 +305,6 @@ def dpu_attach(debugger, command, result, internal_dict):
                       ':2066'],
                      env=lldb_server_dpu_env)
 
-    print(program_path)
     if not os.path.exists(program_path):
         program_path = None
     target_dpu = \
