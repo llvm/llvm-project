@@ -1,17 +1,6 @@
 // UNSUPPORTED: armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_bswapdi2
-//===-- bswapdi2_test.c - Test __bswapdi2 ---------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __bswapdi2 for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include <math.h>
 #include <stdint.h>

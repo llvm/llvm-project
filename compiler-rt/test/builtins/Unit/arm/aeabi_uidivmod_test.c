@@ -1,16 +1,5 @@
 // REQUIRES: arm-target-arch || armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-//===-- aeabi_uidivmod_test.c - Test __aeabi_uidivmod ---------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __aeabi_uidivmod for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
 #include <stdio.h>
