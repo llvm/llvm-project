@@ -547,7 +547,7 @@ private:
         blockList.push_back(blockOfLabel(eval, altReturn->v));
       }
     }
-    blockList.push_back(eval.lexicalSuccessor->block); // default = fallthrough
+    blockList.push_back(eval.nonNopSuccessor()->block); // default = fallthrough
     builder->create<fir::SelectOp>(toLocation(), res, indexList, blockList);
   }
 
@@ -578,7 +578,7 @@ private:
       indexList.push_back(++index);
       blockList.push_back(blockOfLabel(eval, label));
     }
-    blockList.push_back(eval.lexicalSuccessor->block); // default
+    blockList.push_back(eval.nonNopSuccessor()->block); // default
     builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
                                    blockList);
   }
@@ -661,12 +661,9 @@ private:
     };
     // Add labels from an explicit list.  The list may have duplicates.
     for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
-      if (labelSet.count(label) == 0) {
-        // Ignore labels with no ASSIGN statements for the selector variable.
-        continue;
-      }
-      if (std::find(indexList.begin(), indexList.end(), label) ==
-          indexList.end()) { // ignore duplicates
+      if (labelSet.count(label) &&
+          std::find(indexList.begin(), indexList.end(), label) ==
+              indexList.end()) { // ignore duplicates
         addLabel(label);
       }
     }
@@ -678,7 +675,7 @@ private:
     }
     // Add a nop/fallthrough branch to the switch for a nonconforming program
     // unit that violates the program requirement above.
-    blockList.push_back(eval.lexicalSuccessor->block); // default
+    blockList.push_back(eval.nonNopSuccessor()->block); // default
     builder->create<fir::SelectOp>(loc, selectExpr, indexList, blockList);
   }
 
@@ -947,15 +944,19 @@ private:
     auto &eval = getEval();
     using ScalarExpr = Fortran::parser::Scalar<Fortran::parser::Expr>;
     MLIRContext *context = builder->getContext();
-    const auto selectExpr = genExprValue(
+    auto loc = toLocation();
+    auto selectExpr = genExprValue(
         *Fortran::semantics::GetExpr(std::get<ScalarExpr>(stmt.t)));
-    const auto selectType = selectExpr.getType();
+    auto selectType = selectExpr.getType();
+    Fortran::lower::CharacterExprHelper helper{*builder, loc};
+    if (helper.isCharacter(selectExpr.getType())) {
+      TODO();
+    }
     llvm::SmallVector<mlir::Attribute, 10> attrList;
     llvm::SmallVector<mlir::Value, 10> valueList;
     llvm::SmallVector<mlir::Block *, 10> blockList;
     auto *defaultBlock = eval.parentConstruct->constructExit->block;
     using CaseValue = Fortran::parser::Scalar<Fortran::parser::ConstantExpr>;
-    auto loc = toLocation();
     auto addValue = [&](const CaseValue &caseValue) {
       const auto *expr = Fortran::semantics::GetExpr(caseValue.thing);
       const auto v = Fortran::evaluate::ToInt64(*expr);
@@ -1074,12 +1075,14 @@ private:
     genIoConditionBranches(getEval(), stmt.v, iostat);
   }
   void genFIR(const Fortran::parser::PrintStmt &stmt) {
-    genPrintStatement(*this, stmt,
-                      getEval().getOwningProcedure()->labelEvaluationMap);
+    auto &owningProc = *getEval().getOwningProcedure();
+    genPrintStatement(*this, stmt, owningProc.labelEvaluationMap,
+                      owningProc.assignSymbolLabelMap);
   }
   void genFIR(const Fortran::parser::ReadStmt &stmt) {
-    auto iostat = genReadStatement(
-        *this, stmt, getEval().getOwningProcedure()->labelEvaluationMap);
+    auto &owningProc = *getEval().getOwningProcedure();
+    auto iostat = genReadStatement(*this, stmt, owningProc.labelEvaluationMap,
+                                   owningProc.assignSymbolLabelMap);
     genIoConditionBranches(getEval(), stmt.controls, iostat);
   }
   void genFIR(const Fortran::parser::RewindStmt &stmt) {
@@ -1091,8 +1094,9 @@ private:
     genIoConditionBranches(getEval(), stmt.v, iostat);
   }
   void genFIR(const Fortran::parser::WriteStmt &stmt) {
-    auto iostat = genWriteStatement(
-        *this, stmt, getEval().getOwningProcedure()->labelEvaluationMap);
+    auto &owningProc = *getEval().getOwningProcedure();
+    auto iostat = genWriteStatement(*this, stmt, owningProc.labelEvaluationMap,
+                                    owningProc.assignSymbolLabelMap);
     genIoConditionBranches(getEval(), stmt.controls, iostat);
   }
 
@@ -1137,12 +1141,12 @@ private:
     }
     if (errBlock) {
       indexList.push_back(0);
-      blockList.push_back(eval.lexicalSuccessor->block);
+      blockList.push_back(eval.nonNopSuccessor()->block);
       // ERR label statement is the default successor.
       blockList.push_back(errBlock);
     } else {
       // Fallthrough successor statement is the default successor.
-      blockList.push_back(eval.lexicalSuccessor->block);
+      blockList.push_back(eval.nonNopSuccessor()->block);
     }
     builder->create<fir::SelectOp>(loc, selector, indexList, blockList);
   }
