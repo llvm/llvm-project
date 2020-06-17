@@ -3154,10 +3154,26 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
     return AMDGPU::isInlinableLiteral64(MO.getImm(),
                                         ST.hasInv2PiInlineImm());
   case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+    // We would expect inline immediates to not be concerned with an integer/fp
+    // distinction. However, in the case of 16-bit integer operations, the
+    // "floating point" values appear to not work. It seems read the low 16-bits
+    // of 32-bit immediates, which happens to always work for the integer
+    // values.
+    //
+    // See llvm bugzilla 46302.
+    //
+    // TODO: Theoretically we could use op-sel to use the high bits of the
+    // 32-bit FP values.
+    return AMDGPU::isInlinableIntLiteral(Imm);
+  case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+    // This suffers the same problem as the scalar 16-bit cases.
+    return AMDGPU::isInlinableIntLiteralV216(Imm);
+  case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
       // A few special case instructions have 16-bit operands on subtargets
@@ -3171,11 +3187,8 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
 
     return false;
   }
-  case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     uint32_t Trunc = static_cast<uint32_t>(Imm);
     return AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
