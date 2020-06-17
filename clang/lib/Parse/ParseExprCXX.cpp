@@ -1258,16 +1258,17 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   };
 
   // FIXME: Consider allowing this as an extension for GCC compatibiblity.
-  MultiParseScope TemplateParamScope(*this);
-  if (Tok.is(tok::less)) {
+  const bool HasExplicitTemplateParams = Tok.is(tok::less);
+  ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
+                                /*EnteredScope=*/HasExplicitTemplateParams);
+  if (HasExplicitTemplateParams) {
     Diag(Tok, getLangOpts().CPlusPlus20
                   ? diag::warn_cxx17_compat_lambda_template_parameter_list
                   : diag::ext_lambda_template_parameter_list);
 
     SmallVector<NamedDecl*, 4> TemplateParams;
     SourceLocation LAngleLoc, RAngleLoc;
-    if (ParseTemplateParameters(TemplateParamScope,
-                                CurTemplateDepthTracker.getDepth(),
+    if (ParseTemplateParameters(CurTemplateDepthTracker.getDepth(),
                                 TemplateParams, LAngleLoc, RAngleLoc)) {
       Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
       return ExprError();
