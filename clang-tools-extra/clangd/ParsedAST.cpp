@@ -383,7 +383,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Includes.MainFileIncludes = Patch->preambleIncludes();
     // Replay the preamble includes so that clang-tidy checks can see them.
     ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
-                           Preamble->Preamble.getBounds());
+                           Patch->modifiedBounds());
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...

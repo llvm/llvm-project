@@ -217,6 +217,7 @@ private:
 struct ScannedPreamble {
   std::vector<Inclusion> Includes;
   std::vector<TextualPPDirective> TextualDirectives;
+  PreambleBounds Bounds = {0, false};
 };
 
 /// Scans the preprocessor directives in the preamble section of the file by
@@ -284,6 +285,7 @@ scanPreamble(llvm::StringRef Contents,
   IncludeStructure Includes;
   PP.addPPCallbacks(collectIncludeStructureCallback(SM, &Includes));
   ScannedPreamble SP;
+  SP.Bounds = Bounds;
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
   if (llvm::Error Err = Action.Execute())
@@ -463,6 +465,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
                           PreamblePatchHeaderName);
   PP.PatchFileName = PatchName.str().str();
+  PP.ModifiedBounds = ModifiedScan->Bounds;
 
   llvm::raw_string_ostream Patch(PP.PatchContents);
   // Set default filename for subsequent #line directives
@@ -548,6 +551,7 @@ std::vector<Inclusion> PreamblePatch::preambleIncludes() const {
 PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   PreamblePatch PP;
   PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
+  PP.ModifiedBounds = Preamble.Preamble.getBounds();
   return PP;
 }
 
