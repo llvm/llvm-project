@@ -12,12 +12,16 @@ add_clang_library(clangTidyLLVMModule
   TwineLocalCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyReadabilityModule
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyLLVMModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyReadabilityModule
-  clangTidyUtils
   clangTooling
   )

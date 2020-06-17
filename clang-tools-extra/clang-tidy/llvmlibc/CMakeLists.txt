@@ -10,12 +10,16 @@ add_clang_library(clangTidyLLVMLibcModule
   RestrictSystemLibcHeadersCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyPortabilityModule
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyLLVMLibcModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyPortabilityModule
-  clangTidyUtils
   clangTooling
   )

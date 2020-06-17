@@ -59,13 +59,17 @@ add_clang_library(clangTidyBugproneModule
   VirtualNearMissCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyCppCoreGuidelinesModule
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyBugproneModule
+  PRIVATE
   clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyCppCoreGuidelinesModule
-  clangTidyUtils
   clangTooling
   )
