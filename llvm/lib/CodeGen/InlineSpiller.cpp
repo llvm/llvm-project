@@ -945,6 +945,9 @@ static bool isRealSpill(const MachineInstr &Def) {
 /// insertSpill - Insert a spill of NewVReg after MI.
 void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
                                  MachineBasicBlock::iterator MI) {
+  // Spill are not terminators, so inserting spills after terminators will
+  // violate invariants in MachineVerifier.
+  assert(!MI->isTerminator() && "Inserting a spill after a terminator");
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI, &MBB);
