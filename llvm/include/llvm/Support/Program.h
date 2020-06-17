@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
+#include <chrono>
 #include <system_error>
 
 namespace llvm {
@@ -50,6 +51,13 @@ namespace sys {
     int ReturnCode;
 
     ProcessInfo();
+  };
+
+  /// This struct encapsulates information about a process execution.
+  struct ProcessStatistics {
+    std::chrono::microseconds TotalTime;
+    std::chrono::microseconds UserTime;
+    uint64_t PeakMemory = 0;
   };
 
   /// Find the first executable file \p Name in \p Paths.
@@ -116,10 +124,14 @@ namespace sys {
       ///< string instance in which error messages will be returned. If the
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
-      bool *ExecutionFailed = nullptr);
+      bool *ExecutionFailed = nullptr,
+      Optional<ProcessStatistics> *ProcStat = nullptr ///< If non-zero, provides
+      /// a pointer to a structure in which process execution statistics will be
+      /// stored.
+  );
 
   /// Similar to ExecuteAndWait, but returns immediately.
-  /// @returns The \see ProcessInfo of the newly launced process.
+  /// @returns The \see ProcessInfo of the newly launched process.
   /// \note On Microsoft Windows systems, users will need to either call
   /// \see Wait until the process finished execution or win32 CloseHandle() API
   /// on ProcessInfo.ProcessHandle to avoid memory leaks.
@@ -182,18 +194,21 @@ namespace sys {
   /// \note Users of this function should always check the ReturnCode member of
   /// the \see ProcessInfo returned from this function.
   ProcessInfo Wait(
-      const ProcessInfo &PI, ///< The child process that should be waited on.
+      const ProcessInfo &PI,  ///< The child process that should be waited on.
       unsigned SecondsToWait, ///< If non-zero, this specifies the amount of
       ///< time to wait for the child process to exit. If the time expires, the
       ///< child is killed and this function returns. If zero, this function
       ///< will perform a non-blocking wait on the child process.
       bool WaitUntilTerminates, ///< If true, ignores \p SecondsToWait and waits
       ///< until child has terminated.
-      std::string *ErrMsg = nullptr ///< If non-zero, provides a pointer to a
+      std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
       ///< string instance in which error messages will be returned. If the
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
-      );
+      Optional<ProcessStatistics> *ProcStat = nullptr ///< If non-zero, provides
+      /// a pointer to a structure in which process execution statistics will be
+      /// stored.
+  );
 
 #if defined(_WIN32)
   /// Given a list of command line arguments, quote and escape them as necessary
