@@ -114,9 +114,9 @@ int main1() {
 // CHECK: invoke void [[FOO:.+]](
 // CHECK: [[UB_VAL:%.+]] = load i32, i32* [[UB:%.+]],
 // CHECK-NEXT: [[I_VAL:%.+]] = load i32, i32* [[I:%.+]],
-// CHECK-NEXT: sub nsw i32 [[UB_VAL]], [[I_VAL]]
-// CHECK-NEXT: sdiv i32 %{{.+}}, 1
-// CHECK-NEXT: sext i32 %{{.+}} to i64
+// CHECK-NEXT: sub i32 [[UB_VAL]], [[I_VAL]]
+// CHECK-NEXT: udiv i32 %{{.+}}, 1
+// CHECK-NEXT: zext i32 %{{.+}} to i64
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT:%.+]], i64 0, i64 0
 // CHECK-NEXT: store i64 %{{.+}}, i64* [[TMP]],
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT]], i64 0, i64 0
@@ -128,9 +128,9 @@ int main1() {
 // CHECK: [[UB_VAL:%.+]] = load i32, i32* [[UB]],
 // CHECK-NEXT: [[I_VAL:%.+]] = load i32, i32* [[I]],
 // CHECK-NEXT: [[SUB:%.+]] = sub nsw i32 [[I_VAL]], 2
-// CHECK-NEXT: sub nsw i32 [[UB_VAL]], [[SUB]]
-// CHECK-NEXT: sdiv i32 %{{.+}}, 1
-// CHECK-NEXT: sext i32 %{{.+}} to i64
+// CHECK-NEXT: sub i32 [[UB_VAL]], [[SUB]]
+// CHECK-NEXT: udiv i32 %{{.+}}, 1
+// CHECK-NEXT: zext i32 %{{.+}} to i64
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT:%.+]], i64 0, i64 0
 // CHECK-NEXT: store i64 %{{.+}}, i64* [[TMP]],
 // CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[CNT]], i64 0, i64 0
