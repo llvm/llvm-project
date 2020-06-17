@@ -8,10 +8,14 @@ add_clang_library(clangTidyZirconModule
   ZirconTidyModule.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyZirconModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyUtils
   )

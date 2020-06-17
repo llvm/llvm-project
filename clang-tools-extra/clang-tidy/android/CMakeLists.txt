@@ -23,10 +23,14 @@ add_clang_library(clangTidyAndroidModule
   ComparisonInTempFailureRetryCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyAndroidModule
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyUtils
   )
