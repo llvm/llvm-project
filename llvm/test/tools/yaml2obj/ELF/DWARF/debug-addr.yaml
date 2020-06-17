@@ -592,3 +592,53 @@ DWARF:
   debug_addr:
     - Version: 5
       Entries: []
+
+## l) Test that yaml2obj still generates a .debug_addr section if we assign an invalid value
+## to 'AddressSize' or 'SegmentSelectorSize' when the 'Entries' list is empty.
+
+# RUN: yaml2obj --docnum=10 -DSIZENAME=AddressSize %s -o %t10.addr.o
+# RUN: llvm-readelf --hex-dump=.debug_addr %t10.addr.o | \
+# RUN:   FileCheck -DADDRSIZE=03 -DSEGSIZE=00 %s --check-prefix=ADDR-SEG-SIZE
+
+# RUN: yaml2obj --docnum=10 -DSIZENAME=SegmentSelectorSize %s -o %t10.seg.o
+# RUN: llvm-readelf --hex-dump=.debug_addr %t10.seg.o | \
+# RUN:   FileCheck -DADDRSIZE=08 -DSEGSIZE=03 %s --check-prefix=ADDR-SEG-SIZE
+
+#      ADDR-SEG-SIZE: Hex dump of section '.debug_addr':
+# ADDR-SEG-SIZE-NEXT: 0x00000000 04000000 0500[[ADDRSIZE]][[SEGSIZE]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_addr:
+    - Version:      5
+      [[SIZENAME]]: 3
+      Entries:      []
+
+## m) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddressSize' or 'SegmentSelectorSize' when the 'Entries' list isn't empty.
+
+# RUN: not yaml2obj --docnum=11 -DSIZENAME=AddressSize %s 2>&1 | \
+# RUN:   FileCheck -DFIELD=address %s --check-prefix=INVALID-SIZE
+
+# RUN: not yaml2obj --docnum=11 -DSIZENAME=SegmentSelectorSize %s 2>&1 | \
+# RUN:   FileCheck -DFIELD=segment %s --check-prefix=INVALID-SIZE
+
+# INVALID-SIZE: yaml2obj: error: unable to write debug_addr [[FIELD]]: invalid integer write size: 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_addr:
+    - Version:      5
+      [[SIZENAME]]: 3
+      Entries:
+        - Address: 0x1234
