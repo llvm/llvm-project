@@ -410,10 +410,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   // minimum/maximum flat work group sizes.
   unsigned MinImpliedByFlatWorkGroupSize =
     getWavesPerEUForWorkGroup(FlatWorkGroupSizes.second);
+  Default.first = MinImpliedByFlatWorkGroupSize;
   bool RequestedFlatWorkGroupSize = false;
 
   if (F.hasFnAttribute("amdgpu-flat-work-group-size")) {
-    Default.first = MinImpliedByFlatWorkGroupSize;
     RequestedFlatWorkGroupSize = true;
   }
 
