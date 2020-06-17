@@ -6422,9 +6422,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_FIXUP, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
-  case Intrinsic::amdgcn_trig_preop:
-    return DAG.getNode(AMDGPUISD::TRIG_PREOP, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::amdgcn_div_scale: {
     const ConstantSDNode *Param = cast<ConstantSDNode>(Op.getOperand(3));
 
@@ -9241,7 +9238,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
-  case AMDGPUISD::TRIG_PREOP:
   case AMDGPUISD::DIV_SCALE:
   case AMDGPUISD::DIV_FMAS:
   case AMDGPUISD::DIV_FIXUP:
@@ -9349,6 +9345,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
+    case Intrinsic::amdgcn_trig_preop:
       return true;
     default:
       break;
