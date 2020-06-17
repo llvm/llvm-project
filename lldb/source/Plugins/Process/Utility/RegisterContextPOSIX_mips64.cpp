@@ -149,17 +149,6 @@ const char *RegisterContextPOSIX_mips64::GetRegisterName(unsigned reg) {
   return GetRegisterInfo()[reg].name;
 }
 
-lldb::ByteOrder RegisterContextPOSIX_mips64::GetByteOrder() {
-  // Get the target process whose privileged thread was used for the register
-  // read.
-  lldb::ByteOrder byte_order = eByteOrderInvalid;
-  Process *process = CalculateProcess().get();
-
-  if (process)
-    byte_order = process->GetByteOrder();
-  return byte_order;
-}
-
 bool RegisterContextPOSIX_mips64::IsRegisterSetAvailable(size_t set_index) {
   size_t num_sets = GetRegisterSetCount();
 
