@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_CODEGEN_SAFESTACKLAYOUT_H
 #define LLVM_LIB_CODEGEN_SAFESTACKLAYOUT_H
 
-#include "SafeStackColoring.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/StackLifetime.h"
 
 namespace llvm {
 
