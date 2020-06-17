@@ -24,6 +24,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 using namespace llvm;
@@ -51,18 +52,18 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
 namespace {
-struct OpenMPOpt {
 
-  using OptimizationRemarkGetter =
-      function_ref<OptimizationRemarkEmitter &(Function *)>;
-
-  OpenMPOpt(SmallVectorImpl<Function *> &SCC,
-            SmallPtrSetImpl<Function *> &ModuleSlice,
-            CallGraphUpdater &CGUpdater, OptimizationRemarkGetter OREGetter)
-      : M(*(*SCC.begin())->getParent()), SCC(SCC), ModuleSlice(ModuleSlice),
-        OMPBuilder(M), CGUpdater(CGUpdater), OREGetter(OREGetter) {
+/// OpenMP specific information. For now, stores RFIs and ICVs also needed for
+/// Attributor runs.
+struct OMPInformationCache : public InformationCache {
+  OMPInformationCache(Module &M, AnalysisGetter &AG,
+                      BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
+                      SmallPtrSetImpl<Function *> &ModuleSlice)
+      : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
+        OMPBuilder(M) {
     initializeTypes(M);
     initializeRuntimeFunctions();
+
     OMPBuilder.initialize();
   }
 
@@ -153,6 +154,115 @@ struct OpenMPOpt {
     DenseMap<Function *, std::unique_ptr<UseVector>> UsesMap;
   };
 
+  /// The slice of the module we are allowed to look at.
+  SmallPtrSetImpl<Function *> &ModuleSlice;
+
+  /// An OpenMP-IR-Builder instance
+  OpenMPIRBuilder OMPBuilder;
+
+  /// Map from runtime function kind to the runtime function description.
+  EnumeratedArray<RuntimeFunctionInfo, RuntimeFunction,
+                  RuntimeFunction::OMPRTL___last>
+      RFIs;
+
+  /// Returns true if the function declaration \p F matches the runtime
+  /// function types, that is, return type \p RTFRetType, and argument types
+  /// \p RTFArgTypes.
+  static bool declMatchesRTFTypes(Function *F, Type *RTFRetType,
+                                  SmallVector<Type *, 8> &RTFArgTypes) {
+    // TODO: We should output information to the user (under debug output
+    //       and via remarks).
+
+    if (!F)
+      return false;
+    if (F->getReturnType() != RTFRetType)
+      return false;
+    if (F->arg_size() != RTFArgTypes.size())
+      return false;
+
+    auto RTFTyIt = RTFArgTypes.begin();
+    for (Argument &Arg : F->args()) {
+      if (Arg.getType() != *RTFTyIt)
+        return false;
+
+      ++RTFTyIt;
+    }
+
+    return true;
+  }
+
+  /// Helper to initialize all runtime function information for those defined
+  /// in OpenMPKinds.def.
+  void initializeRuntimeFunctions() {
+    // Helper to collect all uses of the decleration in the UsesMap.
+    auto CollectUses = [&](RuntimeFunctionInfo &RFI) {
+      unsigned NumUses = 0;
+      if (!RFI.Declaration)
+        return NumUses;
+      OMPBuilder.addAttributes(RFI.Kind, *RFI.Declaration);
+
+      NumOpenMPRuntimeFunctionsIdentified += 1;
+      NumOpenMPRuntimeFunctionUsesIdentified += RFI.Declaration->getNumUses();
+
+      // TODO: We directly convert uses into proper calls and unknown uses.
+      for (Use &U : RFI.Declaration->uses()) {
+        if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
+          if (ModuleSlice.count(UserI->getFunction())) {
+            RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
+            ++NumUses;
+          }
+        } else {
+          RFI.getOrCreateUseVector(nullptr).push_back(&U);
+          ++NumUses;
+        }
+      }
+      return NumUses;
+    };
+
+    Module &M = *((*ModuleSlice.begin())->getParent());
+
+#define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
+  {                                                                            \
+    SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
+    Function *F = M.getFunction(_Name);                                        \
+    if (declMatchesRTFTypes(F, _ReturnType, ArgsTypes)) {                      \
+      auto &RFI = RFIs[_Enum];                                                 \
+      RFI.Kind = _Enum;                                                        \
+      RFI.Name = _Name;                                                        \
+      RFI.IsVarArg = _IsVarArg;                                                \
+      RFI.ReturnType = _ReturnType;                                            \
+      RFI.ArgumentTypes = std::move(ArgsTypes);                                \
+      RFI.Declaration = F;                                                     \
+      unsigned NumUses = CollectUses(RFI);                                     \
+      (void)NumUses;                                                           \
+      LLVM_DEBUG({                                                             \
+        dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
+               << " found\n";                                                  \
+        if (RFI.Declaration)                                                   \
+          dbgs() << TAG << "-> got " << NumUses << " uses in "                 \
+                 << RFI.getNumFunctionsWithUses()                              \
+                 << " different functions.\n";                                 \
+      });                                                                      \
+    }                                                                          \
+  }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+
+    // TODO: We should attach the attributes defined in OMPKinds.def.
+  }
+};
+
+struct OpenMPOpt {
+
+  using OptimizationRemarkGetter =
+      function_ref<OptimizationRemarkEmitter &(Function *)>;
+
+  OpenMPOpt(SmallVectorImpl<Function *> &SCC, CallGraphUpdater &CGUpdater,
+            OptimizationRemarkGetter OREGetter,
+            OMPInformationCache &OMPInfoCache)
+      : M(*(*SCC.begin())->getParent()), SCC(SCC),
+        ModuleSlice(OMPInfoCache.ModuleSlice), CGUpdater(CGUpdater),
+        OREGetter(OREGetter), OMPInfoCache(OMPInfoCache) {}
+
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
     bool Changed = false;
@@ -167,12 +277,36 @@ struct OpenMPOpt {
     return Changed;
   }
 
+  /// Return the call if \p U is a callee use in a regular call. If \p RFI is
+  /// given it has to be the callee or a nullptr is returned.
+  static CallInst *getCallIfRegularCall(
+      Use &U, OMPInformationCache::RuntimeFunctionInfo *RFI = nullptr) {
+    CallInst *CI = dyn_cast<CallInst>(U.getUser());
+    if (CI && CI->isCallee(&U) && !CI->hasOperandBundles() &&
+        (!RFI || CI->getCalledFunction() == RFI->Declaration))
+      return CI;
+    return nullptr;
+  }
+
+  /// Return the call if \p V is a regular call. If \p RFI is given it has to be
+  /// the callee or a nullptr is returned.
+  static CallInst *getCallIfRegularCall(
+      Value &V, OMPInformationCache::RuntimeFunctionInfo *RFI = nullptr) {
+    CallInst *CI = dyn_cast<CallInst>(&V);
+    if (CI && !CI->hasOperandBundles() &&
+        (!RFI || CI->getCalledFunction() == RFI->Declaration))
+      return CI;
+    return nullptr;
+  }
+
 private:
   /// Try to delete parallel regions if possible.
   bool deleteParallelRegions() {
     const unsigned CallbackCalleeOperand = 2;
 
-    RuntimeFunctionInfo &RFI = RFIs[OMPRTL___kmpc_fork_call];
+    OMPInformationCache::RuntimeFunctionInfo &RFI =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_fork_call];
+
     if (!RFI.Declaration)
       return false;
 
@@ -243,7 +377,8 @@ private:
 
     for (Function *F : SCC) {
       for (auto DeduplicableRuntimeCallID : DeduplicableRuntimeCallIDs)
-        deduplicateRuntimeCalls(*F, RFIs[DeduplicableRuntimeCallID]);
+        deduplicateRuntimeCalls(*F,
+                                OMPInfoCache.RFIs[DeduplicableRuntimeCallID]);
 
       // __kmpc_global_thread_num is special as we can replace it with an
       // argument in enough cases to make it worth trying.
@@ -254,7 +389,7 @@ private:
           break;
         }
       Changed |= deduplicateRuntimeCalls(
-          *F, RFIs[OMPRTL___kmpc_global_thread_num], GTIdArg);
+          *F, OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num], GTIdArg);
     }
 
     return Changed;
@@ -279,8 +414,9 @@ private:
   /// return a local `struct ident_t*`. For now, if we cannot find a suitable
   /// return value we create one from scratch. We also do not yet combine
   /// information, e.g., the source locations, see combinedIdentStruct.
-  Value *getCombinedIdentFromCallUsesIn(RuntimeFunctionInfo &RFI, Function &F,
-                                        bool GlobalOnly) {
+  Value *
+  getCombinedIdentFromCallUsesIn(OMPInformationCache::RuntimeFunctionInfo &RFI,
+                                 Function &F, bool GlobalOnly) {
     bool SingleChoice = true;
     Value *Ident = nullptr;
     auto CombineIdentStruct = [&](Use &U, Function &Caller) {
@@ -296,29 +432,30 @@ private:
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
       // unfortunate but we work around it for now.
-      if (!OMPBuilder.getInsertionPoint().getBlock())
-        OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
+      if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
+        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
             &F.getEntryBlock(), F.getEntryBlock().begin()));
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
-      Constant *Loc = OMPBuilder.getOrCreateDefaultSrcLocStr();
-      Ident = OMPBuilder.getOrCreateIdent(Loc);
+      Constant *Loc = OMPInfoCache.OMPBuilder.getOrCreateDefaultSrcLocStr();
+      Ident = OMPInfoCache.OMPBuilder.getOrCreateIdent(Loc);
     }
     return Ident;
   }
 
   /// Try to eliminiate calls of \p RFI in \p F by reusing an existing one or
   /// \p ReplVal if given.
-  bool deduplicateRuntimeCalls(Function &F, RuntimeFunctionInfo &RFI,
+  bool deduplicateRuntimeCalls(Function &F,
+                               OMPInformationCache::RuntimeFunctionInfo &RFI,
                                Value *ReplVal = nullptr) {
     auto *UV = RFI.getUseVector(F);
     if (!UV || UV->size() + (ReplVal != nullptr) < 2)
       return false;
 
-    LLVM_DEBUG(dbgs() << TAG << "Deduplicate " << UV->size() << " uses of "
-                      << RFI.Name
-                      << (ReplVal ? " with an existing value\n" : "\n")
-                      << "\n");
+    LLVM_DEBUG(
+        dbgs() << TAG << "Deduplicate " << UV->size() << " uses of " << RFI.Name
+               << (ReplVal ? " with an existing value\n" : "\n") << "\n");
+
     assert((!ReplVal || (isa<Argument>(ReplVal) &&
                          cast<Argument>(ReplVal)->getParent() == &F)) &&
            "Unexpected replacement value!");
@@ -410,8 +547,8 @@ private:
         if (CallInst *CI = getCallIfRegularCall(U)) {
           Value *ArgOp = CI->getArgOperand(ArgNo);
           if (CI == &RefCI || GTIdArgs.count(ArgOp) ||
-              getCallIfRegularCall(*ArgOp,
-                                   &RFIs[OMPRTL___kmpc_global_thread_num]))
+              getCallIfRegularCall(
+                  *ArgOp, &OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num]))
             continue;
         }
         return false;
@@ -430,8 +567,9 @@ private:
     };
 
     // The argument users of __kmpc_global_thread_num calls are GTIds.
-    RuntimeFunctionInfo &GlobThreadNumRFI =
-        RFIs[OMPRTL___kmpc_global_thread_num];
+    OMPInformationCache::RuntimeFunctionInfo &GlobThreadNumRFI =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num];
+
     GlobThreadNumRFI.foreachUse([&](Use &U, Function &F) {
       if (CallInst *CI = getCallIfRegularCall(U, &GlobThreadNumRFI))
         AddUserArgs(*CI);
@@ -443,109 +581,6 @@ private:
     // so we cannot cache the size nor can we use a range based for.
     for (unsigned u = 0; u < GTIdArgs.size(); ++u)
       AddUserArgs(*GTIdArgs[u]);
-  }
-
-  /// Return the call if \p U is a callee use in a regular call. If \p RFI is
-  /// given it has to be the callee or a nullptr is returned.
-  CallInst *getCallIfRegularCall(Use &U, RuntimeFunctionInfo *RFI = nullptr) {
-    CallInst *CI = dyn_cast<CallInst>(U.getUser());
-    if (CI && CI->isCallee(&U) && !CI->hasOperandBundles() &&
-        (!RFI || CI->getCalledFunction() == RFI->Declaration))
-      return CI;
-    return nullptr;
-  }
-
-  /// Return the call if \p V is a regular call. If \p RFI is given it has to be
-  /// the callee or a nullptr is returned.
-  CallInst *getCallIfRegularCall(Value &V, RuntimeFunctionInfo *RFI = nullptr) {
-    CallInst *CI = dyn_cast<CallInst>(&V);
-    if (CI && !CI->hasOperandBundles() &&
-        (!RFI || CI->getCalledFunction() == RFI->Declaration))
-      return CI;
-    return nullptr;
-  }
-
-  /// Returns true if the function declaration \p F matches the runtime
-  /// function types, that is, return type \p RTFRetType, and argument types
-  /// \p RTFArgTypes.
-  static bool declMatchesRTFTypes(Function *F, Type *RTFRetType,
-                                  SmallVector<Type *, 8> &RTFArgTypes) {
-    // TODO: We should output information to the user (under debug output
-    //       and via remarks).
-
-    if (!F)
-      return false;
-    if (F->getReturnType() != RTFRetType)
-      return false;
-    if (F->arg_size() != RTFArgTypes.size())
-      return false;
-
-    auto RTFTyIt = RTFArgTypes.begin();
-    for (Argument &Arg : F->args()) {
-      if (Arg.getType() != *RTFTyIt)
-        return false;
-
-      ++RTFTyIt;
-    }
-
-    return true;
-  }
-
-  /// Helper to initialize all runtime function information for those defined in
-  /// OpenMPKinds.def.
-  void initializeRuntimeFunctions() {
-    // Helper to collect all uses of the decleration in the UsesMap.
-    auto CollectUses = [&](RuntimeFunctionInfo &RFI) {
-      unsigned NumUses = 0;
-      if (!RFI.Declaration)
-        return NumUses;
-      OMPBuilder.addAttributes(RFI.Kind, *RFI.Declaration);
-
-      NumOpenMPRuntimeFunctionsIdentified += 1;
-      NumOpenMPRuntimeFunctionUsesIdentified += RFI.Declaration->getNumUses();
-
-      // TODO: We directly convert uses into proper calls and unknown uses.
-      for (Use &U : RFI.Declaration->uses()) {
-        if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
-          if (ModuleSlice.count(UserI->getFunction())) {
-            RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
-            ++NumUses;
-          }
-        } else {
-          RFI.getOrCreateUseVector(nullptr).push_back(&U);
-          ++NumUses;
-        }
-      }
-      return NumUses;
-    };
-
-#define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
-  {                                                                            \
-    SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
-    Function *F = M.getFunction(_Name);                                        \
-    if (declMatchesRTFTypes(F, _ReturnType, ArgsTypes)) {                      \
-      auto &RFI = RFIs[_Enum];                                                 \
-      RFI.Kind = _Enum;                                                        \
-      RFI.Name = _Name;                                                        \
-      RFI.IsVarArg = _IsVarArg;                                                \
-      RFI.ReturnType = _ReturnType;                                            \
-      RFI.ArgumentTypes = std::move(ArgsTypes);                                \
-      RFI.Declaration = F;                                                     \
-      unsigned NumUses = CollectUses(RFI);                                     \
-      (void)NumUses;                                                           \
-      LLVM_DEBUG({                                                             \
-        dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
-               << " found\n";                                                  \
-        if (RFI.Declaration)                                                   \
-          dbgs() << TAG << "-> got " << NumUses << " uses in "                 \
-                 << RFI.getNumFunctionsWithUses()                              \
-                 << " different functions.\n";                                 \
-      });                                                                      \
-    }                                                                          \
-  }
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-
-    // TODO: We should attach the attributes defined in OMPKinds.def.
   }
 
   /// Emit a remark generically
@@ -566,9 +601,8 @@ private:
     Function *F = Inst->getParent()->getParent();
     auto &ORE = OREGetter(F);
 
-    ORE.emit([&]() {
-      return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, Inst));
-    });
+    ORE.emit(
+        [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, Inst)); });
   }
 
   /// The underyling module.
@@ -580,9 +614,6 @@ private:
   /// The slice of the module we are allowed to look at.
   SmallPtrSetImpl<Function *> &ModuleSlice;
 
-  /// An OpenMP-IR-Builder instance
-  OpenMPIRBuilder OMPBuilder;
-
   /// Callback to update the call graph, the first argument is a removed call,
   /// the second an optional replacement call.
   CallGraphUpdater &CGUpdater;
@@ -590,10 +621,8 @@ private:
   /// Callback to get an OptimizationRemarkEmitter from a Function *
   OptimizationRemarkGetter OREGetter;
 
-  /// Map from runtime function kind to the runtime function description.
-  EnumeratedArray<RuntimeFunctionInfo, RuntimeFunction,
-                  RuntimeFunction::OMPRTL___last>
-      RFIs;
+  /// OpenMP-specific information cache. Also Used for Attributor runs.
+  OMPInformationCache &OMPInfoCache;
 };
 } // namespace
 
@@ -616,16 +645,25 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   if (SCC.empty())
     return PreservedAnalyses::all();
 
-  auto OREGetter = [&C, &CG, &AM](Function *F) -> OptimizationRemarkEmitter & {
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
+  AnalysisGetter AG(FAM);
+
+  auto OREGetter = [&FAM](Function *F) -> OptimizationRemarkEmitter & {
     return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
   };
 
   CallGraphUpdater CGUpdater;
   CGUpdater.initialize(CG, C, AM, UR);
+
+  SetVector<Function *> Functions(SCC.begin(), SCC.end());
+  BumpPtrAllocator Allocator;
+  OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
+                                /*CGSCC*/ &Functions, ModuleSlice);
+
   // TODO: Compute the module slice we are allowed to look at.
-  OpenMPOpt OMPOpt(SCC, ModuleSlice, CGUpdater, OREGetter);
+  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
   bool Changed = OMPOpt.run();
   (void)Changed;
   return PreservedAnalyses::all();
@@ -682,8 +720,15 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
       return *ORE;
     };
 
+    AnalysisGetter AG;
+    SetVector<Function *> Functions(SCC.begin(), SCC.end());
+    BumpPtrAllocator Allocator;
+    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
+                                  Allocator,
+                                  /*CGSCC*/ &Functions, ModuleSlice);
+
     // TODO: Compute the module slice we are allowed to look at.
-    OpenMPOpt OMPOpt(SCC, ModuleSlice, CGUpdater, OREGetter);
+    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
     return OMPOpt.run();
   }
 
