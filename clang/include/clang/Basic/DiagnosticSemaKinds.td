@@ -9937,10 +9937,10 @@ def err_omp_prohibited_region_critical_same_name : Error<
   "cannot nest 'critical' regions having the same name %0">;
 def note_omp_previous_critical_region : Note<
   "previous 'critical' region starts here">;
-def err_omp_several_scan_directives_in_region : Error<
-  "exactly one 'scan' directive must appear in the loop body of an enclosing directive">;
-def note_omp_previous_scan_directive : Note<
-  "previous 'scan' directive used here">;
+def err_omp_several_directives_in_region : Error<
+  "exactly one '%0' directive must appear in the loop body of an enclosing directive">;
+def note_omp_previous_directive : Note<
+  "previous '%0' directive used here">;
 def err_omp_sections_not_compound_stmt : Error<
   "the statement for '#pragma omp sections' must be a compound statement">;
 def err_omp_parallel_sections_not_compound_stmt : Error<

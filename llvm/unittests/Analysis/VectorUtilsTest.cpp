@@ -77,7 +77,7 @@ struct BasicTest : public testing::Test {
 } // namespace
 
 TEST_F(BasicTest, isSplat) {
-  Value *UndefVec = UndefValue::get(VectorType::get(IRB.getInt8Ty(), 4));
+  Value *UndefVec = UndefValue::get(FixedVectorType::get(IRB.getInt8Ty(), 4));
   EXPECT_TRUE(isSplatValue(UndefVec));
 
   Constant *UndefScalar = UndefValue::get(IRB.getInt8Ty());

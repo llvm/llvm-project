@@ -53,6 +53,7 @@ public:
   /// Preserve Comments in Assembly.
   bool PreserveAsmComments : 1;
 
+  bool Dwarf64 : 1;
   int DwarfVersion = 0;
 
   std::string ABIName;

@@ -422,7 +422,7 @@ void SimplifyBooleanExprCheck::matchBoolCondition(MatchFinder *Finder,
                                                   bool Value,
                                                   StringRef BooleanId) {
   Finder->addMatcher(
-      ifStmt(isExpansionInMainFile(),
+      ifStmt(unless(isInTemplateInstantiation()),
              hasCondition(cxxBoolLiteral(equals(Value)).bind(BooleanId)))
           .bind(IfStmtId),
       this);
@@ -432,7 +432,7 @@ void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
                                                   bool Value,
                                                   StringRef TernaryId) {
   Finder->addMatcher(
-      conditionalOperator(isExpansionInMainFile(),
+      conditionalOperator(unless(isInTemplateInstantiation()),
                           hasTrueExpression(cxxBoolLiteral(equals(Value))),
                           hasFalseExpression(cxxBoolLiteral(equals(!Value))))
           .bind(TernaryId),
@@ -442,13 +442,13 @@ void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
 void SimplifyBooleanExprCheck::matchIfReturnsBool(MatchFinder *Finder,
                                                   bool Value, StringRef Id) {
   if (ChainedConditionalReturn)
-    Finder->addMatcher(ifStmt(isExpansionInMainFile(),
+    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
                               hasThen(returnsBool(Value, ThenLiteralId)),
                               hasElse(returnsBool(!Value)))
                            .bind(Id),
                        this);
   else
-    Finder->addMatcher(ifStmt(isExpansionInMainFile(),
+    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
                               unless(hasParent(ifStmt())),
                               hasThen(returnsBool(Value, ThenLiteralId)),
                               hasElse(returnsBool(!Value)))
@@ -474,12 +474,16 @@ void SimplifyBooleanExprCheck::matchIfAssignsBool(MatchFinder *Finder,
   auto Else = anyOf(SimpleElse, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleElse)));
   if (ChainedConditionalAssignment)
-    Finder->addMatcher(ifStmt(hasThen(Then), hasElse(Else)).bind(Id), this);
+    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
+                              hasThen(Then), hasElse(Else))
+                           .bind(Id),
+                       this);
   else
-    Finder->addMatcher(
-        ifStmt(unless(hasParent(ifStmt())), hasThen(Then), hasElse(Else))
-            .bind(Id),
-        this);
+    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
+                              unless(hasParent(ifStmt())), hasThen(Then),
+                              hasElse(Else))
+                           .bind(Id),
+                       this);
 }
 
 void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
@@ -487,6 +491,7 @@ void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
                                                           StringRef Id) {
   Finder->addMatcher(
       compoundStmt(
+          unless(isInTemplateInstantiation()),
           hasAnySubstatement(
               ifStmt(hasThen(returnsBool(Value)), unless(hasElse(stmt())))),
           hasAnySubstatement(returnStmt(has(ignoringParenImpCasts(

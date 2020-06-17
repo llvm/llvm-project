@@ -1,16 +1,5 @@
 // REQUIRES: arm-target-arch || armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-//===-- aeabi_frsub.c - Test __aeabi_frsub --------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests __aeabi_frsub for the compiler_rt library.
-//
-//===----------------------------------------------------------------------===//
 
 #include <stdio.h>
 #include <stdlib.h>

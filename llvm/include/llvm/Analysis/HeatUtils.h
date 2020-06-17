@@ -22,6 +22,10 @@ namespace llvm {
 class BlockFrequencyInfo;
 class Function;
 
+// Returns number of calls of calledFunction by callerFunction.
+uint64_t
+getNumOfCalls(Function &callerFunction, Function &calledFunction);
+
 // Returns the maximum frequency of a BB in a function.
 uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI);
 

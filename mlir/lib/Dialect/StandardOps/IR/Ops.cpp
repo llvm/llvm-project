@@ -426,6 +426,11 @@ OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
   /// and(x, 0) -> 0
   if (matchPattern(rhs(), m_Zero()))
     return rhs();
+  /// and(x, allOnes) -> x
+  APInt intValue;
+  if (matchPattern(rhs(), m_ConstantInt(&intValue)) &&
+      intValue.isAllOnesValue())
+    return lhs();
   /// and(x,x) -> x
   if (lhs() == rhs())
     return rhs();
@@ -1303,7 +1308,7 @@ static LogicalResult verify(DimOp op) {
 }
 
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
-  auto index = operands[1].dyn_cast<IntegerAttr>();
+  auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
 
   // All forms of folding require a known index.
   if (!index)
@@ -1698,8 +1703,8 @@ struct ExtractElementFromTensorFromElements
     if (extract.indices().size() != 1)
       return failure();
 
-    auto tensor_from_elements =
-        dyn_cast<TensorFromElementsOp>(extract.aggregate().getDefiningOp());
+    auto tensor_from_elements = dyn_cast_or_null<TensorFromElementsOp>(
+        extract.aggregate().getDefiningOp());
     if (tensor_from_elements == nullptr)
       return failure();
 
@@ -2257,6 +2262,9 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
   // subi(x,x) -> 0
   if (getOperand(0) == getOperand(1))
     return Builder(getContext()).getZeroAttr(getType());
+  // subi(x,0) -> x
+  if (matchPattern(rhs(), m_Zero()))
+    return lhs();
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a - b; });

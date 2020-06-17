@@ -1394,7 +1394,7 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
   else if (EltVT == MVT::f64)
     return getConstantFP(APFloat(Val), DL, VT, isTarget);
   else if (EltVT == MVT::f80 || EltVT == MVT::f128 || EltVT == MVT::ppcf128 ||
-           EltVT == MVT::f16) {
+           EltVT == MVT::f16 || EltVT == MVT::bf16) {
     bool Ignored;
     APFloat APF = APFloat(Val);
     APF.convert(EVTToAPFloatSemantics(EltVT), APFloat::rmNearestTiesToEven,

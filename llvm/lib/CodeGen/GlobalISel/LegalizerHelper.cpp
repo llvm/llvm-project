@@ -2057,9 +2057,10 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       // TODO: Probably should be zext
       widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
       Observer.changedInstr(MI);
+      return Legalized;
     }
 
-    return Legalized;
+    return UnableToLegalize;
   }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FMUL:
@@ -2719,7 +2720,6 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
   SmallVector<Register, 4> PartRegs, LeftoverRegs;
 
   for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
-    LLT LeftoverTy;
     Register SrcReg = MI.getOperand(I).getReg();
     LLT SrcTyI = MRI.getType(SrcReg);
     LLT NarrowTyI = LLT::scalarOrVector(NewNumElts, SrcTyI.getScalarType());

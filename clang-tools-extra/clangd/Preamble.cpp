@@ -397,10 +397,12 @@ bool isPreambleCompatible(const PreambleData &Preamble,
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
   auto Bounds =
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
+  auto VFS = Inputs.FSProvider->getFileSystem();
+  VFS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
-                                    Inputs.FSProvider->getFileSystem().get());
+                                    VFS.get());
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {

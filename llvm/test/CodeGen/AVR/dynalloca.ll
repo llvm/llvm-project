@@ -53,9 +53,27 @@ define void @dynalloca2(i16 %x) {
 ; CHECK-LABEL: dynalloca2:
 ; CHECK: in [[SPCOPY1:r[0-9]+]], 61
 ; CHECK: in [[SPCOPY2:r[0-9]+]], 62
-; CHECK: push
-; CHECK-NOT: st
-; CHECK-NOT: std
+; Allocate stack space for call
+; CHECK: in {{.*}}, 61
+; CHECK: in {{.*}}, 62
+; CHECK: subi
+; CHECK: sbci
+; CHECK: in r0, 63
+; CHECK-NEXT: cli
+; CHECK-NEXT: out 62, {{.*}}
+; CHECK-NEXT: out 63, r0
+; CHECK-NEXT: out 61, {{.*}}
+; Store values on the stack
+; CHECK: ldi r16, 0
+; CHECK: ldi r17, 0
+; CHECK: std Z+5, r16
+; CHECK: std Z+6, r17
+; CHECK: std Z+7, r16
+; CHECK: std Z+8, r17
+; CHECK: std Z+3, r16
+; CHECK: std Z+4, r17
+; CHECK: std Z+1, r16
+; CHECK: std Z+2, r17
 ; CHECK: call
 ; Call frame restore
 ; CHECK-NEXT: in r30, 61

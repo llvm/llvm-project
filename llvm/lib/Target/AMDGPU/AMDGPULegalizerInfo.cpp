@@ -2814,7 +2814,7 @@ bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
 
   auto ThirtyOne = B.buildConstant(S32, 31);
   auto LHSign = B.buildAShr(S32, LHS, ThirtyOne);
-  auto RHSign = B.buildAShr(S32, LHS, ThirtyOne);
+  auto RHSign = B.buildAShr(S32, RHS, ThirtyOne);
 
   LHS = B.buildAdd(S32, LHS, LHSign).getReg(0);
   RHS = B.buildAdd(S32, RHS, RHSign).getReg(0);

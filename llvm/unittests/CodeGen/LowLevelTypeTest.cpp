@@ -85,7 +85,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
-      Type *IRTy = VectorType::get(IRSTy, Elts);
+      Type *IRTy = FixedVectorType::get(IRSTy, Elts);
       EXPECT_EQ(VTy, getLLTForType(*IRTy, DL));
     }
   }
@@ -222,8 +222,8 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test Type->LLT conversion.
       Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), NumElts);
+      Type *IRVTy = FixedVectorType::get(
+          PointerType::get(IntegerType::get(C, 8), AS), NumElts);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }
@@ -256,6 +256,18 @@ TEST(LowLevelTypeTest, Divide) {
             LLT::vector(4, LLT::pointer(1, 64)).divide(4));
   EXPECT_EQ(LLT::vector(2, LLT::pointer(1, 64)),
             LLT::vector(4, LLT::pointer(1, 64)).divide(2));
+}
+
+constexpr LLT CELLT = LLT();
+constexpr LLT CES32 = LLT::scalar(32);
+constexpr LLT CEV2S32 = LLT::vector(2, 32);
+constexpr LLT CEP0 = LLT::pointer(0, 32);
+
+TEST(LowLevelTypeTest, ConstExpr) {
+  EXPECT_EQ(LLT(), CELLT);
+  EXPECT_EQ(LLT::scalar(32), CES32);
+  EXPECT_EQ(LLT::vector(2, 32), CEV2S32);
+  EXPECT_EQ(LLT::pointer(0, 32), CEP0);
 }
 
 }

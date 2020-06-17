@@ -169,6 +169,7 @@ private:
     bool LoopStart = false;
     bool BodyComplete = false;
     SourceLocation PrevScanLocation;
+    SourceLocation PrevOrderedLocation;
     SourceLocation InnerTeamsRegionLoc;
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
@@ -847,6 +848,21 @@ public:
   SourceLocation getParentScanDirectiveLoc() const {
     const SharingMapTy *Top = getSecondOnStackOrNull();
     return Top ? Top->PrevScanLocation : SourceLocation();
+  }
+  /// Mark that parent region already has ordered directive.
+  void setParentHasOrderedDirective(SourceLocation Loc) {
+    if (SharingMapTy *Parent = getSecondOnStackOrNull())
+      Parent->PrevOrderedLocation = Loc;
+  }
+  /// Return true if current region has inner ordered construct.
+  bool doesParentHasOrderedDirective() const {
+    const SharingMapTy *Top = getSecondOnStackOrNull();
+    return Top ? Top->PrevOrderedLocation.isValid() : false;
+  }
+  /// Returns the location of the previously specified ordered directive.
+  SourceLocation getParentOrderedDirectiveLoc() const {
+    const SharingMapTy *Top = getSecondOnStackOrNull();
+    return Top ? Top->PrevOrderedLocation : SourceLocation();
   }
 
   /// Set collapse value for the region.
@@ -9187,9 +9203,10 @@ StmtResult Sema::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
   // Check that only one instance of scan directives is used in the same outer
   // region.
   if (DSAStack->doesParentHasScanDirective()) {
-    Diag(StartLoc, diag::err_omp_several_scan_directives_in_region);
+    Diag(StartLoc, diag::err_omp_several_directives_in_region) << "scan";
     Diag(DSAStack->getParentScanDirectiveLoc(),
-         diag::note_omp_previous_scan_directive);
+         diag::note_omp_previous_directive)
+        << "scan";
     return StmtError();
   }
   DSAStack->setParentHasScanDirective(StartLoc);
@@ -9264,6 +9281,22 @@ StmtResult Sema::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
   }
   if ((!AStmt && !DependFound) || ErrorFound)
     return StmtError();
+
+  // OpenMP 5.0, 2.17.9, ordered Construct, Restrictions.
+  // During execution of an iteration of a worksharing-loop or a loop nest
+  // within a worksharing-loop, simd, or worksharing-loop SIMD region, a thread
+  // must not execute more than one ordered region corresponding to an ordered
+  // construct without a depend clause.
+  if (!DependFound) {
+    if (DSAStack->doesParentHasOrderedDirective()) {
+      Diag(StartLoc, diag::err_omp_several_directives_in_region) << "ordered";
+      Diag(DSAStack->getParentOrderedDirectiveLoc(),
+           diag::note_omp_previous_directive)
+          << "ordered";
+      return StmtError();
+    }
+    DSAStack->setParentHasOrderedDirective(StartLoc);
+  }
 
   if (AStmt) {
     assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");

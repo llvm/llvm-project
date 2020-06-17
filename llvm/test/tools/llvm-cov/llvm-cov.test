@@ -131,18 +131,18 @@ RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitesp
  OUT-FB-NEXT:Taken at least once:81.82% of 11
  OUT-FB-NEXT:No calls
  OUT-F-EMPTY:
-         OUT:File './test.h'
-    OUT-NEXT:Lines executed:100.00% of 1
-  OUT-B-NEXT:No branches
-  OUT-B-NEXT:No calls
-OUTFILE-NEXT:Creating 'test.h.gcov'
-   OUT-EMPTY:
-    OUT-NEXT:File 'test.cpp'
+         OUT:File 'test.cpp'
     OUT-NEXT:Lines executed:81.40% of 43
   OUT-B-NEXT:Branches executed:100.00% of 15
   OUT-B-NEXT:Taken at least once:86.67% of 15
   OUT-B-NEXT:No calls
 OUTFILE-NEXT:Creating 'test.cpp.gcov'
+   OUT-EMPTY:
+    OUT-NEXT:File './test.h'
+    OUT-NEXT:Lines executed:100.00% of 1
+  OUT-B-NEXT:No branches
+  OUT-B-NEXT:No calls
+OUTFILE-NEXT:Creating 'test.h.gcov'
 
 # Summarize unconditional branches too.
 RUN: llvm-cov gcov test.c -a -b -u | FileCheck %s --check-prefixes=OUT,OUTFILE,OUT-B
@@ -158,22 +158,28 @@ H-C: unconditional  0 taken 1
 RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | FileCheck %s --check-prefix=NO-GCDA
 RUN: diff -aub test_no_gcda.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_no_gcda.h.gcov test.h.gcov
-NO-GCDA:       File './test.h'
-NO-GCDA-NEXT:  Lines executed:0.00% of 1
-NO-GCDA-NEXT:  Creating 'test.h.gcov'
-NO-GCDA-EMPTY:
-NO-GCDA-NEXT:  File 'test.cpp'
+NO-GCDA:       File 'test.cpp'
 NO-GCDA-NEXT:  Lines executed:0.00% of 43
 NO-GCDA-NEXT:  Creating 'test.cpp.gcov'
+NO-GCDA-EMPTY:
+NO-GCDA-NEXT:  File './test.h'
+NO-GCDA-NEXT:  Lines executed:0.00% of 1
+NO-GCDA-NEXT:  Creating 'test.h.gcov'
 
 # Invalid gcno file.
 RUN: llvm-cov gcov test.c -gcno=test_read_fail.gcno
 
+# Not a .gcda file. Error but keep the .gcov output.
+RUN: echo invalid > not.gcda
+RUN: llvm-cov gcov test.c -gcda=not.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
+RUN: FileCheck %s --check-prefix=NOT-GCDA < %t.err
+NOT-GCDA: not.gcda:not a gcov data file
+
 # Bad file checksum on gcda.
-RUN: llvm-cov gcov test.c -gcda=test_file_checksum_fail.gcda
+RUN: llvm-cov gcov test.c -gcda=test_file_checksum_fail.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
 
 # Bad function checksum on gcda
-RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda
+RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda 2> %t.err | FileCheck %s --check-prefix=NO-GCDA
 
 # Has arcs from exit blocks
 RUN-DISABLED: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS

@@ -406,3 +406,55 @@ DWARF:
       Descriptors:
         - Address: 0x0000000000001234
           Length:  0x20
+
+## h) Test that yaml2obj still generates a .debug_aranges section if we assign an invalid value
+## to 'AddrSize' when the 'Descriptors' list is empty.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --hex-dump=.debug_aranges %t8.o | \
+# RUN:   FileCheck %s --check-prefix=ADDR-SIZE
+
+#      ADDR-SIZE: Hex dump of section '.debug_aranges':
+# ADDR-SIZE-NEXT: 0x00000000 2c000000 02000000 00000700 00000000
+##                                                 ^~ address_size (1-byte) 0x07
+# ADDR-SIZE-NEXT: 0x00000010 00000000 00000000 00000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Length:      0x2c
+      Version:     2
+      CuOffset:    0
+      AddrSize:    0x07 ## Invalid address_size.
+      SegSize:     0
+      Descriptors: []
+
+## i) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddrSize' when the 'Descriptors' list isn't empty.
+
+# RUN: not yaml2obj --docnum=9 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-SIZE
+
+# INVALID-SIZE: yaml2obj: error: unable to write debug_aranges address: invalid integer write size: 7
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Length:      0x2c
+      Version:     2
+      CuOffset:    0
+      AddrSize:    0x07 ## Invalid address_size.
+      SegSize:     0
+      Descriptors:
+        - Address: 0x1234
+          Length:  0x1000

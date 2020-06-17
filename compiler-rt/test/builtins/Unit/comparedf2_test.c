@@ -1,19 +1,6 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_comparedf2
 
-//===-- cmpdf2_test.c - Test __cmpdf2 -------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file tests single-precision soft-double comparisons for the compiler-rt
-// library.
-//
-//===----------------------------------------------------------------------===//
-
 #include <stdio.h>
 
 int __eqdf2(double, double);

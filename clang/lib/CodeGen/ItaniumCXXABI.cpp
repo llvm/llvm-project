@@ -2687,6 +2687,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
         llvm::GlobalVariable::InternalLinkage,
         llvm::ConstantInt::get(CGM.Int8Ty, 0), "__tls_guard");
     Guard->setThreadLocal(true);
+    Guard->setThreadLocalMode(CGM.GetDefaultLLVMTLSModel());
 
     CharUnits GuardAlign = CharUnits::One();
     Guard->setAlignment(GuardAlign.getAsAlign());

@@ -568,6 +568,29 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, unsigned pos) {
       builder.getI64ArrayAttr({kSizePosInMemRefDescriptor, pos}));
 }
 
+Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
+                             int64_t rank) {
+  auto indexTy = indexType.cast<LLVM::LLVMType>();
+  auto indexPtrTy = indexTy.getPointerTo();
+  auto arrayTy = LLVM::LLVMType::getArrayTy(indexTy, rank);
+  auto arrayPtrTy = arrayTy.getPointerTo();
+
+  // Copy size values to stack-allocated memory.
+  auto zero = createIndexAttrConstant(builder, loc, indexType, 0);
+  auto one = createIndexAttrConstant(builder, loc, indexType, 1);
+  auto sizes = builder.create<LLVM::ExtractValueOp>(
+      loc, arrayTy, value,
+      builder.getI64ArrayAttr({kSizePosInMemRefDescriptor}));
+  auto sizesPtr =
+      builder.create<LLVM::AllocaOp>(loc, arrayPtrTy, one, /*alignment=*/0);
+  builder.create<LLVM::StoreOp>(loc, sizes, sizesPtr);
+
+  // Load an return size value of interest.
+  auto resultPtr = builder.create<LLVM::GEPOp>(loc, indexPtrTy, sizesPtr,
+                                               ValueRange({zero, pos}));
+  return builder.create<LLVM::LoadOp>(loc, resultPtr);
+}
+
 /// Builds IR inserting the pos-th size into the descriptor
 void MemRefDescriptor::setSize(OpBuilder &builder, Location loc, unsigned pos,
                                Value size) {
@@ -576,7 +599,6 @@ void MemRefDescriptor::setSize(OpBuilder &builder, Location loc, unsigned pos,
       builder.getI64ArrayAttr({kSizePosInMemRefDescriptor, pos}));
 }
 
-/// Builds IR inserting the pos-th size into the descriptor
 void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
                                        unsigned pos, uint64_t size) {
   setSize(builder, loc, pos,
@@ -598,7 +620,6 @@ void MemRefDescriptor::setStride(OpBuilder &builder, Location loc, unsigned pos,
       builder.getI64ArrayAttr({kStridePosInMemRefDescriptor, pos}));
 }
 
-/// Builds IR inserting the pos-th stride into the descriptor
 void MemRefDescriptor::setConstantStride(OpBuilder &builder, Location loc,
                                          unsigned pos, uint64_t stride) {
   setStride(builder, loc, pos,
@@ -2117,25 +2138,29 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto dimOp = cast<DimOp>(op);
+    auto loc = op->getLoc();
     DimOp::Adaptor transformed(operands);
-    MemRefType type = dimOp.memrefOrTensor().getType().cast<MemRefType>();
 
-    Optional<int64_t> index = dimOp.getConstantIndex();
-    if (!index.hasValue()) {
-      // TODO: Implement this lowering.
-      return failure();
+    // Take advantage if index is constant.
+    MemRefType memRefType = dimOp.memrefOrTensor().getType().cast<MemRefType>();
+    if (Optional<int64_t> index = dimOp.getConstantIndex()) {
+      int64_t i = index.getValue();
+      if (memRefType.isDynamicDim(i)) {
+        // Extract dynamic size from the memref descriptor.
+        MemRefDescriptor descriptor(transformed.memrefOrTensor());
+        rewriter.replaceOp(op, {descriptor.size(rewriter, loc, i)});
+      } else {
+        // Use constant for static size.
+        int64_t dimSize = memRefType.getDimSize(i);
+        rewriter.replaceOp(op, createIndexConstant(rewriter, loc, dimSize));
+      }
+      return success();
     }
 
-    int64_t i = index.getValue();
-    // Extract dynamic size from the memref descriptor.
-    if (type.isDynamicDim(i))
-      rewriter.replaceOp(op, {MemRefDescriptor(transformed.memrefOrTensor())
-                                  .size(rewriter, op->getLoc(), i)});
-    else
-      // Use constant for static size.
-      rewriter.replaceOp(
-          op, createIndexConstant(rewriter, op->getLoc(), type.getDimSize(i)));
-
+    Value index = dimOp.index();
+    int64_t rank = memRefType.getRank();
+    MemRefDescriptor memrefDescriptor(transformed.memrefOrTensor());
+    rewriter.replaceOp(op, {memrefDescriptor.size(rewriter, loc, index, rank)});
     return success();
   }
 };

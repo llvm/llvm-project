@@ -184,6 +184,17 @@ bool DivergenceAnalysis::inRegion(const BasicBlock &BB) const {
   return (!RegionLoop && BB.getParent() == &F) || RegionLoop->contains(&BB);
 }
 
+static bool usesLiveOut(const Instruction &I, const Loop *DivLoop) {
+  for (auto &Op : I.operands()) {
+    auto *OpInst = dyn_cast<Instruction>(&Op);
+    if (!OpInst)
+      continue;
+    if (DivLoop->contains(OpInst->getParent()))
+      return true;
+  }
+  return false;
+}
+
 // marks all users of loop-carried values of the loop headed by LoopHeader as
 // divergent
 void DivergenceAnalysis::taintLoopLiveOuts(const BasicBlock &LoopHeader) {
@@ -227,16 +238,14 @@ void DivergenceAnalysis::taintLoopLiveOuts(const BasicBlock &LoopHeader) {
         continue;
       if (isDivergent(I))
         continue;
+      if (!usesLiveOut(I, DivLoop))
+        continue;
 
-      for (auto &Op : I.operands()) {
-        auto *OpInst = dyn_cast<Instruction>(&Op);
-        if (!OpInst)
-          continue;
-        if (DivLoop->contains(OpInst->getParent())) {
-          markDivergent(I);
-          pushUsers(I);
-          break;
-        }
+      markDivergent(I);
+      if (I.isTerminator()) {
+        propagateBranchDivergence(I);
+      } else {
+        pushUsers(I);
       }
     }
 

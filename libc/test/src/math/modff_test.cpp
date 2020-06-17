@@ -9,9 +9,11 @@
 
 #include "include/math.h"
 #include "src/math/modff.h"
+#include "utils/FPUtil/BasicOperations.h"
 #include "utils/FPUtil/BitPatterns.h"
 #include "utils/FPUtil/FloatOperations.h"
 #include "utils/FPUtil/FloatProperties.h"
+#include "utils/FPUtil/NearestIntegerOperations.h"
 #include "utils/UnitTest/Test.h"
 
 using __llvm_libc::fputil::valueAsBits;

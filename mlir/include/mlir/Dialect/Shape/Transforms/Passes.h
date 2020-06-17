@@ -18,6 +18,8 @@
 
 namespace mlir {
 
+class MLIRContext;
+class OwningRewritePatternList;
 class Pass;
 
 /// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
@@ -25,6 +27,9 @@ class Pass;
 /// transformed to `shape.reduce`, which can be lowered to SCF and Standard.
 std::unique_ptr<Pass> createShapeToShapeLowering();
 
+/// Collects a set of patterns to rewrite ops within the Shape dialect.
+void populateShapeRewritePatterns(MLIRContext *context,
+                                  OwningRewritePatternList &patterns);
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES_H_
