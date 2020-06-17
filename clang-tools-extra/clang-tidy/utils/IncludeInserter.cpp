@@ -45,6 +45,19 @@ std::unique_ptr<PPCallbacks> IncludeInserter::CreatePPCallbacks() {
   return std::make_unique<IncludeInserterCallback>(this);
 }
 
+IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
+  // std::unique_ptr is cheap to construct, so force a construction now to save
+  // the lookup needed if we were to insert into the map.
+  std::unique_ptr<IncludeSorter> &Entry = IncludeSorterByFile[FileID];
+  if (!Entry) {
+    // If it wasn't found, Entry will be default constructed to nullptr.
+    Entry = std::make_unique<IncludeSorter>(
+        &SourceMgr, &LangOpts, FileID,
+        SourceMgr.getFilename(SourceMgr.getLocForStartOfFile(FileID)), Style);
+  }
+  return *Entry;
+}
+
 llvm::Optional<FixItHint>
 IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
                                         bool IsAngled) {
@@ -53,31 +66,14 @@ IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
   if (!InsertedHeaders[FileID].insert(std::string(Header)).second)
     return llvm::None;
 
-  if (IncludeSorterByFile.find(FileID) == IncludeSorterByFile.end()) {
-    // This may happen if there have been no preprocessor directives in this
-    // file.
-    IncludeSorterByFile.insert(std::make_pair(
-        FileID,
-        std::make_unique<IncludeSorter>(
-            &SourceMgr, &LangOpts, FileID,
-            SourceMgr.getFilename(SourceMgr.getLocForStartOfFile(FileID)),
-            Style)));
-  }
-  return IncludeSorterByFile[FileID]->CreateIncludeInsertion(Header, IsAngled);
+  return getOrCreate(FileID).CreateIncludeInsertion(Header, IsAngled);
 }
 
 void IncludeInserter::AddInclude(StringRef FileName, bool IsAngled,
                                  SourceLocation HashLocation,
                                  SourceLocation EndLocation) {
   FileID FileID = SourceMgr.getFileID(HashLocation);
-  if (IncludeSorterByFile.find(FileID) == IncludeSorterByFile.end()) {
-    IncludeSorterByFile.insert(std::make_pair(
-        FileID, std::make_unique<IncludeSorter>(
-                    &SourceMgr, &LangOpts, FileID,
-                    SourceMgr.getFilename(HashLocation), Style)));
-  }
-  IncludeSorterByFile[FileID]->AddInclude(FileName, IsAngled, HashLocation,
-                                          EndLocation);
+  getOrCreate(FileID).AddInclude(FileName, IsAngled, HashLocation, EndLocation);
 }
 
 } // namespace utils
