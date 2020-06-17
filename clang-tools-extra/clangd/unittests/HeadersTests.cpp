@@ -53,7 +53,7 @@ private:
     EXPECT_TRUE(static_cast<bool>(CI));
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
-    auto VFS = PI.FSProvider->getFileSystem(Cmd->Directory);
+    auto VFS = PI.FSProvider->view(Cmd->Directory);
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
         llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
@@ -120,7 +120,7 @@ protected:
     return Edit;
   }
 
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   std::string MainFile = testPath("main.cpp");
   std::string Subdir = testPath("sub");

@@ -20,7 +20,7 @@
 namespace clang {
 namespace clangd {
 
-ParseInputs TestTU::inputs(MockFSProvider &FSProvider) const {
+ParseInputs TestTU::inputs(MockFS &FSProvider) const {
   std::string FullFilename = testPath(Filename),
               FullHeaderName = testPath(HeaderFilename),
               ImportThunk = testPath("import_thunk.h");
@@ -67,7 +67,7 @@ ParseInputs TestTU::inputs(MockFSProvider &FSProvider) const {
 }
 
 std::shared_ptr<const PreambleData> TestTU::preamble() const {
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   auto Inputs = inputs(FSProvider);
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
@@ -78,7 +78,7 @@ std::shared_ptr<const PreambleData> TestTU::preamble() const {
 }
 
 ParsedAST TestTU::build() const {
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   auto Inputs = inputs(FSProvider);
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);

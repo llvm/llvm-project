@@ -16,10 +16,10 @@
 #include "TestFS.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
 #include "support/Path.h"
 #include "support/TestTracer.h"
 #include "support/Threading.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -150,7 +150,7 @@ protected:
                            std::move(CB));
   }
 
-  MockFSProvider FSProvider;
+  MockFS FSProvider;
   MockCompilationDatabase CDB;
 };
 
@@ -775,12 +775,11 @@ TEST_F(TUSchedulerTests, MissingHeader) {
   FSProvider.Timestamps[HeaderB] = time_t(1);
 
   // The addition of the missing header file triggers a rebuild, no errors.
-  updateWithDiags(
-      S, Source, Inputs, WantDiagnostics::Yes,
-      [&DiagCount](std::vector<Diag> Diags) {
-        ++DiagCount;
-        EXPECT_THAT(Diags, IsEmpty());
-      });
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [&DiagCount](std::vector<Diag> Diags) {
+                    ++DiagCount;
+                    EXPECT_THAT(Diags, IsEmpty());
+                  });
 
   // Ensure previous assertions are done before we touch the FS again.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
@@ -798,12 +797,12 @@ TEST_F(TUSchedulerTests, MissingHeader) {
 
   // Forcing the reload should should cause a rebuild.
   Inputs.ForceRebuild = true;
-  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
-                  [&DiagCount](std::vector<Diag> Diags) {
-                    ++DiagCount;
-                    ElementsAre(Field(&Diag::Message,
-                                      "use of undeclared identifier 'b'"));
-                  });
+  updateWithDiags(
+      S, Source, Inputs, WantDiagnostics::Yes,
+      [&DiagCount](std::vector<Diag> Diags) {
+        ++DiagCount;
+        ElementsAre(Field(&Diag::Message, "use of undeclared identifier 'b'"));
+      });
 
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   EXPECT_EQ(DiagCount, 3U);
@@ -901,7 +900,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
     std::vector<ASTAction::Kind> ASTActions;
     std::vector<PreambleAction> PreambleActions;
   } CaptureTUStatus;
-  MockFSProvider FS;
+  MockFS FS;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &CaptureTUStatus);
   Annotations Code("int m^ain () {}");

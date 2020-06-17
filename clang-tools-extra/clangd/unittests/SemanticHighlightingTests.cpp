@@ -728,7 +728,7 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   };
 
   auto FooCpp = testPath("foo.cpp");
-  MockFSProvider FS;
+  MockFS FS;
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase MCD;

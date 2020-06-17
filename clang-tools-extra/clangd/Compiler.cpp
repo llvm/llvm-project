@@ -48,7 +48,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.FSProvider->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
       CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(

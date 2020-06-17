@@ -15,7 +15,7 @@
 
 #include "Protocol.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -168,7 +168,7 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
 /// though the latter may have been overridden in main()!
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const FileSystemProvider &FSProvider);
+                                          const ThreadsafeFS &FSProvider);
 
 /// Cleanup and format the given replacements.
 llvm::Expected<tooling::Replacements>

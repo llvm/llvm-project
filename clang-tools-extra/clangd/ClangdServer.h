@@ -23,8 +23,8 @@
 #include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "support/Cancellation.h"
-#include "support/FSProvider.h"
 #include "support/Function.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -172,7 +172,7 @@ public:
   /// those arguments for subsequent reparses. However, ClangdServer will check
   /// if compilation arguments changed on calls to forceReparse().
   ClangdServer(const GlobalCompilationDatabase &CDB,
-               const FileSystemProvider &FSProvider, const Options &Opts,
+               const ThreadsafeFS &FSProvider, const Options &Opts,
                Callbacks *Callbacks = nullptr);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
@@ -330,7 +330,7 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  const FileSystemProvider &FSProvider;
+  const ThreadsafeFS &FSProvider;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:

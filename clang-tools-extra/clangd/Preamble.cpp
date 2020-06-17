@@ -10,8 +10,8 @@
 #include "Compiler.h"
 #include "Headers.h"
 #include "SourceCode.h"
-#include "support/FSProvider.h"
 #include "support/Logger.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Diagnostic.h"
@@ -234,12 +234,12 @@ scanPreamble(llvm::StringRef Contents,
   // than vfs::FileSystem, that way we can just use ParseInputs without this
   // hack.
   auto GetFSProvider = [](llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    class VFSProvider : public FileSystemProvider {
+    class VFSProvider : public ThreadsafeFS {
     public:
       VFSProvider(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
           : VFS(std::move(FS)) {}
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-      getFileSystem(llvm::NoneType) const override {
+      view(llvm::NoneType) const override {
         return VFS;
       }
 
@@ -358,7 +358,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
-  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.FSProvider->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
@@ -395,7 +395,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
   auto Bounds =
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
-  auto VFS = Inputs.FSProvider->getFileSystem(Inputs.CompileCommand.Directory);
+  auto VFS = Inputs.FSProvider->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
@@ -423,7 +423,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   SPAN_ATTACH(Tracer, "File", FileName);
   assert(llvm::sys::path::is_absolute(FileName) && "relative FileName!");
   auto VFS = Baseline.StatCache->getConsumingFS(
-      Modified.FSProvider->getFileSystem(/*CWD=*/llvm::None));
+      Modified.FSProvider->view(/*CWD=*/llvm::None));
   // First scan preprocessor directives in Baseline and Modified. These will be
   // used to figure out newly added directives in Modified. Scanning can fail,
   // the code just bails out and creates an empty patch in such cases, as:

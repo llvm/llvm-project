@@ -50,7 +50,7 @@ IncludeStructure
 collectPatchedIncludes(llvm::StringRef ModifiedContents,
                        llvm::StringRef BaselineContents,
                        llvm::StringRef MainFileName = "main.cpp") {
-  MockFSProvider FS;
+  MockFS FS;
   auto TU = TestTU::withCode(BaselineContents);
   TU.Filename = MainFileName.str();
   // ms-compatibility changes meaning of #import, make sure it is turned off.
@@ -74,7 +74,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
       std::move(CI), &BaselinePreamble->Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(
           ModifiedContents.slice(0, Bounds.Size).str()),
-      PI.FSProvider->getFileSystem(PI.CompileCommand.Directory), Diags);
+      PI.FSProvider->view(PI.CompileCommand.Directory), Diags);
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     ADD_FAILURE() << "failed begin source file";
@@ -165,7 +165,7 @@ TEST(PreamblePatchTest, MainFileIsEscaped) {
 }
 
 TEST(PreamblePatchTest, PatchesPreambleIncludes) {
-  MockFSProvider FS;
+  MockFS FS;
   IgnoreDiagnostics Diags;
   auto TU = TestTU::withCode(R"cpp(
     #include "a.h"
@@ -201,7 +201,7 @@ llvm::Optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
   }
 
   IgnoreDiagnostics Diags;
-  MockFSProvider FS;
+  MockFS FS;
   auto TU = TestTU::withCode(Modified);
   auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
   if (!CI) {
@@ -219,7 +219,7 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
     ADD_FAILURE() << "Failed to build baseline preamble";
     return "";
   }
-  MockFSProvider FS;
+  MockFS FS;
   auto TU = TestTU::withCode(Modified);
   return PreamblePatch::create(testPath("main.cpp"), TU.inputs(FS),
                                *BaselinePreamble)
@@ -518,7 +518,7 @@ TEST(PreamblePatch, ModifiedBounds) {
 
     Annotations Modified(Case.Modified);
     TU.Code = Modified.code().str();
-    MockFSProvider FSProvider;
+    MockFS FSProvider;
     auto PP = PreamblePatch::create(testPath(TU.Filename),
                                     TU.inputs(FSProvider), *BaselinePreamble);
 

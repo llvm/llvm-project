@@ -22,10 +22,10 @@
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
 #include "support/Context.h"
-#include "support/FSProvider.h"
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/Threading.h"
+#include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -90,7 +90,7 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, const FileSystemProvider &FSProvider,
+    Context BackgroundContext, const ThreadsafeFS &FSProvider,
     const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize,
     std::function<void(BackgroundQueue::Stats)> OnProgress)
@@ -244,7 +244,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
   auto AbsolutePath = getAbsolutePath(Cmd);
 
-  auto FS = FSProvider.getFileSystem(Cmd.Directory);
+  auto FS = FSProvider.view(Cmd.Directory);
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
     return llvm::errorCodeToError(Buf.getError());
@@ -381,7 +381,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
 
-  auto FS = FSProvider.getFileSystem(/*CWD=*/llvm::None);
+  auto FS = FSProvider.view(/*CWD=*/llvm::None);
   llvm::DenseSet<PathRef> TUsToIndex;
   // We'll accept data from stale shards, but ensure the files get reindexed
   // soon.
