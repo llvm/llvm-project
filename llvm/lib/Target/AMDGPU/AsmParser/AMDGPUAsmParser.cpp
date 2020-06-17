@@ -489,7 +489,7 @@ public:
   }
 
   bool isVSrcB16() const {
-    return isVCSrcF16() || isLiteralImm(MVT::i16);
+    return isVCSrcB16() || isLiteralImm(MVT::i16);
   }
 
   bool isVSrcV2B16() const {
@@ -1546,6 +1546,16 @@ static bool isSafeTruncation(int64_t Val, unsigned Size) {
   return isUIntN(Size, Val) || isIntN(Size, Val);
 }
 
+static bool isInlineableLiteralOp16(int64_t Val, MVT VT, bool HasInv2Pi) {
+  if (VT.getScalarType() == MVT::i16) {
+    // FP immediate values are broken.
+    return isInlinableIntLiteral(Val);
+  }
+
+  // f16/v2f16 operands work correctly for all values.
+  return AMDGPU::isInlinableLiteral16(Val, HasInv2Pi);
+}
+
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
 
   // This is a hack to enable named inline values like
@@ -1577,9 +1587,9 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
       return false;
 
     if (type.getScalarSizeInBits() == 16) {
-      return AMDGPU::isInlinableLiteral16(
+      return isInlineableLiteralOp16(
         static_cast<int16_t>(FPLiteral.bitcastToAPInt().getZExtValue()),
-        AsmParser->hasInv2PiInlineImm());
+        type, AsmParser->hasInv2PiInlineImm());
     }
 
     // Check if single precision literal is inlinable
@@ -1599,9 +1609,9 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
   }
 
   if (type.getScalarSizeInBits() == 16) {
-    return AMDGPU::isInlinableLiteral16(
+    return isInlineableLiteralOp16(
       static_cast<int16_t>(Literal.getLoBits(16).getSExtValue()),
-      AsmParser->hasInv2PiInlineImm());
+      type, AsmParser->hasInv2PiInlineImm());
   }
 
   return AMDGPU::isInlinableLiteral32(
@@ -2825,16 +2835,22 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
     return AMDGPU::isInlinableLiteral32(Val, hasInv2PiInlineImm());
   case 2: {
     const unsigned OperandType = Desc.OpInfo[OpIdx].OperandType;
+    if (OperandType == AMDGPU::OPERAND_REG_IMM_INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_INLINE_AC_INT16)
+      return AMDGPU::isInlinableIntLiteral(Val);
+
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
-        OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2INT16)
+      return AMDGPU::isInlinableIntLiteralV216(Val);
+
+    if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_V2FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16) {
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
       return AMDGPU::isInlinableLiteralV216(Val, hasInv2PiInlineImm());
-    } else {
-      return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
-    }
+
+    return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
   }
   default:
     llvm_unreachable("invalid operand size");

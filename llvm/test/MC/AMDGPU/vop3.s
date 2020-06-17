@@ -555,7 +555,7 @@ v_mad_i16_e64 v5, -1, v2, v3
 // VI: v_mad_i16 v5, -1, v2, v3 ; encoding: [0x05,0x00,0xec,0xd1,0xc1,0x04,0x0e,0x04]
 
 v_mad_i16 v5, v1, -4.0, v3
-// VI: v_mad_i16 v5, v1, -4.0, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0xef,0x0d,0x04]
+// NOVI: error: invalid literal operand
 
 v_mad_i16 v5, v1, v2, 0
 // VI: v_mad_i16 v5, v1, v2, 0 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x05,0x02,0x02]
@@ -567,7 +567,7 @@ v_mad_u16 v5, v1, 0, v3
 // VI: v_mad_u16 v5, v1, 0, v3 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x01,0x0d,0x04]
 
 v_mad_u16 v5, v1, v2, -4.0
-// VI: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
+// NOVI: error: invalid literal operand
 
 ///===---------------------------------------------------------------------===//
 // VOP3 with Integer Clamp
