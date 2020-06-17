@@ -1606,6 +1606,23 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   return true;
 }
 
+static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
+                                 Statistic &InstRemovedStat) {
+  bool MadeChanges = false;
+  for (Instruction &Inst : make_early_inc_range(BB)) {
+    if (Inst.getType()->isVoidTy())
+      continue;
+    if (tryToReplaceWithConstant(Solver, &Inst)) {
+      if (Inst.isSafeToRemove())
+        Inst.eraseFromParent();
+      // Hey, we just changed something!
+      MadeChanges = true;
+      ++InstRemovedStat;
+    }
+  }
+  return MadeChanges;
+}
+
 // runSCCP() - Run the Sparse Conditional Constant Propagation algorithm,
 // and return true if the function was modified.
 static bool runSCCP(Function &F, const DataLayout &DL,
@@ -1647,21 +1664,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       continue;
     }
 
-    // Iterate over all of the instructions in a function, replacing them with
-    // constants if we have found them to be of constant values.
-    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
-      Instruction *Inst = &*BI++;
-      if (Inst->getType()->isVoidTy() || Inst->isTerminator())
-        continue;
-
-      if (tryToReplaceWithConstant(Solver, Inst)) {
-        if (isInstructionTriviallyDead(Inst))
-          Inst->eraseFromParent();
-        // Hey, we just changed something!
-        MadeChanges = true;
-        ++NumInstRemoved;
-      }
-    }
+    MadeChanges |= simplifyInstsInBlock(Solver, BB, NumInstRemoved);
   }
 
   return MadeChanges;
@@ -1890,30 +1893,19 @@ bool llvm::runIPSCCP(
         }
       }
 
-    for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-      if (!Solver.isBlockExecutable(&*BB)) {
-        LLVM_DEBUG(dbgs() << "  BasicBlock Dead:" << *BB);
+    for (BasicBlock &BB : F) {
+      if (!Solver.isBlockExecutable(&BB)) {
+        LLVM_DEBUG(dbgs() << "  BasicBlock Dead:" << BB);
         ++NumDeadBlocks;
 
         MadeChanges = true;
 
-        if (&*BB != &F.front())
-          BlocksToErase.push_back(&*BB);
+        if (&BB != &F.front())
+          BlocksToErase.push_back(&BB);
         continue;
       }
 
-      for (BasicBlock::iterator BI = BB->begin(), E = BB->end(); BI != E; ) {
-        Instruction *Inst = &*BI++;
-        if (Inst->getType()->isVoidTy())
-          continue;
-        if (tryToReplaceWithConstant(Solver, Inst)) {
-          if (Inst->isSafeToRemove())
-            Inst->eraseFromParent();
-          // Hey, we just changed something!
-          MadeChanges = true;
-          ++IPNumInstRemoved;
-        }
-      }
+      MadeChanges |= simplifyInstsInBlock(Solver, BB, IPNumInstRemoved);
     }
 
     DomTreeUpdater DTU = Solver.getDTU(F);
