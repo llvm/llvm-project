@@ -6773,7 +6773,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   // headers, sweeping up a bunch of types that the project doesn't
   // really rely on MSVC-compatible layout for.  We must therefore
   // support "ms_struct except for C++ stuff" as a secondary ABI.
-  if (Record->isMsStruct(Context) &&
+  // Don't emit this diagnostic if the feature was enabled as a
+  // language option (as opposed to via a pragma or attribute), as
+  // the option -mms-bitfields otherwise essentially makes it impossible
+  // to build C++ code, unless this diagnostic is turned off.
+  if (Record->isMsStruct(Context) && !Context.getLangOpts().MSBitfields &&
       (Record->isPolymorphic() || Record->getNumBases())) {
     Diag(Record->getLocation(), diag::warn_cxx_ms_struct);
   }
