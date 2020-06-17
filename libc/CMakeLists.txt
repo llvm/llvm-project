@@ -99,3 +99,5 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(fuzzing)
 endif()
+
+add_subdirectory(benchmarks)
