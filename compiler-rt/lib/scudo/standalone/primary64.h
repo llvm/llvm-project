@@ -213,9 +213,7 @@ public:
     return reinterpret_cast<const char *>(RegionInfoArray);
   }
 
-  static uptr getRegionInfoArraySize() {
-    return sizeof(RegionInfoArray);
-  }
+  static uptr getRegionInfoArraySize() { return sizeof(RegionInfoArray); }
 
   static BlockInfo findNearestBlock(const char *RegionInfoData, uptr Ptr) {
     const RegionInfo *RegionInfoArray =
@@ -457,6 +455,18 @@ private:
                              BlockSize;
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
+
+    // Releasing smaller blocks is expensive, so we want to make sure that a
+    // significant amount of bytes are free, and that there has been a good
+    // amount of batches pushed to the freelist before attempting to release.
+    if (BlockSize < PageSize / 16U) {
+      if (!Force && BytesPushed < Region->AllocatedUser / 16U)
+        return 0;
+      // We want 8x% to 9x% free bytes (the larger the bock, the lower the %).
+      if ((BytesInFreeList * 100U) / Region->AllocatedUser <
+          (100U - 1U - BlockSize / 16U))
+        return 0;
+    }
 
     if (!Force) {
       const s32 IntervalMs = getReleaseToOsIntervalMs();
