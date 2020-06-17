@@ -304,10 +304,13 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lkernel32");
       }
 
-      if (Args.hasArg(options::OPT_static))
+      if (Args.hasArg(options::OPT_static)) {
         CmdArgs.push_back("--end-group");
-      else
+      } else {
         AddLibGCC(Args, CmdArgs);
+        if (!HasWindowsApp)
+          CmdArgs.push_back("-lkernel32");
+      }
     }
 
     if (!Args.hasArg(options::OPT_nostartfiles)) {
