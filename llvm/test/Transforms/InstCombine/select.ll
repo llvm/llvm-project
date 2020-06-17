@@ -1669,3 +1669,62 @@ define float @copysign_wrong_const(float %x) {
   %r = select i1 %ispos, float 2.0, float -1.0
   ret float %r
 }
+
+; TODO: we can replace select with a Phi.
+define i32 @select_dominating_cond(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %x, i32 %y
+  ret i32 %s
+}
+
+; TODO: We can replace select with a Phi and then sink a and b to respective
+; branches.
+define i32 @select_dominating_cond_and_sink(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_dominating_cond_and_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  %a = add i32 %x, %y
+  %b = mul i32 %x, %y
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %s = select i1 %cond, i32 %a, i32 %b
+  ret i32 %s
+}
