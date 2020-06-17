@@ -1,5 +1,3 @@
-project(OMPT-Multiplex)
-
 if(LIBOMP_OMPT_SUPPORT)
   include_directories(${LIBOMP_INCLUDE_DIR})
 
