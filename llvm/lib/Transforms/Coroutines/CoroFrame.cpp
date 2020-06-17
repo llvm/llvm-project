@@ -1067,7 +1067,8 @@ static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
     if (!calledFunc || callInst2->getParent() != &F.getEntryBlock() ||
         callInst->getParent()->getSinglePredecessor() != &F.getEntryBlock())
       return false;
-    if (calledFunc->getName().equals("swift_getFunctionReplacement")) {
+    if (calledFunc->getName().equals("swift_getFunctionReplacement") ||
+        calledFunc->getName().equals("swift_getFunctionReplacement50")) {
       return true;
     }
     return false;
