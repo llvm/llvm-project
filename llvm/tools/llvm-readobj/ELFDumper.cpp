@@ -2731,18 +2731,19 @@ getGnuHashTableChains(const typename ELFT::SymRange DynSymTable,
   // A normal empty GNU hash table section produced by linker might have
   // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
   // and have dummy null values in the Bloom filter and in the buckets
-  // vector. It happens because the value of symndx is not important for
-  // dynamic loaders when the GNU hash table is empty. They just skip the
-  // whole object during symbol lookup. In such cases, the symndx value is
-  // irrelevant and we should not report a warning.
+  // vector (or no values at all). It happens because the value of symndx is not
+  // important for dynamic loaders when the GNU hash table is empty. They just
+  // skip the whole object during symbol lookup. In such cases, the symndx value
+  // is irrelevant and we should not report a warning.
   ArrayRef<typename ELFT::Word> Buckets = GnuHashTable->buckets();
   if (!llvm::all_of(Buckets, [](typename ELFT::Word V) { return V == 0; }))
     return createError("the first hashed symbol index (" +
                        Twine(GnuHashTable->symndx) +
                        ") is larger than the number of dynamic symbols (" +
                        Twine(NumSyms) + ")");
-
-  return GnuHashTable->values(NumSyms);
+  // There is no way to represent an array of (dynamic symbols count - symndx)
+  // length.
+  return ArrayRef<typename ELFT::Word>();
 }
 
 template <typename ELFT>
