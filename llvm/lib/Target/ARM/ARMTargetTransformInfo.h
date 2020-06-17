@@ -250,8 +250,7 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
-  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                             bool TailFolded) const;
+  bool emitGetActiveLaneMask() const;
 
   bool shouldBuildLookupTablesForConstant(Constant *C) const {
     // In the ROPI and RWPI relocation models we can't have pointers to global

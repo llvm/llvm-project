@@ -141,8 +141,7 @@ public:
     return false;
   }
 
-  bool emitGetActiveLaneMask(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                             bool TailFold) const {
+  bool emitGetActiveLaneMask() const {
     return false;
   }
 
