@@ -478,7 +478,7 @@ int clangTidyMain(int argc, const char **argv) {
       llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
                    << Plural << "\n";
     }
-    return WErrorCount;
+    return 1;
   }
 
   if (FoundErrors) {
