@@ -113,7 +113,7 @@ OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
     }
   }
   // Allocate storage for the result's data.
-  int status{result->Allocate(lowerBound, resultExtent, elementBytes)};
+  int status{result->Allocate(lowerBound, resultExtent)};
   if (status != CFI_SUCCESS) {
     terminator.Crash("RESHAPE: Allocate failed (error %d)", status);
   }
