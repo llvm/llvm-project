@@ -688,7 +688,7 @@ void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
   }
   result.Establish(string.type(), resultBytes, nullptr, 0);
   RUNTIME_CHECK(terminator, result.Allocate(nullptr, nullptr) == CFI_SUCCESS);
-  std::memcmp(result.OffsetElement(), string.OffsetElement(), resultBytes);
+  std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 
 void RTNAME(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
