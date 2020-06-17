@@ -1978,3 +1978,19 @@ bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
     return false;
   }
 }
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
+                      ST.getMaxNumSGPRs(MF) / 4);
+}
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
+}
+
+ArrayRef<MCPhysReg>
+SIRegisterInfo::getAllVGPR32(const MachineFunction &MF) const {
+  return makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), ST.getMaxNumVGPRs(MF));
+}
