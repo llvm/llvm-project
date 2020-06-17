@@ -387,7 +387,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     Value *ScalarBTC = State.get(getOperand(1), {Part, 0});
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = VectorType::get(Int1Ty, State.VF);
+    auto *PredTy = FixedVectorType::get(Int1Ty, State.VF);
     Instruction *Call = Builder.CreateIntrinsic(
         Intrinsic::get_active_lane_mask, {PredTy, ScalarBTC->getType()},
         {VIVElem0, ScalarBTC}, nullptr, "active.lane.mask");
