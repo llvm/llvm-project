@@ -2443,6 +2443,9 @@ namespace {
 /// This class provides transaction based operation on the IR.
 /// Every change made through this class is recorded in the internal state and
 /// can be undone (rollback) until commit is called.
+/// CGP does not check if instructions could be speculatively executed when
+/// moved. Preserving the original location would pessimize the debugging
+/// experience, as well as negatively impact the quality of sample PGO.
 class TypePromotionTransaction {
   /// This represents the common interface of the individual transaction.
   /// Each class implements the logic for doing one specific modification on
@@ -2658,6 +2661,7 @@ class TypePromotionTransaction {
     ZExtBuilder(Instruction *InsertPt, Value *Opnd, Type *Ty)
         : TypePromotionAction(InsertPt) {
       IRBuilder<> Builder(InsertPt);
+      Builder.SetCurrentDebugLocation(DebugLoc());
       Val = Builder.CreateZExt(Opnd, Ty, "promoted");
       LLVM_DEBUG(dbgs() << "Do: ZExtBuilder: " << *Val << "\n");
     }
@@ -5798,16 +5802,8 @@ bool CodeGenPrepare::optimizeExt(Instruction *&Inst) {
   if (canFormExtLd(SpeculativelyMovedExts, LI, ExtFedByLoad, HasPromoted)) {
     assert(LI && ExtFedByLoad && "Expect a valid load and extension");
     TPT.commit();
-    // Move the extend into the same block as the load
+    // Move the extend into the same block as the load.
     ExtFedByLoad->moveAfter(LI);
-    // CGP does not check if the zext would be speculatively executed when moved
-    // to the same basic block as the load. Preserving its original location
-    // would pessimize the debugging experience, as well as negatively impact
-    // the quality of sample pgo. We don't want to use "line 0" as that has a
-    // size cost in the line-table section and logically the zext can be seen as
-    // part of the load. Therefore we conservatively reuse the same debug
-    // location for the load and the zext.
-    ExtFedByLoad->setDebugLoc(LI->getDebugLoc());
     ++NumExtsMoved;
     Inst = ExtFedByLoad;
     return true;
