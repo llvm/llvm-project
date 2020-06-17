@@ -112,3 +112,26 @@ define i64 @test5(i32 %x) {
   %ext = sext i32 %p to i64
   ret i64 %ext
 }
+
+; sext is constant folded before sext -> zext conversion.
+define i64 @test6(i32 %x) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    ret i64 10
+;
+  %ext = sext i32 10 to i64
+  ret i64 %ext
+}
+
+; sext that can be converted to zext feeds another sext.
+define i64 @test7(i16 %x) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[P:%.*]] = and i16 [[X:%.*]], 15
+; CHECK-NEXT:    [[EXT_1:%.*]] = sext i16 [[P]] to i32
+; CHECK-NEXT:    [[EXT_2:%.*]] = sext i32 [[EXT_1]] to i64
+; CHECK-NEXT:    ret i64 [[EXT_2]]
+;
+  %p = and i16 %x, 15
+  %ext.1 = sext i16 %p to i32
+  %ext.2 = sext i32 %ext.1 to i64
+  ret i64 %ext.2
+}
