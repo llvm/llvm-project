@@ -1413,14 +1413,14 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
 }
 
 bool ARMTTIImpl::emitGetActiveLaneMask() const {
-  if (!ST->hasMVEIntegerOps())
+  if (!ST->hasMVEIntegerOps() || DisableTailPredication)
     return false;
 
-  // TODO: Intrinsic @llvm.get.active.lane.mask is supported.
+  // Intrinsic @llvm.get.active.lane.mask is supported.
   // It is used in the MVETailPredication pass, which requires the number of
   // elements processed by this vector loop to setup the tail-predicated
   // loop.
-  return false;
+  return true;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
