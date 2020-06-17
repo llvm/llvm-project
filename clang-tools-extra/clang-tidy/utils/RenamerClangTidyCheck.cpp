@@ -195,10 +195,6 @@ public:
   NameLookup() : NameLookup(nullptr) {}
 
   bool hasMultipleResolutions() const { return Data.getInt(); }
-  bool hasDecl() const {
-    assert(!hasMultipleResolutions() && "Found multiple decls");
-    return Data.getPointer() != nullptr;
-  }
   const NamedDecl *getDecl() const {
     assert(!hasMultipleResolutions() && "Found multiple decls");
     return Data.getPointer();

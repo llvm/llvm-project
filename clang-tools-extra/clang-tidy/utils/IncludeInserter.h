@@ -76,7 +76,6 @@ private:
   llvm::DenseMap<FileID, std::unique_ptr<IncludeSorter>> IncludeSorterByFile;
   llvm::DenseMap<FileID, std::set<std::string>> InsertedHeaders;
   const SourceManager &SourceMgr;
-  const LangOptions &LangOpts;
   const IncludeSorter::IncludeStyle Style;
   friend class IncludeInserterCallback;
 };

@@ -37,7 +37,7 @@ private:
 IncludeInserter::IncludeInserter(const SourceManager &SourceMgr,
                                  const LangOptions &LangOpts,
                                  IncludeSorter::IncludeStyle Style)
-    : SourceMgr(SourceMgr), LangOpts(LangOpts), Style(Style) {}
+    : SourceMgr(SourceMgr), Style(Style) {}
 
 IncludeInserter::~IncludeInserter() {}
 
@@ -52,7 +52,7 @@ IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
   if (!Entry) {
     // If it wasn't found, Entry will be default constructed to nullptr.
     Entry = std::make_unique<IncludeSorter>(
-        &SourceMgr, &LangOpts, FileID,
+        &SourceMgr, FileID,
         SourceMgr.getFilename(SourceMgr.getLocForStartOfFile(FileID)), Style);
   }
   return *Entry;
