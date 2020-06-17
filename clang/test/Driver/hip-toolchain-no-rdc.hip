@@ -154,14 +154,14 @@
 // Link host objects.
 //
 
-// LINK-NOT: llvm-link
-// LINK-NOT: opt
-// LINK-NOT: llc
+// LINK-NOT: {{".*/llvm-link"}}
+// LINK-NOT: {{".*/opt"}}
+// LINK-NOT: {{".*/llc"}}
 // LINK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
 // LINK-NOT: "-T" "{{.*}}.lk"
 
-// LKONLY-NOT: llvm-link
-// LKONLY-NOT: opt
-// LKONLY-NOT: llc
+// LKONLY-NOT: {{".*/llvm-link"}}
+// LKONLY-NOT: {{".*/opt"}}
+// LKONLY-NOT: {{".*/llc"}}
 // LKONLY: [[LD:".*ld.*"]] {{.*}} "{{.*/a.o}}" "{{.*/b.o}}"
 // LKONLY-NOT: "-T" "{{.*}}.lk"
