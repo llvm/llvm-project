@@ -45,7 +45,7 @@ void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
   sizeOfCmds += lc->getSize();
 }
 
-size_t MachHeaderSection::getSize() const {
+uint64_t MachHeaderSection::getSize() const {
   return sizeof(mach_header_64) + sizeOfCmds;
 }
 
@@ -138,7 +138,7 @@ void BindingSection::writeTo(uint8_t *buf) const {
 StubsSection::StubsSection()
     : SyntheticSection(segment_names::text, "__stubs") {}
 
-size_t StubsSection::getSize() const {
+uint64_t StubsSection::getSize() const {
   return entries.size() * target->stubSize;
 }
 
@@ -158,7 +158,7 @@ void StubsSection::addEntry(DylibSymbol &sym) {
 StubHelperSection::StubHelperSection()
     : SyntheticSection(segment_names::text, "__stub_helper") {}
 
-size_t StubHelperSection::getSize() const {
+uint64_t StubHelperSection::getSize() const {
   return target->stubHelperHeaderSize +
          in.stubs->getEntries().size() * target->stubHelperEntrySize;
 }
@@ -200,7 +200,7 @@ LazyPointerSection::LazyPointerSection()
   flags = S_LAZY_SYMBOL_POINTERS;
 }
 
-size_t LazyPointerSection::getSize() const {
+uint64_t LazyPointerSection::getSize() const {
   return in.stubs->getEntries().size() * WordSize;
 }
 
@@ -281,7 +281,7 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
   align = WordSize;
 }
 
-size_t SymtabSection::getSize() const {
+uint64_t SymtabSection::getSize() const {
   return symbols.size() * sizeof(structs::nlist_64);
 }
 
