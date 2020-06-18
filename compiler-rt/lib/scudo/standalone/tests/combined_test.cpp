@@ -385,14 +385,14 @@ struct DeathSizeClassConfig {
   static const scudo::uptr NumBits = 1;
   static const scudo::uptr MinSizeLog = 10;
   static const scudo::uptr MidSizeLog = 10;
-  static const scudo::uptr MaxSizeLog = 11;
+  static const scudo::uptr MaxSizeLog = 13;
   static const scudo::u32 MaxNumCachedHint = 4;
   static const scudo::uptr MaxBytesCachedLog = 12;
 };
 
 static const scudo::uptr DeathRegionSizeLog = 20U;
 struct DeathConfig {
-  // Tiny allocator, its Primary only serves chunks of two sizes.
+  // Tiny allocator, its Primary only serves chunks of four sizes.
   using DeathSizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
   typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
       Primary;
@@ -472,7 +472,10 @@ TEST(ScudoCombinedTest, FullRegion) {
        ClassId <= DeathConfig::DeathSizeClassMap::LargestClassId; ClassId++) {
     const scudo::uptr Size =
         DeathConfig::DeathSizeClassMap::getSizeByClassId(ClassId);
-    const scudo::uptr MaxNumberOfChunks = (1U << DeathRegionSizeLog) / Size;
+    // Allocate enough to fill all of the regions above this one.
+    const scudo::uptr MaxNumberOfChunks =
+        ((1U << DeathRegionSizeLog) / Size) *
+        (DeathConfig::DeathSizeClassMap::LargestClassId - ClassId + 1);
     void *P;
     for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
       P = Allocator->allocate(Size - 64U, Origin);
@@ -481,10 +484,10 @@ TEST(ScudoCombinedTest, FullRegion) {
       else
         V.push_back(P);
     }
-  }
-  while (!V.empty()) {
-    Allocator->deallocate(V.back(), Origin);
-    V.pop_back();
+    while (!V.empty()) {
+      Allocator->deallocate(V.back(), Origin);
+      V.pop_back();
+    }
   }
   EXPECT_EQ(FailedAllocationsCount, 0U);
 }
