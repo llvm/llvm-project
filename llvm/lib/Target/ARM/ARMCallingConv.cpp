@@ -278,5 +278,33 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   return true;
 }
 
+static bool CustomAssignInRegList(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                  CCValAssign::LocInfo LocInfo, CCState &State,
+                                  ArrayRef<MCPhysReg> RegList) {
+  unsigned Reg = State.AllocateReg(RegList);
+  if (Reg) {
+    State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return true;
+  }
+  return false;
+}
+
+static bool CC_ARM_AAPCS_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                    CCValAssign::LocInfo LocInfo,
+                                    ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  // f16 arguments are extended to i32 and assigned to a register in [r0, r3]
+  return CustomAssignInRegList(ValNo, ValVT, MVT::i32, LocInfo, State,
+                               RRegList);
+}
+
+static bool CC_ARM_AAPCS_VFP_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags,
+                                        CCState &State) {
+  // f16 arguments are extended to f32 and assigned to a register in [s0, s15]
+  return CustomAssignInRegList(ValNo, ValVT, MVT::f32, LocInfo, State,
+                               SRegList);
+}
+
 // Include the table generated calling convention implementations.
 #include "ARMGenCallingConv.inc"

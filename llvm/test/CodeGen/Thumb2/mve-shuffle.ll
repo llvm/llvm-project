@@ -682,7 +682,7 @@ entry:
 define arm_aapcs_vfpcc half @extract_f16_0(<8 x half> %a) {
 ; CHECK-LABEL: extract_f16_0:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    @ kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bx lr
 entry:
   %res = extractelement <8 x half> %a, i32 0
@@ -693,7 +693,6 @@ define arm_aapcs_vfpcc half @extract_f16_3(<8 x half> %a) {
 ; CHECK-LABEL: extract_f16_3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s0, s1
-; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %res = extractelement <8 x half> %a, i32 3
