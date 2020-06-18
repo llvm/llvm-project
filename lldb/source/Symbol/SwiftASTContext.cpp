@@ -2206,7 +2206,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     logError("couldn't load the Swift stdlib");
     return {};
   }
-  
+
   return swift_ast_sp;
 }
 
@@ -2497,7 +2497,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       info.type = XcodeSDK::GetSDKTypeForTriple(
           HostInfo::GetArchitecture().GetTriple());
       XcodeSDK sdk(info);
-      sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
+      sdk_path = std::string(HostInfo::GetXcodeSDKPath(sdk));
     }
     if (!sdk_path.empty()) {
       // Note that calling setSDKPath() also recomputes all paths that
