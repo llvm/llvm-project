@@ -1,3 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS ShapeToStandardPatterns.td)
+mlir_tablegen(ShapeToStandardPatterns.inc -gen-rewriters)
+add_public_tablegen_target(ShapeToStandardPatternsIncGen)
+
 add_mlir_conversion_library(MLIRShapeToStandard
   ShapeToStandard.cpp
 
@@ -6,6 +10,7 @@ add_mlir_conversion_library(MLIRShapeToStandard
 
   DEPENDS
   MLIRConversionPassIncGen
+  ShapeToStandardPatternsIncGen
 
   LINK_COMPONENTS
   Core
