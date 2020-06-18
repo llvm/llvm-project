@@ -1164,10 +1164,11 @@ private:
                                       RewriterState &curState);
 
   /// Build an optimistic legalization graph given the provided patterns. This
-  /// function populates 'legalizerPatterns' with the operations that are not
-  /// directly legal, but may be transitively legal for the current target given
-  /// the provided patterns.
+  /// function populates 'anyOpLegalizerPatterns' and 'legalizerPatterns' with
+  /// patterns for operations that are not directly legal, but may be
+  /// transitively legal for the current target given the provided patterns.
   void buildLegalizationGraph(
+      LegalizationPatterns &anyOpLegalizerPatterns,
       DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
 
   /// Compute the benefit of each node within the computed legalization graph.
@@ -1179,6 +1180,21 @@ private:
   ///     pattern with the highest PatternBenefit. This allows for users to
   ///     prefer specific legalizations over others.
   void computeLegalizationGraphBenefit(
+      LegalizationPatterns &anyOpLegalizerPatterns,
+      DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
+
+  /// Compute the legalization depth when legalizing an operation of the given
+  /// type.
+  unsigned computeOpLegalizationDepth(
+      OperationName op, DenseMap<OperationName, unsigned> &minOpPatternDepth,
+      DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
+
+  /// Apply the conversion cost model to the given set of patterns, and return
+  /// the smallest legalization depth of any of the patterns. See
+  /// `computeLegalizationGraphBenefit` for the breakdown of the cost model.
+  unsigned applyCostModelToPatterns(
+      LegalizationPatterns &patterns,
+      DenseMap<OperationName, unsigned> &minOpPatternDepth,
       DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
 
   /// The current set of patterns that have been applied.
@@ -1195,12 +1211,13 @@ private:
 OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
                                        const OwningRewritePatternList &patterns)
     : target(targetInfo), applicator(patterns) {
-  // The set of legality information for operations transitively supported by
-  // the target.
+  // The set of patterns that can be applied to illegal operations to transform
+  // them into legal ones.
   DenseMap<OperationName, LegalizationPatterns> legalizerPatterns;
+  LegalizationPatterns anyOpLegalizerPatterns;
 
-  buildLegalizationGraph(legalizerPatterns);
-  computeLegalizationGraphBenefit(legalizerPatterns);
+  buildLegalizationGraph(anyOpLegalizerPatterns, legalizerPatterns);
+  computeLegalizationGraphBenefit(anyOpLegalizerPatterns, legalizerPatterns);
 }
 
 bool OperationLegalizer::isIllegal(Operation *op) const {
@@ -1365,7 +1382,7 @@ bool OperationLegalizer::canApplyPattern(Operation *op,
   LLVM_DEBUG({
     auto &os = rewriter.getImpl().logger;
     os.getOStream() << "\n";
-    os.startLine() << "* Pattern : '" << pattern.getRootKind() << " -> (";
+    os.startLine() << "* Pattern : '" << op->getName() << " -> (";
     llvm::interleaveComma(pattern.getGeneratedOps(), llvm::dbgs());
     os.getOStream() << ")' {\n";
     os.indent();
@@ -1466,6 +1483,7 @@ LogicalResult OperationLegalizer::legalizePatternResult(
 }
 
 void OperationLegalizer::buildLegalizationGraph(
+    LegalizationPatterns &anyOpLegalizerPatterns,
     DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
   // A mapping between an operation and a set of operations that can be used to
   // generate it.
@@ -1478,21 +1496,40 @@ void OperationLegalizer::buildLegalizationGraph(
 
   // Build the mapping from operations to the parent ops that may generate them.
   applicator.walkAllPatterns([&](const RewritePattern &pattern) {
-    OperationName root = pattern.getRootKind();
+    Optional<OperationName> root = pattern.getRootKind();
+
+    // If the pattern has no specific root, we can't analyze the relationship
+    // between the root op and generated operations. Given that, add all such
+    // patterns to the legalization set.
+    if (!root) {
+      anyOpLegalizerPatterns.push_back(&pattern);
+      return;
+    }
 
     // Skip operations that are always known to be legal.
-    if (target.getOpAction(root) == LegalizationAction::Legal)
+    if (target.getOpAction(*root) == LegalizationAction::Legal)
       return;
 
     // Add this pattern to the invalid set for the root op and record this root
     // as a parent for any generated operations.
-    invalidPatterns[root].insert(&pattern);
+    invalidPatterns[*root].insert(&pattern);
     for (auto op : pattern.getGeneratedOps())
-      parentOps[op].insert(root);
+      parentOps[op].insert(*root);
 
     // Add this pattern to the worklist.
     patternWorklist.insert(&pattern);
   });
+
+  // If there are any patterns that don't have a specific root kind, we can't
+  // make direct assumptions about what operations will never be legalized.
+  // Note: Technically we could, but it would require an analysis that may
+  // recurse into itself. It would be better to perform this kind of filtering
+  // at a higher level than here anyways.
+  if (!anyOpLegalizerPatterns.empty()) {
+    for (const RewritePattern *pattern : patternWorklist)
+      legalizerPatterns[*pattern->getRootKind()].push_back(pattern);
+    return;
+  }
 
   while (!patternWorklist.empty()) {
     auto *pattern = patternWorklist.pop_back_val();
@@ -1507,106 +1544,130 @@ void OperationLegalizer::buildLegalizationGraph(
 
     // Otherwise, if all of the generated operation are valid, this op is now
     // legal so add all of the child patterns to the worklist.
-    legalizerPatterns[pattern->getRootKind()].push_back(pattern);
-    invalidPatterns[pattern->getRootKind()].erase(pattern);
+    legalizerPatterns[*pattern->getRootKind()].push_back(pattern);
+    invalidPatterns[*pattern->getRootKind()].erase(pattern);
 
     // Add any invalid patterns of the parent operations to see if they have now
     // become legal.
-    for (auto op : parentOps[pattern->getRootKind()])
+    for (auto op : parentOps[*pattern->getRootKind()])
       patternWorklist.set_union(invalidPatterns[op]);
   }
 }
 
 void OperationLegalizer::computeLegalizationGraphBenefit(
+    LegalizationPatterns &anyOpLegalizerPatterns,
     DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
   // The smallest pattern depth, when legalizing an operation.
-  DenseMap<OperationName, unsigned> minPatternDepth;
-
-  // Compute the minimum legalization depth for a given operation.
-  std::function<unsigned(OperationName)> computeDepth = [&](OperationName op) {
-    // Check for existing depth.
-    auto depthIt = minPatternDepth.find(op);
-    if (depthIt != minPatternDepth.end())
-      return depthIt->second;
-
-    // If a mapping for this operation does not exist, then this operation
-    // is always legal. Return 0 as the depth for a directly legal operation.
-    auto opPatternsIt = legalizerPatterns.find(op);
-    if (opPatternsIt == legalizerPatterns.end() || opPatternsIt->second.empty())
-      return 0u;
-
-    // Initialize the depth to the maximum value.
-    unsigned minDepth = std::numeric_limits<unsigned>::max();
-
-    // Record this initial depth in case we encounter this op again when
-    // recursively computing the depth.
-    minPatternDepth.try_emplace(op, minDepth);
-
-    // Compute the depth for each pattern used to legalize this operation.
-    SmallVector<std::pair<const RewritePattern *, unsigned>, 4> patternsByDepth;
-    patternsByDepth.reserve(opPatternsIt->second.size());
-    for (const RewritePattern *pattern : opPatternsIt->second) {
-      unsigned depth = 0;
-      for (auto generatedOp : pattern->getGeneratedOps())
-        depth = std::max(depth, computeDepth(generatedOp) + 1);
-      patternsByDepth.emplace_back(pattern, depth);
-
-      // Update the min depth for this operation.
-      minDepth = std::min(minDepth, depth);
-    }
-
-    // Update the pattern depth.
-    minPatternDepth[op] = minDepth;
-
-    // If the operation only has one legalization pattern, there is no need to
-    // sort them.
-    if (patternsByDepth.size() == 1)
-      return minDepth;
-
-    // Sort the patterns by those likely to be the most beneficial.
-    llvm::array_pod_sort(
-        patternsByDepth.begin(), patternsByDepth.end(),
-        [](const std::pair<const RewritePattern *, unsigned> *lhs,
-           const std::pair<const RewritePattern *, unsigned> *rhs) {
-          // First sort by the smaller pattern legalization depth.
-          if (lhs->second != rhs->second)
-            return llvm::array_pod_sort_comparator<unsigned>(&lhs->second,
-                                                             &rhs->second);
-
-          // Then sort by the larger pattern benefit.
-          auto lhsBenefit = lhs->first->getBenefit();
-          auto rhsBenefit = rhs->first->getBenefit();
-          return llvm::array_pod_sort_comparator<PatternBenefit>(&rhsBenefit,
-                                                                 &lhsBenefit);
-        });
-
-    // Update the legalization pattern to use the new sorted list.
-    opPatternsIt->second.clear();
-    for (auto &patternIt : patternsByDepth)
-      opPatternsIt->second.push_back(patternIt.first);
-
-    return minDepth;
-  };
+  DenseMap<OperationName, unsigned> minOpPatternDepth;
 
   // For each operation that is transitively legal, compute a cost for it.
   for (auto &opIt : legalizerPatterns)
-    if (!minPatternDepth.count(opIt.first))
-      computeDepth(opIt.first);
+    if (!minOpPatternDepth.count(opIt.first))
+      computeOpLegalizationDepth(opIt.first, minOpPatternDepth,
+                                 legalizerPatterns);
+
+  // Apply the cost model to the patterns that can match any operation. Those
+  // with a specific operation type are already resolved when computing the op
+  // legalization depth.
+  if (!anyOpLegalizerPatterns.empty())
+    applyCostModelToPatterns(anyOpLegalizerPatterns, minOpPatternDepth,
+                             legalizerPatterns);
 
   // Apply a cost model to the pattern applicator. We order patterns first by
   // depth then benefit. `legalizerPatterns` contains per-op patterns by
   // decreasing benefit.
   applicator.applyCostModel([&](const RewritePattern &p) {
-    auto &list = legalizerPatterns[p.getRootKind()];
+    ArrayRef<const RewritePattern *> orderedPatternList;
+    if (Optional<OperationName> rootName = p.getRootKind())
+      orderedPatternList = legalizerPatterns[*rootName];
+    else
+      orderedPatternList = anyOpLegalizerPatterns;
 
     // If the pattern is not found, then it was removed and cannot be matched.
-    LegalizationPatterns::iterator it = llvm::find(list, &p);
-    if (it == list.end())
+    auto it = llvm::find(orderedPatternList, &p);
+    if (it == orderedPatternList.end())
       return PatternBenefit::impossibleToMatch();
 
     // Patterns found earlier in the list have higher benefit.
-    return PatternBenefit(std::distance(it, list.end()));
+    return PatternBenefit(std::distance(it, orderedPatternList.end()));
   });
+}
+
+unsigned OperationLegalizer::computeOpLegalizationDepth(
+    OperationName op, DenseMap<OperationName, unsigned> &minOpPatternDepth,
+    DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
+  // Check for existing depth.
+  auto depthIt = minOpPatternDepth.find(op);
+  if (depthIt != minOpPatternDepth.end())
+    return depthIt->second;
+
+  // If a mapping for this operation does not exist, then this operation
+  // is always legal. Return 0 as the depth for a directly legal operation.
+  auto opPatternsIt = legalizerPatterns.find(op);
+  if (opPatternsIt == legalizerPatterns.end() || opPatternsIt->second.empty())
+    return 0u;
+
+  // Record this initial depth in case we encounter this op again when
+  // recursively computing the depth.
+  minOpPatternDepth.try_emplace(op, std::numeric_limits<unsigned>::max());
+
+  // Apply the cost model to the operation patterns, and update the minimum
+  // depth.
+  unsigned minDepth = applyCostModelToPatterns(
+      opPatternsIt->second, minOpPatternDepth, legalizerPatterns);
+  minOpPatternDepth[op] = minDepth;
+  return minDepth;
+}
+
+unsigned OperationLegalizer::applyCostModelToPatterns(
+    LegalizationPatterns &patterns,
+    DenseMap<OperationName, unsigned> &minOpPatternDepth,
+    DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
+  unsigned minDepth = std::numeric_limits<unsigned>::max();
+
+  // Compute the depth for each pattern within the set.
+  SmallVector<std::pair<const RewritePattern *, unsigned>, 4> patternsByDepth;
+  patternsByDepth.reserve(patterns.size());
+  for (const RewritePattern *pattern : patterns) {
+    unsigned depth = 0;
+    for (auto generatedOp : pattern->getGeneratedOps()) {
+      unsigned generatedOpDepth = computeOpLegalizationDepth(
+          generatedOp, minOpPatternDepth, legalizerPatterns);
+      depth = std::max(depth, generatedOpDepth + 1);
+    }
+    patternsByDepth.emplace_back(pattern, depth);
+
+    // Update the minimum depth of the pattern list.
+    minDepth = std::min(minDepth, depth);
+  }
+
+  // If the operation only has one legalization pattern, there is no need to
+  // sort them.
+  if (patternsByDepth.size() == 1)
+    return minDepth;
+
+  // Sort the patterns by those likely to be the most beneficial.
+  llvm::array_pod_sort(
+      patternsByDepth.begin(), patternsByDepth.end(),
+      [](const std::pair<const RewritePattern *, unsigned> *lhs,
+         const std::pair<const RewritePattern *, unsigned> *rhs) {
+        // First sort by the smaller pattern legalization depth.
+        if (lhs->second != rhs->second)
+          return llvm::array_pod_sort_comparator<unsigned>(&lhs->second,
+                                                           &rhs->second);
+
+        // Then sort by the larger pattern benefit.
+        auto lhsBenefit = lhs->first->getBenefit();
+        auto rhsBenefit = rhs->first->getBenefit();
+        return llvm::array_pod_sort_comparator<PatternBenefit>(&rhsBenefit,
+                                                               &lhsBenefit);
+      });
+
+  // Update the legalization pattern to use the new sorted list.
+  patterns.clear();
+  for (auto &patternIt : patternsByDepth)
+    patterns.push_back(patternIt.first);
+  return minDepth;
 }
 
 //===----------------------------------------------------------------------===//
