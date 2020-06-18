@@ -98,7 +98,7 @@ define i8 @test6f() {
 ; CHECK: alloca i8, align 1
 ; CHECK-NEXT: call i8 @test6g
 ; CHECK-NEXT: icmp eq i8 %tmp, 0
-; CHECK-NEXT: load i8, i8* %r, align 1, !dbg !{{[0-9]+$}}
+; CHECK-NEXT: load i8, i8* %r, align 1{{$}}
 
 bb0:
   %r = alloca i8, align 1
