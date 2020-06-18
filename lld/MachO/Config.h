@@ -29,7 +29,9 @@ struct Configuration {
   llvm::StringRef outputFile;
   llvm::MachO::Architecture arch;
   llvm::MachO::HeaderFileType outputType;
-  std::vector<llvm::StringRef> searchPaths;
+  std::vector<llvm::StringRef> librarySearchPaths;
+  // TODO: use the framework search paths
+  std::vector<llvm::StringRef> frameworkSearchPaths;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
 };
 
