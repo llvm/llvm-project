@@ -76,9 +76,9 @@ entry:
   %c.addr = alloca i32, align 4
   store i32 %r, i32* %r.addr, align 4
   store i32 %c, i32* %c.addr, align 4
-  %0 = load <4 x double>, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 0), align 16
+  %0 = load <4 x double>, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 0), align 8
   %mul = call <4 x double> @llvm.matrix.multiply(<4 x double> %0, <4 x double> %0, i32 2, i32 2, i32 2)
-  store <4 x double> %0, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 2), align 16
+  store <4 x double> %0, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 2), align 8
   ret void
 }
 
