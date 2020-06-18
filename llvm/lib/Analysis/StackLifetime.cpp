@@ -8,17 +8,26 @@
 
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormattedStream.h"
+#include <memory>
 #include <tuple>
 
 using namespace llvm;
@@ -283,4 +292,67 @@ void StackLifetime::run() {
   LLVM_DEBUG(dumpBlockLiveness());
   calculateLiveIntervals();
   LLVM_DEBUG(dumpLiveRanges());
+}
+
+class StackLifetime::LifetimeAnnotationWriter
+    : public AssemblyAnnotationWriter {
+  const StackLifetime &SL;
+  SmallVector<StringRef, 16> Names;
+
+  void printInstrAlive(unsigned InstrNo, formatted_raw_ostream &OS) {
+    Names.clear();
+    for (const auto &KV : SL.AllocaNumbering) {
+      if (SL.LiveRanges[KV.getSecond()].test(InstrNo))
+        Names.push_back(KV.getFirst()->getName());
+    }
+    llvm::sort(Names);
+    OS << "  ; Alive: <" << llvm::join(Names, " ") << ">\n";
+  }
+
+  void printBBAlive(const BasicBlock *BB, bool Start,
+                    formatted_raw_ostream &OS) {
+    auto ItBB = SL.BlockInstRange.find(BB);
+    if (ItBB == SL.BlockInstRange.end())
+      return; // Unreachable.
+    unsigned InstrNo =
+        Start ? ItBB->getSecond().first : (ItBB->getSecond().second - 1);
+    printInstrAlive(InstrNo, OS);
+  }
+
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override {
+    printBBAlive(BB, true, OS);
+  }
+  void emitBasicBlockEndAnnot(const BasicBlock *BB,
+                              formatted_raw_ostream &OS) override {
+    printBBAlive(BB, false, OS);
+  }
+
+  void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
+    auto It = SL.InstructionNumbering.find(dyn_cast<IntrinsicInst>(&V));
+    if (It == SL.InstructionNumbering.end())
+      return; // Unintresting.
+    OS << "\n";
+    printInstrAlive(It->getSecond(), OS);
+  }
+
+public:
+  LifetimeAnnotationWriter(const StackLifetime &SL) : SL(SL) {}
+};
+
+void StackLifetime::print(raw_ostream &OS) {
+  LifetimeAnnotationWriter AAW(*this);
+  F.print(OS, &AAW);
+}
+
+PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  SmallVector<const AllocaInst *, 8> Allocas;
+  for (auto &I : instructions(F))
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I))
+      Allocas.push_back(AI);
+  StackLifetime SL(F, Allocas);
+  SL.run();
+  SL.print(OS);
+  return PreservedAnalyses::all();
 }
