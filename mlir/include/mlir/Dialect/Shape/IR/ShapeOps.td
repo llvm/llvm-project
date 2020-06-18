@@ -375,7 +375,7 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def Shape_YieldOp : Shape_Op<"yield", 
+def Shape_YieldOp : Shape_Op<"yield",
     [HasParent<"ReduceOp">,
      NoSideEffect,
      ReturnLike,
@@ -532,6 +532,14 @@ def Shape_AssumingOp : Shape_Op<"assuming",
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let extraClassDeclaration = [{
+    // Inline the region into the region containing the AssumingOp and delete
+    // the AssumingOp.
+    //
+    // This does no checks on the inputs to the AssumingOp.
+    static void inlineRegionIntoParent(AssumingOp &op, PatternRewriter &rewriter);
+  }];
 
   let hasCanonicalizer = 1;
 }
