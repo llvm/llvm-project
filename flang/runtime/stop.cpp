@@ -42,8 +42,14 @@ static void DescribeIEEESignaledExceptions() {
   }
 }
 
+static void CloseAllExternalUnits(const char *why) {
+  Fortran::runtime::io::IoErrorHandler handler{why};
+  Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
+}
+
 [[noreturn]] void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
+  CloseAllExternalUnits("STOP statement");
   if (!quiet) {
     if (code != EXIT_SUCCESS) {
       std::fprintf(stderr, "Fortran %s: code %d\n",
@@ -56,6 +62,7 @@ static void DescribeIEEESignaledExceptions() {
 
 [[noreturn]] void RTNAME(StopStatementText)(
     const char *code, bool isErrorStop, bool quiet) {
+  CloseAllExternalUnits("STOP statement");
   if (!quiet) {
     std::fprintf(
         stderr, "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
@@ -66,12 +73,12 @@ static void DescribeIEEESignaledExceptions() {
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
   Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
+  CloseAllExternalUnits("FAIL IMAGE statement");
   std::exit(EXIT_FAILURE);
 }
 
 [[noreturn]] void RTNAME(ProgramEndStatement)() {
-  Fortran::runtime::io::IoErrorHandler handler{"END statement"};
-  Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
+  CloseAllExternalUnits("END statement");
   std::exit(EXIT_SUCCESS);
 }
 }
