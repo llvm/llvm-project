@@ -76,8 +76,18 @@ def get_line2spell_and_mangled(args, clang_args):
     if line is None:
       common.debug('Skipping function without line number:', node['name'], '@', node['loc'])
       return
-    # If there is no 'inner' object, it is a function declaration -> skip
-    if 'inner' not in node:
+
+    # If there is no 'inner' object, it is a function declaration and we can
+    # skip it. However, function declarations may also contain an 'inner' list,
+    # but in that case it will only contains ParmVarDecls. If we find an entry
+    # that is not a ParmVarDecl, we know that this is a function definition.
+    has_body = False
+    if 'inner' in node:
+      for i in node['inner']:
+        if i.get('kind', 'ParmVarDecl') != 'ParmVarDecl':
+          has_body = True
+          break
+    if not has_body:
       common.debug('Skipping function without body:', node['name'], '@', node['loc'])
       return
     spell = node['name']
