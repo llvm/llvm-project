@@ -159,6 +159,8 @@ public:
   /// In case the result must be passed by the caller, indicate how.
   /// nullopt if the result is not passed by the caller.
   std::optional<PassedEntity> getPassedResult() const { return passedResult; }
+  /// Returns the mlir function type
+  mlir::FunctionType genFunctionType() const;
 
 private:
   /// CRTP handle.
@@ -170,8 +172,6 @@ private:
   buildImplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
   void
   buildExplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
-  /// Helper to get type after the first pass.
-  mlir::FunctionType genFunctionType() const;
   /// Second pass entry point, once the mlir::FuncOp is created
   void mapBackInputToPassedEntity(const FirPlaceHolder &, FirValue);
 
@@ -217,12 +217,18 @@ public:
     return procRef;
   };
   bool isMainProgram() const { return false; }
+  /// Returns true if this is a call to a procedure pointer of a dummy
+  /// procedure.
+  bool isIndirectCall() const;
 
   /// Helpers to place the lowered arguments at the right place once they
   /// have been lowered.
   void placeInput(const PassedEntity &passedEntity, mlir::Value arg);
   void placeAddressAndLengthInput(const PassedEntity &passedEntity,
                                   mlir::Value addr, mlir::Value len);
+  /// If this is a call to a procedure pointer or dummy, returns the related
+  /// symbol. Nullptr otherwise.
+  const Fortran::semantics::Symbol *getIfIndirectCallSymbol() const;
   /// Get the input vector once it is complete.
   const llvm::SmallVector<mlir::Value, 3> &getInputs() const {
     assert(verifyActualInputs() && "lowered arguments are incomplete");
@@ -260,6 +266,9 @@ public:
   Fortran::lower::pft::FunctionLikeUnit &getCallDescription() const {
     return funit;
   };
+  /// On the callee side it does not matter whether the procedure is
+  /// called through pointers or not.
+  bool isIndirectCall() const { return false; }
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
