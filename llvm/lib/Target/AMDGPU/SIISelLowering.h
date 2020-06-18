@@ -408,6 +408,9 @@ public:
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
 
+  Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
+                                        const MachineRegisterInfo &MRI,
+                                        unsigned Depth = 0) const override;
   bool isSDNodeSourceOfDivergence(const SDNode *N,
     FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
 

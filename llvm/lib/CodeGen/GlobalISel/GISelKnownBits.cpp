@@ -34,6 +34,8 @@ GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
 Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
+  case TargetOpcode::COPY:
+    return computeKnownAlignment(MI->getOperand(1).getReg(), Depth);
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI->getOperand(1).getIndex();
     return MF.getFrameInfo().getObjectAlign(FrameIdx);
