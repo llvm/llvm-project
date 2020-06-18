@@ -1728,3 +1728,66 @@ merge:
   %s = select i1 %cond, i32 %a, i32 %b
   ret i32 %s
 }
+
+; TODO: Replace with phi[x, z].
+define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_phi_same_condition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[Z:%.*]], [[IF_FALSE]] ]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[X:%.*]], i32 [[PHI]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [%z, %if.false]
+  %s = select i1 %cond, i32 %x, i32 %phi
+  ret i32 %s
+}
+
+
+; TODO: Replace with phi[a, c] and sink them to respective branches.
+define i32 @select_phi_same_condition_sink(i1 %cond, i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_phi_same_condition_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ [[B]], [[IF_FALSE]] ]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[PHI]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+entry:
+  %a = add i32 %x, %y
+  %b = mul i32 %x, %z
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [0, %if.true], [%b, %if.false]
+  %s = select i1 %cond, i32 %a, i32 %phi
+  ret i32 %s
+}
