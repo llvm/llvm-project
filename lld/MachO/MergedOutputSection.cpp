@@ -32,11 +32,13 @@ void MergedOutputSection::mergeInput(InputSection *input) {
 void MergedOutputSection::finalize() {
   uint64_t isecAddr = addr;
   uint64_t isecFileOff = fileOff;
-  for (InputSection *i : inputs) {
-    i->outSecOff = alignTo(isecAddr, i->align) - addr;
-    i->outSecFileOff = alignTo(isecFileOff, i->align) - fileOff;
-    isecAddr += i->getSize();
-    isecFileOff += i->getFileSize();
+  for (InputSection *isec : inputs) {
+    isecAddr = alignTo(isecAddr, isec->align);
+    isecFileOff = alignTo(isecFileOff, isec->align);
+    isec->outSecOff = isecAddr - addr;
+    isec->outSecFileOff = isecFileOff - fileOff;
+    isecAddr += isec->getSize();
+    isecFileOff += isec->getFileSize();
   }
   size = isecAddr - addr;
   fileSize = isecFileOff - fileOff;
