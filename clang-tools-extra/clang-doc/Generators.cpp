@@ -15,11 +15,10 @@ namespace doc {
 
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format) {
-  for (auto I = GeneratorRegistry::begin(), E = GeneratorRegistry::end();
-       I != E; ++I) {
-    if (I->getName() != Format)
+  for (const auto &Generator : GeneratorRegistry::entries()) {
+    if (Generator.getName() != Format)
       continue;
-    return I->instantiate();
+    return Generator.instantiate();
   }
   return createStringError(llvm::inconvertibleErrorCode(),
                            "can't find generator: " + Format);

@@ -3157,11 +3157,10 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
 
   auto Name = S.getName();
 
-  for (GCMetadataPrinterRegistry::iterator
-         I = GCMetadataPrinterRegistry::begin(),
-         E = GCMetadataPrinterRegistry::end(); I != E; ++I)
-    if (Name == I->getName()) {
-      std::unique_ptr<GCMetadataPrinter> GMP = I->instantiate();
+  for (const GCMetadataPrinterRegistry::entry &GCMetaPrinter :
+       GCMetadataPrinterRegistry::entries())
+    if (Name == GCMetaPrinter.getName()) {
+      std::unique_ptr<GCMetadataPrinter> GMP = GCMetaPrinter.instantiate();
       GMP->S = &S;
       auto IterBool = GCMap.insert(std::make_pair(&S, std::move(GMP)));
       return IterBool.first->second.get();

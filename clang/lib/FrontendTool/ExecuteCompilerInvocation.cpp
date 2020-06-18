@@ -74,16 +74,15 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case TemplightDump:          return std::make_unique<TemplightDumpAction>();
 
   case PluginAction: {
-    for (FrontendPluginRegistry::iterator it =
-           FrontendPluginRegistry::begin(), ie = FrontendPluginRegistry::end();
-         it != ie; ++it) {
-      if (it->getName() == CI.getFrontendOpts().ActionName) {
-        std::unique_ptr<PluginASTAction> P(it->instantiate());
+    for (const FrontendPluginRegistry::entry &Plugin :
+         FrontendPluginRegistry::entries()) {
+      if (Plugin.getName() == CI.getFrontendOpts().ActionName) {
+        std::unique_ptr<PluginASTAction> P(Plugin.instantiate());
         if ((P->getActionType() != PluginASTAction::ReplaceAction &&
              P->getActionType() != PluginASTAction::Cmdline) ||
             !P->ParseArgs(
                 CI,
-                CI.getFrontendOpts().PluginArgs[std::string(it->getName())]))
+                CI.getFrontendOpts().PluginArgs[std::string(Plugin.getName())]))
           return nullptr;
         return std::move(P);
       }
@@ -205,9 +204,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 
   // Load any requested plugins.
-  for (unsigned i = 0,
-         e = Clang->getFrontendOpts().Plugins.size(); i != e; ++i) {
-    const std::string &Path = Clang->getFrontendOpts().Plugins[i];
+  for (const std::string &Path : Clang->getFrontendOpts().Plugins) {
     std::string Error;
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(Path.c_str(), &Error))
       Clang->getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
@@ -215,13 +212,12 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 
   // Check if any of the loaded plugins replaces the main AST action
-  for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
-                                        ie = FrontendPluginRegistry::end();
-       it != ie; ++it) {
-    std::unique_ptr<PluginASTAction> P(it->instantiate());
+  for (const FrontendPluginRegistry::entry &Plugin :
+       FrontendPluginRegistry::entries()) {
+    std::unique_ptr<PluginASTAction> P(Plugin.instantiate());
     if (P->getActionType() == PluginASTAction::ReplaceAction) {
       Clang->getFrontendOpts().ProgramAction = clang::frontend::PluginAction;
-      Clang->getFrontendOpts().ActionName = std::string(it->getName());
+      Clang->getFrontendOpts().ActionName = Plugin.getName().str();
       break;
     }
   }
