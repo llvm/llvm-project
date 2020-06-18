@@ -299,7 +299,7 @@ namespace llvm {
       if (isSimple())
         return V.getVectorElementCount();
 
-      return {getExtendedVectorNumElements(), isExtendedScalableVector()};
+      return getExtendedVectorElementCount();
     }
 
     /// Given a vector type, return the minimum number of elements it contains.
