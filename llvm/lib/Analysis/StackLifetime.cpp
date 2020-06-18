@@ -203,7 +203,6 @@ void StackLifetime::calculateLocalLiveness() {
 
       // Update block LiveIn set, noting whether it has changed.
       if (LocalLiveIn.test(BlockInfo.LiveIn)) {
-        Changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
