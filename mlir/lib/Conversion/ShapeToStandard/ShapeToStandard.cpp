@@ -19,6 +19,9 @@ using namespace mlir::shape;
 
 namespace {
 
+/// Generated conversion patterns.
+#include "ShapeToStandardPatterns.inc"
+
 /// Conversion patterns.
 template <typename SrcOpTy, typename DstOpTy>
 class BinaryOpConversion : public OpConversionPattern<SrcOpTy> {
@@ -31,20 +34,6 @@ public:
     typename SrcOpTy::Adaptor adaptor(operands);
     rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
                                          adaptor.rhs());
-    return success();
-  }
-};
-
-class FromExtentTensorOpConversion
-    : public OpConversionPattern<FromExtentTensorOp> {
-public:
-  using OpConversionPattern<FromExtentTensorOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(FromExtentTensorOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    FromExtentTensorOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
 };
@@ -71,20 +60,6 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     SizeToIndexOp::Adaptor transformed(operands);
     rewriter.replaceOp(op.getOperation(), transformed.arg());
-    return success();
-  }
-};
-
-class ToExtentTensorOpConversion
-    : public OpConversionPattern<ToExtentTensorOp> {
-public:
-  using OpConversionPattern<ToExtentTensorOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ToExtentTensorOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    ToExtentTensorOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.input());
     return success();
   }
 };
@@ -122,6 +97,7 @@ public:
 /// Conversion pass.
 class ConvertShapeToStandardPass
     : public ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
+
   void runOnOperation() override {
     // Setup type conversion.
     MLIRContext &ctx = getContext();
@@ -151,15 +127,14 @@ class ConvertShapeToStandardPass
 
 void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  populateWithGenerated(ctx, &patterns);
   // clang-format off
   patterns.insert<
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
       ConstSizeOpConverter,
-      FromExtentTensorOpConversion,
       IndexToSizeOpConversion,
-      SizeToIndexOpConversion,
-      ToExtentTensorOpConversion>(ctx);
+      SizeToIndexOpConversion>(ctx);
   // clang-format on
 }
 
