@@ -5393,6 +5393,7 @@ TEST_P(SVEBuiltins, ImportTypes) {
     "__SVUint32_t",
     "__SVUint64_t",
     "__SVFloat16_t",
+    "__SVBFloat16_t",
     "__SVFloat32_t",
     "__SVFloat64_t",
     "__SVBool_t"
