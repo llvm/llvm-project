@@ -68,51 +68,22 @@ void mlir::edsc::affineLoopNestBuilder(
     ValueRange lbs, ValueRange ubs, ArrayRef<int64_t> steps,
     function_ref<void(ValueRange)> bodyBuilderFn) {
   assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
-  assert(lbs.size() == ubs.size() && "Mismatch in number of arguments");
-  assert(lbs.size() == steps.size() && "Mismatch in number of arguments");
 
-  // If there are no loops to be constructed, construct the body anyway.
-  if (lbs.empty()) {
-    if (bodyBuilderFn)
-      bodyBuilderFn(ValueRange());
-    return;
-  }
+  // Wrap the body builder function into an interface compatible with the main
+  // builder.
+  auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                              ValueRange ivs) {
+    ScopedContext context(nestedBuilder, nestedLoc);
+    bodyBuilderFn(ivs);
+  };
+  function_ref<void(OpBuilder &, Location, ValueRange)> wrapper;
+  if (bodyBuilderFn)
+    wrapper = wrappedBuilderFn;
 
-  // Fetch the builder and location.
+  // Extract the builder, location and construct the loop nest.
   OpBuilder &builder = ScopedContext::getBuilderRef();
-  OpBuilder::InsertionGuard guard(builder);
   Location loc = ScopedContext::getLocation();
-  AffineMap identity = builder.getDimIdentityMap();
-
-  // Create the loops iteratively and store the induction variables.
-  SmallVector<Value, 4> ivs;
-  ivs.reserve(lbs.size());
-  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
-    // Callback for creating the loop body, always creates the terminator.
-    auto loopBody = [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                        Value iv) {
-      ivs.push_back(iv);
-      // In the innermost loop, call the body builder.
-      if (i == e - 1 && bodyBuilderFn) {
-        ScopedContext nestedContext(nestedBuilder, loc);
-        OpBuilder::InsertionGuard nestedGuard(nestedBuilder);
-        bodyBuilderFn(ivs);
-      }
-      nestedBuilder.create<AffineTerminatorOp>(nestedLoc);
-    };
-
-    // Create the loop. If the bounds are known to be constants, use the
-    // constant form of the loop.
-    auto lbConst = lbs[i].getDefiningOp<ConstantIndexOp>();
-    auto ubConst = ubs[i].getDefiningOp<ConstantIndexOp>();
-    auto loop = lbConst && ubConst
-                    ? builder.create<AffineForOp>(loc, lbConst.getValue(),
-                                                  ubConst.getValue(), steps[i],
-                                                  loopBody)
-                    : builder.create<AffineForOp>(loc, lbs[i], identity, ubs[i],
-                                                  identity, steps[i], loopBody);
-    builder.setInsertionPointToStart(loop.getBody());
-  }
+  buildAffineLoopNest(builder, loc, lbs, ubs, steps, wrapper);
 }
 
 void mlir::edsc::affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
