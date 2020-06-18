@@ -289,9 +289,9 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     }
 
     OS << ' ';
-    printArg(OS, "-index-store-path", Quote);
+    llvm::sys::printArg(OS, "-index-store-path", Quote);
     OS << ' ';
-    printArg(OS, IndexStoreDir.c_str(), Quote);
+    llvm::sys::printArg(OS, IndexStoreDir.c_str(), Quote);
   }
 
 
