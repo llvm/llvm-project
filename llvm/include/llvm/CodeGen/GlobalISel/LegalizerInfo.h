@@ -35,6 +35,7 @@ namespace llvm {
 
 extern cl::opt<bool> DisableGISelLegalityCheck;
 
+class LegalizerHelper;
 class MachineInstr;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -1211,16 +1212,17 @@ public:
                        const MachineRegisterInfo &MRI) const;
 
   /// Called for instructions with the Custom LegalizationAction.
-  virtual bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIRBuilder,
-                              GISelChangeObserver &Observer) const {
+  virtual bool legalizeCustom(LegalizerHelper &Helper,
+                              MachineInstr &MI) const {
     llvm_unreachable("must implement this if custom action is used");
   }
 
   /// \returns true if MI is either legal or has been legalized and false if not
   /// legal.
-  virtual bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                                 GISelChangeObserver &Observer) const {
+  /// Return true if MI is either legal or has been legalized and false
+  /// if not legal.
+  virtual bool legalizeIntrinsic(LegalizerHelper &Helper,
+                                 MachineInstr &MI) const {
     return true;
   }
 

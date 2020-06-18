@@ -85,9 +85,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   verify(*STI.getInstrInfo());
 }
 
-bool X86LegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                         MachineIRBuilder &MIRBuilder,
-                                         GISelChangeObserver &Observer) const {
+bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
   case Intrinsic::memset:

@@ -357,13 +357,12 @@ ARMLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate,
   llvm_unreachable("Unsupported size for FCmp predicate");
 }
 
-bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
-                                      MachineRegisterInfo &MRI,
-                                      MachineIRBuilder &MIRBuilder,
-                                      GISelChangeObserver &Observer) const {
+bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
+                                      MachineInstr &MI) const {
   using namespace TargetOpcode;
 
-  MIRBuilder.setInstr(MI);
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   switch (MI.getOpcode()) {

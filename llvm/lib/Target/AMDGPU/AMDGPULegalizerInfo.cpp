@@ -1463,10 +1463,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   verify(*ST.getInstrInfo());
 }
 
-bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B,
-                                         GISelChangeObserver &Observer) const {
+bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  GISelChangeObserver &Observer = Helper.Observer;
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
     return legalizeAddrSpaceCast(MI, MRI, B);
@@ -1488,7 +1490,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
-    return legalizeMinNumMaxNum(MI, MRI, B);
+    return legalizeMinNumMaxNum(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -1869,10 +1871,9 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(
-  MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
-  MachineFunction &MF = B.getMF();
+bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
+                                               MachineInstr &MI) const {
+  MachineFunction &MF = Helper.MIRBuilder.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   const bool IsIEEEOp = MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE ||
@@ -1886,9 +1887,6 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(
   if (IsIEEEOp)
     return true;
 
-  MachineIRBuilder HelperBuilder(MI);
-  GISelObserverWrapper DummyObserver;
-  LegalizerHelper Helper(MF, DummyObserver, HelperBuilder);
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
 }
 
@@ -4185,9 +4183,9 @@ bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                            MachineIRBuilder &B,
-                                            GISelChangeObserver &Observer) const {
+bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                            MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
 
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
@@ -4319,7 +4317,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return true;
   }
   case Intrinsic::amdgcn_s_buffer_load:
-    return legalizeSBufferLoad(MI, B, Observer);
+    return legalizeSBufferLoad(MI, B, Helper.Observer);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_struct_buffer_store:
     return legalizeBufferStore(MI, MRI, B, false, false);
@@ -4376,7 +4374,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
-      return legalizeImageIntrinsic(MI, B, Observer, ImageDimIntr);
+      return legalizeImageIntrinsic(MI, B, Helper.Observer, ImageDimIntr);
     return true;
   }
   }

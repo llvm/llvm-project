@@ -85,15 +85,15 @@ static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
 LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &Builder)
-    : MIRBuilder(Builder), MRI(MF.getRegInfo()),
-      LI(*MF.getSubtarget().getLegalizerInfo()), Observer(Observer) {
+    : MIRBuilder(Builder), Observer(Observer), MRI(MF.getRegInfo()),
+      LI(*MF.getSubtarget().getLegalizerInfo()) {
   MIRBuilder.setChangeObserver(Observer);
 }
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &B)
-    : MIRBuilder(B), MRI(MF.getRegInfo()), LI(LI), Observer(Observer) {
+    : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI) {
   MIRBuilder.setChangeObserver(Observer);
 }
 LegalizerHelper::LegalizeResult
@@ -104,8 +104,7 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
 
   if (MI.getOpcode() == TargetOpcode::G_INTRINSIC ||
       MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
-    return LI.legalizeIntrinsic(MI, MIRBuilder, Observer) ? Legalized
-                                                          : UnableToLegalize;
+    return LI.legalizeIntrinsic(*this, MI) ? Legalized : UnableToLegalize;
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
   case Legal:
@@ -134,8 +133,7 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
     return moreElementsVector(MI, Step.TypeIdx, Step.NewType);
   case Custom:
     LLVM_DEBUG(dbgs() << ".. Custom legalization\n");
-    return LI.legalizeCustom(MI, MRI, MIRBuilder, Observer) ? Legalized
-                                                            : UnableToLegalize;
+    return LI.legalizeCustom(*this, MI) ? Legalized : UnableToLegalize;
   default:
     LLVM_DEBUG(dbgs() << ".. Unable to legalize\n");
     return UnableToLegalize;
