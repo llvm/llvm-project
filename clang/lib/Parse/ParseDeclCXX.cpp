@@ -984,10 +984,10 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
           Sema::ExpressionEvaluationContextRecord::EK_Decltype);
-      Result =
-          Actions.CorrectDelayedTyposInExpr(ParseExpression(), [](Expr *E) {
-            return E->hasPlaceholderType() ? ExprError() : E;
-          });
+      Result = Actions.CorrectDelayedTyposInExpr(
+          ParseExpression(), /*InitDecl=*/nullptr,
+          /*RecoverUncorrectedTypos=*/false,
+          [](Expr *E) { return E->hasPlaceholderType() ? ExprError() : E; });
       if (Result.isInvalid()) {
         DS.SetTypeSpecError();
         if (SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch)) {
