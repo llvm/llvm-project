@@ -30,6 +30,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -86,7 +87,7 @@ static Optional<std::string> findLibrary(StringRef name) {
   std::string archive = (llvm::Twine("lib") + name + ".a").str();
   llvm::SmallString<260> location;
 
-  for (StringRef dir : config->searchPaths) {
+  for (StringRef dir : config->librarySearchPaths) {
     for (StringRef library : {stub, shared, archive}) {
       location = dir;
       llvm::sys::path::append(location, library);
@@ -110,13 +111,42 @@ static TargetInfo *createTargetInfo(opt::InputArgList &args) {
   }
 }
 
-static std::vector<StringRef> getSearchPaths(opt::InputArgList &args) {
-  std::vector<StringRef> ret{args::getStrings(args, OPT_L)};
-  if (!args.hasArg(OPT_Z)) {
-    ret.push_back("/usr/lib");
-    ret.push_back("/usr/local/lib");
+static bool isDirectory(StringRef option, StringRef path) {
+  if (!fs::exists(path)) {
+    warn("directory not found for option -" + option + path);
+    return false;
+  } else if (!fs::is_directory(path)) {
+    warn("option -" + option + path + " references a non-directory path");
+    return false;
   }
-  return ret;
+  return true;
+}
+
+static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
+                           opt::InputArgList &args,
+                           const SmallVector<StringRef, 2> &systemPaths) {
+  StringRef optionLetter{(optionCode == OPT_F ? "F" : "L")};
+  for (auto const &path : args::getStrings(args, optionCode)) {
+    if (isDirectory(optionLetter, path))
+      paths.push_back(path);
+  }
+  if (!args.hasArg(OPT_Z) && Triple(sys::getProcessTriple()).isOSDarwin()) {
+    for (auto const &path : systemPaths) {
+      if (isDirectory(optionLetter, path))
+        paths.push_back(path);
+    }
+  }
+}
+
+static void getLibrarySearchPaths(std::vector<StringRef> &paths,
+                                  opt::InputArgList &args) {
+  getSearchPaths(paths, OPT_L, args, {"/usr/lib", "/usr/local/lib"});
+}
+
+static void getFrameworkSearchPaths(std::vector<StringRef> &paths,
+                                    opt::InputArgList &args) {
+  getSearchPaths(paths, OPT_F, args,
+                 {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
 static void addFile(StringRef path) {
@@ -330,14 +360,20 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
-  config->searchPaths = getSearchPaths(args);
+  getLibrarySearchPaths(config->librarySearchPaths, args);
+  getFrameworkSearchPaths(config->frameworkSearchPaths, args);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
-    std::vector<StringRef> &searchPaths = config->searchPaths;
-    message("Library search paths:\n" +
-            llvm::join(searchPaths.begin(), searchPaths.end(), "\n"));
+    message(StringRef("Library search paths:") +
+            (config->librarySearchPaths.size()
+                 ? "\n\t" + llvm::join(config->librarySearchPaths, "\n\t")
+                 : ""));
+    message(StringRef("Framework search paths:") +
+            (config->frameworkSearchPaths.size()
+                 ? "\n\t" + llvm::join(config->frameworkSearchPaths, "\n\t")
+                 : ""));
     freeArena();
     return !errorCount();
   }
