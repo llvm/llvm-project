@@ -1,8 +1,5 @@
-; RUN: llc -mtriple=aarch64 -mattr=+sve < %s 2>%t | FileCheck %s --check-prefix=CHECKCG
+; RUN: llc -mtriple=aarch64 -mattr=+sve < %s | FileCheck %s --check-prefix=CHECKCG
 ; RUN: llc -mtriple=aarch64 -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECKISEL
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
 
 ; CHECKCG-LABEL: foo:
 ; CHECKCG: addvl   sp, sp, #-1

@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
 
 ; NOTE: invalid, upper and lower bound immediate values of the reg+imm
 ; addressing mode are checked only for the byte version of each
