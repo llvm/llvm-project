@@ -933,7 +933,6 @@ define void @test_extractvalue(%struct.dummy* %p, half* %q) {
 }
 
 ; CHECK-ALL-LABEL: test_struct_return:
-; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-VFP-LIBCALL: bl __aeabi_h2f
 ; CHECK-NOVFP-DAG: ldr
 ; CHECK-NOVFP-DAG: ldrh
