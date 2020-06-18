@@ -41,8 +41,12 @@
 # RUN: llvm-objdump -d %t.preempt3 | FileCheck --check-prefix=PLT %s
 
 ## The option value is a glob.
-# RUN: ld.lld -shared -Bsymbolic --export-dynamic-symbol 'f*' %t.o -o %t.preempt4
-# RUN: llvm-objdump -d %t.preempt4 | FileCheck --check-prefix=PLT %s
+# RUN: ld.lld -shared -Bsymbolic --export-dynamic-symbol 'f*' %t.o -o - | \
+# RUN:   llvm-objdump -d - | FileCheck --check-prefix=PLT %s
+# RUN: ld.lld -shared -Bsymbolic --export-dynamic-symbol '[f]o[o]' %t.o -o - | \
+# RUN:   llvm-objdump -d - | FileCheck --check-prefix=PLT %s
+# RUN: ld.lld -shared -Bsymbolic --export-dynamic-symbol 'f?o' %t.o -o - | \
+# RUN:   llvm-objdump -d - | FileCheck --check-prefix=PLT %s
 
 # PLT:       <foo@plt>
 # NOPLT-NOT: <foo@plt>
