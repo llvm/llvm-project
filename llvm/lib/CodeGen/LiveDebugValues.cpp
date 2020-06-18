@@ -6,23 +6,98 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This pass implements a data flow analysis that propagates debug location
-/// information by inserting additional DBG_VALUE insts into the machine
-/// instruction stream. Before running, each DBG_VALUE inst corresponds to a
-/// source assignment of a variable. Afterwards, a DBG_VALUE inst specifies a
-/// variable location for the current basic block (see SourceLevelDebugging.rst).
+/// \file LiveDebugValues.cpp
 ///
-/// This is a separate pass from DbgValueHistoryCalculator to facilitate
-/// testing and improve modularity.
+/// LiveDebugValues is an optimistic "available expressions" dataflow
+/// algorithm. The set of expressions is the set of machine locations
+/// (registers, spill slots, constants) that a variable fragment might be
+/// located, qualified by a DIExpression and indirect-ness flag, while each
+/// variable is identified by a DebugVariable object. The availability of an
+/// expression begins when a DBG_VALUE instruction specifies the location of a
+/// DebugVariable, and continues until that location is clobbered or
+/// re-specified by a different DBG_VALUE for the same DebugVariable.
 ///
-/// Each variable location is represented by a VarLoc object that identifies the
-/// source variable, its current machine-location, and the DBG_VALUE inst that
-/// specifies the location. Each VarLoc is indexed in the (function-scope)
-/// VarLocMap, giving each VarLoc a unique index. Rather than operate directly
-/// on machine locations, the dataflow analysis in this pass identifies
-/// locations by their index in the VarLocMap, meaning all the variable
-/// locations in a block can be described by a sparse vector of VarLocMap
-/// indexes.
+/// The cannonical "available expressions" problem doesn't have expression
+/// clobbering, instead when a variable is re-assigned, any expressions using
+/// that variable get invalidated. LiveDebugValues can map onto "available
+/// expressions" by having every register represented by a variable, which is
+/// used in an expression that becomes available at a DBG_VALUE instruction.
+/// When the register is clobbered, its variable is effectively reassigned, and
+/// expressions computed from it become unavailable. A similar construct is
+/// needed when a DebugVariable has its location re-specified, to invalidate
+/// all other locations for that DebugVariable.
+///
+/// Using the dataflow analysis to compute the available expressions, we create
+/// a DBG_VALUE at the beginning of each block where the expression is
+/// live-in. This propagates variable locations into every basic block where
+/// the location can be determined, rather than only having DBG_VALUEs in blocks
+/// where locations are specified due to an assignment or some optimization.
+/// Movements of values between registers and spill slots are annotated with
+/// DBG_VALUEs too to track variable values bewteen locations. All this allows
+/// DbgEntityHistoryCalculator to focus on only the locations within individual
+/// blocks, facilitating testing and improving modularity.
+///
+/// We follow an optimisic dataflow approach, with this lattice:
+///
+/// \verbatim
+///                    ┬ "Unknown"
+///                          |
+///                          v
+///                         True
+///                          |
+///                          v
+///                      ⊥ False
+/// \endverbatim With "True" signifying that the expression is available (and
+/// thus a DebugVariable's location is the corresponding register), while
+/// "False" signifies that the expression is unavailable. "Unknown"s never
+/// survive to the end of the analysis (see below).
+///
+/// Formally, all DebugVariable locations that are live-out of a block are
+/// initialized to \top.  A blocks live-in values take the meet of the lattice
+/// value for every predecessors live-outs, except for the entry block, where
+/// all live-ins are \bot. The usual dataflow propagation occurs: the transfer
+/// function for a block assigns an expression for a DebugVariable to be "True"
+/// if a DBG_VALUE in the block specifies it; "False" if the location is
+/// clobbered; or the live-in value if it is unaffected by the block. We
+/// visit each block in reverse post order until a fixedpoint is reached. The
+/// solution produced is maximal.
+///
+/// Intuitively, we start by assuming that every expression / variable location
+/// is at least "True", and then propagate "False" from the entry block and any
+/// clobbers until there are no more changes to make. This gives us an accurate
+/// solution because all incorrect locations will have a "False" propagated into
+/// them. It also gives us a solution that copes well with loops by assuming
+/// that variable locations are live-through every loop, and then removing those
+/// that are not through dataflow.
+///
+/// Within LiveDebugValues: each variable location is represented by a
+/// VarLoc object that identifies the source variable, its current
+/// machine-location, and the DBG_VALUE inst that specifies the location. Each
+/// VarLoc is indexed in the (function-scope) \p VarLocMap, giving each VarLoc a
+/// unique index. Rather than operate directly on machine locations, the
+/// dataflow analysis in this pass identifies locations by their index in the
+/// VarLocMap, meaning all the variable locations in a block can be described
+/// by a sparse vector of VarLocMap indicies.
+///
+/// All the storage for the dataflow analysis is local to the ExtendRanges
+/// method and passed down to helper methods. "OutLocs" and "InLocs" record the
+/// in and out lattice values for each block. "OpenRanges" maintains a list of
+/// variable locations and, with the "process" method, evaluates the transfer
+/// function of each block. "flushPendingLocs" installs DBG_VALUEs for each
+/// live-in location at the start of blocks, while "Transfers" records
+/// transfers of values between machine-locations.
+///
+/// We avoid explicitly representing the "Unknown" (\top) lattice value in the
+/// implementation. Instead, unvisited blocks implicitly have all lattice
+/// values set as "Unknown". After being visited, there will be path back to
+/// the entry block where the lattice value is "False", and as the transfer
+/// function cannot make new "Unknown" locations, there are no scenarios where
+/// a block can have an "Unknown" location after being visited. Similarly, we
+/// don't enumerate all possible variable locations before exploring the
+/// function: when a new location is discovered, all blocks previously explored
+/// were implicitly "False" but unrecorded, and become explicitly "False" when
+/// a new VarLoc is created with its bit not set in predecessor InLocs or
+/// OutLocs.
 ///
 //===----------------------------------------------------------------------===//
 
