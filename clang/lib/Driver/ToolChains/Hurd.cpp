@@ -125,13 +125,6 @@ Tool *Hurd::buildAssembler() const {
   return new tools::gnutools::Assembler(*this);
 }
 
-std::string Hurd::computeSysRoot() const {
-  if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot;
-
-  return std::string();
-}
-
 std::string Hurd::getDynamicLinker(const ArgList &Args) const {
   if (getArch() == llvm::Triple::x86)
     return "/lib/ld.so";
