@@ -365,8 +365,8 @@ supported for the ``amdgcn`` target.
      Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
      Local                             3               group       LDS              32      0xFFFFFFFF
      Constant                          4               constant    *same as global* 64      0x0000000000000000
-     Private                           5               private     scratch          32      0x00000000
-     Constant 32-bit                   6               *TODO*
+     Private                           5               private     scratch          32      0xFFFFFFFF
+     Constant 32-bit                   6               *TODO*                               0x00000000
      Buffer Fat Pointer (experimental) 7               *TODO*
      ================================= =============== =========== ================ ======= ============================
 
