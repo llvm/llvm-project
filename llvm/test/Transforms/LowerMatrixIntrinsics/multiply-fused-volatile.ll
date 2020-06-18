@@ -14,29 +14,29 @@ define void @multiply_all_volatile(<4 x double>* noalias %A, <4 x double>* noali
 ; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP1]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x double>* [[COL_CAST]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP2]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP2]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[B:%.*]] to double*
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, double* [[TMP3]], i64 0
 ; CHECK-NEXT:    [[COL_CAST3:%.*]] = bitcast double* [[TMP4]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x double>* [[COL_CAST3]] to double*
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[TMP5]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
 ; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP5]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
 
 ; CHECK:         [[TMP18:%.*]] = bitcast <4 x double>* [[C:%.*]] to double*
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, double* [[TMP18]], i64 0
 ; CHECK-NEXT:    [[COL_CAST18:%.*]] = bitcast double* [[TMP19]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <4 x double>* [[COL_CAST18]] to double*
 ; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> {{.*}}, <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    store volatile <2 x double> {{.*}}, <2 x double>* [[VEC_CAST19]], align 8
 ; CHECK-NEXT:    [[VEC_GEP20:%.*]] = getelementptr double, double* [[TMP20]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast double* [[VEC_GEP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> {{.*}}, <2 x double>* [[VEC_CAST21]], align 8
+; CHECK-NEXT:    store volatile <2 x double> {{.*}}, <2 x double>* [[VEC_CAST21]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
@@ -59,10 +59,10 @@ define void @multiply_load0_volatile(<4 x double>* noalias %A, <4 x double>* noa
 ; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP1]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x double>* [[COL_CAST]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP2]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP2]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[B:%.*]] to double*
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, double* [[TMP3]], i64 0
 ; CHECK-NEXT:    [[COL_CAST3:%.*]] = bitcast double* [[TMP4]] to <4 x double>*
@@ -112,10 +112,10 @@ define void @multiply_load1_volatile(<4 x double>* noalias %A, <4 x double>* noa
 ; CHECK-NEXT:    [[COL_CAST3:%.*]] = bitcast double* [[TMP4]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x double>* [[COL_CAST3]] to double*
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[TMP5]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
 ; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP5]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
-; CHECK-NEXT:    load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
+; CHECK-NEXT:    load volatile <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
 
 ; CHECK:         [[TMP18:%.*]] = bitcast <4 x double>* [[C:%.*]] to double*
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, double* [[TMP18]], i64 0
@@ -166,10 +166,10 @@ define void @multiply_store_volatile(<4 x double>* noalias %A, <4 x double>* noa
 ; CHECK-NEXT:    [[COL_CAST18:%.*]] = bitcast double* [[TMP19]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <4 x double>* [[COL_CAST18]] to double*
 ; CHECK-NEXT:    [[VEC_CAST19:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> {{.*}}, <2 x double>* [[VEC_CAST19]], align 8
+; CHECK-NEXT:    store volatile <2 x double> {{.*}}, <2 x double>* [[VEC_CAST19]], align 8
 ; CHECK-NEXT:    [[VEC_GEP20:%.*]] = getelementptr double, double* [[TMP20]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast double* [[VEC_GEP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> {{.*}}, <2 x double>* [[VEC_CAST21]], align 8
+; CHECK-NEXT:    store volatile <2 x double> {{.*}}, <2 x double>* [[VEC_CAST21]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
