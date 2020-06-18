@@ -1681,7 +1681,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   Sema::TagUseKind TUK;
-  if (isDefiningTypeSpecifierContext(DSC) == AllowDefiningTypeSpec::No)
+  if (isDefiningTypeSpecifierContext(DSC) == AllowDefiningTypeSpec::No ||
+      (getLangOpts().OpenMP && OpenMPDirectiveParsing))
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||

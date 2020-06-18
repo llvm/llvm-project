@@ -1824,6 +1824,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     // Skip last tokens.
     skipUntilPragmaOpenMPEnd(OMPD_begin_declare_variant);
 
+    ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+
     VariantMatchInfo VMI;
     ASTContext &ASTCtx = Actions.getASTContext();
     TI.getAsVariantMatchInfo(ASTCtx, VMI);
@@ -1921,6 +1923,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     if (!Actions.ActOnStartOpenMPDeclareTargetDirective(DTLoc))
       return DeclGroupPtrTy();
 
+    ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
     llvm::SmallVector<Decl *, 4>  Decls;
     DKind = parseOpenMPDirectiveKind(*this);
     while (DKind != OMPD_end_declare_target && Tok.isNot(tok::eof) &&
@@ -2333,6 +2336,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
       // FIXME: We create a bogus CompoundStmt scope to hold the contents of
       // the captured region. Code elsewhere assumes that any FunctionScopeInfo
       // should have at least one compound statement scope within it.
+      ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
       AssociatedStmt = (Sema::CompoundScopeRAII(Actions), ParseStatement());
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||

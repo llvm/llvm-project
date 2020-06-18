@@ -294,9 +294,9 @@ namespace clang {
     bool OldVal;
 
   public:
-    ParsingOpenMPDirectiveRAII(Parser &P)
+    ParsingOpenMPDirectiveRAII(Parser &P, bool Value = true)
         : P(P), OldVal(P.OpenMPDirectiveParsing) {
-      P.OpenMPDirectiveParsing = true;
+      P.OpenMPDirectiveParsing = Value;
     }
 
     /// This can be used to restore the state early, before the dtor
