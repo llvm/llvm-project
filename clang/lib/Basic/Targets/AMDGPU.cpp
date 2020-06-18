@@ -13,6 +13,7 @@
 #include "AMDGPU.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -178,6 +179,8 @@ ArrayRef<const char *> AMDGPUTargetInfo::getGCCRegNames() const {
 bool AMDGPUTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
+  const bool IsNullCPU = CPU.empty();
+  bool IsWave32Capable = false;
 
   using namespace llvm::AMDGPU;
 
@@ -188,6 +191,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1102:
     case GK_GFX1101:
     case GK_GFX1100:
+      IsWave32Capable = true;
       Features["ci-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot5-insts"] = true;
@@ -211,6 +215,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1032:
     case GK_GFX1031:
     case GK_GFX1030:
+      IsWave32Capable = true;
       Features["ci-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
@@ -238,6 +243,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       [[fallthrough]];
     case GK_GFX1013:
     case GK_GFX1010:
+      IsWave32Capable = true;
       Features["dl-insts"] = true;
       Features["ci-insts"] = true;
       Features["flat-address-space"] = true;
@@ -334,7 +340,32 @@ bool AMDGPUTargetInfo::initFeatureMap(
     }
   }
 
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec);
+  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
+    return false;
+
+  // FIXME: Not diagnosing wavefrontsize32 on wave64 only targets.
+  const bool HaveWave32 =
+      (IsWave32Capable || IsNullCPU) && Features.count("wavefrontsize32");
+  const bool HaveWave64 = Features.count("wavefrontsize64");
+
+  // TODO: Should move this logic into TargetParser
+  if (HaveWave32 && HaveWave64) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive";
+    return false;
+  }
+
+  // Don't assume any wavesize with an unknown subtarget.
+  if (!IsNullCPU) {
+    // Default to wave32 if available, or wave64 if not
+    if (!HaveWave32 && !HaveWave64) {
+      StringRef DefaultWaveSizeFeature =
+          IsWave32Capable ? "wavefrontsize32" : "wavefrontsize64";
+      Features.insert(std::make_pair(DefaultWaveSizeFeature, true));
+    }
+  }
+
+  return true;
 }
 
 void AMDGPUTargetInfo::fillValidCPUList(
