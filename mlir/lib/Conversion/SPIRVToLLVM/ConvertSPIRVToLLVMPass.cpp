@@ -44,8 +44,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
-
-  if (failed(applyPartialConversion(module, target, patterns, &converter)))
+  if (failed(applyPartialConversion(module, target, patterns)))
     signalPassFailure();
 }
 

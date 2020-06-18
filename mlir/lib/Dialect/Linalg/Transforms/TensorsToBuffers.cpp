@@ -136,19 +136,19 @@ struct ConvertLinalgOnTensorsToBuffers
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
       return converter.isSignatureLegal(funcOp.getType()) &&
              llvm::none_of(funcOp.getType().getResults(),
-                           [&](Type type) { return type.isa<MemRefType>(); });
+                           [&](Type type) { return type.isa<MemRefType>(); }) &&
+             converter.isLegal(&funcOp.getBody());
     });
 
     // Walk over all the functions to apply buffer assignment.
-    getOperation().walk([&](FuncOp function) {
+    getOperation().walk([&](FuncOp function) -> WalkResult {
       OwningRewritePatternList patterns;
       BufferAssignmentPlacer placer(function);
       populateConvertLinalgOnTensorsToBuffersPattern(&context, &placer,
                                                      &converter, &patterns);
 
       // Applying full conversion
-      return WalkResult(
-          applyFullConversion(function, target, patterns, &converter));
+      return applyFullConversion(function, target, patterns);
     });
   }
 };

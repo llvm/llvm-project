@@ -141,12 +141,14 @@ public:
       else
         newResultTypes.push_back(convertedType);
     }
+    if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), *converter,
+                                           &conversion)))
+      return failure();
 
     // Update the signature of the function.
     rewriter.updateRootInPlace(funcOp, [&] {
       funcOp.setType(rewriter.getFunctionType(conversion.getConvertedTypes(),
                                               newResultTypes));
-      rewriter.applySignatureConversion(&funcOp.getBody(), conversion);
     });
     return success();
   }

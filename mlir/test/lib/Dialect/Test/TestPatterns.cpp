@@ -304,8 +304,7 @@ struct TestUndoBlockErase : public ConversionPattern {
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
   TestDropOpSignatureConversion(MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern("test.drop_region_op", 1, ctx), converter(converter) {
-  }
+      : ConversionPattern("test.drop_region_op", 1, converter, ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -313,19 +312,17 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
     Block *entry = &region.front();
 
     // Convert the original entry arguments.
+    TypeConverter &converter = *getTypeConverter();
     TypeConverter::SignatureConversion result(entry->getNumArguments());
-    if (failed(
-            converter.convertSignatureArgs(entry->getArgumentTypes(), result)))
+    if (failed(converter.convertSignatureArgs(entry->getArgumentTypes(),
+                                              result)) ||
+        failed(rewriter.convertRegionTypes(&region, converter, &result)))
       return failure();
 
     // Convert the region signature and just drop the operation.
-    rewriter.applySignatureConversion(&region, result);
     rewriter.eraseOp(op);
     return success();
   }
-
-  /// The type converter to use when rewriting the signature.
-  TypeConverter &converter;
 };
 /// This pattern simply updates the operands of the given operation.
 struct TestPassthroughInvalidOp : public ConversionPattern {
@@ -568,8 +565,10 @@ struct TestLegalizePatternDriver
       return llvm::none_of(op.getOperandTypes(),
                            [](Type type) { return type.isF32(); });
     });
-    target.addDynamicallyLegalOp<FuncOp>(
-        [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
+    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+      return converter.isSignatureLegal(op.getType()) &&
+             converter.isLegal(&op.getBody());
+    });
 
     // Expect the type_producer/type_consumer operations to only operate on f64.
     target.addDynamicallyLegalOp<TestTypeProducerOp>(
@@ -591,7 +590,7 @@ struct TestLegalizePatternDriver
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
-      (void)applyPartialConversion(getOperation(), target, patterns, &converter,
+      (void)applyPartialConversion(getOperation(), target, patterns,
                                    &unlegalizedOps);
       // Emit remarks for each legalizable operation.
       for (auto *op : unlegalizedOps)
@@ -606,7 +605,7 @@ struct TestLegalizePatternDriver
         return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
       });
 
-      (void)applyFullConversion(getOperation(), target, patterns, &converter);
+      (void)applyFullConversion(getOperation(), target, patterns);
       return;
     }
 
@@ -616,7 +615,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target, patterns,
-                                       legalizedOps, &converter)))
+                                       legalizedOps)))
       return signalPassFailure();
 
     // Emit remarks for each legalizable operation.
