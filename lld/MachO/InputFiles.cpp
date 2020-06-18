@@ -185,9 +185,6 @@ void InputFile::parseRelocations(const section_64 &sec,
       r.target = symbols[rel.r_symbolnum];
       r.addend = rawAddend;
     } else {
-      if (!rel.r_pcrel)
-        fatal("TODO: Only pcrel section relocations are supported");
-
       if (rel.r_symbolnum == 0 || rel.r_symbolnum > subsections.size())
         fatal("invalid section index in relocation for offset " +
               std::to_string(r.offset) + " in section " + sec.sectname +
@@ -195,14 +192,19 @@ void InputFile::parseRelocations(const section_64 &sec,
 
       SubsectionMap &targetSubsecMap = subsections[rel.r_symbolnum - 1];
       const section_64 &targetSec = sectionHeaders[rel.r_symbolnum - 1];
-      // The implicit addend for pcrel section relocations is the pcrel offset
-      // in terms of the addresses in the input file. Here we adjust it so that
-      // it describes the offset from the start of the target section.
-      // TODO: Figure out what to do for non-pcrel section relocations.
-      // TODO: The offset of 4 is probably not right for ARM64, nor for
-      //       relocations with r_length != 2.
-      uint32_t targetOffset =
-          sec.addr + rel.r_address + 4 + rawAddend - targetSec.addr;
+      uint32_t targetOffset;
+      if (rel.r_pcrel) {
+        // The implicit addend for pcrel section relocations is the pcrel offset
+        // in terms of the addresses in the input file. Here we adjust it so
+        // that it describes the offset from the start of the target section.
+        // TODO: The offset of 4 is probably not right for ARM64, nor for
+        //       relocations with r_length != 2.
+        targetOffset =
+            sec.addr + rel.r_address + 4 + rawAddend - targetSec.addr;
+      } else {
+        // The addend for a non-pcrel relocation is its absolute address.
+        targetOffset = rawAddend - targetSec.addr;
+      }
       r.target = findContainingSubsection(targetSubsecMap, &targetOffset);
       r.addend = targetOffset;
     }
