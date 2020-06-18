@@ -20,7 +20,8 @@
 #include <optional>
 #include <string>
 
-// IsDescriptor() predicate
+// IsDescriptor() predicate: true when a symbol is implemented
+// at runtime with a descriptor.
 // TODO there's probably a better place for this predicate than here
 namespace Fortran::semantics {
 
@@ -103,6 +104,42 @@ std::optional<common::ConstantSubscript> DynamicType::GetCharLength() const {
     if (const auto &len{charLength_->GetExplicit()}) {
       return ToInt64(len);
     }
+  }
+  return std::nullopt;
+}
+
+static constexpr int RealKindBytes(int kind) {
+  switch (kind) {
+  case 3: // non-IEEE 16-bit format (truncated 32-bit)
+    return 2;
+  case 10: // 80387 80-bit extended precision
+  case 12: // possible variant spelling
+    return 16;
+  default:
+    return kind;
+  }
+}
+
+std::optional<std::size_t> DynamicType::MeasureSizeInBytes() const {
+  switch (category_) {
+  case TypeCategory::Integer:
+    return kind_;
+  case TypeCategory::Real:
+    return RealKindBytes(kind_);
+  case TypeCategory::Complex:
+    return 2 * RealKindBytes(kind_);
+  case TypeCategory::Character:
+    if (auto len{GetCharLength()}) {
+      return kind_ * *len;
+    }
+    break;
+  case TypeCategory::Logical:
+    return kind_;
+  case TypeCategory::Derived:
+    if (derived_ && derived_->scope()) {
+      return derived_->scope()->size();
+    }
+    break;
   }
   return std::nullopt;
 }

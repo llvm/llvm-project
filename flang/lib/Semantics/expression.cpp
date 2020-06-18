@@ -95,40 +95,6 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
   return std::nullopt;
 }
 
-// Wraps a object in an explicitly typed representation (e.g., Designator<>
-// or FunctionRef<>) that has been instantiated on a dynamically chosen type.
-template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
-    typename WRAPPED>
-common::IfNoLvalue<MaybeExpr, WRAPPED> WrapperHelper(int kind, WRAPPED &&x) {
-  return common::SearchTypes(
-      TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
-}
-
-template <template <typename> typename WRAPPER, typename WRAPPED>
-common::IfNoLvalue<MaybeExpr, WRAPPED> TypedWrapper(
-    const DynamicType &dyType, WRAPPED &&x) {
-  switch (dyType.category()) {
-    SWITCH_COVERS_ALL_CASES
-  case TypeCategory::Integer:
-    return WrapperHelper<TypeCategory::Integer, WRAPPER, WRAPPED>(
-        dyType.kind(), std::move(x));
-  case TypeCategory::Real:
-    return WrapperHelper<TypeCategory::Real, WRAPPER, WRAPPED>(
-        dyType.kind(), std::move(x));
-  case TypeCategory::Complex:
-    return WrapperHelper<TypeCategory::Complex, WRAPPER, WRAPPED>(
-        dyType.kind(), std::move(x));
-  case TypeCategory::Character:
-    return WrapperHelper<TypeCategory::Character, WRAPPER, WRAPPED>(
-        dyType.kind(), std::move(x));
-  case TypeCategory::Logical:
-    return WrapperHelper<TypeCategory::Logical, WRAPPER, WRAPPED>(
-        dyType.kind(), std::move(x));
-  case TypeCategory::Derived:
-    return AsGenericExpr(Expr<SomeDerived>{WRAPPER<SomeDerived>{std::move(x)}});
-  }
-}
-
 class ArgumentAnalyzer {
 public:
   explicit ArgumentAnalyzer(ExpressionAnalyzer &context)

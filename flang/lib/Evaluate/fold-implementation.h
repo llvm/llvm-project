@@ -1076,22 +1076,6 @@ auto ApplyElementwise(
           }});
 }
 
-// Predicate: is a scalar expression suitable for naive scalar expansion
-// in the flattening of an array expression?
-// TODO: capture such scalar expansions in temporaries, flatten everything
-struct UnexpandabilityFindingVisitor
-    : public AnyTraverse<UnexpandabilityFindingVisitor> {
-  using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
-  using Base::operator();
-  UnexpandabilityFindingVisitor() : Base{*this} {}
-  template <typename T> bool operator()(const FunctionRef<T> &) { return true; }
-  bool operator()(const CoarrayRef &) { return true; }
-};
-
-template <typename T> bool IsExpandableScalar(const Expr<T> &expr) {
-  return !UnexpandabilityFindingVisitor{}(expr);
-}
-
 template <typename DERIVED, typename RESULT, typename LEFT, typename RIGHT>
 auto ApplyElementwise(FoldingContext &context,
     Operation<DERIVED, RESULT, LEFT, RIGHT> &operation,
