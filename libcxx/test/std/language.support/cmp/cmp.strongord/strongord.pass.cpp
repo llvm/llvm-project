@@ -198,6 +198,20 @@ constexpr bool test_constexpr() {
       break;
     }
   }
+  {
+    static_assert(std::strong_ordering::less == std::strong_ordering::less);
+    static_assert(std::strong_ordering::less != std::strong_ordering::equal);
+    static_assert(std::strong_ordering::less != std::strong_ordering::greater);
+
+    static_assert(std::strong_ordering::equal != std::strong_ordering::less);
+    static_assert(std::strong_ordering::equal == std::strong_ordering::equal);
+    static_assert(std::strong_ordering::equal != std::strong_ordering::greater);
+
+    static_assert(std::strong_ordering::greater != std::strong_ordering::less);
+    static_assert(std::strong_ordering::greater != std::strong_ordering::equal);
+    static_assert(std::strong_ordering::greater ==
+                  std::strong_ordering::greater);
+  }
 #endif
 
   return true;
