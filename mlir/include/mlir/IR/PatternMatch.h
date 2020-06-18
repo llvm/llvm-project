@@ -74,9 +74,9 @@ public:
   /// condition predicates.
   PatternBenefit getBenefit() const { return benefit; }
 
-  /// Return the root node that this pattern matches.  Patterns that can
-  /// match multiple root types are instantiated once per root.
-  OperationName getRootKind() const { return rootKind; }
+  /// Return the root node that this pattern matches. Patterns that can match
+  /// multiple root types return None.
+  Optional<OperationName> getRootKind() const { return rootKind; }
 
   //===--------------------------------------------------------------------===//
   // Implementation hooks for patterns to implement.
@@ -89,12 +89,30 @@ public:
   virtual ~Pattern() {}
 
 protected:
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
+  /// This class acts as a special tag that makes the desire to match "any"
+  /// operation type explicit. This helps to avoid unnecessary usages of this
+  /// feature, and ensures that the user is making a conscious decision.
+  struct MatchAnyOpTypeTag {};
+
+  /// This constructor is used for patterns that match against a specific
+  /// operation type. The `benefit` is the expected benefit of matching this
+  /// pattern.
   Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context);
 
+  /// This contructor is used when a pattern may match against multiple
+  /// different types of operations. The `benefit` is the expected benefit of
+  /// matching this pattern. `MatchAnyOpTypeTag` is just a tag to ensure that
+  /// the "match any" behavior is what the user actually desired,
+  /// `MatchAnyOpTypeTag()` should always be supplied here.
+  Pattern(PatternBenefit benefit, MatchAnyOpTypeTag);
+
 private:
-  const OperationName rootKind;
+  /// The root operation of the pattern. If the pattern matches a specific
+  /// operation, this contains the name of that operation. Contains None
+  /// otherwise.
+  Optional<OperationName> rootKind;
+
+  /// The expected benefit of matching this pattern.
   const PatternBenefit benefit;
 
   virtual void anchor();
@@ -151,10 +169,24 @@ protected:
                  MLIRContext *context)
       : Pattern(rootName, benefit, context) {}
   /// Patterns must specify the root operation name they match against, and can
+  /// also specify the benefit of the pattern matching. `MatchAnyOpTypeTag`
+  /// is just a tag to ensure that the "match any" behavior is what the user
+  /// actually desired, `MatchAnyOpTypeTag()` should always be supplied here.
+  RewritePattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
+      : Pattern(benefit, tag) {}
+  /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching. They can also specify
   /// the names of operations that may be generated during a successful rewrite.
   RewritePattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
                  PatternBenefit benefit, MLIRContext *context);
+  /// Patterns must specify the root operation name they match against, and can
+  /// also specify the benefit of the pattern matching. They can also specify
+  /// the names of operations that may be generated during a successful rewrite.
+  /// `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
+  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
+  /// always be supplied here.
+  RewritePattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+                 MLIRContext *context, MatchAnyOpTypeTag tag);
 
   /// A list of the potential operations that may be generated when rewriting
   /// an op with this pattern.
@@ -431,6 +463,14 @@ public:
     return *this;
   }
 
+  /// Add an instance of each of the pattern types 'Ts'. Return a reference to
+  /// `this` for chaining insertions.
+  template <typename... Ts> OwningRewritePatternList &insert() {
+    (void)std::initializer_list<int>{
+        0, (patterns.emplace_back(std::make_unique<Ts>()), 0)...};
+    return *this;
+  }
+
   /// Add the given pattern to the pattern list.
   void insert(std::unique_ptr<RewritePattern> pattern) {
     patterns.emplace_back(std::move(pattern));
@@ -485,11 +525,23 @@ public:
   void walkAllPatterns(function_ref<void(const RewritePattern &)> walk);
 
 private:
+  /// Attempt to match and rewrite the given op with the given pattern, allowing
+  /// a predicate to decide if a pattern can be applied or not, and hooks for if
+  /// the pattern match was a success or failure.
+  LogicalResult matchAndRewrite(
+      Operation *op, const RewritePattern &pattern, PatternRewriter &rewriter,
+      function_ref<bool(const RewritePattern &)> canApply,
+      function_ref<void(const RewritePattern &)> onFailure,
+      function_ref<LogicalResult(const RewritePattern &)> onSuccess);
+
   /// The list that owns the patterns used within this applicator.
   const OwningRewritePatternList &owningPatternList;
 
   /// The set of patterns to match for each operation, stable sorted by benefit.
   DenseMap<OperationName, SmallVector<RewritePattern *, 2>> patterns;
+  /// The set of patterns that may match against any operation type, stable
+  /// sorted by benefit.
+  SmallVector<RewritePattern *, 1> anyOpPatterns;
 };
 
 //===----------------------------------------------------------------------===//
