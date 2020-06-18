@@ -153,6 +153,7 @@ vasprintf U
 vfprintf U
 vsnprintf U
 vsscanf U
+wait4 U
 waitpid U
 wcrtomb U
 wcslen U
