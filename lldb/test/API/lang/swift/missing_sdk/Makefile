@@ -8,7 +8,7 @@ fakesdk:
 SWIFTFLAGS := $(subst $(SDKROOT),$(shell pwd)/fakesdk,$(SWIFTFLAGS))
 
 a.out: $(SWIFT_SOURCES) fakesdk
-	$(SWIFTC) $< $(SWIFTFLAGS) -o "$(EXE)" -toolchain-stdlib-rpath
+	$(SWIFTC) $< $(SWIFTFLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
