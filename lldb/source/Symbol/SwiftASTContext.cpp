@@ -2488,7 +2488,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       XcodeSDK::Info info;
       info.type = XcodeSDK::GetSDKTypeForTriple(triple);
       XcodeSDK sdk(info);
-      StringRef sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+      sdk_path = HostInfo::GetXcodeSDKPath(sdk);
     }
     if (sdk_path.empty()) {
       // This fallback is questionable. Perhaps it should be removed.
