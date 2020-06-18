@@ -237,6 +237,8 @@ class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
    let Inst{3-2} = 0b01;
    let Inst{1} = e;
    let Inst{0} = p;
+
+   let DecoderMethod = "decodeFLPMX";
 }
 
 //===----------------------------------------------------------------------===//
