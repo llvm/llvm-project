@@ -404,7 +404,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
                                .addDef(Dest)
                                .addUse(DestTmp)
                                .addUse(MF.getInfo<MipsFunctionInfo>()
-                                           ->getGlobalBaseRegForGlobalISel());
+                                           ->getGlobalBaseRegForGlobalISel(MF));
       if (!constrainSelectedInstRegOperands(*ADDu, TII, TRI, RBI))
         return false;
     }
@@ -669,7 +669,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       MachineInstr *LWGOT = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
                                 .addDef(I.getOperand(0).getReg())
                                 .addReg(MF.getInfo<MipsFunctionInfo>()
-                                            ->getGlobalBaseRegForGlobalISel())
+                                            ->getGlobalBaseRegForGlobalISel(MF))
                                 .addGlobalAddress(GVal);
       // Global Values that don't have local linkage are handled differently
       // when they are part of call sequence. MipsCallLowering::lowerCall
@@ -725,7 +725,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
                .addDef(I.getOperand(0).getReg())
                .addReg(MF.getInfo<MipsFunctionInfo>()
-                           ->getGlobalBaseRegForGlobalISel())
+                           ->getGlobalBaseRegForGlobalISel(MF))
                .addJumpTableIndex(I.getOperand(1).getIndex(), MipsII::MO_GOT)
                .addMemOperand(MF.getMachineMemOperand(
                    MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, 4,
