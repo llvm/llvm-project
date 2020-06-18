@@ -259,8 +259,7 @@ struct OpenMPOpt {
   OpenMPOpt(SmallVectorImpl<Function *> &SCC, CallGraphUpdater &CGUpdater,
             OptimizationRemarkGetter OREGetter,
             OMPInformationCache &OMPInfoCache)
-      : M(*(*SCC.begin())->getParent()), SCC(SCC),
-        ModuleSlice(OMPInfoCache.ModuleSlice), CGUpdater(CGUpdater),
+      : M(*(*SCC.begin())->getParent()), SCC(SCC), CGUpdater(CGUpdater),
         OREGetter(OREGetter), OMPInfoCache(OMPInfoCache) {}
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
@@ -268,8 +267,8 @@ struct OpenMPOpt {
     bool Changed = false;
 
     LLVM_DEBUG(dbgs() << TAG << "Run on SCC with " << SCC.size()
-                      << " functions in a slice with " << ModuleSlice.size()
-                      << " functions\n");
+                      << " functions in a slice with "
+                      << OMPInfoCache.ModuleSlice.size() << " functions\n");
 
     Changed |= deduplicateRuntimeCalls();
     Changed |= deleteParallelRegions();
@@ -610,9 +609,6 @@ private:
 
   /// The SCC we are operating on.
   SmallVectorImpl<Function *> &SCC;
-
-  /// The slice of the module we are allowed to look at.
-  SmallPtrSetImpl<Function *> &ModuleSlice;
 
   /// Callback to update the call graph, the first argument is a removed call,
   /// the second an optional replacement call.
