@@ -41,8 +41,10 @@ def P9Model : SchedMachineModel {
   let CompleteModel = 1;
 
   // Do not support QPX (Quad Processing eXtension), SPE (Signal Processing
-  // Engine), prefixed instructions on Power 9 or PC relative mem ops.
-  let UnsupportedFeatures = [HasQPX, HasSPE, PrefixInstrs, PCRelativeMemops];
+  // Engine), prefixed instructions on Power 9, PC relative mem ops, or
+  // instructions introduced in ISA 3.1.
+  let UnsupportedFeatures = [HasQPX, HasSPE, PrefixInstrs, PCRelativeMemops,
+                             IsISA3_1];
 
 }
 

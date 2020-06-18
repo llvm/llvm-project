@@ -60,6 +60,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
                        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                                  [IntrNoMem]>;
 
+  // Parallel Bits Deposit/Extract Doubleword Builtins.
+  def int_ppc_pdepd
+      : GCCBuiltin<"__builtin_pdepd">,
+        Intrinsic <[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_pextd
+      : GCCBuiltin<"__builtin_pextd">,
+        Intrinsic <[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+
   def int_ppc_truncf128_round_to_odd
       : GCCBuiltin<"__builtin_truncf128_round_to_odd">,
         Intrinsic <[llvm_double_ty], [llvm_f128_ty], [IntrNoMem]>;
@@ -402,6 +410,13 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vprtybq : GCCBuiltin<"__builtin_altivec_vprtybq">,
               Intrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
+  // P10 Vector Parallel Bits Deposit/Extract Doubleword Builtins.
+  def int_ppc_altivec_vpdepd : GCCBuiltin<"__builtin_altivec_vpdepd">,
+              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vpextd : GCCBuiltin<"__builtin_altivec_vpextd">,
+              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
+                        [IntrNoMem]>;
 }
 
 // Vector average.

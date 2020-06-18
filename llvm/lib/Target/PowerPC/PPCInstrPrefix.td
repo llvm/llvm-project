@@ -191,6 +191,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
 }
 
 def PrefixInstrs : Predicate<"PPCSubTarget->hasPrefixInstrs()">;
+def IsISA3_1 : Predicate<"PPCSubTarget->isISA3_1()">;
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -500,3 +501,19 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
+let Predicates = [IsISA3_1] in {
+   def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vpdepd v2i64:$vA, v2i64:$vB))]>;
+   def VPEXTD : VXForm_1<1421, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vpextd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD,
+                         (int_ppc_altivec_vpextd v2i64:$vA, v2i64:$vB))]>;
+   def PDEPD : XForm_6<31, 156, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                       "pdepd $rA, $rS, $rB", IIC_IntGeneral,
+                       [(set i64:$rA, (int_ppc_pdepd i64:$rS, i64:$rB))]>;
+   def PEXTD : XForm_6<31, 188, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
+                       "pextd $rA, $rS, $rB", IIC_IntGeneral,
+                       [(set i64:$rA, (int_ppc_pextd i64:$rS, i64:$rB))]>;
+}
