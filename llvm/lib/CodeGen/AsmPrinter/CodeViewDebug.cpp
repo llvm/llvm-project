@@ -849,10 +849,11 @@ static std::string flattenCommandLine(ArrayRef<const char *> Args,
       continue;
     }
     if (!LastArg.empty())
-      FlatCmdLine += " ";
+      OS << " ";
     llvm::sys::printArg(OS, Arg, /*Quote=*/true);
     LastArg = Arg;
   }
+  OS.flush();
   return FlatCmdLine;
 }
 
@@ -876,6 +877,9 @@ void CodeViewDebug::emitBuildInfo() {
       getStringIdTypeIdx(TypeTable, MainSourceFile->getDirectory());
   BuildInfoArgs[BuildInfoRecord::SourceFile] =
       getStringIdTypeIdx(TypeTable, MainSourceFile->getFilename());
+  // FIXME: PDB is intentionally blank unless we implement /Zi type servers.
+  BuildInfoArgs[BuildInfoRecord::TypeServerPDB] =
+      getStringIdTypeIdx(TypeTable, "");
   if (Asm->TM.Options.MCOptions.Argv0 != nullptr) {
     BuildInfoArgs[BuildInfoRecord::BuildTool] =
         getStringIdTypeIdx(TypeTable, Asm->TM.Options.MCOptions.Argv0);
@@ -883,7 +887,6 @@ void CodeViewDebug::emitBuildInfo() {
         TypeTable, flattenCommandLine(Asm->TM.Options.MCOptions.CommandLineArgs,
                                       MainSourceFile->getFilename()));
   }
-  // FIXME: PDB is intentionally blank unless we implement /Zi type servers.
   BuildInfoRecord BIR(BuildInfoArgs);
   TypeIndex BuildInfoIndex = TypeTable.writeLeafType(BIR);
 
