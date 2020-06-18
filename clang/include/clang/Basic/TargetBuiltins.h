@@ -247,6 +247,7 @@ namespace clang {
     bool isGatherPrefetch() const { return Flags & IsGatherPrefetch; }
     bool isReverseUSDOT() const { return Flags & ReverseUSDOT; }
     bool isUndef() const { return Flags & IsUndef; }
+    bool isTupleCreate() const { return Flags & IsTupleCreate; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

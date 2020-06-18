@@ -4646,7 +4646,7 @@ struct ARMVectorIntrinsicInfo {
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
   unsigned AltLLVMIntrinsic;
-  unsigned TypeModifier;
+  uint64_t TypeModifier;
 
   bool operator<(unsigned RHSBuiltinID) const {
     return BuiltinID < RHSBuiltinID;
@@ -7998,9 +7998,8 @@ static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatUndef);
 }
 
-SmallVector<llvm::Type *, 2>
-CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
-                                     ArrayRef<Value *> Ops) {
+SmallVector<llvm::Type *, 2> CodeGenFunction::getSVEOverloadTypes(
+    SVETypeFlags TypeFlags, llvm::Type *ResultType, ArrayRef<Value *> Ops) {
   if (TypeFlags.isOverloadNone())
     return {};
 
@@ -8014,6 +8013,9 @@ CodeGenFunction::getSVEOverloadTypes(SVETypeFlags TypeFlags,
 
   if (TypeFlags.isOverloadCvt())
     return {Ops[0]->getType(), Ops.back()->getType()};
+
+  if (TypeFlags.isTupleCreate())
+    return {ResultType, Ops[0]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
@@ -8112,7 +8114,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     }
 
     Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
-                                   getSVEOverloadTypes(TypeFlags, Ops));
+                                   getSVEOverloadTypes(TypeFlags, Ty, Ops));
     Value *Call = Builder.CreateCall(F, Ops);
 
     // Predicate results must be converted to svbool_t.

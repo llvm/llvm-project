@@ -200,6 +200,7 @@ def IsGatherPrefetch          : FlagType<0x10000000>;
 def ReverseCompare            : FlagType<0x20000000>; // Compare operands must be swapped.
 def ReverseUSDOT              : FlagType<0x40000000>; // Unsigned/signed operands must be swapped.
 def IsUndef                   : FlagType<0x80000000>; // Codegen `undef` of given type.
+def IsTupleCreate             : FlagType<0x100000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -1278,6 +1279,10 @@ def SVUNDEF_1 : SInst<"svundef_{d}",  "d", "csilUcUsUiUlhfd", MergeNone, "", [Is
 def SVUNDEF_2 : SInst<"svundef2_{d}", "2", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
 def SVUNDEF_3 : SInst<"svundef3_{d}", "3", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
 def SVUNDEF_4 : SInst<"svundef4_{d}", "4", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef]>;
+
+def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create2", [IsTupleCreate]>;
+def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create3", [IsTupleCreate]>;
+def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tuple_create4", [IsTupleCreate]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
