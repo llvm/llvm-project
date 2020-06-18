@@ -23,7 +23,6 @@ namespace mlir {
 class OperationFolder;
 
 namespace edsc {
-class BlockHandle;
 class NestedBuilder;
 
 /// Helper class to transparently handle builder insertion points by RAII.
@@ -145,96 +144,6 @@ protected:
 
 private:
   ScopedContext *bodyScope = nullptr;
-};
-
-// This class exists solely to handle the C++ vexing parse case when
-// trying to enter a Block that has already been constructed.
-class Append {};
-
-/// Deprecated. Use buildInNewBlock or appendToBlock instead.
-///
-/// A BlockBuilder is a NestedBuilder for mlir::Block*.
-/// This exists by opposition to LoopBuilder which is not related to an
-/// mlir::Block* but to a mlir::Value.
-/// It is meant to be used as a temporary object for representing any nested
-/// MLIR construct that is "related to" an mlir::Block*.
-class BlockBuilder : public NestedBuilder {
-public:
-  /// Enters the mlir::Block* previously captured by `bh` and sets the insertion
-  /// point to its end. If the block already contains a terminator, set the
-  /// insertion point before the terminator.
-  BlockBuilder(BlockHandle bh, Append);
-
-  /// Constructs a new mlir::Block with argument types derived from `args`.
-  /// Captures the new block in `bh` and its arguments into `args`.
-  /// Enters the new mlir::Block* and sets the insertion point to its end.
-  ///
-  /// Prerequisites:
-  ///   The Value `args` are typed delayed Values; i.e. they are
-  ///   not yet bound to mlir::Value.
-  BlockBuilder(BlockHandle *bh) : BlockBuilder(bh, {}, {}) {}
-  BlockBuilder(BlockHandle *bh, ArrayRef<Type> types,
-               MutableArrayRef<Value> args);
-
-  /// Constructs a new mlir::Block with argument types derived from `args` and
-  /// appends it as the last block in the region.
-  /// Captures the new block in `bh` and its arguments into `args`.
-  /// Enters the new mlir::Block* and sets the insertion point to its end.
-  ///
-  /// Prerequisites:
-  ///   The Value `args` are typed delayed Values; i.e. they are
-  ///   not yet bound to mlir::Value.
-  BlockBuilder(BlockHandle *bh, Region &region, ArrayRef<Type> types,
-               MutableArrayRef<Value> args);
-
-  /// The only purpose of this operator is to serve as a sequence point so that
-  /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
-  /// scoped within a BlockBuilder.
-  void operator()(function_ref<void(void)> fun = nullptr);
-
-private:
-  BlockBuilder(BlockBuilder &) = delete;
-  BlockBuilder &operator=(BlockBuilder &other) = delete;
-};
-
-/// Deprecated. Use Block * instead.
-///
-/// A BlockHandle represents a (potentially "delayed") Block abstraction.
-/// This extra abstraction is necessary because an mlir::Block is not an
-/// mlir::Value.
-/// A BlockHandle should be captured by pointer but otherwise passed by Value
-/// everywhere.
-class BlockHandle {
-public:
-  /// A BlockHandle constructed without an mlir::Block* represents a "delayed"
-  /// Block. A delayed Block represents the declaration (in the PL sense) of a
-  /// placeholder for an mlir::Block* that will be constructed and captured at
-  /// some later point in the program.
-  BlockHandle() : block(nullptr) {}
-
-  /// A BlockHandle constructed with an mlir::Block* represents an "eager"
-  /// Block. An eager Block represents both the declaration and the definition
-  /// (in the PL sense) of a placeholder for an mlir::Block* that has already
-  /// been constructed in the past and that is captured "now" in the program.
-  BlockHandle(mlir::Block *block) : block(block) {}
-
-  /// BlockHandle is a value type, use the default copy constructor and
-  /// assignment operator.
-  BlockHandle(const BlockHandle &) = default;
-  BlockHandle &operator=(const BlockHandle &) = default;
-
-  /// Delegates block creation to MLIR and wrap the resulting mlir::Block.
-  static BlockHandle create(ArrayRef<Type> argTypes);
-
-  /// Delegates block creation to MLIR and wrap the resulting mlir::Block.
-  static BlockHandle createInRegion(Region &region, ArrayRef<Type> argTypes);
-
-  operator bool() { return block != nullptr; }
-  operator mlir::Block *() { return block; }
-  mlir::Block *getBlock() { return block; }
-
-private:
-  mlir::Block *block;
 };
 
 /// Creates a block in the region that contains the insertion block of the
