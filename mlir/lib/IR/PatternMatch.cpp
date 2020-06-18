@@ -19,8 +19,7 @@ PatternBenefit::PatternBenefit(unsigned benefit) : representation(benefit) {
 }
 
 unsigned short PatternBenefit::getBenefit() const {
-  assert(representation != ImpossibleToMatchSentinel &&
-         "Pattern doesn't match");
+  assert(!isImpossibleToMatch() && "Pattern doesn't match");
   return representation;
 }
 
@@ -171,31 +170,72 @@ void PatternRewriter::cloneRegionBefore(Region &region, Block *before) {
 // PatternMatcher implementation
 //===----------------------------------------------------------------------===//
 
-RewritePatternMatcher::RewritePatternMatcher(
-    const OwningRewritePatternList &patterns) {
-  for (auto &pattern : patterns)
-    this->patterns.push_back(pattern.get());
+void PatternApplicator::applyCostModel(CostModel model) {
+  // Separate patterns by root kind to simplify lookup later on.
+  patterns.clear();
+  for (const auto &pat : owningPatternList)
+    patterns[pat->getRootKind()].push_back(pat.get());
 
-  // Sort the patterns by benefit to simplify the matching logic.
-  std::stable_sort(this->patterns.begin(), this->patterns.end(),
-                   [](RewritePattern *l, RewritePattern *r) {
-                     return r->getBenefit() < l->getBenefit();
-                   });
+  // Sort the patterns using the provided cost model.
+  llvm::SmallDenseMap<RewritePattern *, PatternBenefit> benefits;
+  auto cmp = [&benefits](RewritePattern *lhs, RewritePattern *rhs) {
+    return benefits[lhs] > benefits[rhs];
+  };
+  for (auto &it : patterns) {
+    SmallVectorImpl<RewritePattern *> &list = it.second;
+
+    // Special case for one pattern in the list, which is the most common case.
+    if (list.size() == 1) {
+      if (model(*list.front()).isImpossibleToMatch())
+        list.clear();
+      continue;
+    }
+
+    // Collect the dynamic benefits for the current pattern list.
+    benefits.clear();
+    for (RewritePattern *pat : list)
+      benefits.try_emplace(pat, model(*pat));
+
+    // Sort patterns with highest benefit first, and remove those that are
+    // impossible to match.
+    std::stable_sort(list.begin(), list.end(), cmp);
+    while (!list.empty() && benefits[list.back()].isImpossibleToMatch())
+      list.pop_back();
+  }
+}
+
+void PatternApplicator::walkAllPatterns(
+    function_ref<void(const RewritePattern &)> walk) {
+  for (auto &it : owningPatternList)
+    walk(*it);
 }
 
 /// Try to match the given operation to a pattern and rewrite it.
-bool RewritePatternMatcher::matchAndRewrite(Operation *op,
-                                            PatternRewriter &rewriter) {
-  for (auto *pattern : patterns) {
-    // Ignore patterns that are for the wrong root or are impossible to match.
-    if (pattern->getRootKind() != op->getName() ||
-        pattern->getBenefit().isImpossibleToMatch())
+LogicalResult PatternApplicator::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter,
+    function_ref<bool(const RewritePattern &)> canApply,
+    function_ref<void(const RewritePattern &)> onFailure,
+    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
+  auto patternIt = patterns.find(op->getName());
+  if (patternIt == patterns.end())
+    return failure();
+
+  for (auto *pattern : patternIt->second) {
+    // Check that the pattern can be applied.
+    if (canApply && !canApply(*pattern))
       continue;
 
     // Try to match and rewrite this pattern. The patterns are sorted by
-    // benefit, so if we match we can immediately rewrite and return.
-    if (succeeded(pattern->matchAndRewrite(op, rewriter)))
-      return true;
+    // benefit, so if we match we can immediately rewrite.
+    rewriter.setInsertionPoint(op);
+    if (succeeded(pattern->matchAndRewrite(op, rewriter))) {
+      if (!onSuccess || succeeded(onSuccess(*pattern)))
+        return success();
+      continue;
+    }
+
+    if (onFailure)
+      onFailure(*pattern);
   }
-  return false;
+  return failure();
 }
