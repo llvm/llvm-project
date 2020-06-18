@@ -45,6 +45,7 @@ enum class NodeKind : uint16_t {
   BinaryOperatorExpression,
   CxxNullPtrExpression,
   IntegerLiteralExpression,
+  IdExpression,
 
   // Statements.
   UnknownStatement,
@@ -84,7 +85,10 @@ enum class NodeKind : uint16_t {
   ArraySubscript,
   TrailingReturnType,
   ParametersAndQualifiers,
-  MemberPointer
+  MemberPointer,
+  NestedNameSpecifier,
+  NameSpecifier,
+  UnqualifiedId
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
@@ -150,7 +154,10 @@ enum class NodeRole : uint8_t {
   ArraySubscript_sizeExpression,
   TrailingReturnType_declarator,
   ParametersAndQualifiers_parameter,
-  ParametersAndQualifiers_trailingReturn
+  ParametersAndQualifiers_trailingReturn,
+  IdExpression_id,
+  IdExpression_qualifier,
+  NestedNameSpecifier_specifier
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeRole R);
@@ -175,6 +182,56 @@ public:
     return NodeKind::UnknownExpression <= N->kind() &&
            N->kind() <= NodeKind::UnknownExpression;
   }
+};
+
+/// A sequence of these specifiers make a `nested-name-specifier`.
+/// e.g. the `std::` or `vector<int>::` in `std::vector<int>::size`.
+class NameSpecifier final : public Tree {
+public:
+  NameSpecifier() : Tree(NodeKind::NameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::NameSpecifier;
+  }
+};
+
+/// Models a `nested-name-specifier`. C++ [expr.prim.id.qual]
+/// e.g. the `std::vector<int>::` in `std::vector<int>::size`.
+class NestedNameSpecifier final : public Tree {
+public:
+  NestedNameSpecifier() : Tree(NodeKind::NestedNameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() <= NodeKind::NestedNameSpecifier;
+  }
+  std::vector<syntax::NameSpecifier *> specifiers();
+};
+
+/// Models an `unqualified-id`. C++ [expr.prim.id.unqual]
+/// e.g. the `size` in `std::vector<int>::size`.
+class UnqualifiedId final : public Tree {
+public:
+  UnqualifiedId() : Tree(NodeKind::UnqualifiedId) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::UnqualifiedId;
+  }
+};
+
+/// Models an `id-expression`, e.g. `std::vector<int>::size`.
+/// C++ [expr.prim.id]
+/// id-expression:
+///   unqualified-id
+///   qualified-id
+/// qualified-id:
+///   nested-name-specifier template_opt unqualified-id
+class IdExpression final : public Expression {
+public:
+  IdExpression() : Expression(NodeKind::IdExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IdExpression;
+  }
+  syntax::NestedNameSpecifier *qualifier();
+  // TODO after expose `id-expression` from `DependentScopeDeclRefExpr`:
+  // Add accessor for `template_opt`.
+  syntax::UnqualifiedId *unqualifiedId();
 };
 
 /// An expression of an unknown kind, i.e. one not currently handled by the
