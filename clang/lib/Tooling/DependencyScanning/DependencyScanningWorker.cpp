@@ -240,7 +240,7 @@ llvm::Error DependencyScanningWorker::computeDependenciesForClangInvocation(
     for (const auto &Arg : Arguments)
       CC1Args.push_back(Arg.c_str());
     std::unique_ptr<CompilerInvocation> Invocation(
-        newInvocation(&Diags, CC1Args));
+        newInvocation(&Diags, CC1Args, /*BinaryName=*/nullptr));
 
     DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
                                     PPSkipMappings.get(), Format);
