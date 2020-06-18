@@ -6,10 +6,7 @@
 
 // CHECK-LABEL: @test_vdupq_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[A:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
 // CHECK-NEXT:    ret <8 x half> [[DOTSPLAT]]
 //
@@ -97,15 +94,12 @@ uint32x4_t test_vdupq_n_u32(uint32_t a)
 
 // CHECK-LABEL: @test_vdupq_m_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[A:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP3]], <8 x half> [[DOTSPLAT]], <8 x half> [[INACTIVE:%.*]]
-// CHECK-NEXT:    ret <8 x half> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x half> [[DOTSPLAT]], <8 x half> [[INACTIVE:%.*]]
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
 //
 float16x8_t test_vdupq_m_n_f16(float16x8_t inactive, float16_t a, mve_pred16_t p)
 {
@@ -244,12 +238,9 @@ uint32x4_t test_vdupq_m_n_u32(uint32x4_t inactive, uint32_t a, mve_pred16_t p)
 
 // CHECK-LABEL: @test_vdupq_x_n_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A_COERCE:%.*]] to i32
-// CHECK-NEXT:    [[TMP_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP_0_EXTRACT_TRUNC]] to half
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP2]])
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[A:%.*]], i32 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
 // CHECK-NEXT:    ret <8 x half> [[DOTSPLAT]]
 //
