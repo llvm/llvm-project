@@ -1122,7 +1122,7 @@ ConversionPattern::matchAndRewrite(Operation *op,
 
 namespace {
 /// A set of rewrite patterns that can be used to legalize a given operation.
-using LegalizationPatterns = SmallVector<RewritePattern *, 1>;
+using LegalizationPatterns = SmallVector<const RewritePattern *, 1>;
 
 /// This class defines a recursive operation legalizer.
 class OperationLegalizer {
@@ -1130,11 +1130,7 @@ public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
   OperationLegalizer(ConversionTarget &targetInfo,
-                     const OwningRewritePatternList &patterns)
-      : target(targetInfo) {
-    buildLegalizationGraph(patterns);
-    computeLegalizationGraphBenefit();
-  }
+                     const OwningRewritePatternList &patterns);
 
   /// Returns if the given operation is known to be illegal on the target.
   bool isIllegal(Operation *op) const;
@@ -1151,16 +1147,28 @@ private:
   LogicalResult legalizeWithFold(Operation *op,
                                  ConversionPatternRewriter &rewriter);
 
-  /// Attempt to legalize the given operation by applying the provided pattern.
-  /// Returns success if the operation was legalized, failure otherwise.
-  LogicalResult legalizePattern(Operation *op, RewritePattern *pattern,
-                                ConversionPatternRewriter &rewriter);
+  /// Attempt to legalize the given operation by applying a pattern. Returns
+  /// success if the operation was legalized, failure otherwise.
+  LogicalResult legalizeWithPattern(Operation *op,
+                                    ConversionPatternRewriter &rewriter);
+
+  /// Return true if the given pattern may be applied to the given operation,
+  /// false otherwise.
+  bool canApplyPattern(Operation *op, const RewritePattern &pattern,
+                       ConversionPatternRewriter &rewriter);
+
+  /// Legalize the resultant IR after successfully applying the given pattern.
+  LogicalResult legalizePatternResult(Operation *op,
+                                      const RewritePattern &pattern,
+                                      ConversionPatternRewriter &rewriter,
+                                      RewriterState &curState);
 
   /// Build an optimistic legalization graph given the provided patterns. This
   /// function populates 'legalizerPatterns' with the operations that are not
   /// directly legal, but may be transitively legal for the current target given
   /// the provided patterns.
-  void buildLegalizationGraph(const OwningRewritePatternList &patterns);
+  void buildLegalizationGraph(
+      DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
 
   /// Compute the benefit of each node within the computed legalization graph.
   /// This orders the patterns within 'legalizerPatterns' based upon two
@@ -1170,19 +1178,30 @@ private:
   ///  2) When comparing patterns with the same legalization depth, prefer the
   ///     pattern with the highest PatternBenefit. This allows for users to
   ///     prefer specific legalizations over others.
-  void computeLegalizationGraphBenefit();
+  void computeLegalizationGraphBenefit(
+      DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns);
 
   /// The current set of patterns that have been applied.
-  SmallPtrSet<RewritePattern *, 8> appliedPatterns;
-
-  /// The set of legality information for operations transitively supported by
-  /// the target.
-  DenseMap<OperationName, LegalizationPatterns> legalizerPatterns;
+  SmallPtrSet<const RewritePattern *, 8> appliedPatterns;
 
   /// The legalization information provided by the target.
   ConversionTarget &target;
+
+  /// The pattern applicator to use for conversions.
+  PatternApplicator applicator;
 };
 } // namespace
+
+OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
+                                       const OwningRewritePatternList &patterns)
+    : target(targetInfo), applicator(patterns) {
+  // The set of legality information for operations transitively supported by
+  // the target.
+  DenseMap<OperationName, LegalizationPatterns> legalizerPatterns;
+
+  buildLegalizationGraph(legalizerPatterns);
+  computeLegalizationGraphBenefit(legalizerPatterns);
+}
 
 bool OperationLegalizer::isIllegal(Operation *op) const {
   // Check if the target explicitly marked this operation as illegal.
@@ -1253,24 +1272,12 @@ OperationLegalizer::legalize(Operation *op,
   }
 
   // Otherwise, we need to apply a legalization pattern to this operation.
-  auto it = legalizerPatterns.find(op->getName());
-  if (it == legalizerPatterns.end()) {
+  if (succeeded(legalizeWithPattern(op, rewriter))) {
     LLVM_DEBUG({
-      logFailure(rewriterImpl.logger, "no known legalization path");
+      logSuccess(rewriterImpl.logger, "");
       rewriterImpl.logger.startLine() << logLineComment;
     });
-    return failure();
-  }
-
-  // The patterns are sorted by expected benefit, so try to apply each in-order.
-  for (auto *pattern : it->second) {
-    if (succeeded(legalizePattern(op, pattern, rewriter))) {
-      LLVM_DEBUG({
-        logSuccess(rewriterImpl.logger, "");
-        rewriterImpl.logger.startLine() << logLineComment;
-      });
-      return success();
-    }
+    return success();
   }
 
   LLVM_DEBUG({
@@ -1320,45 +1327,69 @@ OperationLegalizer::legalizeWithFold(Operation *op,
 }
 
 LogicalResult
-OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
-                                    ConversionPatternRewriter &rewriter) {
+OperationLegalizer::legalizeWithPattern(Operation *op,
+                                        ConversionPatternRewriter &rewriter) {
   auto &rewriterImpl = rewriter.getImpl();
+
+  // Functor that returns if the given pattern may be applied.
+  auto canApply = [&](const RewritePattern &pattern) {
+    return canApplyPattern(op, pattern, rewriter);
+  };
+
+  // Functor that cleans up the rewriter state after a pattern failed to match.
+  RewriterState curState = rewriterImpl.getCurrentState();
+  auto onFailure = [&](const RewritePattern &pattern) {
+    LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern failed to match"));
+    rewriterImpl.resetState(curState);
+    appliedPatterns.erase(&pattern);
+  };
+
+  // Functor that performs additional legalization when a pattern is
+  // successfully applied.
+  auto onSuccess = [&](const RewritePattern &pattern) {
+    auto result = legalizePatternResult(op, pattern, rewriter, curState);
+    appliedPatterns.erase(&pattern);
+    if (failed(result))
+      rewriterImpl.resetState(curState);
+    return result;
+  };
+
+  // Try to match and rewrite a pattern on this operation.
+  return applicator.matchAndRewrite(op, rewriter, canApply, onFailure,
+                                    onSuccess);
+}
+
+bool OperationLegalizer::canApplyPattern(Operation *op,
+                                         const RewritePattern &pattern,
+                                         ConversionPatternRewriter &rewriter) {
   LLVM_DEBUG({
-    auto &os = rewriterImpl.logger;
+    auto &os = rewriter.getImpl().logger;
     os.getOStream() << "\n";
-    os.startLine() << "* Pattern : '" << pattern->getRootKind() << " -> (";
-    llvm::interleaveComma(pattern->getGeneratedOps(), llvm::dbgs());
+    os.startLine() << "* Pattern : '" << pattern.getRootKind() << " -> (";
+    llvm::interleaveComma(pattern.getGeneratedOps(), llvm::dbgs());
     os.getOStream() << ")' {\n";
     os.indent();
   });
 
   // Ensure that we don't cycle by not allowing the same pattern to be
   // applied twice in the same recursion stack if it is not known to be safe.
-  if (!pattern->hasBoundedRewriteRecursion() &&
-      !appliedPatterns.insert(pattern).second) {
-    LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern was already applied"));
-    return failure();
+  if (!pattern.hasBoundedRewriteRecursion() &&
+      !appliedPatterns.insert(&pattern).second) {
+    LLVM_DEBUG(
+        logFailure(rewriter.getImpl().logger, "pattern was already applied"));
+    return false;
   }
+  return true;
+}
 
-  RewriterState curState = rewriterImpl.getCurrentState();
-  auto cleanupFailure = [&] {
-    // Reset the rewriter state and pop this pattern.
-    rewriterImpl.resetState(curState);
-    appliedPatterns.erase(pattern);
-    return failure();
-  };
+LogicalResult OperationLegalizer::legalizePatternResult(
+    Operation *op, const RewritePattern &pattern,
+    ConversionPatternRewriter &rewriter, RewriterState &curState) {
+  auto &rewriterImpl = rewriter.getImpl();
 
-  // Try to rewrite with the given pattern.
-  rewriter.setInsertionPoint(op);
-  LogicalResult matchedPattern = pattern->matchAndRewrite(op, rewriter);
 #ifndef NDEBUG
   assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
 #endif
-
-  if (failed(matchedPattern)) {
-    LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern failed to match"));
-    return cleanupFailure();
-  }
 
   // If the pattern moved or created any blocks, try to legalize their types.
   // This ensures that the types of the block arguments are legal for the region
@@ -1376,7 +1407,7 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
     if (failed(rewriterImpl.convertBlockSignature(action.block))) {
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to convert types of moved block"));
-      return cleanupFailure();
+      return failure();
     }
   }
 
@@ -1414,7 +1445,7 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "operation updated in-place '{0}' was illegal",
                             op->getName()));
-      return cleanupFailure();
+      return failure();
     }
   }
 
@@ -1426,42 +1457,42 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "generated operation '{0}'({1}) was illegal",
                             op->getName(), op));
-      return cleanupFailure();
+      return failure();
     }
   }
 
   LLVM_DEBUG(logSuccess(rewriterImpl.logger, "pattern applied successfully"));
-  appliedPatterns.erase(pattern);
   return success();
 }
 
 void OperationLegalizer::buildLegalizationGraph(
-    const OwningRewritePatternList &patterns) {
+    DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
   // A mapping between an operation and a set of operations that can be used to
   // generate it.
   DenseMap<OperationName, SmallPtrSet<OperationName, 2>> parentOps;
   // A mapping between an operation and any currently invalid patterns it has.
-  DenseMap<OperationName, SmallPtrSet<RewritePattern *, 2>> invalidPatterns;
+  DenseMap<OperationName, SmallPtrSet<const RewritePattern *, 2>>
+      invalidPatterns;
   // A worklist of patterns to consider for legality.
-  llvm::SetVector<RewritePattern *> patternWorklist;
+  llvm::SetVector<const RewritePattern *> patternWorklist;
 
   // Build the mapping from operations to the parent ops that may generate them.
-  for (auto &pattern : patterns) {
-    auto root = pattern->getRootKind();
+  applicator.walkAllPatterns([&](const RewritePattern &pattern) {
+    OperationName root = pattern.getRootKind();
 
     // Skip operations that are always known to be legal.
     if (target.getOpAction(root) == LegalizationAction::Legal)
-      continue;
+      return;
 
     // Add this pattern to the invalid set for the root op and record this root
     // as a parent for any generated operations.
-    invalidPatterns[root].insert(pattern.get());
-    for (auto op : pattern->getGeneratedOps())
+    invalidPatterns[root].insert(&pattern);
+    for (auto op : pattern.getGeneratedOps())
       parentOps[op].insert(root);
 
     // Add this pattern to the worklist.
-    patternWorklist.insert(pattern.get());
-  }
+    patternWorklist.insert(&pattern);
+  });
 
   while (!patternWorklist.empty()) {
     auto *pattern = patternWorklist.pop_back_val();
@@ -1486,7 +1517,8 @@ void OperationLegalizer::buildLegalizationGraph(
   }
 }
 
-void OperationLegalizer::computeLegalizationGraphBenefit() {
+void OperationLegalizer::computeLegalizationGraphBenefit(
+    DenseMap<OperationName, LegalizationPatterns> &legalizerPatterns) {
   // The smallest pattern depth, when legalizing an operation.
   DenseMap<OperationName, unsigned> minPatternDepth;
 
@@ -1511,9 +1543,9 @@ void OperationLegalizer::computeLegalizationGraphBenefit() {
     minPatternDepth.try_emplace(op, minDepth);
 
     // Compute the depth for each pattern used to legalize this operation.
-    SmallVector<std::pair<RewritePattern *, unsigned>, 4> patternsByDepth;
+    SmallVector<std::pair<const RewritePattern *, unsigned>, 4> patternsByDepth;
     patternsByDepth.reserve(opPatternsIt->second.size());
-    for (RewritePattern *pattern : opPatternsIt->second) {
+    for (const RewritePattern *pattern : opPatternsIt->second) {
       unsigned depth = 0;
       for (auto generatedOp : pattern->getGeneratedOps())
         depth = std::max(depth, computeDepth(generatedOp) + 1);
@@ -1534,8 +1566,8 @@ void OperationLegalizer::computeLegalizationGraphBenefit() {
     // Sort the patterns by those likely to be the most beneficial.
     llvm::array_pod_sort(
         patternsByDepth.begin(), patternsByDepth.end(),
-        [](const std::pair<RewritePattern *, unsigned> *lhs,
-           const std::pair<RewritePattern *, unsigned> *rhs) {
+        [](const std::pair<const RewritePattern *, unsigned> *lhs,
+           const std::pair<const RewritePattern *, unsigned> *rhs) {
           // First sort by the smaller pattern legalization depth.
           if (lhs->second != rhs->second)
             return llvm::array_pod_sort_comparator<unsigned>(&lhs->second,
@@ -1560,6 +1592,21 @@ void OperationLegalizer::computeLegalizationGraphBenefit() {
   for (auto &opIt : legalizerPatterns)
     if (!minPatternDepth.count(opIt.first))
       computeDepth(opIt.first);
+
+  // Apply a cost model to the pattern applicator. We order patterns first by
+  // depth then benefit. `legalizerPatterns` contains per-op patterns by
+  // decreasing benefit.
+  applicator.applyCostModel([&](const RewritePattern &p) {
+    auto &list = legalizerPatterns[p.getRootKind()];
+
+    // If the pattern is not found, then it was removed and cannot be matched.
+    LegalizationPatterns::iterator it = llvm::find(list, &p);
+    if (it == list.end())
+      return PatternBenefit::impossibleToMatch();
+
+    // Patterns found earlier in the list have higher benefit.
+    return PatternBenefit(std::distance(it, list.end()));
+  });
 }
 
 //===----------------------------------------------------------------------===//
