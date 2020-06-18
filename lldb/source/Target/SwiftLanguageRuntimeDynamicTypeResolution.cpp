@@ -44,12 +44,13 @@ swift::Type GetSwiftType(CompilerType type) {
 }
 
 swift::CanType GetCanonicalSwiftType(CompilerType type) {
+  swift::Type swift_type = nullptr;
   auto *ts = type.GetTypeSystem();
   if (auto *tr = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts))
-    return tr->GetSwiftType(type)->getCanonicalType();
+    swift_type = tr->GetSwiftType(type);
   if (auto *ast = llvm::dyn_cast_or_null<SwiftASTContext>(ts))
-    return ast->GetSwiftType(type)->getCanonicalType();
-  return swift::CanType();
+    swift_type = ast->GetSwiftType(type);
+  return swift_type ? swift_type->getCanonicalType() : swift::CanType();
 }
 
 static lldb::addr_t

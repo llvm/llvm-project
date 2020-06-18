@@ -894,6 +894,12 @@ static std::string GetClangModulesCacheProperty() {
   return path.str();
 }
 
+#ifndef NDEBUG
+SwiftASTContext::SwiftASTContext() : m_typeref_typesystem(this) {
+  llvm::dbgs() << "Initialized mock SwiftASTContext\n";
+}
+#endif
+
 SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
                                  Target *target)
     : TypeSystemSwift(), m_typeref_typesystem(this),

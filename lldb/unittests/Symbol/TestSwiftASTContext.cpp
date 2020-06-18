@@ -61,6 +61,8 @@ struct TestSwiftASTContext : public testing::Test {
 };
 
 struct SwiftASTContextTester : public SwiftASTContext {
+  SwiftASTContextTester() : SwiftASTContext() {}
+
   static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
                                     std::string swift_dir,
                                     std::string swift_stdlib_os_dir,
@@ -183,4 +185,15 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
   // Local builds.
   swift_dir = path::parent_path(abs_paths[9]);
   EXPECT_EQ(GetResourceDir("x86_64-apple-macosx", macosx_sdk), swift_dir);
+}
+
+TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {
+#ifndef NDEBUG
+  // The mock constructor is only available in asserts mode.
+  SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
+  SwiftASTContext context;
+  CompilerType t(&context, nullptr);
+  EXPECT_FALSE(SwiftASTContext::IsNonTriviallyManagedReferenceType(t, strategy,
+                                                                   nullptr));
+#endif
 }

@@ -587,6 +587,11 @@ public:
 
   ~SwiftASTContext();
 
+#ifndef NDEBUG
+  /// Provided only for unit tests.
+  SwiftASTContext();
+#endif
+
   const std::string &GetDescription() const;
 
   // PluginInterface functions
