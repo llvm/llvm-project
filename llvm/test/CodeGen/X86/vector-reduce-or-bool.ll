@@ -1617,7 +1617,6 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>) {
 ; SSE-NEXT:    por %xmm3, %xmm1
 ; SSE-NEXT:    por %xmm2, %xmm1
 ; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    psllw $7, %xmm1
 ; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    testw %ax, %ax
 ; SSE-NEXT:    setne %al
