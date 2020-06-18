@@ -389,7 +389,7 @@ namespace llvm {
 
     /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
-      unsigned NElts = getVectorNumElements();
+      unsigned NElts = getVectorMinNumElements();
       return !(NElts & (NElts - 1));
     }
 
@@ -397,10 +397,9 @@ namespace llvm {
     /// and returns that type.
     EVT getPow2VectorType(LLVMContext &Context) const {
       if (!isPow2VectorType()) {
-        unsigned NElts = getVectorNumElements();
-        unsigned Pow2NElts = 1 <<  Log2_32_Ceil(NElts);
-        return EVT::getVectorVT(Context, getVectorElementType(), Pow2NElts,
-                                isScalableVector());
+        ElementCount NElts = getVectorElementCount();
+        NElts.Min = 1 << Log2_32_Ceil(NElts.Min);
+        return EVT::getVectorVT(Context, getVectorElementType(), NElts);
       }
       else {
         return *this;
