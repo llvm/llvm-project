@@ -34,6 +34,8 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
     SecNames.insert("debug_line");
   if (!DebugAddr.empty())
     SecNames.insert("debug_addr");
+  if (!AbbrevDecls.empty())
+    SecNames.insert("debug_abbrev");
   return SecNames;
 }
 
