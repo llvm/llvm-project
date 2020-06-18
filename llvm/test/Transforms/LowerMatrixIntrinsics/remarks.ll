@@ -36,54 +36,54 @@ declare <4 x double> @llvm.matrix.multiply(<12 x double>, <12 x double>, i32, i3
 
 ; CHECK-LABEL: remark: test.h:60:20: Lowered with 6 stores, 6 loads, 0 compute ops
 ; CHECK-NEXT:  store(
-; CHECK-NEXT:   columnwise.load.3x3.double(addr %A, 5),
+; CHECK-NEXT:   column.major.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B)
-define void @columnwise.load(<9 x double>* %A, <9 x double>* %B) !dbg !27 {
-  %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !28
+define void @column.major.load(<9 x double>* %A, <9 x double>* %B) !dbg !27 {
+  %A.matrix = call <9 x double> @llvm.matrix.column.major.load(<9 x double>* %A, i64 5, i1 false, i32 3, i32 3), !dbg !28
   store <9 x double> %A.matrix, <9 x double>* %B, !dbg !28
   ret void
 }
 
-declare <9 x double> @llvm.matrix.columnwise.load(<9 x double>*, i32, i32, i32)
+declare <9 x double> @llvm.matrix.column.major.load(<9 x double>*, i64, i1, i32, i32)
 
 ; CHECK-LABEL: remark: test.h:70:20: Lowered with 6 stores, 6 loads, 0 compute ops
-; CHECK-NEXT:  columnwise.store.3x3.double(
-; CHECK-NEXT:   columnwise.load.3x3.double(addr %A, 5),
+; CHECK-NEXT:  column.major.store.3x3.double(
+; CHECK-NEXT:   column.major.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B,
 ; CHECK-NEXT:   10)
-define void @columnwise.store(<9 x double>* %A, <9 x double>* %B) !dbg !29 {
-  %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !30
-  call void @llvm.matrix.columnwise.store(<9 x double> %A.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !30
+define void @column.major.store(<9 x double>* %A, <9 x double>* %B) !dbg !29 {
+  %A.matrix = call <9 x double> @llvm.matrix.column.major.load(<9 x double>* %A, i64 5, i1 false, i32 3, i32 3), !dbg !30
+  call void @llvm.matrix.column.major.store(<9 x double> %A.matrix, <9 x double>* %B, i64 10, i1 false, i32 3, i32 3), !dbg !30
   ret void
 }
 
-declare void @llvm.matrix.columnwise.store(<9 x double>, <9 x double>*, i32, i32, i32)
+declare void @llvm.matrix.column.major.store(<9 x double>, <9 x double>*, i64, i1, i32, i32)
 
 ; CHECK-LABEL: remark: test.h:80:20: Lowered with 6 stores, 6 loads, 12 compute ops
-; CHECK-NEXT:  columnwise.store.3x3.double(
+; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
-; CHECK-NEXT:     columnwise.load.3x3.double(addr %A, 5)
-; CHECK-NEXT:     (reused) columnwise.load.3x3.double(addr %A, 5)),
-; CHECK-NEXT:    (reused) columnwise.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:     column.major.load.3x3.double(addr %A, 5)
+; CHECK-NEXT:     (reused) column.major.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:    (reused) column.major.load.3x3.double(addr %A, 5)),
 ; CHECK-NEXT:   addr %B,
 ; CHECK-NEXT:   10)
 
 define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
-  %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !32
+  %A.matrix = call <9 x double> @llvm.matrix.column.major.load(<9 x double>* %A, i64 5, i1 false, i32 3, i32 3), !dbg !32
   %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !32
   %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !32
-  call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !32
+  call void @llvm.matrix.column.major.store(<9 x double> %R2.matrix, <9 x double>* %B, i64 10, i1 false, i32 3, i32 3), !dbg !32
   ret void
 }
 
 ; CHECK-LABEL: remark: test.h:90:20: Lowered with 6 stores, 6 loads, 12 compute ops
-; CHECK-NEXT:  columnwise.store.3x3.double(
+; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
-; CHECK-NEXT:     columnwise.load.3x3.double(addr %A, 5)
-; CHECK-NEXT:     (reused) columnwise.load.3x3.double(addr %A, 5)),
-; CHECK-NEXT:    (reused) columnwise.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:     column.major.load.3x3.double(addr %A, 5)
+; CHECK-NEXT:     (reused) column.major.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:    (reused) column.major.load.3x3.double(addr %A, 5)),
 ; CHECK-NEXT:   addr %B,
 ; CHECK-NEXT:   10)
 ; CHECK-NEXT:  remark: test.h:90:20: Lowered with 2 stores, 12 loads, 22 compute ops
@@ -94,10 +94,10 @@ define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
 ; CHECK-NEXT:   addr %E)
 
 define void @multiple_expressions(<9 x double>* %A, <9 x double>* %B, <12 x double>* %C, <12 x double>* %D, <4 x double>* %E) !dbg !33 {
-  %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !34
+  %A.matrix = call <9 x double> @llvm.matrix.column.major.load(<9 x double>* %A, i64 5, i1 false, i32 3, i32 3), !dbg !34
   %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !34
   %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !34
-  call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !34
+  call void @llvm.matrix.column.major.store(<9 x double> %R2.matrix, <9 x double>* %B, i64 10, i1 false, i32 3, i32 3), !dbg !34
 
   %C.matrix = load <12 x double>, <12 x double>* %C, !dbg !34
   %D.matrix = load <12 x double>, <12 x double>* %D, !dbg !34
@@ -108,20 +108,20 @@ define void @multiple_expressions(<9 x double>* %A, <9 x double>* %B, <12 x doub
 }
 
 ; CHECK-LABEL: remark: test.h:100:20: Lowered with 6 stores, 6 loads, 12 compute ops
-; CHECK-NEXT:  columnwise.store.3x3.double(
+; CHECK-NEXT:  column.major.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
-; CHECK-NEXT:     columnwise.load.3x3.double(addr %A, 5)
-; CHECK-NEXT:     (reused) columnwise.load.3x3.double(addr %A, 5)),
-; CHECK-NEXT:    (reused) columnwise.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:     column.major.load.3x3.double(addr %A, 5)
+; CHECK-NEXT:     (reused) column.major.load.3x3.double(addr %A, 5)),
+; CHECK-NEXT:    (reused) column.major.load.3x3.double(addr %A, 5)),
 ; CHECK-NEXT:   stack addr %B,
 ; CHECK-NEXT:   10)
 define void @stackaddresses(<9 x double>* %A) !dbg !35 {
   %B = alloca <9 x double>
-  %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !36
+  %A.matrix = call <9 x double> @llvm.matrix.column.major.load(<9 x double>* %A, i64 5, i1 false, i32 3, i32 3), !dbg !36
   %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !36
   %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !36
-  call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !36
+  call void @llvm.matrix.column.major.store(<9 x double> %R2.matrix, <9 x double>* %B, i64 10, i1 false, i32 3, i32 3), !dbg !36
   ret void
 }
 
