@@ -1188,6 +1188,18 @@ def SVUZP2       : SInst<"svuzp2[_{d}]",      "ddd",  "csilUcUsUiUlhfd", MergeNo
 def SVZIP1       : SInst<"svzip1[_{d}]",      "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip1">;
 def SVZIP2       : SInst<"svzip2[_{d}]",      "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip2">;
 
+let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
+def SVREV_BF16    : SInst<"svrev[_{d}]",    "dd",   "b", MergeNone, "aarch64_sve_rev">;
+def SVSEL_BF16    : SInst<"svsel[_{d}]",    "dPdd", "b", MergeNone, "aarch64_sve_sel">;
+def SVSPLICE_BF16 : SInst<"svsplice[_{d}]", "dPdd", "b", MergeNone, "aarch64_sve_splice">;
+def SVTRN1_BF16   : SInst<"svtrn1[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_trn1">;
+def SVTRN2_BF16   : SInst<"svtrn2[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_trn2">;
+def SVUZP1_BF16   : SInst<"svuzp1[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_uzp1">;
+def SVUZP2_BF16   : SInst<"svuzp2[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_uzp2">;
+def SVZIP1_BF16   : SInst<"svzip1[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_zip1">;
+def SVZIP2_BF16   : SInst<"svzip2[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_zip2">;
+}
+
 def SVREV_B   : SInst<"svrev_{d}",      "PP",   "PcPsPiPl", MergeNone, "aarch64_sve_rev">;
 def SVSEL_B   : SInst<"svsel[_b]",      "PPPP", "Pc",       MergeNone, "aarch64_sve_sel">;
 def SVTRN1_B  : SInst<"svtrn1_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_trn1">;
@@ -1357,6 +1369,15 @@ def SVUZP1Q      : SInst<"svuzp1q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNo
 def SVUZP2Q      : SInst<"svuzp2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_uzp2q">;
 def SVZIP1Q      : SInst<"svzip1q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip1q">;
 def SVZIP2Q      : SInst<"svzip2q[_{d}]",     "ddd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_zip2q">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64) && defined(__ARM_FEATURE_SVE_BF16)" in {
+def SVTRN1Q_BF16      : SInst<"svtrn1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_trn1q">;
+def SVTRN2Q_BF16      : SInst<"svtrn2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_trn2q">;
+def SVUZP1Q_BF16      : SInst<"svuzp1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp1q">;
+def SVUZP2Q_BF16      : SInst<"svuzp2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_uzp2q">;
+def SVZIP1Q_BF16      : SInst<"svzip1q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip1q">;
+def SVZIP2Q_BF16      : SInst<"svzip2q[_{d}]",     "ddd",  "b", MergeNone, "aarch64_sve_zip2q">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
