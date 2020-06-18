@@ -114,7 +114,7 @@ for arch in ${architectures}; do
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
     mkdir -p "${build_dir}/${arch}"
     (cd "${build_dir}/${arch}" &&
-        xcrun --sdk "${sdk}" cmake "${llvm_root}/llvm" \
+        xcrun --sdk "${sdk}" cmake "${llvm_root}/libcxx/utils/ci/runtimes" \
             -GNinja \
             -DCMAKE_MAKE_PROGRAM="$(xcrun --sdk "${sdk}" --find ninja)" \
             -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
