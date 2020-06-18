@@ -841,6 +841,13 @@ void AArch64PassConfig::addPreEmitPass2() {
   addPass(createUnpackMachineBundles(nullptr));
 }
 
+MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return AArch64FunctionInfo::create<AArch64FunctionInfo>(
+      Allocator, F, static_cast<const AArch64Subtarget *>(STI));
+}
+
 yaml::MachineFunctionInfo *
 AArch64TargetMachine::createDefaultFuncInfoYAML() const {
   return new yaml::AArch64FunctionInfo();

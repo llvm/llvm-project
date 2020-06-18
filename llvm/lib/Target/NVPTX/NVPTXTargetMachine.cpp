@@ -15,6 +15,7 @@
 #include "NVPTXAllocaHoisting.h"
 #include "NVPTXAtomicLower.h"
 #include "NVPTXLowerAggrCopies.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
@@ -199,6 +200,13 @@ private:
 
 TargetPassConfig *NVPTXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new NVPTXPassConfig(*this, PM);
+}
+
+MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return NVPTXMachineFunctionInfo::create<NVPTXMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
