@@ -12459,7 +12459,8 @@ static SDValue PerformANDCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
 
-  if(!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT) || VT == MVT::v4i1 ||
+      VT == MVT::v8i1 || VT == MVT::v16i1)
     return SDValue();
 
   APInt SplatBits, SplatUndef;
@@ -12755,6 +12756,10 @@ static SDValue PerformORCombine(SDNode *N,
   if(!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
+  if (Subtarget->hasMVEIntegerOps() &&
+      (VT == MVT::v4i1 || VT == MVT::v8i1 || VT == MVT::v16i1))
+    return PerformORCombine_i1(N, DCI, Subtarget);
+
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
@@ -12825,10 +12830,6 @@ static SDValue PerformORCombine(SDNode *N,
         }
     }
   }
-
-  if (Subtarget->hasMVEIntegerOps() &&
-      (VT == MVT::v4i1 || VT == MVT::v8i1 || VT == MVT::v16i1))
-    return PerformORCombine_i1(N, DCI, Subtarget);
 
   // Try to use the ARM/Thumb2 BFI (bitfield insert) instruction when
   // reasonable.
