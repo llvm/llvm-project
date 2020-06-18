@@ -160,6 +160,9 @@ public:
   /// Return true if the given operation has legal operand and result types.
   bool isLegal(Operation *op);
 
+  /// Return true if the types of block arguments within the region are legal.
+  bool isLegal(Region *region);
+
   /// Return true if the inputs and outputs of the given function type are
   /// legal.
   bool isSignatureLegal(FunctionType ty);
@@ -268,16 +271,15 @@ private:
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-/// Base class for the conversion patterns that require type changes. Specific
-/// conversions must derive this class and implement least one `rewrite` method.
-/// NOTE: These conversion patterns can only be used with the 'apply*' methods
-/// below.
+/// Base class for the conversion patterns. This pattern class enables type
+/// conversions, and other uses specific to the conversion framework. As such,
+/// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
   /// Hook for derived classes to implement rewriting. `op` is the (first)
-  /// operation matched by the pattern, `operands` is a list of rewritten values
-  /// that are passed to this operation, `rewriter` can be used to emit the new
-  /// operations. This function should not fail. If some specific cases of
+  /// operation matched by the pattern, `operands` is a list of the rewritten
+  /// operand values that are passed to `op`, `rewriter` can be used to emit the
+  /// new operations. This function should not fail. If some specific cases of
   /// the operation are not supported, these cases should not be matched.
   virtual void rewrite(Operation *op, ArrayRef<Value> operands,
                        ConversionPatternRewriter &rewriter) const {
@@ -298,8 +300,32 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final;
 
+  /// Return the type converter held by this pattern, or nullptr if the pattern
+  /// does not require type conversion.
+  TypeConverter *getTypeConverter() const { return typeConverter; }
+
 protected:
+  /// See `RewritePattern::RewritePattern` for information on the other
+  /// available constructors.
   using RewritePattern::RewritePattern;
+  /// Construct a conversion pattern that matches an operation with the given
+  /// root name. This constructor allows for providing a type converter to use
+  /// within the pattern.
+  ConversionPattern(StringRef rootName, PatternBenefit benefit,
+                    TypeConverter &typeConverter, MLIRContext *ctx)
+      : RewritePattern(rootName, benefit, ctx), typeConverter(&typeConverter) {}
+  /// Construct a conversion pattern that matches any operation type. This
+  /// constructor allows for providing a type converter to use within the
+  /// pattern. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
+  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
+  /// always be supplied here.
+  ConversionPattern(PatternBenefit benefit, TypeConverter &typeConverter,
+                    MatchAnyOpTypeTag tag)
+      : RewritePattern(benefit, tag), typeConverter(&typeConverter) {}
+
+protected:
+  /// An optional type converter for use by this pattern.
+  TypeConverter *typeConverter;
 
 private:
   using RewritePattern::rewrite;
@@ -312,6 +338,10 @@ template <typename SourceOp>
 struct OpConversionPattern : public ConversionPattern {
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
+  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : ConversionPattern(SourceOp::getOperationName(), benefit, typeConverter,
+                          context) {}
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
@@ -367,7 +397,7 @@ struct ConversionPatternRewriterImpl;
 /// hooks.
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  ConversionPatternRewriter(MLIRContext *ctx, TypeConverter *converter);
+  ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
   /// Apply a signature conversion to the entry block of the given region. This
@@ -376,6 +406,15 @@ public:
   Block *
   applySignatureConversion(Region *region,
                            TypeConverter::SignatureConversion &conversion);
+
+  /// Convert the types of block arguments within the given region. This
+  /// replaces each block with a new block containing the updated signature. The
+  /// entry block may have a special conversion if `entryConversion` is
+  /// provided. On success, the new entry block to the region is returned for
+  /// convenience. Otherwise, failure is returned.
+  FailureOr<Block *> convertRegionTypes(
+      Region *region, TypeConverter &converter,
+      TypeConverter::SignatureConversion *entryConversion = nullptr);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
@@ -721,36 +760,30 @@ private:
 /// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
 /// possible, ignoring operations that failed to legalize. This method only
-/// returns failure if there ops explicitly marked as illegal. If `converter` is
-/// provided, the signatures of blocks and regions are also converted.
-/// If an `unconvertedOps` set is provided, all operations that are found not
-/// to be legalizable to the given `target` are placed within that set. (Note
-/// that if there is an op explicitly marked as illegal, the conversion
-/// terminates and the `unconvertedOps` set will not necessarily be complete.)
+/// returns failure if there ops explicitly marked as illegal. If an
+/// `unconvertedOps` set is provided, all operations that are found not to be
+/// legalizable to the given `target` are placed within that set. (Note that if
+/// there is an op explicitly marked as illegal, the conversion terminates and
+/// the `unconvertedOps` set will not necessarily be complete.)
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
                        const OwningRewritePatternList &patterns,
-                       TypeConverter *converter = nullptr,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LLVM_NODISCARD LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
                        const OwningRewritePatternList &patterns,
-                       TypeConverter *converter = nullptr,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
 /// Apply a complete conversion on the given operations, and all nested
 /// operations. This method returns failure if the conversion of any operation
 /// fails, or if there are unreachable blocks in any of the regions nested
-/// within 'ops'. If 'converter' is provided, the signatures of blocks and
-/// regions are also converted.
+/// within 'ops'.
 LLVM_NODISCARD LogicalResult
 applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns,
-                    TypeConverter *converter = nullptr);
+                    const OwningRewritePatternList &patterns);
 LLVM_NODISCARD LogicalResult
 applyFullConversion(Operation *op, ConversionTarget &target,
-                    const OwningRewritePatternList &patterns,
-                    TypeConverter *converter = nullptr);
+                    const OwningRewritePatternList &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -759,17 +792,15 @@ applyFullConversion(Operation *op, ConversionTarget &target,
 /// provided 'convertedOps' set; note that no actual rewrites are applied to the
 /// operations on success and only pre-existing operations are added to the set.
 /// This method only returns failure if there are unreachable blocks in any of
-/// the regions nested within 'ops', or if a type conversion failed. If
-/// 'converter' is provided, the signatures of blocks and regions are also
-/// considered for conversion.
-LLVM_NODISCARD LogicalResult applyAnalysisConversion(
-    ArrayRef<Operation *> ops, ConversionTarget &target,
-    const OwningRewritePatternList &patterns,
-    DenseSet<Operation *> &convertedOps, TypeConverter *converter = nullptr);
-LLVM_NODISCARD LogicalResult applyAnalysisConversion(
-    Operation *op, ConversionTarget &target,
-    const OwningRewritePatternList &patterns,
-    DenseSet<Operation *> &convertedOps, TypeConverter *converter = nullptr);
+/// the regions nested within 'ops'.
+LLVM_NODISCARD LogicalResult
+applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+                        const OwningRewritePatternList &patterns,
+                        DenseSet<Operation *> &convertedOps);
+LLVM_NODISCARD LogicalResult
+applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                        const OwningRewritePatternList &patterns,
+                        DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

@@ -1195,10 +1195,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<FuncOp>(
-      [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
-  if (failed(applyPartialConversion(getOperation(), target, patterns,
-                                    &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns))) {
     signalPassFailure();
   }
 }

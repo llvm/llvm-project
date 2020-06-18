@@ -489,7 +489,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
+  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
+                                         &signatureConverter)))
+    return failure();
   rewriter.eraseOp(funcOp);
   return success();
 }

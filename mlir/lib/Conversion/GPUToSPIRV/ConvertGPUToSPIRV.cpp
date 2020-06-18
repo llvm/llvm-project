@@ -164,8 +164,11 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   TypeConverter::SignatureConversion signatureConverter(
       body->getNumArguments());
   signatureConverter.remapInput(0, newIndVar);
-  body = rewriter.applySignatureConversion(&forOp.getLoopBody(),
-                                           signatureConverter);
+  FailureOr<Block *> newBody = rewriter.convertRegionTypes(
+      &forOp.getLoopBody(), typeConverter, &signatureConverter);
+  if (failed(newBody))
+    return failure();
+  body = *newBody;
 
   // Delete the loop terminator.
   rewriter.eraseOp(body->getTerminator());
@@ -356,9 +359,12 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
       continue;
     newFuncOp.setAttr(namedAttr.first, namedAttr.second);
   }
+
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
+  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
+                                         &signatureConverter)))
+    return nullptr;
   rewriter.eraseOp(funcOp);
 
   spirv::setABIAttrs(newFuncOp, entryPointInfo, argABIInfo);

@@ -82,7 +82,8 @@ class ConvertShapeToStandardPass
     target.addLegalDialect<scf::SCFDialect, StandardOpsDialect>();
     target.addLegalOp<ModuleOp, ModuleTerminatorOp, ReturnOp>();
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getType());
+      return typeConverter.isSignatureLegal(op.getType()) &&
+             typeConverter.isLegal(&op.getBody());
     });
 
     // Setup conversion patterns.
@@ -92,7 +93,7 @@ class ConvertShapeToStandardPass
 
     // Apply conversion.
     auto module = getOperation();
-    if (failed(applyFullConversion(module, target, patterns, &typeConverter)))
+    if (failed(applyFullConversion(module, target, patterns)))
       signalPassFailure();
   }
 };

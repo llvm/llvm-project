@@ -398,7 +398,7 @@ ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter_,
                                            PatternBenefit benefit)
-    : ConversionPattern(rootOpName, benefit, context),
+    : ConversionPattern(rootOpName, benefit, typeConverter_, context),
       typeConverter(typeConverter_) {}
 
 /*============================================================================*/
@@ -1038,8 +1038,9 @@ protected:
         attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
-    // Tell the rewriter to convert the region signature.
-    rewriter.applySignatureConversion(&newFuncOp.getBody(), result);
+    if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), typeConverter,
+                                           &result)))
+      return nullptr;
 
     return newFuncOp;
   }
@@ -1059,6 +1060,9 @@ struct FuncOpConversion : public FuncOpConversionBase {
     auto funcOp = cast<FuncOp>(op);
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
+    if (!newFuncOp)
+      return failure();
+
     if (emitWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
@@ -1095,6 +1099,8 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
     getMemRefArgIndicesAndTypes(funcOp.getType(), promotedArgsInfo);
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
+    if (!newFuncOp)
+      return failure();
     if (newFuncOp.getBody().empty()) {
       rewriter.eraseOp(op);
       return success();
@@ -3172,7 +3178,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
                                           emitCWrappers, useAlignedAlloc);
 
     LLVMConversionTarget target(getContext());
-    if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
+    if (failed(applyPartialConversion(m, target, patterns)))
       signalPassFailure();
   }
 };
