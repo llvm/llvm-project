@@ -14,56 +14,6 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-static Optional<Value> emitStaticFor(ArrayRef<Value> lbs, ArrayRef<Value> ubs,
-                                     int64_t step) {
-  if (lbs.size() != 1 || ubs.size() != 1)
-    return Optional<Value>();
-
-  auto *lbDef = lbs.front().getDefiningOp();
-  auto *ubDef = ubs.front().getDefiningOp();
-  if (!lbDef || !ubDef)
-    return Optional<Value>();
-
-  auto lbConst = dyn_cast<ConstantIndexOp>(lbDef);
-  auto ubConst = dyn_cast<ConstantIndexOp>(ubDef);
-  if (!lbConst || !ubConst)
-    return Optional<Value>();
-  return ScopedContext::getBuilderRef()
-      .create<AffineForOp>(ScopedContext::getLocation(), lbConst.getValue(),
-                           ubConst.getValue(), step)
-      .getInductionVar();
-}
-
-LoopBuilder mlir::edsc::makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
-                                              ArrayRef<Value> ubs,
-                                              int64_t step) {
-  mlir::edsc::LoopBuilder result;
-  if (auto staticForIv = emitStaticFor(lbs, ubs, step))
-    *iv = staticForIv.getValue();
-  else
-    *iv = ScopedContext::getBuilderRef()
-              .create<AffineForOp>(
-                  ScopedContext::getLocation(), lbs,
-                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
-                      lbs.size()),
-                  ubs,
-                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
-                      ubs.size()),
-                  step)
-              .getInductionVar();
-
-  auto *body = getForInductionVarOwner(*iv).getBody();
-  result.enter(body);
-  return result;
-}
-
-mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(Value *iv,
-                                                         ArrayRef<Value> lbs,
-                                                         ArrayRef<Value> ubs,
-                                                         int64_t step) {
-  loops.emplace_back(makeAffineLoopBuilder(iv, lbs, ubs, step));
-}
-
 void mlir::edsc::affineLoopNestBuilder(
     ValueRange lbs, ValueRange ubs, ArrayRef<int64_t> steps,
     function_ref<void(ValueRange)> bodyBuilderFn) {
@@ -106,30 +56,6 @@ void mlir::edsc::affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
         }
         nestedBuilder.create<AffineTerminatorOp>(nestedLoc);
       });
-}
-
-mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> lbs, ArrayRef<Value> ubs,
-    ArrayRef<int64_t> steps) {
-  assert(ivs.size() == lbs.size() && "Mismatch in number of arguments");
-  assert(ivs.size() == ubs.size() && "Mismatch in number of arguments");
-  assert(ivs.size() == steps.size() && "Mismatch in number of arguments");
-  for (auto it : llvm::zip(ivs, lbs, ubs, steps))
-    loops.emplace_back(makeAffineLoopBuilder(&std::get<0>(it), std::get<1>(it),
-                                             std::get<2>(it), std::get<3>(it)));
-}
-
-void mlir::edsc::AffineLoopNestBuilder::operator()(
-    function_ref<void(void)> fun) {
-  if (fun)
-    fun();
-  // Iterate on the calling operator() on all the loops in the nest.
-  // The iteration order is from innermost to outermost because enter/exit needs
-  // to be asymmetric (i.e. enter() occurs on LoopBuilder construction, exit()
-  // occurs on calling operator()). The asymmetry is required for properly
-  // nesting imperfectly nested regions (see LoopBuilder::operator()).
-  for (auto lit = loops.rbegin(), eit = loops.rend(); lit != eit; ++lit)
-    (*lit)();
 }
 
 static std::pair<AffineExpr, Value>
