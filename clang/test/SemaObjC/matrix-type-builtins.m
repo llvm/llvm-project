@@ -27,5 +27,5 @@ double test_store(MatrixValue *mv, float *Ptr) {
 
   __builtin_matrix_column_major_store(mv.value, mv.value, mv.value);
   // expected-error@-1 {{second argument must be a pointer to a valid matrix element type}}
-  // expected-error@-2 {{casting 'double4x4' (aka 'double __attribute__((matrix_type(4, 4)))') to incompatible type 'unsigned long'}}
+  // expected-error@-2 {{casting 'double4x4' (aka 'double __attribute__((matrix_type(4, 4)))') to incompatible type 'unsigned long}}
 }
