@@ -48,6 +48,7 @@ void registerTestConstantFold();
 void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
+void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestLinalgHoisting();
@@ -122,6 +123,7 @@ void registerTestPasses() {
   registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
   registerTestFunc();
+  registerTestExpandTanhPass();
   registerTestGpuMemoryPromotionPass();
   registerTestLinalgHoisting();
   registerTestLinalgTransforms();
