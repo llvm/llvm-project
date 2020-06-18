@@ -635,13 +635,12 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   return 2; // VCC.
 }
 
-unsigned GCNSubtarget::computeOccupancy(const MachineFunction &MF,
-                                        unsigned LDSSize,
+unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                         unsigned NumSGPRs,
                                         unsigned NumVGPRs) const {
   unsigned Occupancy =
     std::min(getMaxWavesPerEU(),
-             getOccupancyWithLocalMemSize(LDSSize, MF.getFunction()));
+             getOccupancyWithLocalMemSize(LDSSize, F));
   if (NumSGPRs)
     Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
   if (NumVGPRs)
