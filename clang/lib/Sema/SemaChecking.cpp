@@ -2131,6 +2131,18 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
               diag::err_rotation_argument_to_cmla))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck0_1:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_2:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 2))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck0_3:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 3))
+        HasError = true;
+      break;
     }
   }
 

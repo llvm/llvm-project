@@ -8030,10 +8030,10 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSVEOverloadTypes(
   if (TypeFlags.isOverloadWhileRW())
     return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
-  if (TypeFlags.isOverloadCvt())
+  if (TypeFlags.isOverloadCvt() || TypeFlags.isTupleSet())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
-  if (TypeFlags.isTupleCreate())
+  if (TypeFlags.isTupleCreate() || TypeFlags.isTupleGet())
     return {ResultType, Ops[0]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
