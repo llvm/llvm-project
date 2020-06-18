@@ -1688,6 +1688,86 @@ void mlir::extractForInductionVars(ArrayRef<AffineForOp> forInsts,
     ivs->push_back(forInst.getInductionVar());
 }
 
+/// Builds an affine loop nest, using "loopCreatorFn" to create individual loop
+/// operations.
+template <typename BoundListTy, typename LoopCreatorTy>
+void buildAffineLoopNestImpl(
+    OpBuilder &builder, Location loc, BoundListTy lbs, BoundListTy ubs,
+    ArrayRef<int64_t> steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
+    LoopCreatorTy &&loopCreatorFn) {
+  assert(lbs.size() == ubs.size() && "Mismatch in number of arguments");
+  assert(lbs.size() == steps.size() && "Mismatch in number of arguments");
+
+  // If there are no loops to be constructed, construct the body anyway.
+  OpBuilder::InsertionGuard guard(builder);
+  if (lbs.empty()) {
+    if (bodyBuilderFn)
+      bodyBuilderFn(builder, loc, ValueRange());
+    return;
+  }
+
+  // Create the loops iteratively and store the induction variables.
+  SmallVector<Value, 4> ivs;
+  ivs.reserve(lbs.size());
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    // Callback for creating the loop body, always creates the terminator.
+    auto loopBody = [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                        Value iv) {
+      ivs.push_back(iv);
+      // In the innermost loop, call the body builder.
+      if (i == e - 1 && bodyBuilderFn) {
+        OpBuilder::InsertionGuard nestedGuard(nestedBuilder);
+        bodyBuilderFn(nestedBuilder, nestedLoc, ivs);
+      }
+      nestedBuilder.create<AffineTerminatorOp>(nestedLoc);
+    };
+
+    // Delegate actual loop creation to the callback in order to dispatch
+    // between constant- and variable-bound loops.
+    auto loop = loopCreatorFn(builder, loc, lbs[i], ubs[i], steps[i], loopBody);
+    builder.setInsertionPointToStart(loop.getBody());
+  }
+}
+
+/// Creates an affine loop from the bounds known to be constants.
+static AffineForOp buildAffineLoopFromConstants(
+    OpBuilder &builder, Location loc, int64_t lb, int64_t ub, int64_t step,
+    function_ref<void(OpBuilder &, Location, Value)> bodyBuilderFn) {
+  return builder.create<AffineForOp>(loc, lb, ub, step, bodyBuilderFn);
+}
+
+/// Creates an affine loop from the bounds that may or may not be constants.
+static AffineForOp buildAffineLoopFromValues(
+    OpBuilder &builder, Location loc, Value lb, Value ub, int64_t step,
+    function_ref<void(OpBuilder &, Location, Value)> bodyBuilderFn) {
+  auto lbConst = lb.getDefiningOp<ConstantIndexOp>();
+  auto ubConst = ub.getDefiningOp<ConstantIndexOp>();
+  if (lbConst && ubConst)
+    return buildAffineLoopFromConstants(builder, loc, lbConst.getValue(),
+                                        ubConst.getValue(), step,
+                                        bodyBuilderFn);
+  return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
+                                     builder.getDimIdentityMap(), step,
+                                     bodyBuilderFn);
+}
+
+void mlir::buildAffineLoopNest(
+    OpBuilder &builder, Location loc, ArrayRef<int64_t> lbs,
+    ArrayRef<int64_t> ubs, ArrayRef<int64_t> steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  buildAffineLoopNestImpl(builder, loc, lbs, ubs, steps, bodyBuilderFn,
+                          buildAffineLoopFromConstants);
+}
+
+void mlir::buildAffineLoopNest(
+    OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
+    ArrayRef<int64_t> steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+  buildAffineLoopNestImpl(builder, loc, lbs, ubs, steps, bodyBuilderFn,
+                          buildAffineLoopFromValues);
+}
+
 //===----------------------------------------------------------------------===//
 // AffineIfOp
 //===----------------------------------------------------------------------===//
