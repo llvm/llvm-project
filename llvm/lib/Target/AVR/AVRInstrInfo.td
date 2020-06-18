@@ -193,6 +193,7 @@ def brtarget_13 : Operand<OtherVT>
 def call_target : Operand<iPTR>
 {
     let EncoderMethod = "encodeCallTarget";
+    let DecoderMethod = "decodeCallTarget";
 }
 
 // A 16-bit address (which can lead to an R_AVR_16 relocation).
