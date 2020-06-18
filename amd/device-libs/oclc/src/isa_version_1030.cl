@@ -5,17 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "ockl.h"
+#include "oclc.h"
 
-__attribute__((target("s-memtime-inst"))) ulong
-OCKL_MANGLE_U64(memtime)(void)
-{
-    return __builtin_amdgcn_s_memtime();
-}
-
-__attribute__((target("s-memrealtime"))) ulong
-OCKL_MANGLE_U64(memrealtime)(void)
-{
-    return __builtin_amdgcn_s_memrealtime();
-}
+const __constant int __oclc_ISA_version = 10300;
 

@@ -40,6 +40,7 @@ __attribute__((target("dot2-insts"), const)) static uint amdgcn_udot8(uint a, ui
   else   return __builtin_amdgcn_udot8(a, b, c, false); }
 
 #define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100
+
 #define AS_INT(X) __builtin_astype(X, int)
 #define AS_UINT(X) __builtin_astype(X, uint)
 #define ATTR __attribute__((const))
