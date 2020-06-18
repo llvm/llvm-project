@@ -81,3 +81,108 @@ void test_transpose_const(const matrix_t<float, 3, 3> &m) {
 //  constexpr double4x4 m = {};
 //  [] { return __builtin_matrix_transpose(m); }
 //}
+
+template <typename T, unsigned R, unsigned C, unsigned S>
+matrix_t<T, R, C> column_major_load_with_stride(T *Ptr) {
+  return __builtin_matrix_column_major_load(Ptr, R, C, S);
+}
+
+void test_column_major_load_with_stride_template_double(double *Ptr) {
+  // CHECK-LABEL: define void @_Z50test_column_major_load_with_stride_template_doublePd(double* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <40 x double> @_Z29column_major_load_with_strideIdLj10ELj4ELj15EEU11matrix_typeXT0_EXT1_ET_PS0_(double* [[PTR]])
+
+  // CHECK-LABEL:  define linkonce_odr <40 x double> @_Z29column_major_load_with_strideIdLj10ELj4ELj15EEU11matrix_typeXT0_EXT1_ET_PS0_(double* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <40 x double> @llvm.matrix.column.major.load.v40f64.p0f64(double* align 8 [[PTR]], i64 15, i1 false, i32 10, i32 4)
+
+  matrix_t<double, 10, 4> M1 = column_major_load_with_stride<double, 10, 4, 15>(Ptr);
+}
+
+void test_column_major_load_with_stride_template_int(int *Ptr) {
+  // CHECK-LABEL: define void @_Z47test_column_major_load_with_stride_template_intPi(i32* %Ptr) #5 {
+  // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <6 x i32> @_Z29column_major_load_with_strideIiLj3ELj2ELj12EEU11matrix_typeXT0_EXT1_ET_PS0_(i32* [[PTR]])
+
+  // CHECK-LABEL: define linkonce_odr <6 x i32> @_Z29column_major_load_with_strideIiLj3ELj2ELj12EEU11matrix_typeXT0_EXT1_ET_PS0_(i32* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32.p0i32(i32* align 4 [[PTR]], i64 12, i1 false, i32 3, i32 2)
+
+  matrix_t<int, 3, 2> M1 = column_major_load_with_stride<int, 3, 2, 12>(Ptr);
+}
+
+struct UnsignedWrapper {
+  char x;
+  operator unsigned() {
+    return x;
+  }
+};
+
+void test_column_major_load_stride_wrapper(int *Ptr, UnsignedWrapper &W) {
+  // CHECK-LABEL:  define void @_Z37test_column_major_load_stride_wrapperPiR15UnsignedWrapper(i32* %Ptr, %struct.UnsignedWrapper* nonnull align 1 dereferenceable(1) %W)
+  // CHECK:         [[W:%.*]] = load %struct.UnsignedWrapper*, %struct.UnsignedWrapper** %W.addr, align 8
+  // CHECK-NEXT:    [[STRIDE:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* [[W]])
+  // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = zext i32 [[STRIDE]] to i64
+  // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32.p0i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
+  matrix_t<int, 2, 2> M1 = __builtin_matrix_column_major_load(Ptr, 2, 2, W);
+}
+
+constexpr int constexpr3() { return 3; }
+
+void test_column_major_load_constexpr_num_rows(int *Ptr) {
+  // CHECK-LABEL: define void @_Z41test_column_major_load_constexpr_num_rowsPi(i32* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32.p0i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 3, i32 2)
+
+  matrix_t<int, 3, 2> M1 = __builtin_matrix_column_major_load(Ptr, constexpr3(), 2, 3);
+}
+
+constexpr int constexpr1() { return 1; }
+
+void test_column_major_load_constexpr_num_columns(int *Ptr) {
+  // CHECK-LABEL: define void @_Z44test_column_major_load_constexpr_num_columnsPi(i32* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <2 x i32> @llvm.matrix.column.major.load.v2i32.p0i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 1)
+  matrix_t<int, 2, 1> M1 = __builtin_matrix_column_major_load(Ptr, 2, constexpr1(), 3);
+}
+
+template <unsigned N>
+constexpr int constexpr_plus1() { return N + 1; }
+
+void test_column_major_load_constexpr_num_columns_temp(int *Ptr) {
+  // CHECK-LABEL:  define void @_Z49test_column_major_load_constexpr_num_columns_tempPi(i32* %Ptr)
+  // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <10 x i32> @llvm.matrix.column.major.load.v10i32.p0i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 5)
+  matrix_t<int, 2, 5> M1 = __builtin_matrix_column_major_load(Ptr, 2, constexpr_plus1<4>(), 3);
+}
+
+void test_column_major_load_constexpr_stride_constexpr(int *Ptr) {
+  // CHECK-LABEL: define void @_Z49test_column_major_load_constexpr_stride_constexprPi(i32* %Ptr)
+  // CHECK:         [[STRIDE:%.*]] = call i32 @_Z10constexpr3v()
+  // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
+  // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32.p0i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
+
+  matrix_t<int, 2, 2> M1 = __builtin_matrix_column_major_load(Ptr, 2, 2, constexpr3());
+}
+
+template <typename T>
+struct remove_pointer {
+  typedef T type;
+};
+
+template <typename T>
+struct remove_pointer<T *> {
+  typedef typename remove_pointer<T>::type type;
+};
+
+// Same as column_major_load_with_stride, but with the PtrT argument itself begin a pointer type.
+template <typename PtrT, unsigned R, unsigned C, unsigned S>
+matrix_t<typename remove_pointer<PtrT>::type, R, C> column_major_load_with_stride2(PtrT Ptr) {
+  return __builtin_matrix_column_major_load(Ptr, R, C, S);
+}
+
+void call_column_major_load_with_stride2(float *Ptr) {
+  matrix_t<float, 2, 2> m = column_major_load_with_stride2<float *, 2, 2, 2>(Ptr);
+}
