@@ -2776,6 +2776,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       if (isa<DbgInfoIntrinsic>(BonusInst))
         continue;
       Instruction *NewBonusInst = BonusInst->clone();
+
+      // When we fold the bonus instructions we want to make sure we
+      // reset their debug locations in order to avoid stepping on dead
+      // code caused by folding dead branches.
+      NewBonusInst->setDebugLoc(DebugLoc());
+
       RemapInstruction(NewBonusInst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       VMap[&*BonusInst] = NewBonusInst;
@@ -2795,6 +2801,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
     // Clone Cond into the predecessor basic block, and or/and the
     // two conditions together.
     Instruction *CondInPred = Cond->clone();
+
+    // Reset the condition debug location to avoid jumping on dead code
+    // as the result of folding dead branches.
+    CondInPred->setDebugLoc(DebugLoc());
+
     RemapInstruction(CondInPred, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     PredBlock->getInstList().insert(PBI->getIterator(), CondInPred);
