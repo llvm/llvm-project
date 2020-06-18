@@ -23,8 +23,6 @@ namespace mlir {
 class OperationFolder;
 
 namespace edsc {
-class NestedBuilder;
-
 /// Helper class to transparently handle builder insertion points by RAII.
 /// As its name indicates, a ScopedContext is means to be used locally in a
 /// scoped fashion. This abstracts away all the boilerplate related to
@@ -88,62 +86,6 @@ struct OperationBuilder {
   operator Op() { return op; }
   operator Operation *() { return op.getOperation(); }
   Op op;
-};
-
-/// A NestedBuilder is a scoping abstraction to create an idiomatic syntax
-/// embedded in C++ that serves the purpose of building nested MLIR.
-/// Nesting and compositionality is obtained by using the strict ordering that
-/// exists between object construction and method invocation on said object (in
-/// our case, the call to `operator()`).
-/// This ordering allows implementing an abstraction that decouples definition
-/// from declaration (in a PL sense) on placeholders.
-class NestedBuilder {
-protected:
-  NestedBuilder() = default;
-  NestedBuilder(const NestedBuilder &) = delete;
-  NestedBuilder(NestedBuilder &&other) : bodyScope(other.bodyScope) {
-    other.bodyScope = nullptr;
-  }
-
-  NestedBuilder &operator=(const NestedBuilder &) = delete;
-  NestedBuilder &operator=(NestedBuilder &&other) {
-    std::swap(bodyScope, other.bodyScope);
-    return *this;
-  }
-
-  /// Enter an mlir::Block and setup a ScopedContext to insert operations at
-  /// the end of it. Since we cannot use c++ language-level scoping to implement
-  /// scoping itself, we use enter/exit pairs of operations.
-  /// As a consequence we must allocate a new OpBuilder + ScopedContext and
-  /// let the escape.
-  void enter(mlir::Block *block) {
-    bodyScope = new ScopedContext(ScopedContext::getBuilderRef(),
-                                  OpBuilder::InsertPoint(block, block->end()),
-                                  ScopedContext::getLocation());
-    if (!block->empty()) {
-      auto &termOp = block->back();
-      if (termOp.isKnownTerminator())
-        ScopedContext::getBuilderRef().setInsertionPoint(&termOp);
-    }
-  }
-
-  /// Exit the current mlir::Block by explicitly deleting the dynamically
-  /// allocated OpBuilder and ScopedContext.
-  void exit() {
-    delete bodyScope;
-    bodyScope = nullptr;
-  }
-
-  /// Custom destructor does nothing because we already destroyed bodyScope
-  /// manually in `exit`. Insert an assertion to defensively guard against
-  /// improper usage of scoping.
-  ~NestedBuilder() {
-    assert(!bodyScope &&
-           "Illegal use of NestedBuilder; must have called exit()");
-  }
-
-private:
-  ScopedContext *bodyScope = nullptr;
 };
 
 /// Creates a block in the region that contains the insertion block of the
