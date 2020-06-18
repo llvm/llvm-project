@@ -209,10 +209,10 @@ def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
 
 def int_amdgcn_wave_barrier : GCCBuiltin<"__builtin_amdgcn_wave_barrier">,
-  Intrinsic<[], [], [IntrConvergent]>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
 
 def int_amdgcn_s_waitcnt : GCCBuiltin<"__builtin_amdgcn_s_waitcnt">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_div_scale : Intrinsic<
   // 1st parameter: Numerator
@@ -1179,15 +1179,15 @@ def int_amdgcn_exp_compr : Intrinsic <[], [
 
 def int_amdgcn_buffer_wbinvl1_sc :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_sc">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_buffer_wbinvl1 :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_dcache_inv :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_inv">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_memtime :
   GCCBuiltin<"__builtin_amdgcn_s_memtime">,
@@ -1195,17 +1195,17 @@ def int_amdgcn_s_memtime :
 
 def int_amdgcn_s_sleep :
   GCCBuiltin<"__builtin_amdgcn_s_sleep">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]> {
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]> {
 }
 
 def int_amdgcn_s_incperflevel :
   GCCBuiltin<"__builtin_amdgcn_s_incperflevel">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]> {
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]> {
 }
 
 def int_amdgcn_s_decperflevel :
   GCCBuiltin<"__builtin_amdgcn_s_decperflevel">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]> {
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]> {
 }
 
 def int_amdgcn_s_getreg :
@@ -1493,6 +1493,7 @@ def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],
 >;
 
 // If false, set EXEC=0 for the current thread until the end of program.
+// FIXME: Should this be IntrNoMem, IntrHasSideEffects?
 def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
 
 // Copies the active channels of the source value to the destination value,
@@ -1532,11 +1533,11 @@ def int_amdgcn_is_private : GCCBuiltin<"__builtin_amdgcn_is_private">,
 
 def int_amdgcn_s_dcache_inv_vol :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_inv_vol">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_buffer_wbinvl1_vol :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_vol">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // VI Intrinsics
@@ -1562,11 +1563,11 @@ def int_amdgcn_update_dpp :
 
 def int_amdgcn_s_dcache_wb :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_wb">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_dcache_wb_vol :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_wb_vol">,
-  Intrinsic<[], [], []>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_memrealtime :
   GCCBuiltin<"__builtin_amdgcn_s_memrealtime">,

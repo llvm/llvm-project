@@ -374,7 +374,8 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
   let AsmMatchConverter = "";
 
   let hasSideEffects = 1;
-  let mayStore = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
 
   // Set everything to 0.
   let offen       = 0;
