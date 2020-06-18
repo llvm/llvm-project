@@ -50,7 +50,7 @@ public:
   explicit GlobalTypeTableBuilder(BumpPtrAllocator &Storage);
   ~GlobalTypeTableBuilder();
 
-  // TypeTableCollection overrides
+  // TypeCollection overrides
   Optional<TypeIndex> getFirst() override;
   Optional<TypeIndex> getNext(TypeIndex Prev) override;
   CVType getType(TypeIndex Index) override;
@@ -58,6 +58,7 @@ public:
   bool contains(TypeIndex Index) override;
   uint32_t size() override;
   uint32_t capacity() override;
+  bool replaceType(TypeIndex &Index, CVType Data, bool Stabilize) override;
 
   // public interface
   void reset();

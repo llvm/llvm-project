@@ -58,3 +58,8 @@ bool TypeTableCollection::contains(TypeIndex Index) {
 uint32_t TypeTableCollection::size() { return Records.size(); }
 
 uint32_t TypeTableCollection::capacity() { return Records.size(); }
+
+bool TypeTableCollection::replaceType(TypeIndex &Index, CVType Data,
+                                      bool Stabilize) {
+  llvm_unreachable("Method cannot be called");
+}

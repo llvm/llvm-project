@@ -74,12 +74,17 @@ ArrayRef<ArrayRef<uint8_t>> AppendingTypeTableBuilder::records() const {
 
 void AppendingTypeTableBuilder::reset() { SeenRecords.clear(); }
 
+static ArrayRef<uint8_t> stabilize(BumpPtrAllocator &RecordStorage,
+                                   ArrayRef<uint8_t> Record) {
+  uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
+  memcpy(Stable, Record.data(), Record.size());
+  return ArrayRef<uint8_t>(Stable, Record.size());
+}
+
 TypeIndex
 AppendingTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
   TypeIndex NewTI = nextTypeIndex();
-  uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
-  memcpy(Stable, Record.data(), Record.size());
-  Record = ArrayRef<uint8_t>(Stable, Record.size());
+  Record = stabilize(RecordStorage, Record);
   SeenRecords.push_back(Record);
   return NewTI;
 }
@@ -92,4 +97,16 @@ AppendingTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
   for (auto C : Fragments)
     TI = insertRecordBytes(C.RecordData);
   return TI;
+}
+
+bool AppendingTypeTableBuilder::replaceType(TypeIndex &Index, CVType Data,
+                                            bool Stabilize) {
+  assert(Index.toArrayIndex() < SeenRecords.size() &&
+         "This function cannot be used to insert records!");
+
+  ArrayRef<uint8_t> Record = Data.data();
+  if (Stabilize)
+    Record = stabilize(RecordStorage, Record);
+  SeenRecords[Index.toArrayIndex()] = Record;
+  return true;
 }
