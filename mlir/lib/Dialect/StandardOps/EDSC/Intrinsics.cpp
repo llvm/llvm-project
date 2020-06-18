@@ -18,6 +18,10 @@ BranchOp mlir::edsc::intrinsics::std_br(BlockHandle bh, ValueRange operands) {
   return OperationBuilder<BranchOp>(bh.getBlock(), ops);
 }
 
+BranchOp mlir::edsc::intrinsics::std_br(Block *block, ValueRange operands) {
+  return OperationBuilder<BranchOp>(block, operands);
+}
+
 BranchOp mlir::edsc::intrinsics::std_br(BlockHandle *bh, ArrayRef<Type> types,
                                         MutableArrayRef<Value> captures,
                                         ValueRange operands) {
@@ -25,6 +29,14 @@ BranchOp mlir::edsc::intrinsics::std_br(BlockHandle *bh, ArrayRef<Type> types,
   BlockBuilder(bh, types, captures)(/* no body */);
   SmallVector<Value, 4> ops(operands.begin(), operands.end());
   return OperationBuilder<BranchOp>(bh->getBlock(), ops);
+}
+
+CondBranchOp mlir::edsc::intrinsics::std_cond_br(Value cond, Block *trueBranch,
+                                                 ValueRange trueOperands,
+                                                 Block *falseBranch,
+                                                 ValueRange falseOperands) {
+  return OperationBuilder<CondBranchOp>(cond, trueBranch, trueOperands,
+                                        falseBranch, falseOperands);
 }
 
 CondBranchOp mlir::edsc::intrinsics::std_cond_br(Value cond,

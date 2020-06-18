@@ -52,6 +52,7 @@ using std_sign_extendi = ValueBuilder<SignExtendIOp>;
 /// Prerequisites:
 ///   All Handles have already captured previously constructed IR objects.
 BranchOp std_br(BlockHandle bh, ValueRange operands);
+BranchOp std_br(Block *block, ValueRange operands);
 
 /// Creates a new mlir::Block* and branches to it from the current block.
 /// Argument types are specified by `operands`.
@@ -78,6 +79,8 @@ BranchOp std_br(BlockHandle *bh, ArrayRef<Type> types,
 CondBranchOp std_cond_br(Value cond, BlockHandle trueBranch,
                          ValueRange trueOperands, BlockHandle falseBranch,
                          ValueRange falseOperands);
+CondBranchOp std_cond_br(Value cond, Block *trueBranch, ValueRange trueOperands,
+                         Block *falseBranch, ValueRange falseOperands);
 
 /// Eagerly creates new mlir::Block* with argument types specified by
 /// `trueOperands`/`falseOperands`.
