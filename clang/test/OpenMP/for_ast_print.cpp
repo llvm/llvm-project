@@ -112,6 +112,66 @@ T tmain(T argc) {
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
+#pragma omp for schedule(nonmonotonic: dynamic)
+  // CHECK-NEXT: #pragma omp for schedule(nonmonotonic: dynamic)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(monotonic : dynamic)
+  // CHECK-NEXT: #pragma omp for schedule(monotonic: dynamic)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(nonmonotonic : guided)
+  // CHECK-NEXT: #pragma omp for schedule(nonmonotonic: guided)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(monotonic : guided)
+  // CHECK-NEXT: #pragma omp for schedule(monotonic: guided)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(nonmonotonic : static)
+  // CHECK-NEXT: #pragma omp for schedule(nonmonotonic: static)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(monotonic :static)
+  // CHECK-NEXT: #pragma omp for schedule(monotonic: static)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(nonmonotonic : auto)
+  // CHECK-NEXT: #pragma omp for schedule(nonmonotonic: auto)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(monotonic : auto)
+  // CHECK-NEXT: #pragma omp for schedule(monotonic: auto)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(nonmonotonic : runtime)
+  // CHECK-NEXT: #pragma omp for schedule(nonmonotonic: runtime)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
+#pragma omp for schedule(monotonic : runtime)
+  // CHECK-NEXT: #pragma omp for schedule(monotonic: runtime)
+  for (int i = 0; i < 2; ++i)
+    a = 2;
+// CHECK-NEXT: for (int i = 0; i < 2; ++i)
+// CHECK-NEXT: a = 2;
 #pragma omp parallel
 #pragma omp for allocate(argc) private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) nowait
   for (auto &x : arr) {

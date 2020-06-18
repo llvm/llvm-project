@@ -13174,7 +13174,9 @@ OMPClause *Sema::ActOnOpenMPScheduleClause(
   // OpenMP, 2.7.1, Loop Construct, Restrictions
   // The nonmonotonic modifier can only be specified with schedule(dynamic) or
   // schedule(guided).
-  if ((M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+  // OpenMP 5.0 does not have this restriction.
+  if (LangOpts.OpenMP < 50 &&
+      (M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
        M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic) &&
       Kind != OMPC_SCHEDULE_dynamic && Kind != OMPC_SCHEDULE_guided) {
     Diag(M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ? M1Loc : M2Loc,
