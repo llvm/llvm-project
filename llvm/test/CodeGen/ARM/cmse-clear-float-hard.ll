@@ -4,13 +4,13 @@
 ; RUN: llc %s -o - -mtriple=thumbebv8m.main -mattr=+fp-armv8d16sp,+dsp -float-abi=hard | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-8M --check-prefix=CHECK-8M-BE
 ; RUN: llc %s -o - -mtriple=thumbv8.1m.main -mattr=+fp-armv8d16sp,+dsp -float-abi=hard | \
-; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-81M-LE
+; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-NO-MVE --check-prefix=CHECK-81M-LE
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main -mattr=+fp-armv8d16sp,+dsp -float-abi=hard | \
-; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-81M-BE
+; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-NO-MVE --check-prefix=CHECK-81M-BE
 ; RUN: llc %s -o - -mtriple=thumbv8.1m.main -mattr=+mve.fp -float-abi=hard | \
-; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-81M-LE
+; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-MVE --check-prefix=CHECK-81M-LE
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main -mattr=+mve.fp -float-abi=hard | \
-; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-81M-BE
+; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-MVE --check-prefix=CHECK-81M-BE
 
 define float @f1(float (float)* nocapture %fptr) #0 {
 ; CHECK-8M-LABEL: f1:
@@ -807,5 +807,445 @@ define void @fidififid(void (float, i32, double, i32, float, i32, float, i32, do
 entry:
   call void %fu(float %a, i32 %b, double %c, i32 %d, float %e, i32 %f, float %g, i32 %h, double %i) #9
   ret void
+}
+
+define half @h1(half (half)* nocapture %hptr) "cmse_nonsecure_entry" nounwind {
+; CHECK-8M-LABEL: h1:
+; CHECK-8M:       @ %bb.0:
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    vldr s0, .LCPI11_0
+; CHECK-8M-NEXT:    blx r0
+; CHECK-8M-NEXT:    vmov r0, s0
+; CHECK-8M-NEXT:    uxth r0, r0
+; CHECK-8M-NEXT:    vmov s0, r0
+; CHECK-8M-NEXT:    pop.w {r7, lr}
+; CHECK-8M-NEXT:    mrs r12, control
+; CHECK-8M-NEXT:    tst.w r12, #8
+; CHECK-8M-NEXT:    beq .LBB11_2
+; CHECK-8M-NEXT:  @ %bb.1:
+; CHECK-8M-NEXT:    vmrs r12, fpscr
+; CHECK-8M-NEXT:    vmov s1, lr
+; CHECK-8M-NEXT:    vmov d1, lr, lr
+; CHECK-8M-NEXT:    vmov d2, lr, lr
+; CHECK-8M-NEXT:    vmov d3, lr, lr
+; CHECK-8M-NEXT:    vmov d4, lr, lr
+; CHECK-8M-NEXT:    vmov d5, lr, lr
+; CHECK-8M-NEXT:    vmov d6, lr, lr
+; CHECK-8M-NEXT:    vmov d7, lr, lr
+; CHECK-8M-NEXT:    bic r12, r12, #159
+; CHECK-8M-NEXT:    bic r12, r12, #4026531840
+; CHECK-8M-NEXT:    vmsr fpscr, r12
+; CHECK-8M-NEXT:  .LBB11_2:
+; CHECK-8M-NEXT:    mov r0, lr
+; CHECK-8M-NEXT:    mov r1, lr
+; CHECK-8M-NEXT:    mov r2, lr
+; CHECK-8M-NEXT:    mov r3, lr
+; CHECK-8M-NEXT:    mov r12, lr
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, lr
+; CHECK-8M-NEXT:    bxns lr
+; CHECK-8M-NEXT:    .p2align 2
+; CHECK-8M-NEXT:  @ %bb.3:
+; CHECK-8M-NEXT:  .LCPI11_0:
+; CHECK-8M-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-NO-MVE-LABEL: h1:
+; CHECK-NO-MVE:       @ %bb.0:
+; CHECK-NO-MVE-NEXT:    vstr fpcxtns, [sp, #-4]!
+; CHECK-NO-MVE-NEXT:    push {r7, lr}
+; CHECK-NO-MVE-NEXT:    sub sp, #4
+; CHECK-NO-MVE-NEXT:    vldr s0, .LCPI11_0
+; CHECK-NO-MVE-NEXT:    blx r0
+; CHECK-NO-MVE-NEXT:    vmov r0, s0
+; CHECK-NO-MVE-NEXT:    uxth r0, r0
+; CHECK-NO-MVE-NEXT:    vmov s0, r0
+; CHECK-NO-MVE-NEXT:    add sp, #4
+; CHECK-NO-MVE-NEXT:    pop.w {r7, lr}
+; CHECK-NO-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
+; CHECK-NO-MVE-NEXT:    vldr fpcxtns, [sp], #4
+; CHECK-NO-MVE-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
+; CHECK-NO-MVE-NEXT:    bxns lr
+; CHECK-NO-MVE-NEXT:    .p2align 2
+; CHECK-NO-MVE-NEXT:  @ %bb.1:
+; CHECK-NO-MVE-NEXT:  .LCPI11_0:
+; CHECK-NO-MVE-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-MVE-LABEL: h1:
+; CHECK-MVE:       @ %bb.0:
+; CHECK-MVE-NEXT:    vstr fpcxtns, [sp, #-4]!
+; CHECK-MVE-NEXT:    push {r7, lr}
+; CHECK-MVE-NEXT:    sub sp, #4
+; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-MVE-NEXT:    vmov.f16 r1, s0
+; CHECK-MVE-NEXT:    vmov s0, r1
+; CHECK-MVE-NEXT:    blx r0
+; CHECK-MVE-NEXT:    vmov.f16 r0, s0
+; CHECK-MVE-NEXT:    vmov s0, r0
+; CHECK-MVE-NEXT:    add sp, #4
+; CHECK-MVE-NEXT:    pop.w {r7, lr}
+; CHECK-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
+; CHECK-MVE-NEXT:    vldr fpcxtns, [sp], #4
+; CHECK-MVE-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
+; CHECK-MVE-NEXT:    bxns lr
+  %call = call half %hptr(half 10.0) nounwind
+  ret half %call
+}
+
+define half @h2(half (half)* nocapture %hptr) nounwind {
+; CHECK-8M-LABEL: h2:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    vldr s0, .LCPI12_0
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    ldr r1, [sp, #64]
+; CHECK-8M-NEXT:    bic r1, r1, #159
+; CHECK-8M-NEXT:    bic r1, r1, #4026531840
+; CHECK-8M-NEXT:    vmsr fpscr, r1
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+; CHECK-8M-NEXT:    .p2align 2
+; CHECK-8M-NEXT:  @ %bb.1:
+; CHECK-8M-NEXT:  .LCPI12_0:
+; CHECK-8M-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-NO-MVE-LABEL: h2:
+; CHECK-NO-MVE:       @ %bb.0: @ %entry
+; CHECK-NO-MVE-NEXT:    push {r7, lr}
+; CHECK-NO-MVE-NEXT:    vldr s0, .LCPI12_0
+; CHECK-NO-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    bic r0, r0, #1
+; CHECK-NO-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-NO-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-NO-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-NO-MVE-NEXT:    blxns r0
+; CHECK-NO-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-NO-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    pop {r7, pc}
+; CHECK-NO-MVE-NEXT:    .p2align 2
+; CHECK-NO-MVE-NEXT:  @ %bb.1:
+; CHECK-NO-MVE-NEXT:  .LCPI12_0:
+; CHECK-NO-MVE-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-MVE-LABEL: h2:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    push {r7, lr}
+; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-MVE-NEXT:    vmov.f16 r1, s0
+; CHECK-MVE-NEXT:    vmov s0, r1
+; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    bic r0, r0, #1
+; CHECK-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-MVE-NEXT:    blxns r0
+; CHECK-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    pop {r7, pc}
+entry:
+  %call = call half %hptr(half 10.0) "cmse_nonsecure_call" nounwind
+  ret half %call
+}
+
+define half @h3(half (half)* nocapture %hptr) nounwind {
+; CHECK-8M-LABEL: h3:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    vldr s0, .LCPI13_0
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    ldr r1, [sp, #64]
+; CHECK-8M-NEXT:    bic r1, r1, #159
+; CHECK-8M-NEXT:    bic r1, r1, #4026531840
+; CHECK-8M-NEXT:    vmsr fpscr, r1
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+; CHECK-8M-NEXT:    .p2align 2
+; CHECK-8M-NEXT:  @ %bb.1:
+; CHECK-8M-NEXT:  .LCPI13_0:
+; CHECK-8M-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-NO-MVE-LABEL: h3:
+; CHECK-NO-MVE:       @ %bb.0: @ %entry
+; CHECK-NO-MVE-NEXT:    push {r7, lr}
+; CHECK-NO-MVE-NEXT:    vldr s0, .LCPI13_0
+; CHECK-NO-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    bic r0, r0, #1
+; CHECK-NO-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-NO-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-NO-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-NO-MVE-NEXT:    blxns r0
+; CHECK-NO-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-NO-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    pop {r7, pc}
+; CHECK-NO-MVE-NEXT:    .p2align 2
+; CHECK-NO-MVE-NEXT:  @ %bb.1:
+; CHECK-NO-MVE-NEXT:  .LCPI13_0:
+; CHECK-NO-MVE-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-MVE-LABEL: h3:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    push {r7, lr}
+; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-MVE-NEXT:    vmov.f16 r1, s0
+; CHECK-MVE-NEXT:    vmov s0, r1
+; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    bic r0, r0, #1
+; CHECK-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-MVE-NEXT:    blxns r0
+; CHECK-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    pop {r7, pc}
+entry:
+  %call = tail call half %hptr(half 10.0) "cmse_nonsecure_call" nounwind
+  ret half %call
+}
+
+define half @h4(half ()* nocapture %hptr) nounwind {
+; CHECK-8M-LABEL: h4:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    mov r12, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+;
+; CHECK-81M-LABEL: h4:
+; CHECK-81M:       @ %bb.0: @ %entry
+; CHECK-81M-NEXT:    push {r7, lr}
+; CHECK-81M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    bic r0, r0, #1
+; CHECK-81M-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-81M-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-81M-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-81M-NEXT:    blxns r0
+; CHECK-81M-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-81M-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-81M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-81M-NEXT:    pop {r7, pc}
+entry:
+  %call = call half %hptr() "cmse_nonsecure_call" nounwind
+  ret half %call
+}
+
+define half @h1_minsize(half (half)* nocapture %hptr) "cmse_nonsecure_entry" minsize nounwind {
+; CHECK-8M-LABEL: h1_minsize:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    vldr s0, .LCPI15_0
+; CHECK-8M-NEXT:    blx r0
+; CHECK-8M-NEXT:    vmov r0, s0
+; CHECK-8M-NEXT:    uxth r0, r0
+; CHECK-8M-NEXT:    vmov s0, r0
+; CHECK-8M-NEXT:    pop.w {r7, lr}
+; CHECK-8M-NEXT:    vmrs r12, fpscr
+; CHECK-8M-NEXT:    vmov s1, lr
+; CHECK-8M-NEXT:    vmov d1, lr, lr
+; CHECK-8M-NEXT:    mov r0, lr
+; CHECK-8M-NEXT:    vmov d2, lr, lr
+; CHECK-8M-NEXT:    mov r1, lr
+; CHECK-8M-NEXT:    vmov d3, lr, lr
+; CHECK-8M-NEXT:    mov r2, lr
+; CHECK-8M-NEXT:    vmov d4, lr, lr
+; CHECK-8M-NEXT:    mov r3, lr
+; CHECK-8M-NEXT:    vmov d5, lr, lr
+; CHECK-8M-NEXT:    vmov d6, lr, lr
+; CHECK-8M-NEXT:    vmov d7, lr, lr
+; CHECK-8M-NEXT:    bic r12, r12, #159
+; CHECK-8M-NEXT:    bic r12, r12, #4026531840
+; CHECK-8M-NEXT:    vmsr fpscr, r12
+; CHECK-8M-NEXT:    mov r12, lr
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, lr
+; CHECK-8M-NEXT:    bxns lr
+; CHECK-8M-NEXT:    .p2align 2
+; CHECK-8M-NEXT:  @ %bb.1:
+; CHECK-8M-NEXT:  .LCPI15_0:
+; CHECK-8M-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-NO-MVE-LABEL: h1_minsize:
+; CHECK-NO-MVE:       @ %bb.0: @ %entry
+; CHECK-NO-MVE-NEXT:    vstr fpcxtns, [sp, #-4]!
+; CHECK-NO-MVE-NEXT:    push {r6, r7, lr}
+; CHECK-NO-MVE-NEXT:    vldr s0, .LCPI15_0
+; CHECK-NO-MVE-NEXT:    blx r0
+; CHECK-NO-MVE-NEXT:    vmov r0, s0
+; CHECK-NO-MVE-NEXT:    uxth r0, r0
+; CHECK-NO-MVE-NEXT:    vmov s0, r0
+; CHECK-NO-MVE-NEXT:    pop.w {r3, r7, lr}
+; CHECK-NO-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
+; CHECK-NO-MVE-NEXT:    vldr fpcxtns, [sp], #4
+; CHECK-NO-MVE-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
+; CHECK-NO-MVE-NEXT:    bxns lr
+; CHECK-NO-MVE-NEXT:    .p2align 2
+; CHECK-NO-MVE-NEXT:  @ %bb.1:
+; CHECK-NO-MVE-NEXT:  .LCPI15_0:
+; CHECK-NO-MVE-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-MVE-LABEL: h1_minsize:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vstr fpcxtns, [sp, #-4]!
+; CHECK-MVE-NEXT:    push {r6, r7, lr}
+; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-MVE-NEXT:    vmov.f16 r1, s0
+; CHECK-MVE-NEXT:    vmov s0, r1
+; CHECK-MVE-NEXT:    blx r0
+; CHECK-MVE-NEXT:    vmov.f16 r0, s0
+; CHECK-MVE-NEXT:    vmov s0, r0
+; CHECK-MVE-NEXT:    pop.w {r3, r7, lr}
+; CHECK-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
+; CHECK-MVE-NEXT:    vldr fpcxtns, [sp], #4
+; CHECK-MVE-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
+; CHECK-MVE-NEXT:    bxns lr
+entry:
+  %call = call half %hptr(half 10.0) nounwind
+  ret half %call
+}
+
+define half @h1_arg(half (half)* nocapture %hptr, half %harg) nounwind {
+; CHECK-8M-LABEL: h1_arg:
+; CHECK-8M:       @ %bb.0: @ %entry
+; CHECK-8M-NEXT:    push {r7, lr}
+; CHECK-8M-NEXT:    vmov r1, s0
+; CHECK-8M-NEXT:    uxth r1, r1
+; CHECK-8M-NEXT:    vmov s0, r1
+; CHECK-8M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    bic r0, r0, #1
+; CHECK-8M-NEXT:    sub sp, #136
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlstm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    ldr r1, [sp, #64]
+; CHECK-8M-NEXT:    bic r1, r1, #159
+; CHECK-8M-NEXT:    bic r1, r1, #4026531840
+; CHECK-8M-NEXT:    vmsr fpscr, r1
+; CHECK-8M-NEXT:    mov r1, r0
+; CHECK-8M-NEXT:    mov r2, r0
+; CHECK-8M-NEXT:    mov r3, r0
+; CHECK-8M-NEXT:    mov r4, r0
+; CHECK-8M-NEXT:    mov r5, r0
+; CHECK-8M-NEXT:    mov r6, r0
+; CHECK-8M-NEXT:    mov r7, r0
+; CHECK-8M-NEXT:    mov r8, r0
+; CHECK-8M-NEXT:    mov r9, r0
+; CHECK-8M-NEXT:    mov r10, r0
+; CHECK-8M-NEXT:    mov r11, r0
+; CHECK-8M-NEXT:    msr apsr_nzcvqg, r0
+; CHECK-8M-NEXT:    blxns r0
+; CHECK-8M-NEXT:    vmov r12, s0
+; CHECK-8M-NEXT:    vlldm sp
+; CHECK-8M-NEXT:    vmov s0, r12
+; CHECK-8M-NEXT:    add sp, #136
+; CHECK-8M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-8M-NEXT:    pop {r7, pc}
+;
+; CHECK-NO-MVE-LABEL: h1_arg:
+; CHECK-NO-MVE:       @ %bb.0: @ %entry
+; CHECK-NO-MVE-NEXT:    push {r7, lr}
+; CHECK-NO-MVE-NEXT:    vmov r1, s0
+; CHECK-NO-MVE-NEXT:    uxth r1, r1
+; CHECK-NO-MVE-NEXT:    vmov s0, r1
+; CHECK-NO-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    bic r0, r0, #1
+; CHECK-NO-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-NO-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-NO-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-NO-MVE-NEXT:    blxns r0
+; CHECK-NO-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-NO-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-NO-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-NO-MVE-NEXT:    pop {r7, pc}
+;
+; CHECK-MVE-LABEL: h1_arg:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    push {r7, lr}
+; CHECK-MVE-NEXT:    vmov.f16 r1, s0
+; CHECK-MVE-NEXT:    vmov s0, r1
+; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    bic r0, r0, #1
+; CHECK-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    vscclrm {s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, vpr}
+; CHECK-MVE-NEXT:    vstr fpcxts, [sp, #-8]!
+; CHECK-MVE-NEXT:    clrm {r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, apsr}
+; CHECK-MVE-NEXT:    blxns r0
+; CHECK-MVE-NEXT:    vldr fpcxts, [sp], #8
+; CHECK-MVE-NEXT:    vpop {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
+; CHECK-MVE-NEXT:    pop {r7, pc}
+entry:
+  %call = call half %hptr(half %harg) "cmse_nonsecure_call" nounwind
+  ret half %call
 }
 
