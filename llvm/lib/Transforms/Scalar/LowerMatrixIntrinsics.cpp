@@ -718,9 +718,9 @@ public:
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Changed |= VisitBinaryOperator(BinOp);
       if (match(Inst, m_Load(m_Value(Op1))))
-        Changed |= VisitLoad(Inst, Op1, Builder);
+        Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        Changed |= VisitStore(Inst, Op1, Op2, Builder);
+        Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
     }
 
     RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, Func);
@@ -732,16 +732,18 @@ public:
     return Changed;
   }
 
-  LoadInst *createVectorLoad(Value *ColumnPtr, Type *EltType,
+  LoadInst *createVectorLoad(Value *ColumnPtr, Type *EltType, bool IsVolatile,
                              IRBuilder<> &Builder) {
-    return Builder.CreateAlignedLoad(
-        ColumnPtr, Align(DL.getABITypeAlignment(EltType)), "col.load");
+    return Builder.CreateAlignedLoad(ColumnPtr,
+                                     Align(DL.getABITypeAlignment(EltType)),
+                                     IsVolatile, "col.load");
   }
 
   StoreInst *createVectorStore(Value *ColumnValue, Value *ColumnPtr,
-                               Type *EltType, IRBuilder<> &Builder) {
+                               Type *EltType, bool IsVolatile,
+                               IRBuilder<> &Builder) {
     return Builder.CreateAlignedStore(ColumnValue, ColumnPtr,
-                                      DL.getABITypeAlign(EltType));
+                                      DL.getABITypeAlign(EltType), IsVolatile);
   }
 
   /// Turns \p BasePtr into an elementwise pointer to \p EltType.
@@ -777,8 +779,8 @@ public:
 
   /// Load a matrix with \p Shape starting at \p Ptr and using \p Stride between
   /// vectors.
-  MatrixTy loadMatrix(Type *Ty, Value *Ptr, Value *Stride, ShapeInfo Shape,
-                      IRBuilder<> &Builder) {
+  MatrixTy loadMatrix(Type *Ty, Value *Ptr, Value *Stride, bool IsVolatile,
+                      ShapeInfo Shape, IRBuilder<> &Builder) {
     auto VType = cast<VectorType>(Ty);
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     MatrixTy Result;
@@ -786,7 +788,8 @@ public:
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
                                      Shape.getStride(), VType->getElementType(),
                                      Builder);
-      Value *Vector = createVectorLoad(GEP, VType->getElementType(), Builder);
+      Value *Vector =
+          createVectorLoad(GEP, VType->getElementType(), IsVolatile, Builder);
       Result.addVector(Vector);
     }
     return Result.addNumLoads(getNumOps(Result.getVectorTy()) *
@@ -795,8 +798,8 @@ public:
 
   /// Loads a sub-matrix with shape \p ResultShape from a \p R x \p C matrix,
   /// starting at \p MatrixPtr[I][J].
-  MatrixTy loadMatrix(Value *MatrixPtr, ShapeInfo MatrixShape, Value *I,
-                      Value *J, ShapeInfo ResultShape, Type *EltTy,
+  MatrixTy loadMatrix(Value *MatrixPtr, bool IsVolatile, ShapeInfo MatrixShape,
+                      Value *I, Value *J, ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
 
     Value *Offset = Builder.CreateAdd(
@@ -813,17 +816,18 @@ public:
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
     return loadMatrix(TileTy, TilePtr,
-                      Builder.getInt64(MatrixShape.getStride()), ResultShape,
-                      Builder);
+                      Builder.getInt64(MatrixShape.getStride()), IsVolatile,
+                      ResultShape, Builder);
   }
 
   /// Lower a load instruction with shape information.
-  void LowerLoad(Instruction *Inst, Value *Ptr, Value *Stride,
+  void LowerLoad(Instruction *Inst, Value *Ptr, Value *Stride, bool IsVolatile,
                  ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
-    finalizeLowering(Inst,
-                     loadMatrix(Inst->getType(), Ptr, Stride, Shape, Builder),
-                     Builder);
+    finalizeLowering(
+        Inst,
+        loadMatrix(Inst->getType(), Ptr, Stride, IsVolatile, Shape, Builder),
+        Builder);
   }
 
   /// Lowers llvm.matrix.column.major.load.
@@ -835,12 +839,13 @@ public:
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
     LowerLoad(Inst, Ptr, Stride,
+              cast<ConstantInt>(Inst->getArgOperand(2))->isOne(),
               {Inst->getArgOperand(3), Inst->getArgOperand(4)});
   }
 
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
   /// MatrixPtr[I][J].
-  void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr,
+  void storeMatrix(const MatrixTy &StoreVal, Value *MatrixPtr, bool IsVolatile,
                    ShapeInfo MatrixShape, Value *I, Value *J, Type *EltTy,
                    IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
@@ -857,20 +862,21 @@ public:
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
     storeMatrix(TileTy, StoreVal, TilePtr,
-                Builder.getInt64(MatrixShape.getStride()), Builder);
+                Builder.getInt64(MatrixShape.getStride()), IsVolatile, Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
   /// vectors.
   MatrixTy storeMatrix(Type *Ty, MatrixTy StoreVal, Value *Ptr, Value *Stride,
-                       IRBuilder<> &Builder) {
+                       bool IsVolatile, IRBuilder<> &Builder) {
     auto VType = cast<VectorType>(Ty);
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(Vec.index()),
                                      Stride, StoreVal.getStride(),
                                      VType->getElementType(), Builder);
-      createVectorStore(Vec.value(), GEP, VType->getElementType(), Builder);
+      createVectorStore(Vec.value(), GEP, VType->getElementType(), IsVolatile,
+                        Builder);
     }
     return MatrixTy().addNumStores(getNumOps(StoreVal.getVectorTy()) *
                                    StoreVal.getNumVectors());
@@ -878,12 +884,13 @@ public:
 
   /// Lower a store instruction with shape information.
   void LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr, Value *Stride,
-                  ShapeInfo Shape) {
+                  bool IsVolatile, ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
     auto StoreVal = getMatrix(Matrix, Shape, Builder);
-    finalizeLowering(
-        Inst, storeMatrix(Matrix->getType(), StoreVal, Ptr, Stride, Builder),
-        Builder);
+    finalizeLowering(Inst,
+                     storeMatrix(Matrix->getType(), StoreVal, Ptr, Stride,
+                                 IsVolatile, Builder),
+                     Builder);
   }
 
   /// Lowers llvm.matrix.column.major.store.
@@ -896,6 +903,7 @@ public:
     Value *Ptr = Inst->getArgOperand(1);
     Value *Stride = Inst->getArgOperand(2);
     LowerStore(Inst, Matrix, Ptr, Stride,
+               cast<ConstantInt>(Inst->getArgOperand(3))->isOne(),
                {Inst->getArgOperand(4), Inst->getArgOperand(5)});
   }
 
@@ -1207,16 +1215,16 @@ public:
 
         for (unsigned K = 0; K < M; K += TileSize) {
           const unsigned TileM = std::min(M - K, unsigned(TileSize));
-          MatrixTy A =
-              loadMatrix(APtr, LShape, Builder.getInt64(I), Builder.getInt64(K),
-                         {TileR, TileM}, EltType, Builder);
-          MatrixTy B =
-              loadMatrix(BPtr, RShape, Builder.getInt64(K), Builder.getInt64(J),
-                         {TileM, TileC}, EltType, Builder);
+          MatrixTy A = loadMatrix(APtr, LoadOp0->isVolatile(), LShape,
+                                  Builder.getInt64(I), Builder.getInt64(K),
+                                  {TileR, TileM}, EltType, Builder);
+          MatrixTy B = loadMatrix(BPtr, LoadOp1->isVolatile(), RShape,
+                                  Builder.getInt64(K), Builder.getInt64(J),
+                                  {TileM, TileC}, EltType, Builder);
           emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
         }
-        storeMatrix(Res, CPtr, {R, M}, Builder.getInt64(I), Builder.getInt64(J),
-                    EltType, Builder);
+        storeMatrix(Res, CPtr, Store->isVolatile(), {R, M}, Builder.getInt64(I),
+                    Builder.getInt64(J), EltType, Builder);
       }
 
     // Mark eliminated instructions as fused and remove them.
@@ -1324,23 +1332,24 @@ public:
   }
 
   /// Lower load instructions, if shape information is available.
-  bool VisitLoad(Instruction *Inst, Value *Ptr, IRBuilder<> &Builder) {
+  bool VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
     auto I = ShapeMap.find(Inst);
     if (I == ShapeMap.end())
       return false;
 
-    LowerLoad(Inst, Ptr, Builder.getInt64(I->second.getStride()), I->second);
+    LowerLoad(Inst, Ptr, Builder.getInt64(I->second.getStride()),
+              Inst->isVolatile(), I->second);
     return true;
   }
 
-  bool VisitStore(Instruction *Inst, Value *StoredVal, Value *Ptr,
+  bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
                   IRBuilder<> &Builder) {
     auto I = ShapeMap.find(StoredVal);
     if (I == ShapeMap.end())
       return false;
 
     LowerStore(Inst, StoredVal, Ptr, Builder.getInt64(I->second.getStride()),
-               I->second);
+               Inst->isVolatile(), I->second);
     return true;
   }
 
