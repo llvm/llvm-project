@@ -429,8 +429,9 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
 
       return true;
     } else if (isa<BinaryOperator>(J) &&
-               J->getType()->getScalarType()->isPPC_FP128Ty()) {
-      // Most operations on ppc_f128 values become calls.
+               (J->getType()->getScalarType()->isFP128Ty() ||
+                J->getType()->getScalarType()->isPPC_FP128Ty())) {
+      // Most operations on f128 or ppc_f128 values become calls.
       return true;
     } else if (isa<UIToFPInst>(J) || isa<SIToFPInst>(J) ||
                isa<FPToUIInst>(J) || isa<FPToSIInst>(J)) {
