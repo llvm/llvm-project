@@ -256,6 +256,8 @@ class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-8} = 0b00000001;
   let Inst{7-4} = d{4-1};
   let Inst{3-0} = r{4-1};
+
+  let DecoderMethod = "decodeFMOVWRdRr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -322,6 +324,8 @@ class FWRdK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-6} = k{5-4};
   let Inst{5-4} = dst{2-1};
   let Inst{3-0} = k{3-0};
+
+  let DecoderMethod = "decodeFWRdK";
 }
 
 //===----------------------------------------------------------------------===//

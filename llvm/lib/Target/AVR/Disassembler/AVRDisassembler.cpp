@@ -116,6 +116,12 @@ static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
                                     uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeFMOVWRdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeFWRdK(MCInst &Inst, unsigned Insn,
+                                uint64_t Address, const void *Decoder);
+
 static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
                                     uint64_t Address, const void *Decoder);
 
@@ -186,6 +192,31 @@ static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
     return MCDisassembler::Fail;
   if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) == MCDisassembler::Fail)
     return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFMOVWRdRr(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  unsigned r = fieldFromInstruction(Insn, 4, 4) * 2;
+  unsigned d = fieldFromInstruction(Insn, 0, 4) * 2;
+  if (DecodeGPR8RegisterClass(Inst, r, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeFWRdK(MCInst &Inst, unsigned Insn,
+                                    uint64_t Address, const void *Decoder) {
+  unsigned d = fieldFromInstruction(Insn, 4, 2) * 2 + 24; // starts at r24:r25
+  unsigned k = 0;
+  k |= fieldFromInstruction(Insn, 0, 4);
+  k |= fieldFromInstruction(Insn, 6, 2) << 4;
+  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  if (DecodeGPR8RegisterClass(Inst, d, Address, Decoder) == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(k));
   return MCDisassembler::Success;
 }
 
