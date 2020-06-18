@@ -168,7 +168,7 @@ void RenamerClangTidyCheck::addUsage(
 
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
                                      SourceManager *SourceMgr) {
-
+  Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
   return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
                   Range, SourceMgr);
@@ -375,6 +375,12 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
       return;
+
+    const auto *Canonical = cast<NamedDecl>(Decl->getCanonicalDecl());
+    if (Canonical != Decl) {
+      addUsage(Canonical, Decl->getLocation());
+      return;
+    }
 
     // Fix type aliases in value declarations.
     if (const auto *Value = Result.Nodes.getNodeAs<ValueDecl>("decl")) {
