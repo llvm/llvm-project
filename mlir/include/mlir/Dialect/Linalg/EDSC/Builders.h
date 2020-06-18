@@ -55,7 +55,7 @@ private:
   std::unique_ptr<BuilderType> builder;
 };
 
-inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
+inline void defaultRegionBuilder(ValueRange args) {}
 
 /// Build a `linalg.generic` op with the specified `inputs`, `outputs` and
 /// `region`.
@@ -76,8 +76,7 @@ inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 Operation *makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
     ArrayRef<StructuredIndexed> outputs,
-    function_ref<void(ArrayRef<BlockArgument>)> regionBuilder =
-        defaultRegionBuilder,
+    function_ref<void(ValueRange)> regionBuilder = defaultRegionBuilder,
     ArrayRef<Value> otherValues = {}, ArrayRef<Attribute> otherAttributes = {});
 
 namespace ops {
@@ -89,11 +88,11 @@ using edsc::StructuredIndexed;
 
 /// Build the body of a region to compute a scalar multiply, under the current
 /// ScopedContext, at the current insert point.
-void mulRegionBuilder(ArrayRef<BlockArgument> args);
+void mulRegionBuilder(ValueRange args);
 
 /// Build the body of a region to compute a scalar multiply-accumulate, under
 /// the current ScopedContext, at the current insert point.
-void macRegionBuilder(ArrayRef<BlockArgument> args);
+void macRegionBuilder(ValueRange args);
 
 /// TODO(ntv): In the future we should tie these implementations to something in
 /// Tablegen that generates the proper interfaces and the proper sugared named
@@ -149,7 +148,7 @@ Operation *linalg_generic_pointwise_max(StructuredIndexed I1,
 
 // TODO(ntv): Implement more useful pointwise operations on a per-need basis.
 
-using MatmulRegionBuilder = function_ref<void(ArrayRef<BlockArgument> args)>;
+using MatmulRegionBuilder = function_ref<void(ValueRange args)>;
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
 /// insert point, that computes:
