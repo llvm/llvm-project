@@ -274,12 +274,6 @@ private:
 /// below.
 class ConversionPattern : public RewritePattern {
 public:
-  /// Construct an ConversionPattern.  `rootName` must correspond to the
-  /// canonical name of the first operation matched by the pattern.
-  ConversionPattern(StringRef rootName, PatternBenefit benefit,
-                    MLIRContext *ctx)
-      : RewritePattern(rootName, benefit, ctx) {}
-
   /// Hook for derived classes to implement rewriting. `op` is the (first)
   /// operation matched by the pattern, `operands` is a list of rewritten values
   /// that are passed to this operation, `rewriter` can be used to emit the new
@@ -303,6 +297,9 @@ public:
   /// Attempt to match and rewrite the IR root at the specified operation.
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final;
+
+protected:
+  using RewritePattern::RewritePattern;
 
 private:
   using RewritePattern::rewrite;

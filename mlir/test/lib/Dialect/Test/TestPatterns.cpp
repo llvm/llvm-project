@@ -701,18 +701,50 @@ struct TestRemappedValue
 };
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// Test patterns without a specific root operation kind
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This pattern matches and removes any operation in the test dialect.
+struct RemoveTestDialectOps : public RewritePattern {
+  RemoveTestDialectOps() : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (!isa<TestDialect>(op->getDialect()))
+      return failure();
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct TestUnknownRootOpDriver
+    : public mlir::PassWrapper<TestUnknownRootOpDriver, FunctionPass> {
+  void runOnFunction() override {
+    mlir::OwningRewritePatternList patterns;
+    patterns.insert<RemoveTestDialectOps>();
+
+    mlir::ConversionTarget target(getContext());
+    target.addIllegalDialect<TestDialect>();
+    if (failed(applyPartialConversion(getFunction(), target, patterns)))
+      signalPassFailure();
+  }
+};
+} // end anonymous namespace
+
 namespace mlir {
 void registerPatternsTestPass() {
-  mlir::PassRegistration<TestReturnTypeDriver>("test-return-type",
-                                               "Run return type functions");
+  PassRegistration<TestReturnTypeDriver>("test-return-type",
+                                         "Run return type functions");
 
-  mlir::PassRegistration<TestDerivedAttributeDriver>(
-      "test-derived-attr", "Run test derived attributes");
+  PassRegistration<TestDerivedAttributeDriver>("test-derived-attr",
+                                               "Run test derived attributes");
 
-  mlir::PassRegistration<TestPatternDriver>("test-patterns",
-                                            "Run test dialect patterns");
+  PassRegistration<TestPatternDriver>("test-patterns",
+                                      "Run test dialect patterns");
 
-  mlir::PassRegistration<TestLegalizePatternDriver>(
+  PassRegistration<TestLegalizePatternDriver>(
       "test-legalize-patterns", "Run test dialect legalization patterns", [] {
         return std::make_unique<TestLegalizePatternDriver>(
             legalizerConversionMode);
@@ -720,6 +752,10 @@ void registerPatternsTestPass() {
 
   PassRegistration<TestRemappedValue>(
       "test-remapped-value",
+      "Test public remapped value mechanism in ConversionPatternRewriter");
+
+  PassRegistration<TestUnknownRootOpDriver>(
+      "test-legalize-unknown-root-patterns",
       "Test public remapped value mechanism in ConversionPatternRewriter");
 }
 } // namespace mlir
