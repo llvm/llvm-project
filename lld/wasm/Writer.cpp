@@ -913,6 +913,9 @@ void Writer::createCallCtorsFunction() {
     for (const WasmInitEntry &f : initFunctions) {
       writeU8(os, WASM_OPCODE_CALL, "CALL");
       writeUleb128(os, f.sym->getFunctionIndex(), "function index");
+      for (size_t i = 0; i < f.sym->signature->Returns.size(); i++) {
+        writeU8(os, WASM_OPCODE_DROP, "DROP");
+      }
     }
     writeU8(os, WASM_OPCODE_END, "END");
   }
@@ -977,8 +980,8 @@ void Writer::calculateInitFunctions() {
       if (sym->isDiscarded())
         continue;
       assert(sym->isLive());
-      if (*sym->signature != WasmSignature{{}, {}})
-        error("invalid signature for init func: " + toString(*sym));
+      if (sym->signature->Params.size() != 0)
+        error("constructor functions cannot take arguments: " + toString(*sym));
       LLVM_DEBUG(dbgs() << "initFunctions: " << toString(*sym) << "\n");
       initFunctions.emplace_back(WasmInitEntry{sym, f.Priority});
     }
