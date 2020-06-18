@@ -332,6 +332,11 @@ public:
   /// coverage pass should actually not be instrumented.
   std::vector<std::string> SanitizeCoverageBlacklistFiles;
 
+  /// Executable and command-line used to create a given CompilerInvocation.
+  /// Most of the time this will be the full -cc1 command.
+  const char *Argv0 = nullptr;
+  ArrayRef<const char *> CommandLineArgs;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
