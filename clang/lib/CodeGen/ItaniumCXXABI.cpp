@@ -4528,8 +4528,6 @@ void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   // Create __dtor function for the var decl.
   llvm::Function *dtorStub = CGF.createAtExitStub(D, dtor, addr);
 
-  if (CGM.getCodeGenOpts().CXAAtExit)
-    llvm::report_fatal_error("using __cxa_atexit unsupported on AIX");
   // Register above __dtor with atexit().
   CGF.registerGlobalDtorWithAtExit(dtorStub);
 
