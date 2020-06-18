@@ -36,10 +36,10 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {
-  linalg.matvec(%A, %x, %y) :
-                memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?xf32, offset: ?, strides: [1]>,
-                memref<?xf32, offset: ?, strides: [1]>
+  linalg.matvec %A, %x, %y :
+                (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                 memref<?xf32, offset: ?, strides: [1]>,
+                 memref<?xf32, offset: ?, strides: [1]>)
   return
 }
 // CHECK-LABEL: func @matvec
@@ -48,7 +48,7 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c6:.*]] = constant 6 : index
 // CHECK:         scf.parallel {{.*}} step (%[[c5]])
 // CHECK:           scf.for {{.*}} step %[[c6]]
-// CHECK:             linalg.matvec({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>, memref<?xf32, #[[$STRIDED_1D]]>
+// CHECK:             linalg.matvec {{.*}}, {{.*}}, {{.*}} : (memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -202,10 +202,10 @@ func @permute_generic_indexed(
 func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {
-  linalg.matvec(%A, %x, %y) {__internal_linalg_transform__ = "__with_perm__"} :
-               memref<?x?xf32, offset: ?, strides: [?, 1]>,
-               memref<?xf32, offset: ?, strides: [1]>,
-               memref<?xf32, offset: ?, strides: [1]>
+  linalg.matvec %A, %x, %y {__internal_linalg_transform__ = "__with_perm__"} :
+               (memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                memref<?xf32, offset: ?, strides: [1]>,
+                memref<?xf32, offset: ?, strides: [1]>)
   return
 }
 // CHECK-LABEL: func @matvec_perm
@@ -214,7 +214,7 @@ func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c6:.*]] = constant 6 : index
 // CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
 // CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
-// CHECK:             linalg.matvec({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>, memref<?xf32, #[[$STRIDED_1D]]>
+// CHECK:             linalg.matvec {{.*}}, {{.*}}, {{.*}} : (memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 
 func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
