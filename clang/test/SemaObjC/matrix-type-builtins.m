@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fenable-matrix %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -fenable-matrix %s
 
 typedef double double4x4 __attribute__((matrix_type(4, 4)));
 typedef unsigned u4x4 __attribute__((matrix_type(4, 4)));
