@@ -753,14 +753,24 @@ struct SpecificIntrinsicInterface : public IntrinsicInterface {
   // Exact actual/dummy type matching is required by default for specific
   // intrinsics. If useGenericAndForceResultType is set, then the probing will
   // also attempt to use the related generic intrinsic and to convert the result
-  // to the specific intrinsic result type if needed.
+  // to the specific intrinsic result type if needed. This also prevents
+  // using the generic name so that folding can insert the conversion on the
+  // result and not the arguments.
+  //
   // This is not enabled on all specific intrinsics because an alternative
   // is to convert the actual arguments to the required dummy types and this is
   // not numerically equivalent.
-  //  e.g. IABS(INT(i), INT(j)) not equiv to INT(ABS(i, j)).
+  //  e.g. IABS(INT(i, 4)) not equiv to INT(ABS(i), 4).
   // This is allowed for restricted min/max specific functions because
   // the expected behavior is clear from their definitions. A warning is though
-  // always emitted because other compilers' behavior is not ubiquitous here.
+  // always emitted because other compilers' behavior is not ubiquitous here and
+  // the results in case of conversion overflow might not be equivalent.
+  // e.g for MIN0: INT(MIN(2147483647_8, 2*2147483647_8), 4) = 2147483647_4
+  // but: MIN(INT(2147483647_8, 4), INT(2*2147483647_8, 4)) = -2_4
+  // xlf and ifort return the first, and pgfortran the later. f18 will return
+  // the first because this matches more closely the MIN0 definition in
+  // Fortran 2018 table 16.3 (although it is still an extension to allow
+  // non default integer argument in MIN0).
   bool useGenericAndForceResultType{false};
 };
 
@@ -1948,7 +1958,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     if (const char *genericName{specIter->second->generic}) {
       if (auto specificCall{
               matchOrBufferMessages(*specIter->second, specificBuffer)}) {
-        specificCall->specificIntrinsic.name = genericName;
+        if (!specIter->second->useGenericAndForceResultType) {
+          specificCall->specificIntrinsic.name = genericName;
+        }
         specificCall->specificIntrinsic.isRestrictedSpecific =
             specIter->second->isRestrictedSpecific;
         // TODO test feature AdditionalIntrinsics, warn on nonstandard
@@ -1973,10 +1985,11 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             // Force the call result type to the specific intrinsic result type
             DynamicType newType{GetReturnType(*specIter->second, defaults_)};
             context.messages().Say(
-                "Argument type does not match specific intrinsic '%s' "
+                "argument types do not match specific intrinsic '%s' "
                 "requirements; using '%s' generic instead and converting the "
                 "result to %s if needed"_en_US,
                 call.name, genericName, newType.AsFortran());
+            specificCall->specificIntrinsic.name = call.name;
             specificCall->specificIntrinsic.characteristics.value()
                 .functionResult.value()
                 .SetType(newType);
