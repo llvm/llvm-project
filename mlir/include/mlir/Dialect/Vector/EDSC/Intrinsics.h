@@ -29,6 +29,11 @@ using vector_type_cast = ValueBuilder<vector::TypeCastOp>;
 using vector_insert = ValueBuilder<vector::InsertOp>;
 using vector_fma = ValueBuilder<vector::FMAOp>;
 using vector_extract = ValueBuilder<vector::ExtractOp>;
+using vector_extract_slices = ValueBuilder<vector::ExtractSlicesOp>;
+using vector_insert_slices = ValueBuilder<vector::InsertSlicesOp>;
+using vector_extract_strided_slice =
+    ValueBuilder<vector::ExtractStridedSliceOp>;
+using vector_insert_strided_slice = ValueBuilder<vector::InsertStridedSliceOp>;
 
 } // namespace intrinsics
 } // namespace edsc
