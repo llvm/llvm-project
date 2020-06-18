@@ -1,7 +1,8 @@
 ; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB,ISBDSBDAGISEL
 ; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB,SBDAGISEL
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,NOHARDEN
-
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {

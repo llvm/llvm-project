@@ -214,12 +214,9 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 
   const TargetInstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
-  // Grab the entry MBB and erase any other blocks. O0 codegen appears to
-  // generate two bbs for the entry block.
+  assert (MF.size() == 1);
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
-  while (MF.size() > 1)
-    MF.erase(std::next(MF.begin()));
 
   //  These thunks need to consist of the following instructions:
   //  __llvm_slsblr_thunk_xN:
