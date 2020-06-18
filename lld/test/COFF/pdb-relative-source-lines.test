@@ -15,9 +15,7 @@ int main(void) {
 void bar(void) {
 }
 
-$ clang-cl -fdebug-compilation-dir . -no-canonical-prefixes -c -Z7 pdb_lines*.c
-$ obj2yaml pdb_lines_1.obj > pdb_lines_1_relative.yaml
-$ obj2yaml pdb_lines_2.obj > pdb_lines_2_relative.yaml
+$ clang-cl -Xclang -fdebug-compilation-dir -Xclang . -c -Z7 pdb_lines*.c
 
 /pdbsourcepath: only sets the directory that relative paths are considered
 relative to, so this test needs to pass relative paths to lld-link for:
@@ -35,20 +33,9 @@ RUN: cd %t
 RUN: yaml2obj %S/Inputs/pdb_lines_1_relative.yaml -o %t/pdb_lines_1_relative.obj
 RUN: yaml2obj %S/Inputs/pdb_lines_2_relative.yaml -o %t/pdb_lines_2_relative.obj
 RUN: ./lld-link -debug "-pdbsourcepath:c:\src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
-RUN: llvm-pdbutil pdb2yaml -ipi-stream -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck %s
+RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck %s
 RUN: ./lld-link -debug "-pdbsourcepath:/usr/src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
-RUN: llvm-pdbutil pdb2yaml -ipi-stream -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=POSIX %s
-
-Also test the convoluted case at the end of remapBuildInfo() in lld/COFF/PDB.cpp
-The only drawback right now is that this edge case will create LF_BUILDINFO
-records with front references in the IPI stream. However the Visual Studio
-debugger takes the .PDB thusly created without any problems.
-Tested on VS2015, 2017 and 2019.
-
-RUN: sed -E -e "s|(String:\s+)\.|\1\'c:\\\\src'|" %S/Inputs/pdb_lines_2_relative.yaml > %t/pdb_lines_2_relative.yaml
-RUN: yaml2obj pdb_lines_2_relative.yaml -o %t/pdb_lines_2_relative.obj
-RUN: ./lld-link -debug "-pdbsourcepath:c:\src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
-RUN: llvm-pdbutil pdb2yaml -ipi-stream -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=EXISTING %s
+RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=POSIX %s
 
 CHECK-LABEL:  - Module:          'c:\src\pdb_lines_1_relative.obj'
 CHECK-NEXT:     ObjFile:         'c:\src\pdb_lines_1_relative.obj'
@@ -83,39 +70,6 @@ CHECK-NEXT:         - 'c:\src\out.pdb'
 CHECK-NEXT:         - cmd
 CHECK-NEXT:         - '-debug -pdbsourcepath:c:\src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
 
-CHECK-LABEL: IpiStream:
-
-CHECK:    - Kind:            LF_STRING_ID
-CHECK-NEXT:      StringId:
-CHECK-NEXT:        Id:              0
-CHECK-NEXT:        String:          'c:\src'
-CHECK-NEXT:     - Kind:            LF_STRING_ID
-CHECK-NEXT:       StringId:
-CHECK-NEXT:         Id:              0
-CHECK-NEXT:         String:          pdb_lines_1.c
-CHECK-NEXT:     - Kind:            LF_STRING_ID
-CHECK-NEXT:       StringId:
-CHECK-NEXT:         Id:              0
-CHECK-NEXT:         String:          'c:\src\buildninjaRel\bin\clang-cl.exe'
-		
-EXISTING-LABEL: IpiStream:
-
-EXISTING:     - Kind:            LF_STRING_ID
-EXISTING-NEXT:      StringId:
-EXISTING-NEXT:        Id:              0
-EXISTING-NEXT:        String:          .
-EXISTING-NEXT:    - Kind:            LF_STRING_ID
-EXISTING-NEXT:      StringId:
-EXISTING-NEXT:        Id:              0
-EXISTING-NEXT:        String:          pdb_lines_1.c
-EXISTING:    - Kind:            LF_STRING_ID
-EXISTING-NEXT:      StringId:
-EXISTING-NEXT:        Id:              0
-EXISTING-LABEL:        String:          'c:\src'
-EXISTING-NEXT:     - Kind:            LF_STRING_ID
-EXISTING-NEXT:       StringId:
-EXISTING-NEXT:         Id:              0
-EXISTING-NEXT:         String:          pdb_lines_2.c
 
 POSIX-LABEL:  - Module:          '/usr/src/pdb_lines_1_relative.obj'
 POSIX-NEXT:     ObjFile:         '/usr/src/pdb_lines_1_relative.obj'
@@ -149,17 +103,3 @@ POSIX-NEXT:         - pdb
 POSIX-NEXT:         - '/usr/src/out.pdb'
 POSIX-NEXT:         - cmd
 POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
-
-POSIX-LABEL: IpiStream:
-POSIX:    - Kind:            LF_STRING_ID
-POSIX-NEXT:      StringId:
-POSIX-NEXT:        Id:              0
-POSIX-NEXT:        String:          '/usr/src'
-POSIX-NEXT:     - Kind:            LF_STRING_ID
-POSIX-NEXT:       StringId:
-POSIX-NEXT:         Id:              0
-POSIX-NEXT:         String:          pdb_lines_1.c
-POSIX-NEXT:     - Kind:            LF_STRING_ID
-POSIX-NEXT:       StringId:
-POSIX-NEXT:         Id:              0
-POSIX-NEXT:         String:          '/usr/src/buildninjaRel/bin/clang-cl.exe'
