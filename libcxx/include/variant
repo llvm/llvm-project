@@ -1062,14 +1062,9 @@ public:
         _VSTD::swap(__lhs, __rhs);
       }
       __impl __tmp(_VSTD::move(*__rhs));
-      static constexpr bool __is_noexcept =
-#ifdef _LIBCPP_NO_EXCEPTIONS
-          true;
-#else
-          __all<(is_nothrow_move_constructible_v<_Types> &&
-                 is_nothrow_swappable_v<_Types>)...>::value;
-#endif
-      if constexpr (__is_noexcept) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+      if constexpr (__all<(is_nothrow_move_constructible_v<_Types> &&
+                           is_nothrow_swappable_v<_Types>)...>::value) {
         this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
       } else {
         // EXTENSION: When the move construction of `__lhs` into `__rhs` throws
@@ -1084,6 +1079,11 @@ public:
           throw;
         }
       }
+#else
+      // this isn't consolidated with the `if constexpr` branch above due to
+      // `throw` being ill-formed with exceptions disabled even when discarded.
+      this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
+#endif
       this->__generic_construct(*__lhs, _VSTD::move(__tmp));
     }
   }
