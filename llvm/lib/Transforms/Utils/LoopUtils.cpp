@@ -870,14 +870,7 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder,
   FastMathFlags FMF;
   FMF.setFast();
   Builder.setFastMathFlags(FMF);
-
-  Value *Cmp;
-  if (RK == RecurrenceDescriptor::MRK_FloatMin ||
-      RK == RecurrenceDescriptor::MRK_FloatMax)
-    Cmp = Builder.CreateFCmp(P, Left, Right, "rdx.minmax.cmp");
-  else
-    Cmp = Builder.CreateICmp(P, Left, Right, "rdx.minmax.cmp");
-
+  Value *Cmp = Builder.CreateCmp(P, Left, Right, "rdx.minmax.cmp");
   Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
   return Select;
 }
