@@ -65,9 +65,8 @@ void ThunkInserter<Derived>::createThunkFunction(MachineModuleInfo &MMI,
 
   Builder.CreateRetVoid();
 
-  // MachineFunctions/MachineBasicBlocks aren't created automatically for the
-  // IR-level constructs we already made. Create them and insert them into the
-  // module.
+  // MachineFunctions aren't created automatically for the IR-level constructs
+  // we already made. Create them and insert them into the module.
   MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
   // A MachineBasicBlock must not be created for the Entry block; code
   // generation from an empty naked function in C source code also does not
