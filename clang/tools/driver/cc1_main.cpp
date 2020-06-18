@@ -203,8 +203,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
-  bool Success =
-      CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv, Diags);
+  bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
+                                                    Argv, Diags, Argv0);
 
   if (Clang->getFrontendOpts().TimeTrace) {
     llvm::timeTraceProfilerInitialize(

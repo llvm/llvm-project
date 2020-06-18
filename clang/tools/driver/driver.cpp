@@ -327,7 +327,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
-    return cc1_main(makeArrayRef(ArgV).slice(2), ArgV[0], GetExecutablePathVP);
+    return cc1_main(makeArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
   if (Tool == "-cc1as")
     return cc1as_main(makeArrayRef(ArgV).slice(2), ArgV[0],
                       GetExecutablePathVP);
