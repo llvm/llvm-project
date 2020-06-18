@@ -762,13 +762,13 @@ private:
             : builder->createIntegerConstant(loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
+    auto lowerVal =
+        builder->createConvert(loc, info.loopVariableType, lowerValue);
+    builder->create<fir::StoreOp>(loc, lowerVal, info.loopVariable);
 
     // Structured loop - generate fir.loop.
     if (info.isStructured()) {
       // Perform the default initial assignment of the DO variable.
-      auto lowerVal =
-          builder->createConvert(loc, info.loopVariableType, lowerValue);
-      builder->create<fir::StoreOp>(loc, lowerVal, info.loopVariable);
       info.insertionPoint = builder->saveInsertionPoint();
       info.doLoop = builder->create<fir::LoopOp>(loc, lowerValue, upperValue,
                                                  info.stepValue);
