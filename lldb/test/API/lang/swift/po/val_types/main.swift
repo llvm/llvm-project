@@ -35,7 +35,7 @@ func main() {
   var dm = DefaultMirror()
   var cm = CustomMirror()
   var cs = CustomSummary()
-  var patatino = "foo"
+  var patatino = "foo" //% self.expect("image list")
   print("yay I am done!") //% self.expect("po dm", substrs=['a', 'b', '12', '24'])
   //% self.expect("po cm", substrs=['c', '36'])
   //% self.expect("po cm", substrs=['12', '24'], matching=False)

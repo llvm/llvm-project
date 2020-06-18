@@ -5,8 +5,7 @@ include Makefile.rules
 # This test only works on macOS 10.11+.
 
 a.out: main.swift libNewerTarget.dylib
-	$(SWIFTC) -target x86_64-apple-macosx10.10 -g -Onone $^ -lNewerTarget -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I$(shell pwd) -Xfrontend -disable-target-os-checking \
-         -toolchain-stdlib-rpath
+	$(SWIFTC) -target x86_64-apple-macosx10.10 -g -Onone $^ -lNewerTarget -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I$(shell pwd) -Xfrontend -disable-target-os-checking
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
@@ -18,8 +17,7 @@ ifneq "$(CODESIGN)" ""
 endif
 
 lib%.dylib: %.swift
-	$(SWIFTC) -target x86_64-apple-macosx10.11 -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ \
-	     -toolchain-stdlib-rpath
+	$(SWIFTC) -target x86_64-apple-macosx10.11 -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
