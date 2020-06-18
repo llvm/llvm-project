@@ -2753,8 +2753,7 @@ verifyCoopMatrixMulAdd(spirv::CooperativeMatrixMulAddNVOp op) {
       typeR.getScope() != typeB.getScope() ||
       typeR.getScope() != typeC.getScope())
     return op.emitOpError("matrix scope must match");
-  if (typeR.getElementType() != typeA.getElementType() ||
-      typeR.getElementType() != typeB.getElementType() ||
+  if (typeA.getElementType() != typeB.getElementType() ||
       typeR.getElementType() != typeC.getElementType())
     return op.emitOpError("matrix element type must match");
   return success();
