@@ -549,6 +549,10 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
       return LT.first * NElts * Cost;
     }
     break;
+  case ISD::FNEG:
+    // Use the backend' estimation. If fneg is not free each element will cost
+    // one additional instruction.
+    return TLI->isFNegFree(SLT) ? 0 : NElts;
   default:
     break;
   }
