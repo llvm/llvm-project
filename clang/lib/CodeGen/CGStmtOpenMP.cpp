@@ -2883,6 +2883,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       bool StaticChunkedOne = RT.isStaticChunked(ScheduleKind.Schedule,
           /* Chunked */ Chunk != nullptr) && HasChunkSizeOne &&
           isOpenMPLoopBoundSharingDirective(S.getDirectiveKind());
+      bool IsMonotonic =
+          Ordered ||
+          ((ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
+            ScheduleKind.Schedule == OMPC_SCHEDULE_unknown) &&
+           !(ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
+             ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic)) ||
+          ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
+          ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
       if ((RT.isStaticNonchunked(ScheduleKind.Schedule,
                                  /* Chunked */ Chunk != nullptr) ||
            StaticChunkedOne) &&
@@ -2891,9 +2899,9 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         emitCommonSimdLoop(
             *this, S,
-            [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+            [&S, IsMonotonic](CodeGenFunction &CGF, PrePostActionTy &) {
               if (isOpenMPSimdDirective(S.getDirectiveKind())) {
-                CGF.EmitOMPSimdInit(S, /*IsMonotonic=*/true);
+                CGF.EmitOMPSimdInit(S, IsMonotonic);
               } else if (const auto *C = S.getSingleClause<OMPOrderClause>()) {
                 if (C->getKind() == OMPC_ORDER_concurrent)
                   CGF.LoopStack.setParallel(/*Enable=*/true);
@@ -2950,11 +2958,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         };
         OMPCancelStack.emitExit(*this, S.getDirectiveKind(), CodeGen);
       } else {
-        const bool IsMonotonic =
-            Ordered || ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
-            ScheduleKind.Schedule == OMPC_SCHEDULE_unknown ||
-            ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
-            ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.
         const OMPLoopArguments LoopArguments(
