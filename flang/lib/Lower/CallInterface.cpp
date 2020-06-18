@@ -34,6 +34,22 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
   return proc.GetName();
 }
 
+bool Fortran::lower::CallerInterface::isIndirectCall() const {
+  if (const auto *symbol = procRef.proc().GetSymbol())
+    return Fortran::semantics::IsPointer(*symbol) ||
+           Fortran::semantics::IsDummy(*symbol);
+  return false;
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::CallerInterface::getIfIndirectCallSymbol() const {
+  if (const auto *symbol = procRef.proc().GetSymbol())
+    if (Fortran::semantics::IsPointer(*symbol) ||
+        Fortran::semantics::IsDummy(*symbol))
+      return symbol;
+  return nullptr;
+}
+
 mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
   const auto &proc = procRef.proc();
   // FIXME: If the callee is defined in the same file but after the current
@@ -182,13 +198,19 @@ void Fortran::lower::CallInterface<T>::init() {
   }
   // No input/output for main program
 
-  auto name = side().getMangledName();
-  auto module = converter.getModuleOp();
-  func = Fortran::lower::FirOpBuilder::getNamedFunction(module, name);
-  if (!func) {
-    mlir::Location loc = side().getCalleeLocation();
-    mlir::FunctionType ty = genFunctionType();
-    func = Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+  // Create / get funcOp for direct calls. For indirect calls (only meaningful
+  // on the caller side), no funcOp has to be created here. The mlir::Value
+  // holding the indirection is used when creating the fir::CallOp.
+  if (!side().isIndirectCall()) {
+    auto name = side().getMangledName();
+    auto module = converter.getModuleOp();
+    func = Fortran::lower::FirOpBuilder::getNamedFunction(module, name);
+    if (!func) {
+      mlir::Location loc = side().getCalleeLocation();
+      mlir::FunctionType ty = genFunctionType();
+      func =
+          Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+    }
   }
 
   // map back fir inputs to passed entities
@@ -306,23 +328,18 @@ public:
         getEntityContainer(interface.side().getCallDescription());
     for (const auto &pair :
          llvm::zip(procedure.dummyArguments, argumentEntities)) {
-      const auto &dummy = std::get<0>(pair);
+      const auto &dummyCharacteristic = std::get<0>(pair);
       std::visit(
           Fortran::common::visitors{
-              [&](const Fortran::evaluate::characteristics::DummyDataObject
-                      &obj) {
-                handleImplicitDataDummy(obj,
-                                        getDataObjectEntity(std::get<1>(pair)));
-              },
-              [&](const Fortran::evaluate::characteristics::DummyProcedure &) {
-                // TODO
-                llvm_unreachable("dummy procedure pointer not yet handled");
+              [&](const auto &dummy) {
+                const auto &entity = getDataObjectEntity(std::get<1>(pair));
+                handleImplicitDummy(dummy, entity);
               },
               [&](const Fortran::evaluate::characteristics::AlternateReturn &) {
                 // nothing to do
               },
           },
-          dummy.u);
+          dummyCharacteristic.u);
     }
   }
   void buildExplicitInterface(
@@ -347,7 +364,7 @@ private:
     addFirOutput(boxCharTy, resultPosition, Property::BoxChar);
   }
 
-  void handleImplicitDataDummy(
+  void handleImplicitDummy(
       const Fortran::evaluate::characteristics::DummyDataObject &obj,
       const FortranEntity &entity) {
     auto dynamicType = obj.type.type();
@@ -355,6 +372,7 @@ private:
       auto boxCharTy = fir::BoxCharType::get(&mlirContext, dynamicType.kind());
       addFirInput(boxCharTy, nextPassedArgPosition(), Property::BoxChar);
       addPassedArg(PassEntityBy::BoxChar, entity);
+      // FIXME: non PDT derived type allowed here.
     } else {
       mlir::Type type =
           getConverter().genType(dynamicType.category(), dynamicType.kind());
@@ -366,6 +384,26 @@ private:
       addFirInput(refType, nextPassedArgPosition(), Property::BaseAddress);
       addPassedArg(PassEntityBy::BaseAddress, entity);
     }
+  }
+
+  void handleImplicitDummy(
+      const Fortran::evaluate::characteristics::DummyProcedure &proc,
+      const FortranEntity &entity) {
+    if (proc.attrs.test(
+            Fortran::evaluate::characteristics::DummyProcedure::Attr::Pointer))
+      llvm_unreachable("TODO: procedure pointer arguments");
+    // Otherwise, it is a dummy procedure
+
+    // TODO: Get actual function type of the dummy procedure, at least when an
+    // interface is given.
+    // In general, that is a nice to have but we cannot guarantee to find the
+    // function type that will match the one of the calls, we may not even know
+    // how many arguments the dummy procedure accepts (e.g. if a procedure
+    // pointer is only transiting through the current procedure without being
+    // called), so a function type cast must always be inserted.
+    auto funcType = mlir::FunctionType::get({}, {}, &mlirContext);
+    addFirInput(funcType, nextPassedArgPosition(), Property::BaseAddress);
+    addPassedArg(PassEntityBy::BaseAddress, entity);
   }
 
   fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
