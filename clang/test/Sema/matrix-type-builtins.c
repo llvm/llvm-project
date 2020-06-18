@@ -66,3 +66,33 @@ void column_major_load(float *p1, int *p2, _Bool *p3, struct Foo *p4) {
            // expected-warning@-1 {{incompatible pointer to integer conversion casting 'char [1]' to type 'unsigned long'}}
       10);
 }
+
+void column_major_store(sx5x10_t *m1, ix3x2_t *m2, float *p1, int *p2, struct Foo *p3, const float *p4) {
+  __builtin_matrix_column_major_store(*m1, p1, 1);
+  // expected-error@-1 {{stride must be greater or equal to the number of rows}}
+  __builtin_matrix_column_major_store(*m1, p1, 0);
+  // expected-error@-1 {{stride must be greater or equal to the number of rows}}
+  __builtin_matrix_column_major_store(*m1, p2, 10);
+  // expected-error@-1 {{the pointee of the second argument must match the element type of the first argument ('int' != 'float')}}
+  __builtin_matrix_column_major_store(p1, p2, 10);
+  // expected-error@-1 {{first argument must be a matrix}}
+
+  __builtin_matrix_column_major_store(
+      "",   // expected-error {{first argument must be a matrix}}
+      10,   // expected-error {{second argument must be a pointer to a valid matrix element type}}
+      *p3); // expected-error {{casting 'struct Foo' to incompatible type 'unsigned long'}}
+
+  __builtin_matrix_column_major_store(
+      *m1,
+      10, // expected-error {{second argument must be a pointer to a valid matrix element type}}
+      10);
+
+  *m1 = __builtin_matrix_column_major_store(*m1, p1, 10);
+  // expected-error@-1 {{assigning to 'sx5x10_t' (aka 'float __attribute__((matrix_type(5, 10)))') from incompatible type 'void'}}
+
+  int x = __builtin_matrix_column_major_store(*m1, p1, 10);
+  // expected-error@-1 {{initializing 'int' with an expression of incompatible type 'void'}}
+
+  __builtin_matrix_column_major_store(*m1, p4, 20);
+  // expected-error@-1 {{cannot store matrix to read-only pointer}}
+}
