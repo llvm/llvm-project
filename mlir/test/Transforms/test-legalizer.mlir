@@ -153,15 +153,11 @@ func @remove_foldable_op(%arg0 : i32) -> (i32) {
 
 // CHECK-LABEL: @create_block
 func @create_block() {
-  // expected-remark@+1 {{op 'test.container' is not legalizable}}
-  "test.container"() ({
-    // Check that we created a block with arguments.
-    // CHECK-NOT: test.create_block
-    // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
-    // CHECK: test.finish
-    "test.create_block"() : () -> ()
-    "test.finish"() : () -> ()
-  }) : () -> ()
+  // Check that we created a block with arguments.
+  // CHECK-NOT: test.create_block
+  // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
+  "test.create_block"() : () -> ()
+
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }
@@ -212,15 +208,12 @@ func @fail_to_convert_region() {
 
 // CHECK-LABEL: @create_illegal_block
 func @create_illegal_block() {
-  // expected-remark@+1 {{op 'test.container' is not legalizable}}
-  "test.container"() ({
-    // Check that we can undo block creation, i.e. that the block was removed.
-    // CHECK: test.create_illegal_block
-    // CHECK-NOT: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
-    // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
-    "test.create_illegal_block"() : () -> ()
-    "test.finish"() : () -> ()
-  }) : () -> ()
+  // Check that we can undo block creation, i.e. that the block was removed.
+  // CHECK: test.create_illegal_block
+  // CHECK-NOT: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
+  // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
+  "test.create_illegal_block"() : () -> ()
+
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }

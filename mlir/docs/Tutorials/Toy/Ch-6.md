@@ -106,8 +106,7 @@ that only legal operations will remain after the conversion.
 
 ```c++
   mlir::ModuleOp module = getOperation();
-  if (mlir::failed(mlir::applyFullConversion(module, target, patterns,
-                                             &typeConverter)))
+  if (mlir::failed(mlir::applyFullConversion(module, target, patterns)))
     signalPassFailure();
 ```
 

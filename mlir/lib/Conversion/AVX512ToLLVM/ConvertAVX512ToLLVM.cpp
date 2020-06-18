@@ -179,10 +179,7 @@ void ConvertAVX512ToLLVMPass::runOnOperation() {
   target.addLegalDialect<LLVM::LLVMDialect>();
   target.addLegalDialect<LLVM::LLVMAVX512Dialect>();
   target.addIllegalDialect<avx512::AVX512Dialect>();
-  target.addDynamicallyLegalOp<FuncOp>(
-      [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
-  if (failed(applyPartialConversion(getOperation(), target, patterns,
-                                    &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns))) {
     signalPassFailure();
   }
 }

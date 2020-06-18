@@ -173,10 +173,8 @@ void LowerVectorToROCDLPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
   target.addLegalDialect<ROCDL::ROCDLDialect>();
 
-  if (failed(applyPartialConversion(getOperation(), target, patterns,
-                                    &converter))) {
+  if (failed(applyPartialConversion(getOperation(), target, patterns)))
     signalPassFailure();
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>

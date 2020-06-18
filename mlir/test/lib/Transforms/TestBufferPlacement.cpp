@@ -1,4 +1,4 @@
-//===- TestBufferPlacement.cpp - Test for buffer placement 0----*- C++ -*-===//
+//===- TestBufferPlacement.cpp - Test for buffer placement ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -140,7 +140,8 @@ struct TestBufferPlacementPreparationPass
 
     // Mark the function whose arguments are in tensor-type illegal.
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
-      return converter.isSignatureLegal(funcOp.getType());
+      return converter.isSignatureLegal(funcOp.getType()) &&
+             converter.isLegal(&funcOp.getBody());
     });
 
     // Walk over all the functions to apply buffer assignment.
@@ -151,7 +152,7 @@ struct TestBufferPlacementPreparationPass
           &context, &placer, &converter, &patterns);
 
       // Applying full conversion
-      return applyFullConversion(function, target, patterns, &converter);
+      return applyFullConversion(function, target, patterns);
     });
   };
 };

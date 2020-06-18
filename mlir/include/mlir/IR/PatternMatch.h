@@ -99,7 +99,7 @@ protected:
   /// pattern.
   Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context);
 
-  /// This contructor is used when a pattern may match against multiple
+  /// This constructor is used when a pattern may match against multiple
   /// different types of operations. The `benefit` is the expected benefit of
   /// matching this pattern. `MatchAnyOpTypeTag` is just a tag to ensure that
   /// the "match any" behavior is what the user actually desired,
@@ -163,28 +163,27 @@ public:
   ArrayRef<OperationName> getGeneratedOps() const { return generatedOps; }
 
 protected:
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
+  /// Construct a rewrite pattern with a certain benefit that matches the
+  /// operation with the given root name.
   RewritePattern(StringRef rootName, PatternBenefit benefit,
                  MLIRContext *context)
       : Pattern(rootName, benefit, context) {}
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching. `MatchAnyOpTypeTag`
-  /// is just a tag to ensure that the "match any" behavior is what the user
-  /// actually desired, `MatchAnyOpTypeTag()` should always be supplied here.
+  /// Construct a rewrite pattern with a certain benefit that matches any
+  /// operation type. `MatchAnyOpTypeTag` is just a tag to ensure that the
+  /// "match any" behavior is what the user actually desired,
+  /// `MatchAnyOpTypeTag()` should always be supplied here.
   RewritePattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
       : Pattern(benefit, tag) {}
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching. They can also specify
-  /// the names of operations that may be generated during a successful rewrite.
+  /// Construct a rewrite pattern with a certain benefit that matches the
+  /// operation with the given root name. `generatedNames` contains the names of
+  /// operations that may be generated during a successful rewrite.
   RewritePattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
                  PatternBenefit benefit, MLIRContext *context);
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching. They can also specify
-  /// the names of operations that may be generated during a successful rewrite.
-  /// `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
-  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
-  /// always be supplied here.
+  /// Construct a rewrite pattern that may match any operation type.
+  /// `generatedNames` contains the names of operations that may be generated
+  /// during a successful rewrite. `MatchAnyOpTypeTag` is just a tag to ensure
+  /// that the "match any" behavior is what the user actually desired,
+  /// `MatchAnyOpTypeTag()` should always be supplied here.
   RewritePattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
                  MLIRContext *context, MatchAnyOpTypeTag tag);
 
