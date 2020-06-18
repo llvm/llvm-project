@@ -7395,6 +7395,9 @@ def : Pat<(v2i32 (bitconvert (v2f32 DPR:$src))), (v2i32 DPR:$src)>;
 def : Pat<(v4i16 (bitconvert (v4f16 DPR:$src))), (v4i16  DPR:$src)>;
 def : Pat<(v4f16 (bitconvert (v4i16 DPR:$src))), (v4f16  DPR:$src)>;
 
+def : Pat<(v4i16 (bitconvert (v4bf16 DPR:$src))), (v4i16  DPR:$src)>;
+def : Pat<(v4bf16 (bitconvert (v4i16 DPR:$src))), (v4bf16  DPR:$src)>;
+
 // 128 bit conversions
 def : Pat<(v2f64 (bitconvert (v2i64 QPR:$src))), (v2f64 QPR:$src)>;
 def : Pat<(v2i64 (bitconvert (v2f64 QPR:$src))), (v2i64 QPR:$src)>;
@@ -7404,6 +7407,9 @@ def : Pat<(v4f32 (bitconvert (v4i32 QPR:$src))), (v4f32 QPR:$src)>;
 
 def : Pat<(v8i16 (bitconvert (v8f16 QPR:$src))), (v8i16  QPR:$src)>;
 def : Pat<(v8f16 (bitconvert (v8i16 QPR:$src))), (v8f16  QPR:$src)>;
+
+def : Pat<(v8i16 (bitconvert (v8bf16 QPR:$src))), (v8i16  QPR:$src)>;
+def : Pat<(v8bf16 (bitconvert (v8i16 QPR:$src))), (v8bf16  QPR:$src)>;
 }
 
 let Predicates = [IsLE,HasNEON] in {
@@ -7411,24 +7417,28 @@ let Predicates = [IsLE,HasNEON] in {
   def : Pat<(f64   (bitconvert (v2f32 DPR:$src))), (f64   DPR:$src)>;
   def : Pat<(f64   (bitconvert (v2i32 DPR:$src))), (f64   DPR:$src)>;
   def : Pat<(f64   (bitconvert (v4f16 DPR:$src))), (f64   DPR:$src)>;
+  def : Pat<(f64   (bitconvert (v4bf16 DPR:$src))), (f64   DPR:$src)>;
   def : Pat<(f64   (bitconvert (v4i16 DPR:$src))), (f64   DPR:$src)>;
   def : Pat<(f64   (bitconvert (v8i8  DPR:$src))), (f64   DPR:$src)>;
 
   def : Pat<(v1i64 (bitconvert (v2f32 DPR:$src))), (v1i64 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v2i32 DPR:$src))), (v1i64 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v4f16 DPR:$src))), (v1i64 DPR:$src)>;
+  def : Pat<(v1i64 (bitconvert (v4bf16 DPR:$src))), (v1i64 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v4i16 DPR:$src))), (v1i64 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v8i8  DPR:$src))), (v1i64 DPR:$src)>;
 
   def : Pat<(v2f32 (bitconvert (f64   DPR:$src))), (v2f32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v1i64 DPR:$src))), (v2f32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v4f16 DPR:$src))), (v2f32 DPR:$src)>;
+  def : Pat<(v2f32 (bitconvert (v4bf16 DPR:$src))), (v2f32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v4i16 DPR:$src))), (v2f32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v8i8  DPR:$src))), (v2f32 DPR:$src)>;
 
   def : Pat<(v2i32 (bitconvert (f64   DPR:$src))), (v2i32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v1i64 DPR:$src))), (v2i32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v4f16 DPR:$src))), (v2i32 DPR:$src)>;
+  def : Pat<(v2i32 (bitconvert (v4bf16 DPR:$src))), (v2i32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v4i16 DPR:$src))), (v2i32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v8i8  DPR:$src))), (v2i32 DPR:$src)>;
 
@@ -7437,6 +7447,12 @@ let Predicates = [IsLE,HasNEON] in {
   def : Pat<(v4f16 (bitconvert (v2f32 DPR:$src))), (v4f16 DPR:$src)>;
   def : Pat<(v4f16 (bitconvert (v2i32 DPR:$src))), (v4f16 DPR:$src)>;
   def : Pat<(v4f16 (bitconvert (v8i8  DPR:$src))), (v4f16 DPR:$src)>;
+
+  def : Pat<(v4bf16 (bitconvert (f64   DPR:$src))), (v4bf16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v1i64 DPR:$src))), (v4bf16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v2f32 DPR:$src))), (v4bf16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v2i32 DPR:$src))), (v4bf16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v8i8  DPR:$src))), (v4bf16 DPR:$src)>;
 
   def : Pat<(v4i16 (bitconvert (f64   DPR:$src))), (v4i16 DPR:$src)>;
   def : Pat<(v4i16 (bitconvert (v1i64 DPR:$src))), (v4i16 DPR:$src)>;
@@ -7449,30 +7465,35 @@ let Predicates = [IsLE,HasNEON] in {
   def : Pat<(v8i8  (bitconvert (v2f32 DPR:$src))), (v8i8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v2i32 DPR:$src))), (v8i8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v4f16 DPR:$src))), (v8i8  DPR:$src)>;
+  def : Pat<(v8i8  (bitconvert (v4bf16 DPR:$src))), (v8i8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v4i16 DPR:$src))), (v8i8  DPR:$src)>;
 
   // 128 bit conversions
   def : Pat<(v2f64 (bitconvert (v4f32 QPR:$src))), (v2f64 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v4i32 QPR:$src))), (v2f64 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v8f16 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v8bf16 QPR:$src))), (v2f64 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v8i16 QPR:$src))), (v2f64 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v16i8 QPR:$src))), (v2f64 QPR:$src)>;
 
   def : Pat<(v2i64 (bitconvert (v4f32 QPR:$src))), (v2i64 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v4i32 QPR:$src))), (v2i64 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v8f16 QPR:$src))), (v2i64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v8bf16 QPR:$src))), (v2i64 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v8i16 QPR:$src))), (v2i64 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v16i8 QPR:$src))), (v2i64 QPR:$src)>;
 
   def : Pat<(v4f32 (bitconvert (v2f64 QPR:$src))), (v4f32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v2i64 QPR:$src))), (v4f32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v8f16 QPR:$src))), (v4f32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v8bf16 QPR:$src))), (v4f32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v8i16 QPR:$src))), (v4f32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v16i8 QPR:$src))), (v4f32 QPR:$src)>;
 
   def : Pat<(v4i32 (bitconvert (v2f64 QPR:$src))), (v4i32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v2i64 QPR:$src))), (v4i32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v8f16 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v8bf16 QPR:$src))), (v4i32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v8i16 QPR:$src))), (v4i32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v16i8 QPR:$src))), (v4i32 QPR:$src)>;
 
@@ -7481,6 +7502,12 @@ let Predicates = [IsLE,HasNEON] in {
   def : Pat<(v8f16 (bitconvert (v4f32 QPR:$src))), (v8f16 QPR:$src)>;
   def : Pat<(v8f16 (bitconvert (v4i32 QPR:$src))), (v8f16 QPR:$src)>;
   def : Pat<(v8f16 (bitconvert (v16i8 QPR:$src))), (v8f16 QPR:$src)>;
+
+  def : Pat<(v8bf16 (bitconvert (v2f64 QPR:$src))), (v8bf16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v2i64 QPR:$src))), (v8bf16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v4f32 QPR:$src))), (v8bf16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v4i32 QPR:$src))), (v8bf16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v16i8 QPR:$src))), (v8bf16 QPR:$src)>;
 
   def : Pat<(v8i16 (bitconvert (v2f64 QPR:$src))), (v8i16 QPR:$src)>;
   def : Pat<(v8i16 (bitconvert (v2i64 QPR:$src))), (v8i16 QPR:$src)>;
@@ -7493,6 +7520,7 @@ let Predicates = [IsLE,HasNEON] in {
   def : Pat<(v16i8 (bitconvert (v4f32 QPR:$src))), (v16i8 QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v4i32 QPR:$src))), (v16i8 QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v8f16 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v8bf16 QPR:$src))), (v16i8 QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v8i16 QPR:$src))), (v16i8 QPR:$src)>;
 }
 
@@ -7501,24 +7529,28 @@ let Predicates = [IsBE,HasNEON] in {
   def : Pat<(f64   (bitconvert (v2f32 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(f64   (bitconvert (v2i32 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(f64   (bitconvert (v4f16 DPR:$src))), (VREV64d16 DPR:$src)>;
+  def : Pat<(f64   (bitconvert (v4bf16 DPR:$src))), (VREV64d16 DPR:$src)>;
   def : Pat<(f64   (bitconvert (v4i16 DPR:$src))), (VREV64d16 DPR:$src)>;
   def : Pat<(f64   (bitconvert (v8i8  DPR:$src))), (VREV64d8  DPR:$src)>;
 
   def : Pat<(v1i64 (bitconvert (v2f32 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v2i32 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v4f16 DPR:$src))), (VREV64d16 DPR:$src)>;
+  def : Pat<(v1i64 (bitconvert (v4bf16 DPR:$src))), (VREV64d16 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v4i16 DPR:$src))), (VREV64d16 DPR:$src)>;
   def : Pat<(v1i64 (bitconvert (v8i8  DPR:$src))), (VREV64d8  DPR:$src)>;
 
   def : Pat<(v2f32 (bitconvert (f64   DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v1i64 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v4f16 DPR:$src))), (VREV32d16 DPR:$src)>;
+  def : Pat<(v2f32 (bitconvert (v4bf16 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v4i16 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v2f32 (bitconvert (v8i8  DPR:$src))), (VREV32d8  DPR:$src)>;
 
   def : Pat<(v2i32 (bitconvert (f64   DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v1i64 DPR:$src))), (VREV64d32 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v4f16 DPR:$src))), (VREV32d16 DPR:$src)>;
+  def : Pat<(v2i32 (bitconvert (v4bf16 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v4i16 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v2i32 (bitconvert (v8i8  DPR:$src))), (VREV32d8  DPR:$src)>;
 
@@ -7527,6 +7559,12 @@ let Predicates = [IsBE,HasNEON] in {
   def : Pat<(v4f16 (bitconvert (v2f32 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v4f16 (bitconvert (v2i32 DPR:$src))), (VREV32d16 DPR:$src)>;
   def : Pat<(v4f16 (bitconvert (v8i8  DPR:$src))), (VREV16d8  DPR:$src)>;
+
+  def : Pat<(v4bf16 (bitconvert (f64   DPR:$src))), (VREV64d16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v1i64 DPR:$src))), (VREV64d16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v2f32 DPR:$src))), (VREV32d16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v2i32 DPR:$src))), (VREV32d16 DPR:$src)>;
+  def : Pat<(v4bf16 (bitconvert (v8i8  DPR:$src))), (VREV16d8  DPR:$src)>;
 
   def : Pat<(v4i16 (bitconvert (f64   DPR:$src))), (VREV64d16 DPR:$src)>;
   def : Pat<(v4i16 (bitconvert (v1i64 DPR:$src))), (VREV64d16 DPR:$src)>;
@@ -7539,30 +7577,35 @@ let Predicates = [IsBE,HasNEON] in {
   def : Pat<(v8i8  (bitconvert (v2f32 DPR:$src))), (VREV32d8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v2i32 DPR:$src))), (VREV32d8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v4f16 DPR:$src))), (VREV16d8  DPR:$src)>;
+  def : Pat<(v8i8  (bitconvert (v4bf16 DPR:$src))), (VREV16d8  DPR:$src)>;
   def : Pat<(v8i8  (bitconvert (v4i16 DPR:$src))), (VREV16d8  DPR:$src)>;
 
   // 128 bit conversions
   def : Pat<(v2f64 (bitconvert (v4f32 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v4i32 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v8f16 QPR:$src))), (VREV64q16 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v8bf16 QPR:$src))), (VREV64q16 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v8i16 QPR:$src))), (VREV64q16 QPR:$src)>;
   def : Pat<(v2f64 (bitconvert (v16i8 QPR:$src))), (VREV64q8  QPR:$src)>;
 
   def : Pat<(v2i64 (bitconvert (v4f32 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v4i32 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v8f16 QPR:$src))), (VREV64q16 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v8bf16 QPR:$src))), (VREV64q16 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v8i16 QPR:$src))), (VREV64q16 QPR:$src)>;
   def : Pat<(v2i64 (bitconvert (v16i8 QPR:$src))), (VREV64q8  QPR:$src)>;
 
   def : Pat<(v4f32 (bitconvert (v2f64 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v2i64 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v8f16 QPR:$src))), (VREV32q16 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v8bf16 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v8i16 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v4f32 (bitconvert (v16i8 QPR:$src))), (VREV32q8  QPR:$src)>;
 
   def : Pat<(v4i32 (bitconvert (v2f64 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v2i64 QPR:$src))), (VREV64q32 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v8f16 QPR:$src))), (VREV32q16 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v8bf16 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v8i16 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v4i32 (bitconvert (v16i8 QPR:$src))), (VREV32q8  QPR:$src)>;
 
@@ -7571,6 +7614,12 @@ let Predicates = [IsBE,HasNEON] in {
   def : Pat<(v8f16 (bitconvert (v4f32 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v8f16 (bitconvert (v4i32 QPR:$src))), (VREV32q16 QPR:$src)>;
   def : Pat<(v8f16 (bitconvert (v16i8 QPR:$src))), (VREV16q8  QPR:$src)>;
+
+  def : Pat<(v8bf16 (bitconvert (v2f64 QPR:$src))), (VREV64q16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v2i64 QPR:$src))), (VREV64q16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v4f32 QPR:$src))), (VREV32q16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v4i32 QPR:$src))), (VREV32q16 QPR:$src)>;
+  def : Pat<(v8bf16 (bitconvert (v16i8 QPR:$src))), (VREV16q8  QPR:$src)>;
 
   def : Pat<(v8i16 (bitconvert (v2f64 QPR:$src))), (VREV64q16 QPR:$src)>;
   def : Pat<(v8i16 (bitconvert (v2i64 QPR:$src))), (VREV64q16 QPR:$src)>;
@@ -7583,6 +7632,7 @@ let Predicates = [IsBE,HasNEON] in {
   def : Pat<(v16i8 (bitconvert (v4f32 QPR:$src))), (VREV32q8  QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v4i32 QPR:$src))), (VREV32q8  QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v8f16 QPR:$src))), (VREV16q8  QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v8bf16 QPR:$src))), (VREV16q8  QPR:$src)>;
   def : Pat<(v16i8 (bitconvert (v8i16 QPR:$src))), (VREV16q8  QPR:$src)>;
 }
 
@@ -7593,12 +7643,12 @@ let Predicates = [HasNEON] in {
   // input and output types are the same, the bitconvert gets elided
   // and we end up generating a nonsense match of nothing.
 
-  foreach VT = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
-    foreach VT2 = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
+  foreach VT = [ v16i8, v8i16, v8f16, v8bf16, v4i32, v4f32, v2i64, v2f64 ] in
+    foreach VT2 = [ v16i8, v8i16, v8f16, v8bf16, v4i32, v4f32, v2i64, v2f64 ] in
       def : Pat<(VT (ARMVectorRegCastImpl (VT2 QPR:$src))), (VT QPR:$src)>;
 
-  foreach VT = [ v8i8, v4i16, v4f16, v2i32, v2f32, v1i64, f64 ] in
-    foreach VT2 = [ v8i8, v4i16, v4f16, v2i32, v2f32, v1i64, f64 ] in
+  foreach VT = [ v8i8, v4i16, v4f16, v4bf16, v2i32, v2f32, v1i64, f64 ] in
+    foreach VT2 = [ v8i8, v4i16, v4f16, v4bf16, v2i32, v2f32, v1i64, f64 ] in
       def : Pat<(VT (ARMVectorRegCastImpl (VT2 DPR:$src))), (VT DPR:$src)>;
 }
 
