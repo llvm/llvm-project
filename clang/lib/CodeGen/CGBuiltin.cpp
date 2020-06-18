@@ -2406,6 +2406,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    MatrixBuilder<CGBuilderTy> MB(Builder);
+    Value *Matrix = EmitScalarExpr(E->getArg(0));
+    Address Dst = EmitPointerWithAlignment(E->getArg(1));
+    Value *Stride = EmitScalarExpr(E->getArg(2));
+
+    const auto *MatrixTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
+    auto *PtrTy = E->getArg(1)->getType()->getAs<PointerType>();
+    assert(PtrTy && "arg1 must be of pointer type");
+    bool IsVolatile = PtrTy->getPointeeType().isVolatileQualified();
+
+    EmitNonNullArgCheck(RValue::get(Dst.getPointer()), E->getArg(1)->getType(),
+                        E->getArg(1)->getExprLoc(), FD, 0);
+    Value *Result = MB.CreateColumnMajorStore(
+        Matrix, Dst.getPointer(), Align(Dst.getAlignment().getQuantity()),
+        Stride, IsVolatile, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+    return RValue::get(Result);
+  }
+
   case Builtin::BIfinite:
   case Builtin::BI__finite:
   case Builtin::BIfinitef:

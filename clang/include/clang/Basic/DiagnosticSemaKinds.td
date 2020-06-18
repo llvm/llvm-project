@@ -10783,14 +10783,19 @@ def warn_import_on_definition : Warning<
   "import %select{module|name}0 cannot be applied to a function with a definition">,
   InGroup<IgnoredAttributes>;
 
-def err_builtin_matrix_arg: Error<
-  "%select{first|second}0 argument must be a matrix">;
+def err_builtin_matrix_arg: Error<"first argument must be a matrix">;
 
 def err_builtin_matrix_scalar_unsigned_arg: Error<
   "%0 argument must be a constant unsigned integer expression">;
 
 def err_builtin_matrix_pointer_arg: Error<
-  "%select{first|second}0 argument must be a pointer to a valid matrix element type">;
+  "%0 argument must be a pointer to a valid matrix element type">;
+
+def err_builtin_matrix_pointer_arg_mismatch: Error<
+  "the pointee of the second argument must match the element type of the first argument (%0 != %1)">;
+
+def err_builtin_matrix_store_to_const: Error<
+  "cannot store matrix to read-only pointer">;
 
 def err_builtin_matrix_stride_too_small: Error<
   "stride must be greater or equal to the number of rows">;
