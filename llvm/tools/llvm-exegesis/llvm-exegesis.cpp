@@ -160,6 +160,12 @@ static cl::opt<std::string>
                                       cl::desc(""), cl::cat(AnalysisOptions),
                                       cl::init(""));
 
+static cl::list<std::string>
+    AllowedHostCpus("allowed-host-cpu",
+                    cl::desc("If specified, only run the benchmark if the host "
+                             "CPU matches the names"),
+                    cl::cat(Options), cl::ZeroOrMore);
+
 static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
     "analysis-display-unstable-clusters",
     cl::desc("if there is more than one benchmark for an opcode, said "
@@ -295,6 +301,13 @@ void benchmarkMain() {
   InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);
+
+  llvm::StringRef ActualCpu = State.getTargetMachine().getTargetCPU();
+  for (auto Begin = AllowedHostCpus.begin(); Begin != AllowedHostCpus.end();
+       ++Begin) {
+    if (ActualCpu != *Begin)
+      ExitWithError(llvm::Twine("Unexpected host CPU ").concat(ActualCpu));
+  }
 
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
