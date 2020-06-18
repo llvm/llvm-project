@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s | FileCheck %s
 
 ; Range checks: for all the instruction tested in this file, the
 ; immediate must be within the range [-8, 7] (4-bit immediate). Out of

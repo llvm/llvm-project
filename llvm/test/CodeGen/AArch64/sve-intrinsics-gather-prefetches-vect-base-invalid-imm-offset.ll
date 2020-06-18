@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s | FileCheck %s
 
 ; PRFB <prfop>, <Pg>, [<Zn>.S{, #<imm>}] -> 32-bit element, imm = 0, 1, ..., 31
 define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_runtime_offset(<vscale x 4 x i32> %bases, i64 %offset, <vscale x 4 x i1> %Pg) nounwind {

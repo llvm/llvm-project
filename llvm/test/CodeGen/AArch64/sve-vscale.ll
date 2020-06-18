@@ -1,8 +1,5 @@
-; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
 ; RUN: opt -mtriple=aarch64 -codegenprepare -S < %s | llc -mtriple=aarch64 -mattr=+sve -asm-verbose=0 | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
 
 ;
 ; RDVL

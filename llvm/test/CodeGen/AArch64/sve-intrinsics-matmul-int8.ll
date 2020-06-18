@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+i8mm -asm-verbose=0 < %s -o - 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+i8mm -asm-verbose=0 < %s -o - | FileCheck %s
 
 define <vscale x 4 x i32> @smmla(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) nounwind {
 entry:
