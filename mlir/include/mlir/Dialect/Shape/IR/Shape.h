@@ -22,6 +22,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
+class PatternRewriter;
+
 namespace shape {
 
 namespace ShapeTypes {
