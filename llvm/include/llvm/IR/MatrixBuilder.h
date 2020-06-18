@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
@@ -51,14 +52,14 @@ template <class IRBuilderTy> class MatrixBuilder {
 public:
   MatrixBuilder(IRBuilderTy &Builder) : B(Builder) {}
 
-  /// Create a columnwise, strided matrix load.
+  /// Create a column major, strided matrix load.
   /// \p DataPtr - Start address of the matrix read
   /// \p Rows    - Number of rows in matrix (must be a constant)
   /// \p Columns - Number of columns in matrix (must be a constant)
   /// \p Stride  - Space between columns
-  CallInst *CreateMatrixColumnwiseLoad(Value *DataPtr, unsigned Rows,
-                                       unsigned Columns, Value *Stride,
-                                       const Twine &Name = "") {
+  CallInst *CreateColumnMajorLoad(Value *DataPtr, Align Alignment,
+                                  Value *Stride, bool IsVolatile, unsigned Rows,
+                                  unsigned Columns, const Twine &Name = "") {
 
     // Deal with the pointer
     PointerType *PtrTy = cast<PointerType>(DataPtr->getType());
@@ -66,30 +67,41 @@ public:
 
     auto *RetType = FixedVectorType::get(EltTy, Rows * Columns);
 
-    Value *Ops[] = {DataPtr, Stride, B.getInt32(Rows), B.getInt32(Columns)};
+    Value *Ops[] = {DataPtr, Stride, B.getInt1(IsVolatile), B.getInt32(Rows),
+                    B.getInt32(Columns)};
     Type *OverloadedTypes[] = {RetType, PtrTy};
 
     Function *TheFn = Intrinsic::getDeclaration(
-        getModule(), Intrinsic::matrix_columnwise_load, OverloadedTypes);
+        getModule(), Intrinsic::matrix_column_major_load, OverloadedTypes);
 
-    return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
+    CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
+    Attribute AlignAttr =
+        Attribute::getWithAlignment(Call->getContext(), Alignment);
+    Call->addAttribute(1, AlignAttr);
+    return Call;
   }
 
-  /// Create a columnwise, strided matrix store.
+  /// Create a column major, strided matrix store.
   /// \p Matrix  - Matrix to store
   /// \p Ptr     - Pointer to write back to
   /// \p Stride  - Space between columns
-  CallInst *CreateMatrixColumnwiseStore(Value *Matrix, Value *Ptr,
-                                        Value *Stride, unsigned Rows,
-                                        unsigned Columns,
-                                        const Twine &Name = "") {
-    Value *Ops[] = {Matrix, Ptr, Stride, B.getInt32(Rows), B.getInt32(Columns)};
+  CallInst *CreateColumnMajorStore(Value *Matrix, Value *Ptr, Align Alignment,
+                                   Value *Stride, bool IsVolatile,
+                                   unsigned Rows, unsigned Columns,
+                                   const Twine &Name = "") {
+    Value *Ops[] = {Matrix,           Ptr,
+                    Stride,           B.getInt1(IsVolatile),
+                    B.getInt32(Rows), B.getInt32(Columns)};
     Type *OverloadedTypes[] = {Matrix->getType(), Ptr->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
-        getModule(), Intrinsic::matrix_columnwise_store, OverloadedTypes);
+        getModule(), Intrinsic::matrix_column_major_store, OverloadedTypes);
 
-    return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
+    CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
+    Attribute AlignAttr =
+        Attribute::getWithAlignment(Call->getContext(), Alignment);
+    Call->addAttribute(2, AlignAttr);
+    return Call;
   }
 
   /// Create a llvm.matrix.transpose call, transposing \p Matrix with \p Rows

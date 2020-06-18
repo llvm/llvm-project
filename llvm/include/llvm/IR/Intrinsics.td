@@ -1449,21 +1449,21 @@ def int_matrix_multiply
               [IntrNoSync, IntrWillReturn, IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>,
                ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
-def int_matrix_columnwise_load
+def int_matrix_column_major_load
   : Intrinsic<[llvm_anyvector_ty],
-              [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty, llvm_i32_ty,
-               llvm_i32_ty],
+              [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i64_ty, llvm_i1_ty,
+               llvm_i32_ty, llvm_i32_ty],
               [IntrNoSync, IntrWillReturn, IntrArgMemOnly, IntrReadMem,
-               NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>,
-               ImmArg<ArgIndex<3>>]>;
+               NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
+               ImmArg<ArgIndex<4>>]>;
 
-def int_matrix_columnwise_store
+def int_matrix_column_major_store
   : Intrinsic<[],
               [llvm_anyvector_ty, LLVMAnyPointerType<LLVMMatchType<0>>,
-               llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+               llvm_i64_ty, llvm_i1_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoSync, IntrWillReturn, IntrArgMemOnly, IntrWriteMem,
                WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
-               ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+               ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 //===---------- Intrinsics to control hardware supported loops ----------===//
 

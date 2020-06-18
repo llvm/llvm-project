@@ -48,13 +48,13 @@ define <8 x double> @load_fadd_transpose(<8 x double>* %A.Ptr, <8 x double> %b) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x double>* [[A_PTR:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 4
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP0]], i64 6
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[B:%.*]], <8 x double> undef, <2 x i32> <i32 0, i32 1>

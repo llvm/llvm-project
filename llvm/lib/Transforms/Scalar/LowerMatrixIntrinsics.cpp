@@ -164,10 +164,10 @@ Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
 ///       definition of an argument, use the produced column vectors directly.
 ///       If not, split the operand vector containing an embedded matrix into
 ///       a set of column vectors,
-///  2.2. Lower the instruction in terms of columnwise operations, which yields
-///       a set of column vectors containing result matrix. Note that we lower
-///       all instructions that have shape information. Besides the intrinsics,
-///       this includes stores for example.
+///  2.2. Lower the instruction in terms of column major operations, which
+///       yields a set of column vectors containing result matrix. Note that we
+///       lower all instructions that have shape information. Besides the
+///       intrinsics, this includes stores for example.
 ///  2.3. Update uses of the lowered instruction. If we have shape information
 ///       for a user, there is nothing to do, as we will look up the result
 ///       column matrix when lowering the user. For other uses, we embed the
@@ -376,7 +376,7 @@ class LowerMatrixIntrinsics {
   /// Maps instructions to their shape information. The shape information
   /// describes the shape to be used while lowering. This matches the shape of
   /// the result value of the instruction, with the only exceptions being store
-  /// instructions and the matrix_columnwise_store intrinsics. For those, the
+  /// instructions and the matrix_column_major_store intrinsics. For those, the
   /// shape information indicates that those instructions should be lowered
   /// using shape information as well.
   DenseMap<Value *, ShapeInfo> ShapeMap;
@@ -502,8 +502,8 @@ public:
       switch (II->getIntrinsicID()) {
       case Intrinsic::matrix_multiply:
       case Intrinsic::matrix_transpose:
-      case Intrinsic::matrix_columnwise_load:
-      case Intrinsic::matrix_columnwise_store:
+      case Intrinsic::matrix_column_major_load:
+      case Intrinsic::matrix_column_major_store:
         return true;
       default:
         return false;
@@ -542,13 +542,13 @@ public:
                                  m_Value(MatrixA), m_Value(M), m_Value(N)))) {
         // Flip dimensions.
         Propagate = setShapeInfo(Inst, {N, M});
-      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_columnwise_store>(
+      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_column_major_store>(
                                  m_Value(MatrixA), m_Value(), m_Value(),
-                                 m_Value(M), m_Value(N)))) {
+                                 m_Value(), m_Value(M), m_Value(N)))) {
         Propagate = setShapeInfo(Inst, {N, M});
-      } else if (match(Inst,
-                       m_Intrinsic<Intrinsic::matrix_columnwise_load>(
-                           m_Value(), m_Value(), m_Value(M), m_Value(N)))) {
+      } else if (match(Inst, m_Intrinsic<Intrinsic::matrix_column_major_load>(
+                                 m_Value(), m_Value(), m_Value(), m_Value(M),
+                                 m_Value(N)))) {
         Propagate = setShapeInfo(Inst, {M, N});
       } else if (match(Inst, m_Store(m_Value(MatrixA), m_Value()))) {
         auto OpShape = ShapeMap.find(MatrixA);
@@ -620,14 +620,14 @@ public:
         // Flip dimensions.
         if (setShapeInfo(MatrixA, {M, N}))
           pushInstruction(MatrixA, WorkList);
-      } else if (match(V, m_Intrinsic<Intrinsic::matrix_columnwise_store>(
-                              m_Value(MatrixA), m_Value(), m_Value(),
+      } else if (match(V, m_Intrinsic<Intrinsic::matrix_column_major_store>(
+                              m_Value(MatrixA), m_Value(), m_Value(), m_Value(),
                               m_Value(M), m_Value(N)))) {
         if (setShapeInfo(MatrixA, {M, N})) {
           pushInstruction(MatrixA, WorkList);
         }
       } else if (isa<LoadInst>(V) ||
-                 match(V, m_Intrinsic<Intrinsic::matrix_columnwise_load>())) {
+                 match(V, m_Intrinsic<Intrinsic::matrix_column_major_load>())) {
         // Nothing to do, no matrix input.
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
@@ -666,8 +666,8 @@ public:
           switch (II->getIntrinsicID()) {
           case Intrinsic::matrix_multiply:
           case Intrinsic::matrix_transpose:
-          case Intrinsic::matrix_columnwise_load:
-          case Intrinsic::matrix_columnwise_store:
+          case Intrinsic::matrix_column_major_load:
+          case Intrinsic::matrix_column_major_store:
             WorkList.push_back(&Inst);
             break;
           default:
@@ -763,11 +763,11 @@ public:
     case Intrinsic::matrix_transpose:
       LowerTranspose(Inst);
       break;
-    case Intrinsic::matrix_columnwise_load:
-      LowerColumnwiseLoad(Inst);
+    case Intrinsic::matrix_column_major_load:
+      LowerColumnMajorLoad(Inst);
       break;
-    case Intrinsic::matrix_columnwise_store:
-      LowerColumnwiseStore(Inst);
+    case Intrinsic::matrix_column_major_store:
+      LowerColumnMajorStore(Inst);
       break;
     default:
       return false;
@@ -783,7 +783,7 @@ public:
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     MatrixTy Result;
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
-      Value *GEP = computeVectorAddr(EltPtr, Builder.getInt32(I), Stride,
+      Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
                                      Shape.getStride(), VType->getElementType(),
                                      Builder);
       Value *Vector = createVectorLoad(GEP, VType->getElementType(), Builder);
@@ -800,7 +800,7 @@ public:
                       IRBuilder<> &Builder) {
 
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt32(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
 
     unsigned AS = cast<PointerType>(MatrixPtr->getType())->getAddressSpace();
     Value *EltPtr =
@@ -813,7 +813,7 @@ public:
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
     return loadMatrix(TileTy, TilePtr,
-                      Builder.getInt32(MatrixShape.getStride()), ResultShape,
+                      Builder.getInt64(MatrixShape.getStride()), ResultShape,
                       Builder);
   }
 
@@ -826,16 +826,16 @@ public:
                      Builder);
   }
 
-  /// Lowers llvm.matrix.columnwise.load.
+  /// Lowers llvm.matrix.column.major.load.
   ///
   /// The intrinsic loads a matrix from memory using a stride between columns.
-  void LowerColumnwiseLoad(CallInst *Inst) {
+  void LowerColumnMajorLoad(CallInst *Inst) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
     LowerLoad(Inst, Ptr, Stride,
-              {Inst->getArgOperand(2), Inst->getArgOperand(3)});
+              {Inst->getArgOperand(3), Inst->getArgOperand(4)});
   }
 
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
@@ -844,7 +844,7 @@ public:
                    ShapeInfo MatrixShape, Value *I, Value *J, Type *EltTy,
                    IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt32(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
 
     unsigned AS = cast<PointerType>(MatrixPtr->getType())->getAddressSpace();
     Value *EltPtr =
@@ -857,7 +857,7 @@ public:
         Builder.CreatePointerCast(TileStart, TilePtrTy, "col.cast");
 
     storeMatrix(TileTy, StoreVal, TilePtr,
-                Builder.getInt32(MatrixShape.getStride()), Builder);
+                Builder.getInt64(MatrixShape.getStride()), Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
@@ -867,7 +867,7 @@ public:
     auto VType = cast<VectorType>(Ty);
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
-      Value *GEP = computeVectorAddr(EltPtr, Builder.getInt32(Vec.index()),
+      Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(Vec.index()),
                                      Stride, StoreVal.getStride(),
                                      VType->getElementType(), Builder);
       createVectorStore(Vec.value(), GEP, VType->getElementType(), Builder);
@@ -886,17 +886,17 @@ public:
         Builder);
   }
 
-  /// Lowers llvm.matrix.columnwise.store.
+  /// Lowers llvm.matrix.column.major.store.
   ///
   /// The intrinsic store a matrix back memory using a stride between columns.
-  void LowerColumnwiseStore(CallInst *Inst) {
+  void LowerColumnMajorStore(CallInst *Inst) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Matrix = Inst->getArgOperand(0);
     Value *Ptr = Inst->getArgOperand(1);
     Value *Stride = Inst->getArgOperand(2);
     LowerStore(Inst, Matrix, Ptr, Stride,
-               {Inst->getArgOperand(3), Inst->getArgOperand(4)});
+               {Inst->getArgOperand(4), Inst->getArgOperand(5)});
   }
 
   // Set elements I..I+NumElts-1 to Block
@@ -1208,14 +1208,14 @@ public:
         for (unsigned K = 0; K < M; K += TileSize) {
           const unsigned TileM = std::min(M - K, unsigned(TileSize));
           MatrixTy A =
-              loadMatrix(APtr, LShape, Builder.getInt32(I), Builder.getInt32(K),
+              loadMatrix(APtr, LShape, Builder.getInt64(I), Builder.getInt64(K),
                          {TileR, TileM}, EltType, Builder);
           MatrixTy B =
-              loadMatrix(BPtr, RShape, Builder.getInt32(K), Builder.getInt32(J),
+              loadMatrix(BPtr, RShape, Builder.getInt64(K), Builder.getInt64(J),
                          {TileM, TileC}, EltType, Builder);
           emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
         }
-        storeMatrix(Res, CPtr, {R, M}, Builder.getInt32(I), Builder.getInt32(J),
+        storeMatrix(Res, CPtr, {R, M}, Builder.getInt64(I), Builder.getInt64(J),
                     EltType, Builder);
       }
 
@@ -1329,7 +1329,7 @@ public:
     if (I == ShapeMap.end())
       return false;
 
-    LowerLoad(Inst, Ptr, Builder.getInt32(I->second.getStride()), I->second);
+    LowerLoad(Inst, Ptr, Builder.getInt64(I->second.getStride()), I->second);
     return true;
   }
 
@@ -1339,7 +1339,7 @@ public:
     if (I == ShapeMap.end())
       return false;
 
-    LowerStore(Inst, StoredVal, Ptr, Builder.getInt32(I->second.getStride()),
+    LowerStore(Inst, StoredVal, Ptr, Builder.getInt64(I->second.getStride()),
                I->second);
     return true;
   }
@@ -1507,11 +1507,11 @@ public:
           prettyPrintMatrixType(II->getOperand(0), SS);
           SS << "." << *II->getType()->getScalarType();
           break;
-        case Intrinsic::matrix_columnwise_load:
+        case Intrinsic::matrix_column_major_load:
           prettyPrintMatrixType(II, SS);
           SS << "." << *II->getType()->getScalarType();
           break;
-        case Intrinsic::matrix_columnwise_store:
+        case Intrinsic::matrix_column_major_store:
           prettyPrintMatrixType(II->getOperand(0), SS);
           SS << "." << *II->getOperand(0)->getType()->getScalarType();
           break;
@@ -1529,9 +1529,10 @@ public:
         case Intrinsic::matrix_multiply:
           return 3;
         case Intrinsic::matrix_transpose:
-        case Intrinsic::matrix_columnwise_load:
-        case Intrinsic::matrix_columnwise_store:
           return 2;
+        case Intrinsic::matrix_column_major_load:
+        case Intrinsic::matrix_column_major_store:
+          return 3;
         default:
           return 0;
         }
@@ -1626,7 +1627,7 @@ public:
       write(std::string("("));
 
       unsigned NumOpsToBreak = 1;
-      if (match(Expr, m_Intrinsic<Intrinsic::matrix_columnwise_load>()))
+      if (match(Expr, m_Intrinsic<Intrinsic::matrix_column_major_load>()))
         NumOpsToBreak = 2;
 
       for (Value *Op : Ops) {
