@@ -2496,7 +2496,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       info.type = XcodeSDK::GetSDKTypeForTriple(
           HostInfo::GetArchitecture().GetTriple());
       XcodeSDK sdk(info);
-      sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+      sdk_path = std::string(HostInfo::GetXcodeSDKPath(sdk));
     }
     if (!sdk_path.empty()) {
       // Note that calling setSDKPath() also recomputes all paths that
