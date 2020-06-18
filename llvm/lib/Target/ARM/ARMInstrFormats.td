@@ -1128,6 +1128,9 @@ class Thumb2DSPPat<dag pattern, dag result> : Pat<pattern, result> {
 class Thumb2DSPMulPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb2, UseMulOps, HasDSP];
 }
+class FPRegs16Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [HasFPRegs16];
+}
 class FP16Pat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [HasFP16];
 }
