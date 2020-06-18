@@ -40533,6 +40533,17 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
     }
   }
 
+  // MOVMSK(PCMPEQ(X,0)) == -1 -> PTESTZ(X,X).
+  if ((IsAllOf && CC == X86::COND_E) && Subtarget.hasSSE41()) {
+    SDValue BC = peekThroughBitcasts(Vec);
+    if (BC.getOpcode() == X86ISD::PCMPEQ &&
+        ISD::isBuildVectorAllZeros(BC.getOperand(1).getNode())) {
+      MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+      SDValue V = DAG.getBitcast(TestVT, BC.getOperand(0));
+      return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+    }
+  }
+
   // See if we can avoid a PACKSS by calling MOVMSK on the sources.
   // For vXi16 cases we can use a v2Xi8 PMOVMSKB. We must mask out
   // sign bits prior to the comparison with zero unless we know that
