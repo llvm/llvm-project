@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONS_H
 #define LLVM_MC_MCTARGETOPTIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include <string>
 #include <vector>
 
@@ -59,6 +60,9 @@ public:
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
+
+  const char *Argv0 = nullptr;
+  ArrayRef<const char *> CommandLineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.
