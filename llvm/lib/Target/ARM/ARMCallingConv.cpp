@@ -209,14 +209,17 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     break;
   }
   case MVT::f16:
+  case MVT::bf16:
   case MVT::f32:
     RegList = SRegList;
     break;
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::f64:
     RegList = DRegList;
     break;
   case MVT::v8f16:
+  case MVT::v8bf16:
   case MVT::v2f64:
     RegList = QRegList;
     break;

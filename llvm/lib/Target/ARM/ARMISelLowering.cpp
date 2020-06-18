@@ -721,6 +721,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
+
+    // For the time being bfloat is only supported when fullfp16 is present.
+    if (Subtarget->hasBF16())
+      addRegisterClass(MVT::bf16, &ARM::HPRRegClass);
   }
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -769,6 +773,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     if (Subtarget->hasFullFP16()) {
       addQRTypeForNEON(MVT::v8f16);
       addDRTypeForNEON(MVT::v4f16);
+    }
+
+    if (Subtarget->hasBF16()) {
+      addQRTypeForNEON(MVT::v8bf16);
+      addDRTypeForNEON(MVT::v4bf16);
     }
   }
 
@@ -2077,9 +2086,10 @@ SDValue ARMTargetLowering::LowerCallResult(
     // f16 arguments have their size extended to 4 bytes and passed as if they
     // had been copied to the LSBs of a 32-bit register.
     // For that, it's passed extended to i32 (soft ABI) or to f32 (hard ABI)
-    if (VA.needsCustom() && VA.getValVT() == MVT::f16) {
+    if (VA.needsCustom() &&
+        (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16)) {
       assert(Subtarget->hasFullFP16() &&
-             "Lowering f16 type return without full fp16 support");
+             "Lowering half precision fp return without full fp16 support");
       Val = DAG.getNode(ISD::BITCAST, dl,
                         MVT::getIntegerVT(VA.getLocVT().getSizeInBits()), Val);
       Val = DAG.getNode(ARMISD::VMOVhr, dl, VA.getValVT(), Val);
@@ -2256,9 +2266,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // f16 arguments have their size extended to 4 bytes and passed as if they
     // had been copied to the LSBs of a 32-bit register.
     // For that, it's passed extended to i32 (soft ABI) or to f32 (hard ABI)
-    if (VA.needsCustom() && VA.getValVT() == MVT::f16) {
+    if (VA.needsCustom() &&
+        (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16)) {
       assert(Subtarget->hasFullFP16() &&
-             "Lowering f16 type argument without full fp16 support");
+             "Lowering half precision fp argument without full fp16 support");
       Arg = DAG.getNode(ARMISD::VMOVrh, dl,
                         MVT::getIntegerVT(VA.getLocVT().getSizeInBits()), Arg);
       Arg = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), Arg);
@@ -3005,8 +3016,8 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // Guarantee that all emitted copies are
     // stuck together, avoiding something bad.
     Flag = Chain.getValue(1);
-    RetOps.push_back(DAG.getRegister(VA.getLocReg(),
-                                     ReturnF16 ? MVT::f16 : VA.getLocVT()));
+    RetOps.push_back(DAG.getRegister(
+        VA.getLocReg(), ReturnF16 ? Arg.getValueType() : VA.getLocVT()));
   }
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const MCPhysReg *I =
@@ -4139,7 +4150,8 @@ bool ARMTargetLowering::splitValueIntoRegisterParts(
     unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.hasValue();
   EVT ValueVT = Val.getValueType();
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
     unsigned ValueBits = ValueVT.getSizeInBits();
     unsigned PartBits = PartVT.getSizeInBits();
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::getIntegerVT(ValueBits), Val);
@@ -4155,7 +4167,8 @@ SDValue ARMTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.hasValue();
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
     unsigned ValueBits = ValueVT.getSizeInBits();
     unsigned PartBits = PartVT.getSizeInBits();
     SDValue Val = Parts[0];
@@ -4266,14 +4279,15 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       } else {
         const TargetRegisterClass *RC;
 
-
-        if (RegVT == MVT::f16)
+        if (RegVT == MVT::f16 || RegVT == MVT::bf16)
           RC = &ARM::HPRRegClass;
         else if (RegVT == MVT::f32)
           RC = &ARM::SPRRegClass;
-        else if (RegVT == MVT::f64 || RegVT == MVT::v4f16)
+        else if (RegVT == MVT::f64 || RegVT == MVT::v4f16 ||
+                 RegVT == MVT::v4bf16)
           RC = &ARM::DPRRegClass;
-        else if (RegVT == MVT::v2f64 || RegVT == MVT::v8f16)
+        else if (RegVT == MVT::v2f64 || RegVT == MVT::v8f16 ||
+                 RegVT == MVT::v8bf16)
           RC = &ARM::QPRRegClass;
         else if (RegVT == MVT::i32)
           RC = AFI->isThumb1OnlyFunction() ? &ARM::tGPRRegClass
@@ -4316,9 +4330,10 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       // f16 arguments have their size extended to 4 bytes and passed as if they
       // had been copied to the LSBs of a 32-bit register.
       // For that, it's passed extended to i32 (soft ABI) or to f32 (hard ABI)
-      if (VA.needsCustom() && VA.getValVT() == MVT::f16) {
+      if (VA.needsCustom() &&
+          (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16)) {
         assert(Subtarget->hasFullFP16() &&
-               "Lowering f16 type argument without full fp16 support");
+               "Lowering half precision fp argument without full fp16 support");
         ArgValue = DAG.getNode(ISD::BITCAST, dl,
                                MVT::getIntegerVT(VA.getLocVT().getSizeInBits()),
                                ArgValue);
@@ -5914,18 +5929,18 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Op.getValueType();
   EVT DstVT = N->getValueType(0);
 
-  if (SrcVT == MVT::i16 && DstVT == MVT::f16) {
+  if (SrcVT == MVT::i16 && (DstVT == MVT::f16 || DstVT == MVT::bf16)) {
     if (!Subtarget->hasFullFP16())
       return SDValue();
-    // f16 bitcast i16 -> VMOVhr
-    return DAG.getNode(ARMISD::VMOVhr, SDLoc(N), MVT::f16,
+    // (b)f16 bitcast i16 -> VMOVhr
+    return DAG.getNode(ARMISD::VMOVhr, SDLoc(N), DstVT,
                        DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
   }
 
-  if (SrcVT == MVT::f16 && DstVT == MVT::i16) {
+  if ((SrcVT == MVT::f16 || SrcVT == MVT::bf16) && DstVT == MVT::i16) {
     if (!Subtarget->hasFullFP16())
       return SDValue();
-    // i16 bitcast f16 -> VMOVrh
+    // i16 bitcast (b)f16 -> VMOVrh
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), MVT::i16,
                        DAG.getNode(ARMISD::VMOVrh, SDLoc(N), MVT::i32, Op));
   }
@@ -13196,7 +13211,7 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
         Copy->getOpcode() == ISD::CopyFromReg) {
       SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1)};
       SDValue NewCopy =
-          DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), MVT::f16, Ops);
+          DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), N->getValueType(0), Ops);
       return NewCopy;
     }
   }
@@ -13205,8 +13220,9 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
   if (LoadSDNode *LN0 = dyn_cast<LoadSDNode>(Op0)) {
     if (LN0->hasOneUse() && LN0->isUnindexed() &&
         LN0->getMemoryVT() == MVT::i16) {
-      SDValue Load = DCI.DAG.getLoad(MVT::f16, SDLoc(N), LN0->getChain(),
-                                     LN0->getBasePtr(), LN0->getMemOperand());
+      SDValue Load =
+          DCI.DAG.getLoad(N->getValueType(0), SDLoc(N), LN0->getChain(),
+                          LN0->getBasePtr(), LN0->getMemOperand());
       DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Load.getValue(0));
       DCI.DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
       return Load;
