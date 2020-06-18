@@ -40,3 +40,23 @@ void test_transpose_placeholder_set(UnsignedMatrixValue *m, u4x3 *r) {
 
   m.value = __builtin_matrix_transpose(*r);
 }
+
+__attribute__((objc_root_class))
+@interface PtrValue
+@property unsigned *value;
+@end
+
+__attribute__((objc_root_class))
+@interface IntValue
+@property int value;
+@end
+
+void test_column_major_load(PtrValue *Ptr, IntValue *Stride) {
+  // CHECK-LABEL: define void @test_column_major_load(%2* %Ptr, %3* %Stride) #4 {
+  // CHECK:         [[STRIDE:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
+  // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
+  // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
+  // CHECK-NEXT:    call <12 x i32> @llvm.matrix.column.major.load.v12i32.p0i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 3, i32 4)
+
+  u3x4 m = __builtin_matrix_column_major_load(Ptr.value, 3, 4, Stride.value);
+}
