@@ -60,3 +60,14 @@ void test_column_major_load(PtrValue *Ptr, IntValue *Stride) {
 
   u3x4 m = __builtin_matrix_column_major_load(Ptr.value, 3, 4, Stride.value);
 }
+
+void test_column_major_store(UnsignedMatrixValue *M, PtrValue *Ptr, IntValue *Stride) {
+  // CHECK-LABEL: define void @test_column_major_store(%1* %M, %2* %Ptr, %3* %Stride) #3 {
+  // CHECK:         [[M:%.*]] = call <12 x i32> bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to <12 x i32> (i8*, i8*)*)
+  // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
+  // CHECK:         [[IDX:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
+  // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v12i32.p0i32(<12 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 3, i32 4)
+
+  __builtin_matrix_column_major_store(M.value, Ptr.value, Stride.value);
+}

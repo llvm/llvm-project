@@ -179,3 +179,81 @@ void column_major_load_volatile(volatile double *Ptr) {
 
   dx5x5_t m_a1 = __builtin_matrix_column_major_load(Ptr, 5, 5, 5);
 }
+
+void column_major_store_with_const_stride_double(double *Ptr) {
+  // CHECK-LABEL: define void @column_major_store_with_const_stride_double(double* %Ptr)
+  // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+  // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64.p0f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
+
+  dx5x5_t m;
+  __builtin_matrix_column_major_store(m, Ptr, 5);
+}
+
+void column_major_store_with_const_stride2_double(double *Ptr) {
+  // CHECK-LABEL: define void @column_major_store_with_const_stride2_double(double* %Ptr)
+  // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+  // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64.p0f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 15, i1 false, i32 5, i32 5)
+  //
+  dx5x5_t m;
+  __builtin_matrix_column_major_store(m, Ptr, 2 * 3 + 9);
+}
+
+void column_major_store_with_stride_math_int(int *Ptr, int S) {
+  // CHECK-LABEL: define void @column_major_store_with_stride_math_int(i32* %Ptr, i32 %S)
+  // CHECK:         [[M:%.*]] = load <80 x i32>, <80 x i32>* {{.*}}, align 4
+  // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    [[S:%.*]] = load i32, i32* %S.addr, align 4
+  // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[S]], 32
+  // CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[ADD]] to i64
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v80i32.p0i32(<80 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX]], i1 false, i32 4, i32 20)
+
+  ix4x20_t m;
+  __builtin_matrix_column_major_store(m, Ptr, S + 32);
+}
+
+void column_major_store_with_stride_math_s_int(int *Ptr, short S) {
+  // CHECK-LABEL: define void @column_major_store_with_stride_math_s_int(i32* %Ptr, i16 signext %S)
+  // CHECK:         [[M:%.*]] = load <80 x i32>, <80 x i32>* {{.*}}, align 4
+  // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
+  // CHECK-NEXT:    [[S:%.*]] = load i16, i16* %S.addr, align 2
+  // CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[S]] to i32
+  // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[EXT]], 2
+  // CHECK-NEXT:    [[IDX:%.*]] = sext i32 [[ADD]] to i64
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v80i32.p0i32(<80 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX]], i1 false, i32 4, i32 20)
+
+  ix4x20_t m;
+  __builtin_matrix_column_major_store(m, Ptr, S + 2);
+}
+
+void column_major_store_array1(double Ptr[25]) {
+  // CHECK-LABEL: define void @column_major_store_array1(double* %Ptr)
+  // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+  // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64.p0f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
+
+  dx5x5_t m;
+  __builtin_matrix_column_major_store(m, Ptr, 5);
+}
+
+void column_major_store_array2() {
+  // CHECK-LABEL: define void @column_major_store_array2()
+  // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+  // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [25 x double], [25 x double]* %Ptr, i64 0, i64 0
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64.p0f64(<25 x double> [[M]], double* align 16 [[PTR]], i64 5, i1 false, i32 5, i32 5)
+
+  double Ptr[25];
+  dx5x5_t m;
+  __builtin_matrix_column_major_store(m, Ptr, 5);
+}
+
+void column_major_store_volatile(volatile double *Ptr) {
+  // CHECK-LABEL: define void @column_major_store_volatile(double* %Ptr) #0 {
+  // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
+  // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64.p0f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 true, i32 5, i32 5)
+
+  dx5x5_t m;
+  __builtin_matrix_column_major_store(m, Ptr, 5);
+}

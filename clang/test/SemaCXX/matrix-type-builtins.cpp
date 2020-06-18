@@ -101,3 +101,66 @@ void call_column_major_load_temp(unsigned *Ptr, unsigned X) {
   (void)__builtin_matrix_column_major_load(X, 2, 2, 2);
   // expected-error@-1 {{first argument must be a pointer to a valid matrix element type}}
 }
+
+template <typename EltTy0, unsigned R0, unsigned C0, typename PtrTy>
+void column_major_store(MyMatrix<EltTy0, R0, C0> &A, PtrTy Ptr, unsigned Stride) {
+  __builtin_matrix_column_major_store(A.value, Ptr, Stride);
+  // expected-error@-1 {{the pointee of the second argument must match the element type of the first argument ('float' != 'unsigned int')}}
+}
+
+template <typename MTy, typename PtrTy, unsigned Stride>
+void column_major_store(MTy &A, PtrTy Ptr) {
+  __builtin_matrix_column_major_store(A.value, Ptr, Stride);
+  // expected-error@-1 {{stride must be greater or equal to the number of rows}}
+}
+
+void test_column_major_stores_template(MyMatrix<unsigned, 2, 3> &M1, unsigned *Ptr1, MyMatrix<float, 3, 4> &M2, float *Ptr2) {
+  column_major_store(M1, Ptr2, 10);
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, float *>' requested here}}
+
+  column_major_store<decltype(M2), float *, 1>(M2, Ptr2);
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<MyMatrix<float, 3, 4> &, float *, 1>' requested here}}
+}
+
+template <typename EltTy0, unsigned R0, unsigned C0, typename EltTy1>
+void column_major_store(MyMatrix<EltTy0, R0, C0> &A, EltTy1 *Ptr) {
+  __builtin_matrix_column_major_store(A.value, Ptr, 1);
+  // expected-error@-1 3 {{stride must be greater or equal to the number of rows}}
+  // expected-error@-2 {{the pointee of the second argument must match the element type of the first argument ('float' != 'unsigned int')}}
+  // expected-error@-3 {{the pointee of the second argument must match the element type of the first argument ('unsigned int' != 'float')}}
+
+  char *s;
+  return __builtin_matrix_column_major_store(A.value, s, 20);
+  // expected-error@-1 {{the pointee of the second argument must match the element type of the first argument ('char' != 'unsigned int')}}
+  // expected-error@-2 {{the pointee of the second argument must match the element type of the first argument ('char' != 'unsigned int')}}
+  // expected-error@-3 {{he pointee of the second argument must match the element type of the first argument ('char' != 'float')}}
+}
+
+void test_column_major_store_template(unsigned *Ptr1, float *Ptr2) {
+  MyMatrix<unsigned, 2, 3> Mat1;
+  column_major_store<unsigned, 2, 3, unsigned>(Mat1, Ptr1);
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, unsigned int>'}}
+  column_major_store<unsigned, 2, 3, float>(Mat1, Ptr2);
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, float>'}}
+
+  MyMatrix<float, 2, 3> Mat2;
+  column_major_store<float, 2, 3, unsigned>(Mat2, Ptr1);
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<float, 2, 3, unsigned int>'}}
+}
+
+void test_column_major_store_constexpr(unsigned *Ptr, MyMatrix<unsigned, 3, 3> &M) {
+  __builtin_matrix_column_major_store(M.value, Ptr, constexpr1());
+  // expected-error@-1 {{stride must be greater or equal to the number of rows}}
+  __builtin_matrix_column_major_store(constexpr1(), Ptr, 1);
+  // expected-error@-1 {{first argument must be a matrix}}
+  __builtin_matrix_column_major_store(M.value, constexpr1(), 1);
+  // expected-error@-1 {{second argument must be a pointer to a valid matrix element type}}
+  // expected-error@-2 {{stride must be greater or equal to the number of rows}}
+}
+
+void test_column_major_store_wrapper(unsigned *Ptr, MyMatrix<unsigned, 3, 3> &M, IntWrapper &W) {
+  __builtin_matrix_column_major_store(M.value, Ptr, W);
+
+  __builtin_matrix_column_major_store(W, Ptr, W);
+  // expected-error@-1 {{first argument must be a matrix}}
+}
