@@ -14,10 +14,10 @@
 ; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
 
 ; RUN: opt -debugify -strip -check-debugify -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
+; RUN:   FileCheck %s -check-prefix=CHECK-WARN
 
 ; RUN: opt -enable-debugify -strip -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
+; RUN:   FileCheck %s -check-prefix=CHECK-WARN
 
 ; RUN: opt -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
 
@@ -88,15 +88,15 @@ define i32 @boom() {
 ; CHECK-REPEAT: ModuleDebugify: Skipping module with debug info
 
 ; --- Failure case
-; CHECK-FAIL: ERROR: Instruction with empty DebugLoc in function foo --   ret void
-; CHECK-FAIL: ERROR: Instruction with empty DebugLoc in function bar --   call void @foo()
-; CHECK-FAIL: ERROR: Instruction with empty DebugLoc in function bar --   {{.*}} add i32 0, 1
-; CHECK-FAIL: ERROR: Instruction with empty DebugLoc in function bar --   ret i32 0
-; CHECK-FAIL: WARNING: Missing line 1
-; CHECK-FAIL: WARNING: Missing line 2
-; CHECK-FAIL: WARNING: Missing line 3
-; CHECK-FAIL: WARNING: Missing line 4
-; CHECK-FAIL: WARNING: Missing variable 1
-; CHECK-FAIL: CheckModuleDebugify: FAIL
+; CHECK-WARN: WARNING: Instruction with empty DebugLoc in function foo --   ret void
+; CHECK-WARN: WARNING: Instruction with empty DebugLoc in function bar --   call void @foo()
+; CHECK-WARN: WARNING: Instruction with empty DebugLoc in function bar --   {{.*}} add i32 0, 1
+; CHECK-WARN: WARNING: Instruction with empty DebugLoc in function bar --   ret i32 0
+; CHECK-WARN: WARNING: Missing line 1
+; CHECK-WARN: WARNING: Missing line 2
+; CHECK-WARN: WARNING: Missing line 3
+; CHECK-WARN: WARNING: Missing line 4
+; CHECK-WARN: WARNING: Missing variable 1
+; CHECK-WARN: CheckModuleDebugify: PASS
 
 ; PASS: CheckModuleDebugify: PASS
