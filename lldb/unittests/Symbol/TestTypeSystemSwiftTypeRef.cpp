@@ -42,6 +42,9 @@ public:
   NodePointer Node(Kind kind, StringRef text) {
     return m_dem.createNode(kind, text);
   }
+  NodePointer NodeWithIndex(Kind kind, swift::Demangle::Node::IndexType index) {
+    return m_dem.createNode(kind, index);
+  }
   NodePointer Node(Kind kind, NodePointer child0 = nullptr,
                    NodePointer child1 = nullptr,
                    NodePointer child2 = nullptr,
@@ -242,5 +245,25 @@ TEST_F(TestTypeSystemSwiftTypeRef, Reference) {
     CompilerType int_type = GetCompilerType(b.Mangle(int_node));
     ASSERT_EQ(int_type, pointee);
     ASSERT_FALSE(is_rvalue);
+  }
+}
+
+TEST_F(TestTypeSystemSwiftTypeRef, Aggregate) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::Tuple));
+    CompilerType tuple = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(tuple.IsAggregateType());
+    // Yes, Int is a struct.
+    NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    ASSERT_TRUE(int_type.IsAggregateType());
+    NodePointer t = b.GlobalType(b.Node(Node::Kind::DependentGenericParamType,
+                                        b.NodeWithIndex(Node::Kind::Index, 0),
+                                        b.NodeWithIndex(Node::Kind::Index, 0)));
+    CompilerType tau = GetCompilerType(b.Mangle(t));
+    ASSERT_FALSE(tau.IsAggregateType());
   }
 }
