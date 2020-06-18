@@ -2760,6 +2760,49 @@ verifyCoopMatrixMulAdd(spirv::CooperativeMatrixMulAddNVOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.MatrixTimesScalar
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyMatrixTimesScalar(spirv::MatrixTimesScalarOp op) {
+  // We already checked that result and matrix are both of matrix type in the
+  // auto-generated verify method.
+
+  auto inputMatrix = op.matrix().getType().cast<spirv::MatrixType>();
+  // Check that the scalar type is the same as the matrix components type.
+  if (auto inputMatrixColumns =
+          inputMatrix.getElementType().dyn_cast<VectorType>()) {
+    if (op.scalar().getType() != inputMatrixColumns.getElementType())
+      return op.emitError("input matrix components' type and scaling "
+                          "value must have the same type");
+
+    // Note that the next three checks could be done using the AllTypesMatch
+    // trait in the Op definition file but it generates a vague error message.
+
+    // Check that the input and result matrices have the same size
+    auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
+    if (inputMatrix.getNumElements() != resultMatrix.getNumElements())
+      return op.emitError("input and result matrices must have "
+                          "the same number of columns");
+
+    if (auto resultMatrixColumns =
+            resultMatrix.getElementType().dyn_cast<VectorType>()) {
+      // Check that the input and result matrices' columns have the same type
+      if (inputMatrixColumns.getElementType() !=
+          resultMatrixColumns.getElementType())
+        return op.emitError("input and result matrices' columns must "
+                            "have the same component type");
+
+      // Check that the input and result matrices' columns have the same size
+      if (inputMatrixColumns.getNumElements() !=
+          resultMatrixColumns.getNumElements())
+        return op.emitError("input and result matrices' columns must "
+                            "have the same size");
+    }
+  }
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 

@@ -174,7 +174,7 @@ function(add_libc_benchmark_configuration target configuration)
     add_libc_benchmark_analysis(${conf_target} ${run_target})
 endfunction()
 
-function(add_libc_benchmark name file)
+function(add_libc_benchmark name file entrypoint_target)
     set(libc_target libc-${name}-benchmark)
     add_executable(${libc_target}
         EXCLUDE_FROM_ALL
@@ -182,12 +182,13 @@ function(add_libc_benchmark name file)
         LibcMemoryBenchmarkMain.h
         LibcMemoryBenchmarkMain.cpp
     )
-    target_link_libraries(${libc_target} PUBLIC json)
+
+    get_target_property(entrypoint_object_file ${entrypoint_target} "OBJECT_FILE_RAW")
+    target_link_libraries(${libc_target} PUBLIC json ${entrypoint_object_file})
     foreach(configuration "small" "big")
         add_libc_benchmark_configuration(${libc_target} ${configuration})
     endforeach()
 endfunction()
 
-add_libc_benchmark(memcpy Memcpy.cpp)
-add_libc_benchmark(memcmp Memcmp.cpp)
-add_libc_benchmark(memset Memset.cpp)
+add_libc_benchmark(memcpy Memcpy.cpp libc.src.string.memcpy)
+add_libc_benchmark(memset Memset.cpp libc.src.string.memset)

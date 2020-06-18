@@ -20,6 +20,9 @@ class LogTestCase(TestBase):
         super(LogTestCase, self).setUp()
         self.log_file = self.getBuildArtifact("log-file.txt")
 
+        if configuration.is_reproducer_replay():
+            self.log_file = self.getReproducerRemappedPath(self.log_file)
+
     def test_file_writing(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -44,9 +47,8 @@ class LogTestCase(TestBase):
 
         self.assertTrue(os.path.isfile(self.log_file))
 
-        f = open(self.log_file)
-        log_lines = f.readlines()
-        f.close()
+        with open(self.log_file, 'r') as f:
+            log_lines = f.read()
         os.remove(self.log_file)
 
         self.assertGreater(
@@ -83,7 +85,7 @@ class LogTestCase(TestBase):
         self.runCmd("log disable lldb")
 
         self.assertTrue(os.path.isfile(self.log_file))
-        with open(self.log_file, "r") as f:
+        with open(self.log_file, 'r') as f:
             contents = f.read()
 
         # check that it is still there

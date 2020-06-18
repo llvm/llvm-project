@@ -97,7 +97,7 @@ void f3() {
     // CHECK:    call void @objc_exception_try_exit(
     f3_helper(0, &x);
   } @finally {
-    // CHECK:    [[DEST1:%.*]] = phi i32 [ 0, {{%.*}} ], [ 3, {{%.*}} ]
+    // CHECK:    [[DEST1:%.*]] = phi i1 [ true, {{%.*}} ], [ false, {{%.*}} ]
     // CHECK:    call void @objc_exception_try_enter
     // CHECK:    call i32 @_setjmp
     @try {
@@ -105,7 +105,7 @@ void f3() {
       // CHECK:  call void @objc_exception_try_exit(
       f3_helper(1, &x);
     } @finally {
-      // CHECK:  [[DEST2:%.*]] = phi i32 [ 0, {{%.*}} ], [ 5, {{%.*}} ]
+      // CHECK:  [[DEST2:%.*]] = phi i1 [ true, {{%.*}} ], [ false, {{%.*}} ]
       // CHECK:  call void @f3_helper(i32 2, i32* nonnull [[X]])
       f3_helper(2, &x);
 

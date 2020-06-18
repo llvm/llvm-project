@@ -6,7 +6,7 @@
 
 #      CHECK:.debug_macro contents:
 # CHECK-NEXT:0x00000000:
-# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, debug_line_offset = 0x0000
+# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x00000000
 # CHECK-NEXT:DW_MACRO_start_file - lineno: 0 filenum: 0
 # CHECK-NEXT:  DW_MACRO_start_file - lineno: 1 filenum: 6
 # CHECK-NEXT:    DW_MACRO_define_strp - lineno: 1 macro: FOO 5
@@ -16,7 +16,7 @@
 # CHECK-NEXT:DW_MACRO_end_file
 
 #      CHECK:0x[[OFFSET]]:
-# CHECK-NEXT:macro header: version = 0x0005, flags = 0x00
+# CHECK-NEXT:macro header: version = 0x0005, flags = 0x00, format = DWARF32
 # CHECK-NEXT:DW_MACRO_define_strp - lineno: 0 macro: WORLD 2
 
 	.section	.debug_macro,"",@progbits

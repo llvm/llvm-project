@@ -12,8 +12,10 @@ add_clang_library(findAllSymbols
   PragmaCommentHandler.cpp
   STLPostfixHeaderMap.cpp
   SymbolInfo.cpp
+  )
 
-  LINK_LIBS
+clang_target_link_libraries(findAllSymbols
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

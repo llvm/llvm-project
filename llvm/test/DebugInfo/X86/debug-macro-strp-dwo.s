@@ -6,7 +6,7 @@
 
 #      CHECK:.debug_macro.dwo contents:
 # CHECK-NEXT:0x00000000:
-# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, debug_line_offset = 0x0000
+# CHECK-NEXT:macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x00000000
 # CHECK-NEXT:DW_MACRO_start_file - lineno: 0 filenum: 0
 # CHECK-NEXT:  DW_MACRO_define_strp - lineno: 1 macro: DWARF_VERSION 5
 # CHECK-NEXT:  DW_MACRO_undef_strp - lineno: 4 macro: DWARF_VERSION

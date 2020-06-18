@@ -690,7 +690,7 @@ namespace dr457 { // dr457: yes
   };
 }
 
-namespace dr458 { // dr458: 11
+namespace dr458 { // dr458: no
   struct A {
     int T;
     int f();
@@ -706,9 +706,9 @@ namespace dr458 { // dr458: 11
   int A::f() {
     return T;
   }
-  template<typename T> // expected-note {{declared here}}
+  template<typename T>
   int A::g() {
-    return T; // expected-error {{'T' does not refer to a value}}
+    return T; // FIXME: this is invalid, it finds the template parameter
   }
 
   template<typename T>
@@ -719,9 +719,9 @@ namespace dr458 { // dr458: 11
   int B<T>::g() {
     return T;
   }
-  template<typename U> template<typename T> // expected-note {{declared here}}
+  template<typename U> template<typename T>
   int B<U>::h() {
-    return T; // expected-error {{'T' does not refer to a value}}
+    return T; // FIXME: this is invalid, it finds the template parameter
   }
 }
 

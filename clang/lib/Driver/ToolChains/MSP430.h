@@ -44,7 +44,7 @@ protected:
   Tool *buildLinker() const override;
 
 private:
-  std::string computeSysRoot() const;
+  std::string computeSysRoot() const override;
 };
 
 } // end namespace toolchains

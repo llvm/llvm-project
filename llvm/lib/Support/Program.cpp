@@ -31,14 +31,16 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
                         Optional<ArrayRef<StringRef>> Env,
                         ArrayRef<Optional<StringRef>> Redirects,
                         unsigned SecondsToWait, unsigned MemoryLimit,
-                        std::string *ErrMsg, bool *ExecutionFailed) {
+                        std::string *ErrMsg, bool *ExecutionFailed,
+                        Optional<ProcessStatistics> *ProcStat) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
-    ProcessInfo Result = Wait(
-        PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0, ErrMsg);
+    ProcessInfo Result =
+        Wait(PI, SecondsToWait, /*WaitUntilTerminates=*/SecondsToWait == 0,
+             ErrMsg, ProcStat);
     return Result.ReturnCode;
   }
 

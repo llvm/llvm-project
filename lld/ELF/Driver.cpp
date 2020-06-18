@@ -1188,7 +1188,8 @@ static void readConfigs(opt::InputArgList &args) {
   // -Bsymbolic-functions (if STT_FUNC), --dynamic-list.
   for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
     config->dynamicList.push_back(
-        {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/true});
+        {arg->getValue(), /*isExternCpp=*/false,
+         /*hasWildcard=*/hasWildcard(arg->getValue())});
 
   for (auto *arg : args.filtered(OPT_version_script))
     if (Optional<std::string> path = searchScript(arg->getValue())) {

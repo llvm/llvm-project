@@ -255,8 +255,8 @@ void Writer::scanRelocations() {
         if (isa<Undefined>(s))
           error("undefined symbol " + s->getName() + ", referenced from " +
                 sys::path::filename(isec->file->getName()));
-        else if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
-          target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
+        else
+          target->prepareSymbolRelocation(*s, r.type);
       }
     }
   }
@@ -416,7 +416,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr = alignTo(addr, section->align);
     fileOff = alignTo(fileOff, section->align);
     section->addr = addr;
-    section->fileOff = fileOff;
+    section->fileOff = isZeroFill(section->flags) ? 0 : fileOff;
     section->finalize();
 
     addr += section->getSize();

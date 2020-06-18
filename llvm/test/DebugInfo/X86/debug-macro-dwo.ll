@@ -9,7 +9,7 @@
 
 ; CHECK-LABEL:  .debug_macro.dwo contents:
 ; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02
+; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02, format = DWARF32
 ; CHECK-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
 ; CHECK-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 1
 ; CHECK-NEXT:     DW_MACRO_define_strx - lineno: 1 macro: FOO 5

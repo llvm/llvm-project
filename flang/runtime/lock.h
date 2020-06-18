@@ -12,15 +12,40 @@
 #define FORTRAN_RUNTIME_LOCK_H_
 
 #include "terminator.h"
+
+// Avoid <mutex> if possible to avoid introduction of C++ runtime
+// library dependence.
+#ifndef _WIN32
+#define USE_PTHREADS 1
+#else
+#undef USE_PTHREADS
+#endif
+
+#if USE_PTHREADS
+#include <pthread.h>
+#else
 #include <mutex>
+#endif
 
 namespace Fortran::runtime {
 
 class Lock {
 public:
+#if USE_PTHREADS
+  Lock() { pthread_mutex_init(&mutex_, nullptr); }
+  ~Lock() { pthread_mutex_destroy(&mutex_); }
+  void Take() {
+    while (pthread_mutex_lock(&mutex_)) {
+    }
+  }
+  bool Try() { return pthread_mutex_trylock(&mutex_) == 0; }
+  void Drop() { pthread_mutex_unlock(&mutex_); }
+#else
   void Take() { mutex_.lock(); }
   bool Try() { return mutex_.try_lock(); }
   void Drop() { mutex_.unlock(); }
+#endif
+
   void CheckLocked(const Terminator &terminator) {
     if (Try()) {
       Drop();
@@ -29,7 +54,11 @@ public:
   }
 
 private:
+#if USE_PTHREADS
+  pthread_mutex_t mutex_{};
+#else
   std::mutex mutex_;
+#endif
 };
 
 class CriticalSection {

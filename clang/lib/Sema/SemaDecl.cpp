@@ -1358,50 +1358,6 @@ void Sema::EnterDeclaratorContext(Scope *S, DeclContext *DC) {
 
   CurContext = DC;
   S->setEntity(DC);
-
-  if (!S->getParent()->isTemplateParamScope())
-    return;
-
-  // Also set the corresponding entities for all immediately-enclosing template
-  // parameter scopes.
-  //
-  // C++20 [temp.local]p7:
-  //   In the definition of a member of a class template that appears outside
-  //   of the class template definition, the name of a member of the class
-  //   template hides the name of a template-parameter of any enclosing class
-  //   templates (but not a template-parameter of the member if the member is a
-  //   class or function template).
-  // C++20 [temp.local]p9:
-  //   In the definition of a class template or in the definition of a member
-  //   of such a template that appears outside of the template definition, for
-  //   each non-dependent base class (13.8.2.1), if the name of the base class
-  //   or the name of a member of the base class is the same as the name of a
-  //   template-parameter, the base class name or member name hides the
-  //   template-parameter name (6.4.10).
-  //
-  // This means that a template parameter scope should be searched immediately
-  // after searching the DeclContext for which it is a template parameter
-  // scope. For example, for
-  //   template<typename T> template<typename U> template<typename V>
-  //     void N::A<T>::B<U>::f(...)
-  // we search V then B<U> (and base classes) then U then A<T> (and base
-  // classes) then T then N then ::.
-  unsigned ScopeDepth = getTemplateDepth(S);
-  for (Scope *OuterS = S->getParent(); OuterS && OuterS->isTemplateParamScope();
-       OuterS = OuterS->getParent(), --ScopeDepth) {
-    auto *SearchDCAfterScope = DC;
-    for (; DC; DC = DC->getLookupParent()) {
-      if (auto *TD = cast<Decl>(DC)->getDescribedTemplate()) {
-        unsigned DCDepth = TD->getTemplateParameters()->getDepth() + 1;
-        if (DCDepth > ScopeDepth)
-          continue;
-        if (ScopeDepth == DCDepth)
-          SearchDCAfterScope = DC = DC->getLookupParent();
-        break;
-      }
-    }
-    OuterS->setLookupEntity(SearchDCAfterScope);
-  }
 }
 
 void Sema::ExitDeclaratorContext(Scope *S) {
@@ -7121,7 +7077,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
     else if (!Context.getTargetInfo().isTLSSupported()) {
-      if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice) {
+      if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+          getLangOpts().SYCLIsDevice) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
         // error should be ignored.
@@ -7223,13 +7180,18 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
-  if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice) {
+  if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+      getLangOpts().SYCLIsDevice) {
     if (EmitTLSUnsupportedError &&
         ((getLangOpts().CUDA && DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) ||
          (getLangOpts().OpenMPIsDevice &&
           OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(NewVD))))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_unsupported);
+
+    if (EmitTLSUnsupportedError &&
+        (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)))
+      targetDiag(D.getIdentifierLoc(), diag::err_thread_unsupported);
     // CUDA B.2.5: "__shared__ and __constant__ variables have implied static
     // storage [duration]."
     if (SC == SC_None && S->getFnParent() != nullptr &&

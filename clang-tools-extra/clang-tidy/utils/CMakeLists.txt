@@ -22,11 +22,15 @@ add_clang_library(clangTidyUtils
   UsingInserter.cpp
 
   LINK_LIBS
+  clangTidy
+  )
+
+clang_target_link_libraries(clangTidyUtils
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
   clangSema
-  clangTidy
   clangTransformer
   )

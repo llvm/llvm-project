@@ -5,20 +5,20 @@
 
 ## Check LLVM output style.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              --demangle %t.so > %t.llvm.long
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              -C %t.so > %t.llvm.short
 # RUN: FileCheck %s --input-file %t.llvm.long --check-prefixes=LLVM-COMMON,LLVM-DEMANGLE
 # RUN: diff %t.llvm.long %t.llvm.short
 
 ## Check that default is no demangling.
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              %t.so > %t.llvm.default
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --elf-section-groups --cg-profile --addrsig         \
 # RUN:              --demangle=false %t.so > %t.llvm.nodemangle
 # RUN: FileCheck %s --input-file %t.llvm.default --check-prefixes=LLVM-COMMON,LLVM-MANGLED
 # RUN: diff %t.llvm.default %t.llvm.nodemangle

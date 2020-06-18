@@ -4,6 +4,7 @@
 declare void @use4(i4)
 declare void @use8(i8)
 declare void @use_v2i4(<2 x i4>)
+declare i1 @use32gen1(i32)
 
 ; Constant can be freely negated.
 define i8 @t0(i8 %x) {
@@ -348,6 +349,44 @@ end:
   %r = phi i8 [ %z, %then], [ %y, %else ]
   %n = sub i8 0, %r
   ret i8 %n
+}
+define void @phi_with_duplicate_incoming_basic_blocks(i32 %x, i32 %y, i1 %should_lookup, i32 %z) {
+; CHECK-LABEL: @phi_with_duplicate_incoming_basic_blocks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_INC_NEG:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[SHOULD_LOOKUP:%.*]], label [[LOOKUP:%.*]], label [[LOOP:%.*]]
+; CHECK:       lookup:
+; CHECK-NEXT:    [[TO_LOOKUP:%.*]] = phi i32 [ [[Y:%.*]], [[ENTRY:%.*]] ], [ [[METAVAL_NEG:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    switch i32 [[TO_LOOKUP]], label [[END:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOOP]]
+; CHECK-NEXT:    i32 42, label [[LOOP]]
+; CHECK-NEXT:    ]
+; CHECK:       loop:
+; CHECK-NEXT:    [[METAVAL_NEG]] = phi i32 [ [[X_INC_NEG]], [[LOOKUP]] ], [ [[X_INC_NEG]], [[LOOKUP]] ], [ -84, [[ENTRY]] ]
+; CHECK-NEXT:    [[REPEAT:%.*]] = call i1 @use32gen1(i32 [[METAVAL_NEG]])
+; CHECK-NEXT:    br i1 [[REPEAT]], label [[LOOKUP]], label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x_inc = add i32 %x, 1
+  br i1 %should_lookup, label %lookup, label %loop
+
+lookup:
+  %to_lookup = phi i32 [ %y, %entry ], [ %negated_metaval, %loop ]
+  switch i32 %to_lookup, label %end [
+  i32 0, label %loop
+  i32 42, label %loop
+  ]
+
+loop:
+  %metaval = phi i32 [ %x_inc, %lookup ], [ %x_inc, %lookup ], [ 84, %entry ]
+  %negated_metaval = sub i32 0, %metaval
+  %repeat = call i1 @use32gen1(i32 %negated_metaval)
+  br i1 %repeat, label %lookup, label %end
+
+end:
+  ret void
 }
 
 ; truncation can be negated if it's operand can be negated

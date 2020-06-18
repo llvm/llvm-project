@@ -1452,6 +1452,27 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
     if (Instruction *Res = processUGT_ADDCST_ADD(Cmp, A, B, CI2, CI, *this))
       return Res;
 
+  // icmp(phi(C1, C2, ...), C) -> phi(icmp(C1, C), icmp(C2, C), ...).
+  Constant *C = dyn_cast<Constant>(Op1);
+  if (!C)
+    return nullptr;
+
+  if (auto *Phi = dyn_cast<PHINode>(Op0))
+    if (all_of(Phi->operands(), [](Value *V) { return isa<Constant>(V); })) {
+      Type *Ty = Cmp.getType();
+      Builder.SetInsertPoint(Phi);
+      PHINode *NewPhi =
+          Builder.CreatePHI(Ty, Phi->getNumOperands());
+      for (BasicBlock *Predecessor : predecessors(Phi->getParent())) {
+        auto *Input =
+            cast<Constant>(Phi->getIncomingValueForBlock(Predecessor));
+        auto *BoolInput = ConstantExpr::getCompare(Pred, Input, C);
+        NewPhi->addIncoming(BoolInput, Predecessor);
+      }
+      NewPhi->takeName(&Cmp);
+      return replaceInstUsesWith(Cmp, NewPhi);
+    }
+
   return nullptr;
 }
 

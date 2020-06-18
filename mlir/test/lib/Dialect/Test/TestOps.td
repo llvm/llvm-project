@@ -321,6 +321,12 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   }];
 }
 
+
+def FoldToCallOp : TEST_Op<"fold_to_call_op"> {
+  let arguments = (ins FlatSymbolRefAttr:$callee);
+  let hasCanonicalizer = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Test Traits
 //===----------------------------------------------------------------------===//

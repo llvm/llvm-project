@@ -38,21 +38,12 @@ public:
 
   /// ``IncludeSorter`` constructor; takes the FileID and name of the file to be
   /// processed by the sorter.
-  IncludeSorter(const SourceManager *SourceMgr, const LangOptions *LangOpts,
-                const FileID FileID, StringRef FileName, IncludeStyle Style);
-
-  /// Returns the ``SourceManager``-specific file ID for the file being handled
-  /// by the sorter.
-  const FileID current_FileID() const { return CurrentFileID; }
+  IncludeSorter(const SourceManager *SourceMgr, const FileID FileID,
+                StringRef FileName, IncludeStyle Style);
 
   /// Adds the given include directive to the sorter.
   void AddInclude(StringRef FileName, bool IsAngled,
                   SourceLocation HashLocation, SourceLocation EndLocation);
-
-  /// Returns the edits needed to sort the current set of includes and reset the
-  /// internal state (so that different blocks of includes are sorted separately
-  /// within the same file).
-  std::vector<FixItHint> GetEdits();
 
   /// Creates a quoted inclusion directive in the right sort order. Returns None
   /// on error or if header inclusion directive for header already exists.
@@ -62,7 +53,6 @@ private:
   typedef SmallVector<SourceRange, 1> SourceRangeVector;
 
   const SourceManager *SourceMgr;
-  const LangOptions *LangOpts;
   const IncludeStyle Style;
   FileID CurrentFileID;
   /// The file name stripped of common suffixes.

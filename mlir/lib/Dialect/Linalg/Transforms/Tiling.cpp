@@ -182,7 +182,7 @@ static void transformIndexedGenericOpIndices(
     indexedGenericOp.emitOpError("expected a region");
     return;
   }
-  auto &block = region.getBlocks().front();
+  auto &block = region.front();
 
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPointToStart(&block);

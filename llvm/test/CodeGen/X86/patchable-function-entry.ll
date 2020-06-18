@@ -31,7 +31,7 @@ define void @f1() "patchable-function-entry"="1" {
 define void @f2() "patchable-function-entry"="2" {
 ; CHECK-LABEL: f2:
 ; CHECK-NEXT: .Lfunc_begin2:
-; 32-COUNT-2:  nop
+; 32:          xchgw %ax, %ax
 ; 64:          xchgw %ax, %ax
 ; CHECK-NEXT:  ret
 ; CHECK:       .section __patchable_function_entries,"awo",@progbits,f2{{$}}
@@ -46,7 +46,8 @@ $f3 = comdat any
 define void @f3() "patchable-function-entry"="3" comdat {
 ; CHECK-LABEL: f3:
 ; CHECK-NEXT: .Lfunc_begin3:
-; 32-COUNT-3:  nop
+; 32:          xchgw %ax, %ax
+; 32-NEXT:     nop
 ; 64:          nopl (%rax)
 ; CHECK:       ret
 ; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f3,comdat,f3{{$}}
@@ -61,7 +62,8 @@ $f5 = comdat any
 define void @f5() "patchable-function-entry"="5" comdat {
 ; CHECK-LABEL: f5:
 ; CHECK-NEXT: .Lfunc_begin4:
-; 32-COUNT-5:  nop
+; 32-COUNT-2:  xchgw %ax, %ax
+; 32-NEXT:     nop
 ; 64:          nopl 8(%rax,%rax)
 ; CHECK-NEXT:  ret
 ; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f5,comdat,f5{{$}}
