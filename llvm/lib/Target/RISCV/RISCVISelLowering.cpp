@@ -197,6 +197,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
+  if (Subtarget.is64Bit() &&
+      !(Subtarget.hasStdExtD() || Subtarget.hasStdExtF())) {
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
+  }
+
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
   setOperationAction(ISD::ConstantPool, XLenVT, Custom);
@@ -876,6 +884,32 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT: {
+    bool IsStrict = N->isStrictFPOpcode();
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDValue Op0 = IsStrict ? N->getOperand(1) : N->getOperand(0);
+    RTLIB::Libcall LC;
+    if (N->getOpcode() == ISD::FP_TO_SINT ||
+        N->getOpcode() == ISD::STRICT_FP_TO_SINT)
+      LC = RTLIB::getFPTOSINT(Op0.getValueType(), N->getValueType(0));
+    else
+      LC = RTLIB::getFPTOUINT(Op0.getValueType(), N->getValueType(0));
+    MakeLibCallOptions CallOptions;
+    EVT OpVT = Op0.getValueType();
+    CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+    SDValue Result;
+    std::tie(Result, Chain) =
+        makeLibCall(DAG, LC, N->getValueType(0), Op0, CallOptions, DL, Chain);
+    Results.push_back(Result);
+    if (IsStrict)
+      Results.push_back(Chain);
+    break;
+  }
   case ISD::READCYCLECOUNTER: {
     assert(!Subtarget.is64Bit() &&
            "READCYCLECOUNTER only has custom type legalization on riscv32");
