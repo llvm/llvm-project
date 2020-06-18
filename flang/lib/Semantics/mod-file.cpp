@@ -322,7 +322,11 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     if (n++ > 0) {
       os << ',';
     }
-    os << dummy->name();
+    if (dummy) {
+      os << dummy->name();
+    } else {
+      os << "*";
+    }
   }
   os << ')';
   PutAttrs(os, bindAttrs, details.bindName(), " "s, ""s);
@@ -825,7 +829,9 @@ void SubprogramSymbolCollector::Collect() {
   const auto &details{symbol_.get<SubprogramDetails>()};
   isInterface_ = details.isInterface();
   for (const Symbol *dummyArg : details.dummyArgs()) {
-    DoSymbol(DEREF(dummyArg));
+    if (dummyArg) {
+      DoSymbol(*dummyArg);
+    }
   }
   if (details.isFunction()) {
     DoSymbol(details.result());

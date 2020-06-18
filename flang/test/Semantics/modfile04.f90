@@ -39,6 +39,15 @@ contains
   end
 end
 
+! Module with a subroutine with alternate returns
+module m3
+contains
+  subroutine altReturn(arg1, arg2, *, *)
+    real :: arg1
+    real :: arg2
+  end subroutine
+end module m3
+
 !Expect: m1.mod
 !module m1
 !type::t
@@ -71,5 +80,14 @@ end
 !end
 !function f4() result(x)
 !complex(4)::x
+!end
+!end
+
+!Expect: m3.mod
+!module m3
+!contains
+!subroutine altreturn(arg1,arg2,*,*)
+!real(4)::arg1
+!real(4)::arg2
 !end
 !end
