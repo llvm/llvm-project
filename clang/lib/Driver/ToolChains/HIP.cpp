@@ -57,8 +57,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",    "gnu", "--no-undefined",
-                        "-shared",    "-o",  Output.getFilename()};
+  ArgStringList LldArgs{"-flavor",
+                        "gnu",
+                        "--no-undefined",
+                        "-shared",
+                        "-mllvm",
+                        "-amdgpu-internalize-symbols",
+                        "-o",
+                        Output.getFilename()};
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
@@ -143,6 +149,8 @@ void HIPToolChain::addClangTargetOptions(
   if (DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                          false))
     CC1Args.push_back("-fgpu-rdc");
+  else
+    CC1Args.append({"-mllvm", "-amdgpu-internalize-symbols"});
 
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
