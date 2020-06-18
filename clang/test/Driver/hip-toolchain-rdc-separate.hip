@@ -97,12 +97,14 @@
 // LINK-NOT: "*.llvm-link"
 // LINK-NOT: ".*opt"
 // LINK-NOT: ".*llc"
-// LINK: {{".*lld.*"}} {{.*}} "-o" "[[IMG_DEV1:.*.out]]" "[[A_BC1]]" "[[B_BC1]]"
+// LINK: {{".*lld.*"}} {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// LINK-SAME: "-o" "[[IMG_DEV1:.*.out]]" "[[A_BC1]]" "[[B_BC1]]"
 
 // LINK-NOT: "*.llvm-link"
 // LINK-NOT: ".*opt"
 // LINK-NOT: ".*llc"
-// LINK: {{".*lld.*"}} {{.*}} "-o" "[[IMG_DEV2:.*.out]]" "[[A_BC2]]" "[[B_BC2]]"
+// LINK: {{".*lld.*"}} {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// LINK-SAME: "-o" "[[IMG_DEV2:.*.out]]" "[[A_BC2]]" "[[B_BC2]]"
 
 // LINK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // LINK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
