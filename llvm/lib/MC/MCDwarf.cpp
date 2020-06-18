@@ -135,7 +135,7 @@ void MCDwarfLineEntry::Make(MCObjectStreamer *MCOS, MCSection *Section) {
 //
 // This helper routine returns an expression of End - Start + IntVal .
 //
-static inline const MCExpr *MakeStartMinusEndExpr(MCContext &Ctx,
+static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
                                                   const MCSymbol &End,
                                                   int IntVal) {
@@ -490,7 +490,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // The length field does not include itself and, in case of the 64-bit DWARF
   // format, the DWARF64 mark.
   emitAbsValue(*MCOS,
-               MakeStartMinusEndExpr(context, *LineStartSym, *LineEndSym,
+               makeEndMinusStartExpr(context, *LineStartSym, *LineEndSym,
                                      UnitLengthBytes),
                OffsetSize);
 
@@ -515,7 +515,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Length of the prologue, is the next 4 bytes (8 bytes for DWARF64). This is
   // actually the length from after the length word, to the end of the prologue.
   emitAbsValue(*MCOS,
-               MakeStartMinusEndExpr(context, *LineStartSym, *ProEndSym,
+               makeEndMinusStartExpr(context, *LineStartSym, *ProEndSym,
                                      (PreHeaderLengthBytes + OffsetSize)),
                OffsetSize);
 
@@ -940,7 +940,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
     const MCExpr *Addr = MCSymbolRefExpr::create(
       StartSymbol, MCSymbolRefExpr::VK_None, context);
     const MCExpr *Size =
-        MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
+        makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
     MCOS->emitValue(Addr, AddrSize);
     emitAbsValue(*MCOS, Size, AddrSize);
   }
@@ -980,7 +980,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte total length of the information for this
   // compilation unit, not including the unit length field itself.
   const MCExpr *Length =
-      MakeStartMinusEndExpr(context, *InfoStart, *InfoEnd, UnitLengthBytes);
+      makeEndMinusStartExpr(context, *InfoStart, *InfoEnd, UnitLengthBytes);
   emitAbsValue(*MCOS, Length, OffsetSize);
 
   // The 2 byte DWARF version.
@@ -1148,7 +1148,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
       const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
           StartSymbol, MCSymbolRefExpr::VK_None, context);
       const MCExpr *SectionSize =
-          MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
+          makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitInt8(dwarf::DW_RLE_start_length);
       MCOS->emitValue(SectionStartAddr, AddrSize);
       MCOS->emitULEB128Value(SectionSize);
@@ -1171,7 +1171,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
 
       // Emit a range list entry spanning this section.
       const MCExpr *SectionSize =
-          MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
+          makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitIntValue(0, AddrSize);
       emitAbsValue(*MCOS, SectionSize, AddrSize);
     }
@@ -1567,7 +1567,7 @@ void FrameEmitterImpl::EmitCompactUnwind(const MCDwarfFrameInfo &Frame) {
 
   // Range Length
   const MCExpr *Range =
-      MakeStartMinusEndExpr(Context, *Frame.Begin, *Frame.End, 0);
+      makeEndMinusStartExpr(Context, *Frame.Begin, *Frame.End, 0);
   emitAbsValue(Streamer, Range, 4);
 
   // Compact Encoding
@@ -1624,7 +1624,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
     Streamer.emitInt32(dwarf::DW_LENGTH_DWARF64);
 
   // Length
-  const MCExpr *Length = MakeStartMinusEndExpr(context, *sectionStart,
+  const MCExpr *Length = makeEndMinusStartExpr(context, *sectionStart,
                                                *sectionEnd, UnitLengthBytes);
   emitAbsValue(Streamer, Length, OffsetSize);
 
@@ -1749,7 +1749,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
     Streamer.emitInt32(dwarf::DW_LENGTH_DWARF64);
 
   // Length
-  const MCExpr *Length = MakeStartMinusEndExpr(context, *fdeStart, *fdeEnd, 0);
+  const MCExpr *Length = makeEndMinusStartExpr(context, *fdeStart, *fdeEnd, 0);
   emitAbsValue(Streamer, Length, OffsetSize);
 
   Streamer.emitLabel(fdeStart);
@@ -1758,11 +1758,11 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   const MCAsmInfo *asmInfo = context.getAsmInfo();
   if (IsEH) {
     const MCExpr *offset =
-        MakeStartMinusEndExpr(context, cieStart, *fdeStart, 0);
+        makeEndMinusStartExpr(context, cieStart, *fdeStart, 0);
     emitAbsValue(Streamer, offset, OffsetSize);
   } else if (!asmInfo->doesDwarfUseRelocationsAcrossSections()) {
     const MCExpr *offset =
-        MakeStartMinusEndExpr(context, SectionStart, cieStart, 0);
+        makeEndMinusStartExpr(context, SectionStart, cieStart, 0);
     emitAbsValue(Streamer, offset, OffsetSize);
   } else {
     Streamer.emitSymbolValue(&cieStart, OffsetSize,
@@ -1777,7 +1777,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 
   // PC Range
   const MCExpr *Range =
-      MakeStartMinusEndExpr(context, *frame.Begin, *frame.End, 0);
+      makeEndMinusStartExpr(context, *frame.Begin, *frame.End, 0);
   emitAbsValue(Streamer, Range, PCSize);
 
   if (IsEH) {
