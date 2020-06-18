@@ -947,9 +947,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {
-      const char *addAttrCmd = "if ({1}) {{"
-                               "  tblgen_attrs.emplace_back(rewriter."
-                               "getIdentifier(\"{0}\"), {1}); }\n";
+      const char *addAttrCmd = "{ if (auto tmpAttr = {1}) "
+                               "tblgen_attrs.emplace_back(rewriter."
+                               "getIdentifier(\"{0}\"), tmpAttr); }\n";
       // The argument in the op definition.
       auto opArgName = resultOp.getArgName(argIndex);
       if (auto subTree = node.getArgAsNestedDag(argIndex)) {
