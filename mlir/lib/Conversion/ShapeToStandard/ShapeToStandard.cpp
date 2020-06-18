@@ -38,32 +38,6 @@ public:
   }
 };
 
-class IndexToSizeOpConversion : public OpConversionPattern<IndexToSizeOp> {
-public:
-  using OpConversionPattern<IndexToSizeOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(IndexToSizeOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    IndexToSizeOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.arg());
-    return success();
-  }
-};
-
-class SizeToIndexOpConversion : public OpConversionPattern<SizeToIndexOp> {
-public:
-  using OpConversionPattern<SizeToIndexOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(SizeToIndexOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    SizeToIndexOp::Adaptor transformed(operands);
-    rewriter.replaceOp(op.getOperation(), transformed.arg());
-    return success();
-  }
-};
-
 class ConstSizeOpConverter : public OpConversionPattern<ConstSizeOp> {
 public:
   using OpConversionPattern<ConstSizeOp>::OpConversionPattern;
@@ -132,9 +106,7 @@ void mlir::populateShapeToStandardConversionPatterns(
   patterns.insert<
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
-      ConstSizeOpConverter,
-      IndexToSizeOpConversion,
-      SizeToIndexOpConversion>(ctx);
+      ConstSizeOpConverter>(ctx);
   // clang-format on
 }
 
