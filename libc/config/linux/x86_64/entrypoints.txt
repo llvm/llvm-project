@@ -54,6 +54,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp2f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsl
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.frexp
@@ -68,4 +69,5 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinf
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncl
 )

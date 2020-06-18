@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FloatOperations.h"
+#ifndef LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
+#define LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
+
+#include "FPBits.h"
+
+#include "utils/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -14,8 +19,12 @@ namespace fputil {
 template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T abs(T x) {
-  return valueFromBits(absBits(x));
+  FPBits<T> bits(x);
+  bits.sign = 0;
+  return T(bits);
 }
 
 } // namespace fputil
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
