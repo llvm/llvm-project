@@ -239,3 +239,47 @@ DWARF:
       Tag:        DW_TAG_compile_unit
       Children:   DW_CHILDREN_no
       Attributes: []
+
+## h) Test that yaml2obj automatically generates abbreviation codes for us.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --hex-dump=.debug_abbrev %t8.o | FileCheck %s --check-prefix=CODE
+
+#      CODE: 0x00000000 01110000 00022e00 0000042e 00000004
+##                      ^-                                  abbreviation code ULEB128
+##                                 ^-                       abbreviation code ULEB128
+##                                            ^-            abbreviation code (ULEB128) 0x04
+##                                                       ^- abbreviation code (ULEB128) 0x04
+##
+# CODE-NEXT: 0x00000010 2e000000 052e0000 00062e00 0000
+##                               ^-                     abbreviation code ULEB128
+##                                          ^-          abbreviation code ULEB128
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Tag:        DW_TAG_compile_unit
+      Children:   DW_CHILDREN_no
+      Attributes: []
+    - Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes: []
+    - Code:       4
+      Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes: []
+    - Code:       4
+      Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes: []
+    - Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes: []
+    - Tag:        DW_TAG_subprogram
+      Children:   DW_CHILDREN_no
+      Attributes: []

@@ -52,7 +52,7 @@ struct AttributeAbbrev {
 };
 
 struct Abbrev {
-  llvm::yaml::Hex32 Code;
+  Optional<yaml::Hex64> Code;
   llvm::dwarf::Tag Tag;
   llvm::dwarf::Constants Children;
   std::vector<AttributeAbbrev> Attributes;

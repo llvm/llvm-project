@@ -94,8 +94,10 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
 }
 
 Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
+  uint64_t AbbrevCode = 0;
   for (auto AbbrevDecl : DI.AbbrevDecls) {
-    encodeULEB128(AbbrevDecl.Code, OS);
+    AbbrevCode = AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;
+    encodeULEB128(AbbrevCode, OS);
     encodeULEB128(AbbrevDecl.Tag, OS);
     OS.write(AbbrevDecl.Children);
     for (auto Attr : AbbrevDecl.Attributes) {
