@@ -12,6 +12,8 @@
 
 #define REQUIRES_16BIT_INSTS __attribute__((target("16-bit-insts")))
 #define REQUIRES_GFX9_INSTS __attribute__((target("gfx9-insts")))
+#define REQUIRES_WAVE32 __attribute__((target("wavefrontsize32")))
+#define REQUIRES_WAVE64 __attribute__((target("wavefrontsize64")))
 
 // Generic intrinsics
 extern __attribute__((const)) float2 __llvm_fma_2f32(float2, float2, float2) __asm("llvm.fma.v2f32");
@@ -31,16 +33,6 @@ extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.
 #define BUILTIN_CTZ_U16(x) (ushort)(x == 0u ? 16 : __builtin_ctzs(x))
 #define BUILTIN_CTZ_U32(x) (uint)(x == 0u ? 32 : __builtin_ctz(x))
 #define BUILTIN_CTZ_U64(x) (ulong)(x == 0u ? 64 : __builtin_ctzl(x))
-
-// AMDGPU intrinsics
-extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i64_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i64.i32");
-extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i64_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64.i64");
-extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_i64_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i64.f32");
-extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_i64_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.i64.f64");
-extern __attribute__((const)) uint __llvm_amdgcn_icmp_i32_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i32.i32");
-extern __attribute__((const)) uint __llvm_amdgcn_icmp_i32_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i32.i64");
-extern __attribute__((const)) uint __llvm_amdgcn_fcmp_i32_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i32.f32");
-extern __attribute__((const)) uint __llvm_amdgcn_fcmp_i32_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.i32.f64");
 
 // Buffer Load/Store
 extern __attribute__((pure)) float4 __llvm_amdgcn_struct_buffer_load_format_v4f32(uint4 rsrc, uint vindex, uint voffset, uint soffset, uint cachepolicy) __asm("llvm.amdgcn.struct.buffer.load.format.v4f32");

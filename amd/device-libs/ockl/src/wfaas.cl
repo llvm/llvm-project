@@ -11,9 +11,6 @@
 
 #define ATTR __attribute__((always_inline))
 
-// XXX from llvm/include/llvm/IR/InstrTypes.h
-#define ICMP_NE 33
-
 // Hack to prevent incorrect hoisting of the operation. There
 // currently is no proper way in llvm to prevent hoisting of
 // operations control flow dependent results.
@@ -25,39 +22,60 @@ static int optimizationBarrierHack(int in_val)
     return out_val;
 }
 
+REQUIRES_WAVE32
+static bool wfany_impl_w32(int e) {
+    return __builtin_amdgcn_ballot_w32(e) != 0;
+}
+
+REQUIRES_WAVE64
+static bool wfany_impl_w64(int e) {
+    return __builtin_amdgcn_ballot_w64(e) != 0;
+}
+
 ATTR bool
 OCKL_MANGLE_I32(wfany)(int e)
 {
     e = optimizationBarrierHack(e);
-    if (__oclc_wavefrontsize64) {
-        return __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) != 0UL;
-    } else {
-        return __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) != 0U;
-    }
+    return __oclc_wavefrontsize64 ?
+        wfany_impl_w64(e) : wfany_impl_w32(e);
+}
+
+REQUIRES_WAVE32
+static bool wfall_impl_w32(int e) {
+    return __builtin_amdgcn_ballot_w32(e) == __builtin_amdgcn_read_exec_lo();
+}
+
+REQUIRES_WAVE64
+static bool wfall_impl_w64(int e) {
+    return __builtin_amdgcn_ballot_w64(e) == __builtin_amdgcn_read_exec();
 }
 
 ATTR bool
 OCKL_MANGLE_I32(wfall)(int e)
 {
     e = optimizationBarrierHack(e);
-    if (__oclc_wavefrontsize64) {
-        return __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec();
-    } else {
-        return __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec_lo();
-    }
+    return __oclc_wavefrontsize64 ?
+        wfall_impl_w64(e) : wfall_impl_w32(e);
 }
 
+
+REQUIRES_WAVE32
+static bool wfsame_impl_w32(int e) {
+    uint u = __builtin_amdgcn_ballot_w32(e);
+    return (u == 0) | (u == __builtin_amdgcn_read_exec_lo());
+}
+
+REQUIRES_WAVE64
+static bool wfsame_impl_w64(int e) {
+    ulong u = __builtin_amdgcn_ballot_w64(e);
+    return (u == 0UL) | (u == __builtin_amdgcn_read_exec());
+}
 
 ATTR bool
 OCKL_MANGLE_I32(wfsame)(int e)
 {
     e = optimizationBarrierHack(e);
-    if (__oclc_wavefrontsize64) {
-        ulong u = __llvm_amdgcn_icmp_i64_i32(e, 0, ICMP_NE) != 0UL;
-        return (u == 0UL) | (u == __builtin_amdgcn_read_exec());
-    } else {
-        uint u = __llvm_amdgcn_icmp_i32_i32(e, 0, ICMP_NE) != 0U;
-        return (u == 0UL) | (u == __builtin_amdgcn_read_exec_lo());
-    }
+    return __oclc_wavefrontsize64 ?
+        wfsame_impl_w64(e) : wfsame_impl_w32(e);
 }
 

@@ -14,9 +14,6 @@
 
 extern ulong __ockl_devmem_request(ulong addr, ulong size);
 
-// XXX from llvm/include/llvm/IR/InstrTypes.h
-#define ICMP_NE 33
-
 // Define this to track user requested non-slab (i.e. "large") in-use
 // allocations. This adds the definition of a query function nna() that
 // returns a snapshot of the current value.
@@ -296,40 +293,66 @@ first(__global void * v)
     return __builtin_astype(w2, __global void *);
 }
 
+REQUIRES_WAVE64
+static uint
+elect_uint_wave64(int pred, uint val, uint none) {
+    uint ret = none;
+
+    ulong mask = __builtin_amdgcn_ballot_w64(pred != 0);
+    if (mask != 0UL) {
+        uint l = __ockl_ctz_u64(mask);
+        ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
+    }
+
+    return ret;
+}
+
+REQUIRES_WAVE32
+static uint
+elect_uint_wave32(int pred, uint val, uint none) {
+    uint ret = none;
+    uint mask = __builtin_amdgcn_ballot_w32(pred != 0);
+    if (mask != 0U) {
+        uint l = __ockl_ctz_u32(mask);
+        ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
+    }
+
+    return ret;
+}
+
 // Read val from one active lane whose predicate is one.
 // If no lanes have the predicate set, return none
 // This is like first, except that first may not have its predicate set
 static uint
 elect_uint(int pred, uint val, uint none)
 {
-    uint ret = none;
-    if (__oclc_wavefrontsize64) {
-        ulong mask = __llvm_amdgcn_icmp_i64_i32(pred, 0, ICMP_NE);
-        if (mask != 0UL) {
-            uint l = __ockl_ctz_u64(mask);
-            ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
-        }
-    } else {
-        uint mask = __llvm_amdgcn_icmp_i32_i32(pred, 0, ICMP_NE);
-        if (mask != 0U) {
-            uint l = __ockl_ctz_u32(mask);
-            ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
-        }
-    }
-    return ret;
+    return __oclc_wavefrontsize64 ?
+        elect_uint_wave64(pred, val, none) :
+        elect_uint_wave32(pred, val, none);
+}
+
+REQUIRES_WAVE64
+static uint
+countnz_wave64(ulong a)
+{
+    ulong mask = __builtin_amdgcn_ballot_w64(a != 0UL);
+    return __builtin_popcountl(mask);
+}
+
+REQUIRES_WAVE32
+static uint
+countnz_wave32(ulong a)
+{
+    uint mask = __builtin_amdgcn_ballot_w32(a != 0UL);
+    return __builtin_popcount(mask);
 }
 
 // Count the number of nonzero arguments across the wave
 static uint
 countnz(ulong a)
 {
-    if (__oclc_wavefrontsize64) {
-        ulong mask = __llvm_amdgcn_icmp_i64_i64(a, 0UL, ICMP_NE);
-        return __builtin_popcountl(mask);
-    } else {
-        uint mask = __llvm_amdgcn_icmp_i32_i64(a, 0UL, ICMP_NE);
-        return __builtin_popcount(mask);
-    }
+    return __oclc_wavefrontsize64 ?
+        countnz_wave64(a) : countnz_wave32(a);
 }
 
 // The kind of the smallest block that can hold sz bytes
